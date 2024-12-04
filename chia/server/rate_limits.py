@@ -9,7 +9,7 @@ from typing import Optional
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import Message
-from chia.server.rate_limit_numbers import RLSettings, get_rate_limits_to_use
+from chia.server.rate_limit_numbers import RLSettings, Unlimited, get_rate_limits_to_use
 
 log = logging.getLogger(__name__)
 
@@ -79,56 +79,68 @@ class RateLimiter:
                 limits = rate_limits["rate_limits_tx"][message_type]
             elif message_type in rate_limits["rate_limits_other"]:
                 limits = rate_limits["rate_limits_other"][message_type]
-                non_tx_freq = rate_limits["non_tx_freq"]
-                non_tx_max_total_size = rate_limits["non_tx_max_total_size"]
-                new_non_tx_count = self.non_tx_message_counts + 1
-                new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
-                if new_non_tx_count > non_tx_freq * proportion_of_limit:
-                    return " ".join(
-                        [
-                            f"non-tx count: {new_non_tx_count}",
-                            f"> {non_tx_freq * proportion_of_limit}",
-                            f"(scale factor: {proportion_of_limit})",
-                        ]
-                    )
-                if new_non_tx_size > non_tx_max_total_size * proportion_of_limit:
-                    return " ".join(
-                        [
-                            f"non-tx size: {new_non_tx_size}",
-                            f"> {non_tx_max_total_size * proportion_of_limit}",
-                            f"(scale factor: {proportion_of_limit})",
-                        ]
-                    )
-            else:
+                if isinstance(limits, RLSettings):
+                    non_tx_freq = rate_limits["non_tx_freq"]
+                    non_tx_max_total_size = rate_limits["non_tx_max_total_size"]
+                    new_non_tx_count = self.non_tx_message_counts + 1
+                    new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
+                    if new_non_tx_count > non_tx_freq * proportion_of_limit:
+                        return " ".join(
+                            [
+                                f"non-tx count: {new_non_tx_count}",
+                                f"> {non_tx_freq * proportion_of_limit}",
+                                f"(scale factor: {proportion_of_limit})",
+                            ]
+                        )
+                    if new_non_tx_size > non_tx_max_total_size * proportion_of_limit:
+                        return " ".join(
+                            [
+                                f"non-tx size: {new_non_tx_size}",
+                                f"> {non_tx_max_total_size * proportion_of_limit}",
+                                f"(scale factor: {proportion_of_limit})",
+                            ]
+                        )
+            else:  # pragma: no cover
                 log.warning(
                     f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})",
                 )
 
-            if limits.max_total_size is None:
-                limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
-            assert limits.max_total_size is not None
+            if isinstance(limits, Unlimited):
+                # this message type is not rate limited. This is used for
+                # response messages and must be combined with banning peers
+                # sending unsolicited responses of this type
+                if len(message.data) > limits.max_size:
+                    return f"message size: {len(message.data)} > {limits.max_size}"
+                ret = True
+                return None
+            elif isinstance(limits, RLSettings):
+                if limits.max_total_size is None:
+                    limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
+                assert limits.max_total_size is not None
 
-            if new_message_counts > limits.frequency * proportion_of_limit:
-                return " ".join(
-                    [
-                        f"message count: {new_message_counts}"
-                        f"> {limits.frequency * proportion_of_limit}"
-                        f"(scale factor: {proportion_of_limit})"
-                    ]
-                )
-            if len(message.data) > limits.max_size:
-                return f"message size: {len(message.data)} > {limits.max_size}"
-            if new_cumulative_size > limits.max_total_size * proportion_of_limit:
-                return " ".join(
-                    [
-                        f"cumulative size: {new_cumulative_size}",
-                        f"> {limits.max_total_size * proportion_of_limit}",
-                        f"(scale factor: {proportion_of_limit})",
-                    ]
-                )
+                if new_message_counts > limits.frequency * proportion_of_limit:
+                    return " ".join(
+                        [
+                            f"message count: {new_message_counts}"
+                            f"> {limits.frequency * proportion_of_limit}"
+                            f"(scale factor: {proportion_of_limit})"
+                        ]
+                    )
+                if len(message.data) > limits.max_size:
+                    return f"message size: {len(message.data)} > {limits.max_size}"
+                if new_cumulative_size > limits.max_total_size * proportion_of_limit:
+                    return " ".join(
+                        [
+                            f"cumulative size: {new_cumulative_size}",
+                            f"> {limits.max_total_size * proportion_of_limit}",
+                            f"(scale factor: {proportion_of_limit})",
+                        ]
+                    )
 
-            ret = True
-            return None
+                ret = True
+                return None
+            else:  # pragma: no cover
+                return f"Internal Error, unknown rate limit for message: {message_type}, limit: {limits}"
         finally:
             if self.incoming or ret:
                 # now that we determined that it's OK to send the message, commit the

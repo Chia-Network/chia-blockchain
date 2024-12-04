@@ -34,6 +34,7 @@ from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     CoinState,
@@ -402,17 +403,32 @@ class FullNodeAPI:
 
         return msg
 
-    @metadata.request()
-    async def reject_block(self, request: full_node_protocol.RejectBlock) -> None:
-        self.log.debug(f"reject_block {request.height}")
+    @metadata.request(peer_required=True)
+    async def reject_block(
+        self,
+        request: full_node_protocol.RejectBlock,
+        peer: WSChiaConnection,
+    ) -> None:
+        self.log.warning(f"unsolicited reject_block {request.height}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
-    @metadata.request()
-    async def reject_blocks(self, request: full_node_protocol.RejectBlocks) -> None:
-        self.log.debug(f"reject_blocks {request.start_height} {request.end_height}")
+    @metadata.request(peer_required=True)
+    async def reject_blocks(
+        self,
+        request: full_node_protocol.RejectBlocks,
+        peer: WSChiaConnection,
+    ) -> None:
+        self.log.warning(f"reject_blocks {request.start_height} {request.end_height}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
-    @metadata.request()
-    async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
+    @metadata.request(peer_required=True)
+    async def respond_blocks(
+        self,
+        request: full_node_protocol.RespondBlocks,
+        peer: WSChiaConnection,
+    ) -> None:
         self.log.warning("Received unsolicited/late blocks")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
     @metadata.request(peer_required=True)
     async def respond_block(
@@ -420,11 +436,8 @@ class FullNodeAPI:
         respond_block: full_node_protocol.RespondBlock,
         peer: WSChiaConnection,
     ) -> Optional[Message]:
-        """
-        Receive a full block from a peer full node (or ourselves).
-        """
-
         self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_logging()}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
         return None
 
     @metadata.request()
