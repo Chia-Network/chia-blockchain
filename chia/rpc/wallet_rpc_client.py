@@ -85,6 +85,8 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
+    VCGet,
+    VCGetResponse,
     VCMint,
     VCMintResponse,
     VCRevoke,
@@ -1675,9 +1677,8 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def vc_get(self, vc_id: bytes32) -> Optional[VCRecord]:
-        response = await self.fetch("vc_get", {"vc_id": vc_id.hex()})
-        return None if response["vc_record"] is None else VCRecord.from_json_dict(response["vc_record"])
+    async def vc_get(self, request: VCGet) -> VCGetResponse:
+        return VCGetResponse.from_json_dict(await self.fetch("vc_get", {**request.to_json_dict()}))
 
     async def vc_get_list(self, start: int = 0, count: int = 50) -> tuple[list[VCRecord], dict[str, Any]]:
         response = await self.fetch("vc_get_list", {"start": start, "count": count})

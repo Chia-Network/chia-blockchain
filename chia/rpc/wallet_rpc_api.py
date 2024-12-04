@@ -56,6 +56,8 @@ from chia.rpc.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    VCGet,
+    VCGetResponse,
     VCMint,
     VCMintResponse,
     VCRevoke,
@@ -4554,22 +4556,15 @@ class WalletRpcApi:
         )
         return VCMintResponse([], [], vc_record)
 
-    async def vc_get(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_get(self, request: VCGet) -> VCGetResponse:
         """
         Given a launcher ID get the verified credential
         :param request: the 'vc_id' launcher id of a verifiable credential
         :return: the 'vc_record' representing the specified verifiable credential
         """
-
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCGet(Streamable):
-            vc_id: bytes32
-
-        parsed_request = VCGet.from_json_dict(request)
-
-        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(parsed_request.vc_id)
-        return {"vc_record": vc_record}
+        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(request.vc_id)
+        return VCGetResponse(vc_record)
 
     async def vc_get_list(self, request: dict[str, Any]) -> EndpointResult:
         """

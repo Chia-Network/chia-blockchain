@@ -377,6 +377,18 @@ class NFTCoin(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class VCGet(Streamable):
+    vc_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetResponse(Streamable):
+    vc_record: Optional[VCRecord]
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: list[Spend]
 

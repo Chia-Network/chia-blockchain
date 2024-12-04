@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from chia_rs import Coin
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.rpc.wallet_request_types import VCMint, VCMintResponse, VCRevoke, VCRevokeResponse, VCSpend, VCSpendResponse
+from chia.rpc.wallet_request_types import (
+    VCGet,
+    VCGetResponse,
+    VCMint,
+    VCMintResponse,
+    VCRevoke,
+    VCRevokeResponse,
+    VCSpend,
+    VCSpendResponse,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
@@ -239,18 +248,23 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     # set RPC Client
     class VcsRevokeRpcClient(TestWalletRpcClient):
-        async def vc_get(self, vc_id: bytes32) -> Optional[VCRecord]:
-            self.add_to_log("vc_get", (vc_id,))
+        async def vc_get(self, request: VCGet) -> VCGetResponse:
+            self.add_to_log("vc_get", (request.vc_id,))
 
-            class FakeVC:
-                def __init__(self) -> None:
-                    self.coin = Coin(get_bytes32(1), get_bytes32(2), uint64(12345678))
-
-                def __getattr__(self, item: str) -> Any:
-                    if item == "vc":
-                        return self
-
-            return cast(VCRecord, FakeVC())
+            return VCGetResponse(
+                VCRecord(
+                    VerifiedCredential(
+                        Coin(get_bytes32(1), get_bytes32(2), uint64(12345678)),
+                        LineageProof(),
+                        VCLineageProof(),
+                        bytes32.zeros,
+                        bytes32.zeros,
+                        bytes32.zeros,
+                        None,
+                    ),
+                    uint32(0),
+                )
+            )
 
         async def vc_revoke(
             self,

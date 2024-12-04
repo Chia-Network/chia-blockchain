@@ -25,6 +25,7 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
     SendTransactionResponse,
+    VCGet,
     VCMint,
     VCRevoke,
     VCSpend,
@@ -1722,7 +1723,7 @@ async def revoke_vc(
             if vc_id is None:
                 print("Must specify either --parent-coin-id or --vc-id")
                 return []
-            record = await wallet_client.vc_get(vc_id)
+            record = (await wallet_client.vc_get(VCGet(vc_id))).vc_record
             if record is None:
                 print(f"Cannot find a VC with ID {vc_id.hex()}")
                 return []
