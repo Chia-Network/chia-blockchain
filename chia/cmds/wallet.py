@@ -34,6 +34,14 @@ def wallet_cmd(ctx: click.Context) -> None:
     pass
 
 
+# TODO: must come after the definition above because of an import loop.  the command
+#  class framework should be expanded to support definition without a group to be a
+#  member of and later attachment to a group using standard click mechanisms.
+
+
+import chia.cmds.signer  # noqa: E402, F401
+
+
 @wallet_cmd.command("get_transaction", help="Get a transaction")
 @click.option(
     "-wp",
