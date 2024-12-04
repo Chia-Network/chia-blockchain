@@ -197,7 +197,7 @@ class TestCMD:
         report(f"run html url: {html_url}")
         report(f"run api url: {api_url}")
         if self.open_browser:
-            webbrowser.open(run_url)
+            webbrowser.open(html_url)
 
     async def check_only(self) -> None:
         if self.only is not None:
