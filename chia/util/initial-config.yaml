@@ -1,5 +1,4 @@
 min_mainnet_k_size: 32
-
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
@@ -11,7 +10,6 @@ daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
 daemon_allow_tls_1_2: False # if True, allow TLS 1.2 for daemon connections
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
-
 network_overrides: &network_overrides
   constants:
     mainnet:
@@ -53,6 +51,18 @@ network_overrides: &network_overrides
       MIN_PLOT_SIZE: 18
       NETWORK_TYPE: 1
       SUB_SLOT_ITERS_STARTING: 67108864
+    dec0424:
+      AGG_SIG_ME_ADDITIONAL_DATA: 54fa51a7dab7c47cae0343ed5eac4ed721fcb6c695fc792b22985c1fee4b1d8e
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: 54fa51a7dab7c47cae0343ed5eac4ed721fcb6c695fc792b22985c1fee4b1d8e
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
+      SUB_SLOT_ITERS_STARTING: 67108864
   config:
     mainnet:
       address_prefix: "xch"
@@ -66,23 +76,21 @@ network_overrides: &network_overrides
     testneta:
       address_prefix: "txch"
       default_full_node_port: 58444
-
-selected_network: &selected_network "mainnet"
-
+    dec0424:
+      address_prefix: txch
+      default_full_node_port: 58445
+selected_network: &selected_network "dec0424"
 # public ssl ca is included in source code
 # Private ssl ca is used for trusted connections between machines user owns
 private_ssl_ca:
   crt: "config/ssl/ca/private_ca.crt"
   key: "config/ssl/ca/private_ca.key"
-
 chia_ssl_ca:
   crt: "config/ssl/ca/chia_ca.crt"
   key: "config/ssl/ca/chia_ca.key"
-
 daemon_ssl:
   private_crt: "config/ssl/daemon/private_daemon.crt"
   private_key: "config/ssl/daemon/private_daemon.key"
-
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overridden.
 logging: &logging
   log_stdout: False # If True, outputs to stdout instead of a file
@@ -95,12 +103,11 @@ logging: &logging
   log_syslog: False # If True, outputs to SysLog host and port specified
   log_syslog_host: "localhost" # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514 # UDP port of the remote or local Unix syslog
-
 seeder:
   # The fake full node used for crawling will run on this port.
-  port: 8444
+  port: 58445
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
-  other_peers_port: 8444
+  other_peers_port: 58445
   # What port to run the DNS server on, (this is useful if you are already using port 53 for DNS).
   dns_port: 53
   # This will override the default full_node.peer_connect_timeout for the crawler full node
@@ -109,7 +116,7 @@ seeder:
   crawler_db_path: "crawler.db"
   # Peers used for the initial run.
   bootstrap_peers:
-    - "node.chia.net"
+    - "node-dec0424.chia.net"
   # Peers to respond with regardless of what the crawler finds
   # Can be IPs or Hostnames. Hostnames will be resolved to IPs
   static_peers: []
@@ -138,12 +145,10 @@ seeder:
     ssl:
       private_crt: "config/ssl/crawler/private_crawler.crt"
       private_key: "config/ssl/crawler/private_crawler.key"
-
 harvester:
   farmer_peers:
     - host: *self_hostname
       port: 8447
-
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8560
@@ -153,31 +158,24 @@ harvester:
     retry_invalid_seconds: 1200 # How long to wait before re-trying plots which failed to load
     batch_size: 300 # How many plot files the harvester processes before it waits batch_sleep_milliseconds
     batch_sleep_milliseconds: 1 # Milliseconds the harvester sleeps between batch processing
-
   # If True use parallel reads in chiapos
   parallel_read: True
-
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-
   # Plots are searched for in the following directories
   plot_directories: []
   recursive_plot_scan: False # If True the harvester scans plots recursively in the provided directories.
   recursive_follow_links: False # If True the harvester follows symlinks when scanning for plots recursively
-
   ssl:
     private_crt: "config/ssl/harvester/private_harvester.crt"
     private_key: "config/ssl/harvester/private_harvester.key"
-
   private_ssl_ca:
     crt: "config/ssl/ca/private_ca.crt"
     key: "config/ssl/ca/private_ca.key"
-
   chia_ssl_ca:
     crt: "config/ssl/ca/chia_ca.crt"
     key: "config/ssl/ca/chia_ca.key"
-
   # Compressed harvesting.
   parallel_decompressor_count: 0
   # If set to 0, `decompressor_thread_count` will default to half of nproc available on the machine.
@@ -191,48 +189,40 @@ harvester:
   enforce_gpu_index: False
   # If no decompressor is available after `decompressor_timeout` seconds, abort the current operation.
   decompressor_timeout: 20
-
 pool:
   # Replace this with a real receive address
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-
 farmer:
   # The farmer server (if run) will run on this port
   port: 8447
   # The farmer will attempt to connect to these full nodes
   full_node_peers:
     - host: *self_hostname
-      port: 8444
-
+      port: 58445
   pool_public_keys: !!set {}
-
   # Replace this with a real receive address
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8559
-
   # when enabled, the farmer will print a pstats profile to the
   # root_dir/profile-farmer directory every second.
   # analyze with python -m chia.util.profiler <path>
   enable_profiler: False
-
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-
   ssl:
     private_crt: "config/ssl/farmer/private_farmer.crt"
     private_key: "config/ssl/farmer/private_farmer.key"
     public_crt: "config/ssl/farmer/public_farmer.crt"
     public_key: "config/ssl/farmer/public_farmer.key"
-
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
   # The server where the VDF clients will connect to.
@@ -241,7 +231,6 @@ timelord_launcher:
   # Number of VDF client processes to keep alive in the local machine.
   process_count: 3
   logging: *logging
-
 timelord:
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
@@ -254,7 +243,7 @@ timelord:
       - 150000
   full_node_peers:
     - host: *self_hostname
-      port: 8444
+      port: 58445
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -286,24 +275,19 @@ timelord:
   slow_bluebox: False
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
   slow_bluebox_process_count: 1
-
   multiprocessing_start_method: default
-
   start_rpc_server: True
   rpc_port: 8557
-
   ssl:
     private_crt: "config/ssl/timelord/private_timelord.crt"
     private_key: "config/ssl/timelord/private_timelord.key"
     public_crt: "config/ssl/timelord/public_timelord.crt"
     public_key: "config/ssl/timelord/public_timelord.key"
-
 full_node:
   # The full node server (if run) will run on this port
-  port: 8444
+  port: 58445
   # The full node will attempt to connect to these full nodes
   full_node_peers: []
-
   # controls the sync-to-disk behavior of the database connection. Can be one of:
   # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
   #         power-loss, disk failure or kernel panics
@@ -315,20 +299,16 @@ full_node:
   # "auto"  on/off is decided based on a heuristic of how likely a failure is on
   #         the particular system we're running on. Defaults to "full".
   db_sync: "auto"
-
   # the number of threads used to read from the blockchain database
   # concurrently. There's always only 1 writer, but the number of readers is
   # configurable
   db_readers: 4
-
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v2_CHALLENGE.sqlite
   # peer_db_path is deprecated and has been replaced by peers_file_path
   peer_db_path: db/peer_table_node.sqlite
   peers_file_path: db/peers.dat
-
   multiprocessing_start_method: default
-
   # The maximum number of UnfinishedBlocks we accept (and forward) with the
   # same reward hash (but different foliage hashes). Traditionally this was
   # effectively 1, meaning whichever UnfinishedBlock we saw first was the only
@@ -336,35 +316,26 @@ full_node:
   # duplicates be forwarded, in order to allow the timelords to,
   # deterministically, pick which one to infuse
   max_duplicate_unfinished_blocks: 3
-
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8555
-
   # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
   enable_upnp: True
-
   # If node is more than these blocks behind, will do a sync (long sync)
   sync_blocks_behind_threshold: 300
-
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
   short_sync_blocks_behind_threshold: 20
-
   bad_peak_cache_size: 100
-
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
   reserved_cores: 0
-
   # set this to true to not offload heavy lifting into separate child processes.
   # this option is mostly useful when profiling, since only the main process is
   # profiled.
   single_threaded: False
-
   # when enabled, logs coins additions, removals and reorgs at INFO level.
   # Requires the log level to be INFO or DEBUG as well.
   log_coins: False
-
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
   # How long to wait for a peer connection
@@ -382,7 +353,6 @@ full_node:
   max_inbound_timelord: 5
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
-
   # Send to a Bluebox (sanitizing timelord) uncompact blocks once every
   # 'send_uncompact_interval' seconds. Set to 0 if you don't use this feature.
   send_uncompact_interval: 0
@@ -393,78 +363,59 @@ full_node:
   sanitize_weight_proof_only: False
   # timeout for weight proof request
   weight_proof_timeout: &weight_proof_timeout 360
-
   # when the full node enters sync-mode, we wait until we have collected peaks
   # from at least 3 peers, or until we've waitied this many seconds
   max_sync_wait: 30
-
   # when enabled, the full node will print a pstats profile to the
   # root_dir/profile-node directory every second.
   # analyze with python -m chia.util.profiler <path>
   enable_profiler: False
-
   # when enabled, each time a block is validated, the python profiler is
   # engaged. If the validation takes more than 2 seconds, the profile is saved
   # to disk, in the chia root/block-validation-profile
   profile_block_validation: False
-
   enable_memory_profiler: False
-
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/sql.log).
   log_sqlite_cmds: False
-
   # Number of coin_ids | puzzle hashes that node will let wallets subscribe to
   max_subscribe_items: 200000
-
   # the maximum number of CoinStates will be returned by a RegisterForPhUpdates
   # request, for untrusted peers
   max_subscribe_response_items: 100000
-
   # Number of coin_ids | puzzle hashes that node will let local wallets subscribe to
   trusted_max_subscribe_items: 2000000
-
   # the maximum number of CoinStates will be returned by a RegisterForPhUpdates
   # request, for trusted peers
   trusted_max_subscribe_response_items: 500000
-
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers: &dns_servers
-    - "dns-introducer.chia.net"
-    - "chia.ctrlaltdel.ch"
-    - "seeder.dexie.space"
-    - "chia.hoffmang.com"
-    - "seeder.xchpool.org"
+    - dns-introducer-dec0424.chia.net
   introducer_peer:
-    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
-    port: 8444
+    host: introducer-dec0424.chia.net # Chia AWS introducer IPv4/IPv6
+    port: 58445
     enable_private_networks: False
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-
   # Node IDs of trusted wallet peers, allows using more permissive limits on sync
   trusted_peers:
     0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb7: Does_not_matter
-
   ssl:
     private_crt: "config/ssl/full_node/private_full_node.crt"
     private_key: "config/ssl/full_node/private_full_node.key"
     public_crt: "config/ssl/full_node/public_full_node.crt"
     public_key: "config/ssl/full_node/public_full_node.key"
   use_chia_loop_policy: True
-
 ui:
   # Which port to use to communicate with the full node
   rpc_port: 8555
-
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
@@ -472,7 +423,6 @@ ui:
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
-
 introducer:
   host: *self_hostname
   port: 8445
@@ -483,107 +433,82 @@ introducer:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-
   ssl:
     public_crt: "config/ssl/full_node/public_full_node.crt"
     public_key: "config/ssl/full_node/public_full_node.key"
-
 wallet:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 9256
-
   # when enabled, the wallet will print a pstats profile to the
   # root_dir/profile-wallet directory every second.
   # analyze with python -m chia.util.profiler <path>
   enable_profiler: False
-
   enable_memory_profiler: False
-
   # see description for full_node.db_sync
   db_sync: auto
-
   # the number of threads used to read from the wallet database
   # concurrently. There's always only 1 writer, but the number of readers is
   # configurable
   db_readers: 2
-
   connect_to_unknown_peers: True
-
   initial_num_public_keys: 425
   reuse_public_key_for_change:
     #Add your wallet fingerprint here, this is an example.
     "2999502625": False
-
   dns_servers: *dns_servers
-
   full_node_peers:
     - host: *self_hostname
-      port: 8444
+      port: 58445
   # The path of NFT off-chain metadata cache
   nft_metadata_cache_path: "nft_cache"
   # The length of NFT ID prefix will be used as hash index
   nft_metadata_cache_hash_length: 3
   multiprocessing_start_method: default
-
   testing: False
   # v2 used by the light wallet sync protocol
   database_path: wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite
   # wallet_peers_path is deprecated and has been replaced by wallet_peers_file_path
   wallet_peers_path: wallet/db/wallet_peers.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
-
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/wallet_sql.log).
   log_sqlite_cmds: False
-
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-
   target_peer_count: 3
   peer_connect_interval: 60
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
-
   introducer_peer:
-    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
-    port: 8444
+    host: introducer-dec0424.chia.net # Chia AWS introducer IPv4/IPv6
+    port: 58445
     enable_private_networks: False
-
   ssl:
     private_crt: "config/ssl/wallet/private_wallet.crt"
     private_key: "config/ssl/wallet/private_wallet.key"
     public_crt: "config/ssl/wallet/public_wallet.crt"
     public_key: "config/ssl/wallet/public_wallet.key"
-
   # Node IDs of trusted full node peers, for performing a fast trusted wallet sync
   trusted_peers:
     0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb9: Does_not_matter
-
   short_sync_blocks_behind_threshold: 20
-
   # wallet overrides for limits
   inbound_rate_limit_percent: 100
   outbound_rate_limit_percent: 60
-
   # timeout for weight proof request
   weight_proof_timeout: *weight_proof_timeout
-
   # if an unknown CAT belonging to us is seen, a wallet will be automatically created
   # the user accepts the risk/responsibility of verifying the authenticity and origin of unknown CATs
   automatically_add_unknown_cats: False
-
   # if an unknown DID is sent to us, a wallet will be automatically created
   did_auto_add_limit: 10
-
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
-
   # Reset wallet sync data on start for given fingerprint
   reset_sync_for_fingerprint: null
-
   # After n received unspent transactions, the spam filter will be enabled, which will filter out received
   # coins with very small value. Any standard TX under xch_spam_amount is filtered
   spam_filter_after_n_txs: 200
@@ -592,10 +517,8 @@ wallet:
   enable_notifications: True
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
-
   # Enabling the delta sync can under certain circumstances lead to missing coin states during re-orgs
   use_delta_sync: False
-
   #################################
   #  Inner puzzle decorators      #
   #################################
@@ -607,22 +530,18 @@ wallet:
   #       clawback_timelock: 3600
   #     - decorator: "DECORATOR_TYPE" #If you want to add more decorators
   #       parameter1: 0
-
   auto_claim:
     enabled: False
     tx_fee: 0
     min_amount: 0
     batch_size: 50
-
   auto_sign_txs: True
-
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections
   wallet_peer:
     host: localhost
     port: 9256
-
   database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
   # The location where the server files will be stored.
   server_files_location: "data_layer/db/server_files_location_CHALLENGE"
@@ -643,47 +562,36 @@ data_layer:
   # TODO: what considerations are there in choosing this?
   rpc_port: 8562
   rpc_server_max_request_body_size: 26214400
-
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/data_sql.log).
   log_sqlite_cmds: False
-
   # Speeds up autoinserts. Disable to perform inserts one by one instead of in a batch.
   enable_batch_autoinsert: True
-
   logging: *logging
-
   ssl:
     private_crt: "config/ssl/data_layer/private_data_layer.crt"
     private_key: "config/ssl/data_layer/private_data_layer.key"
     public_crt: "config/ssl/data_layer/public_data_layer.crt"
     public_key: "config/ssl/data_layer/public_data_layer.key"
-
   plugins:
     uploaders: []
     downloaders: []
   maximum_full_file_count: 1
   # Enable to store all .DAT files grouped by store id
   group_files_by_store: False
-
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True
-
   # The key used by the simulator to farm blocks and send transactions
   key_fingerprint:
-
   # The target address for any blocks that are farmed
   farming_address:
-
   # the directory used to save plots
   # for the plot directory below the final directory will be: ~/.chia/simulator/plots
   plot_directory: simulator/plots
-
   # Should we use real time in the simulated chain?
   # most tests don't need this, however it is pretty important when writing ChiaLisp
   use_current_time: True
-
   # Fork Settings
   HARD_FORK_HEIGHT: 0
   SOFT_FORK5_HEIGHT: 0
