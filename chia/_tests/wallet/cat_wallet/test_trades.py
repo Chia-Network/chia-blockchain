@@ -14,7 +14,7 @@ from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.rpc.wallet_request_types import VCMint
+from chia.rpc.wallet_request_types import VCMint, VCSpend
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -286,17 +286,23 @@ async def test_cat_trades(
         proofs_maker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
         proof_root_maker: bytes32 = proofs_maker.root()
         await client_maker.vc_spend(
-            vc_record_maker.vc.launcher_id,
+            VCSpend(
+                vc_id=vc_record_maker.vc.launcher_id,
+                new_proof_hash=proof_root_maker,
+                push=True,
+            ),
             wallet_environments.tx_config,
-            new_proof_hash=proof_root_maker,
         )
 
         proofs_taker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
         proof_root_taker: bytes32 = proofs_taker.root()
         await client_taker.vc_spend(
-            vc_record_taker.vc.launcher_id,
+            VCSpend(
+                vc_id=vc_record_taker.vc.launcher_id,
+                new_proof_hash=proof_root_taker,
+                push=True,
+            ),
             wallet_environments.tx_config,
-            new_proof_hash=proof_root_taker,
         )
         await wallet_environments.process_pending_states(
             [

@@ -58,6 +58,8 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactionsResponse,
     VCMint,
     VCMintResponse,
+    VCSpend,
+    VCSpendResponse,
 )
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -4598,12 +4600,13 @@ class WalletRpcApi:
         }
 
     @tx_endpoint(push=True)
+    @marshal
     async def vc_spend(
         self,
-        request: dict[str, Any],
+        request: VCSpend,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> VCSpendResponse:
         """
         Spend a verified credential
         :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional parameters for a 'new_puzhash'
@@ -4612,32 +4615,19 @@ class WalletRpcApi:
         :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCSpend(Streamable):
-            vc_id: bytes32
-            new_puzhash: Optional[bytes32] = None
-            new_proof_hash: Optional[bytes32] = None
-            provider_inner_puzhash: Optional[bytes32] = None
-            fee: uint64 = uint64(0)
-
-        parsed_request = VCSpend.from_json_dict(request)
-
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         await vc_wallet.generate_signed_transaction(
-            parsed_request.vc_id,
+            request.vc_id,
             action_scope,
-            parsed_request.fee,
-            parsed_request.new_puzhash,
-            new_proof_hash=parsed_request.new_proof_hash,
-            provider_inner_puzhash=parsed_request.provider_inner_puzhash,
+            request.fee,
+            request.new_puzhash,
+            new_proof_hash=request.new_proof_hash,
+            provider_inner_puzhash=request.provider_inner_puzhash,
             extra_conditions=extra_conditions,
         )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        return VCSpendResponse([], [])  # tx_endpoint takes care of filling this out
 
     async def vc_add_proofs(self, request: dict[str, Any]) -> EndpointResult:
         """

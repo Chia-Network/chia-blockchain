@@ -7,7 +7,7 @@ from chia_rs import Coin
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.rpc.wallet_request_types import VCMint, VCMintResponse, VCRevokeResponse, VCSpendResponse
+from chia.rpc.wallet_request_types import VCMint, VCMintResponse, VCRevokeResponse, VCSpend, VCSpendResponse
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
@@ -128,18 +128,22 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: tuple[TestRpcCl
     class VcsUpdateProofsRpcClient(TestWalletRpcClient):
         async def vc_spend(
             self,
-            vc_id: bytes32,
+            request: VCSpend,
             tx_config: TXConfig,
-            new_puzhash: Optional[bytes32] = None,
-            new_proof_hash: Optional[bytes32] = None,
-            provider_inner_puzhash: Optional[bytes32] = None,
-            fee: uint64 = uint64(0),
-            push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> VCSpendResponse:
             self.add_to_log(
                 "vc_spend",
-                (vc_id, tx_config, new_puzhash, new_proof_hash, provider_inner_puzhash, fee, push, timelock_info),
+                (
+                    request.vc_id,
+                    tx_config,
+                    request.new_puzhash,
+                    request.new_proof_hash,
+                    request.provider_inner_puzhash,
+                    request.fee,
+                    request.push,
+                    timelock_info,
+                ),
             )
             return VCSpendResponse([STD_UTX], [STD_TX])
 

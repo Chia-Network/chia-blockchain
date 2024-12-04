@@ -10,7 +10,7 @@ from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.rpc.wallet_request_types import VCMint
+from chia.rpc.wallet_request_types import VCMint, VCSpend
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
@@ -226,10 +226,13 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     proofs: VCProofs = VCProofs({"foo": "1", "bar": "1", "baz": "1", "qux": "1", "grault": "1"})
     proof_root: bytes32 = proofs.root()
     await client_0.vc_spend(
-        vc_record.vc.launcher_id,
+        VCSpend(
+            vc_id=vc_record.vc.launcher_id,
+            new_proof_hash=proof_root,
+            fee=uint64(100),
+            push=True,
+        ),
         wallet_environments.tx_config,
-        new_proof_hash=proof_root,
-        fee=uint64(100),
     )
     await wallet_environments.process_pending_states(
         [
@@ -277,7 +280,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
-    await client_0.vc_spend(vc_record.vc.launcher_id, wallet_environments.tx_config)
+    await client_0.vc_spend(VCSpend(vc_id=vc_record.vc.launcher_id, push=True), wallet_environments.tx_config)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -441,7 +444,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Send the VC to wallet_1 to use for the CR-CATs
     await client_0.vc_spend(
-        vc_record.vc.launcher_id, wallet_environments.tx_config, new_puzhash=await wallet_1.get_new_puzzlehash()
+        VCSpend(vc_id=vc_record.vc.launcher_id, new_puzhash=await wallet_1.get_new_puzzlehash(), push=True),
+        wallet_environments.tx_config,
     )
     await wallet_environments.process_pending_states(
         [

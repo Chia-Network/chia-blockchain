@@ -21,7 +21,7 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse, VCMint
+from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse, VCMint, VCSpend
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -1645,14 +1645,16 @@ async def spend_vc(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         txs = (
             await wallet_client.vc_spend(
-                vc_id,
-                new_puzhash=new_puzhash,
-                new_proof_hash=bytes32.from_hexstr(new_proof_hash),
-                fee=fee,
+                VCSpend(
+                    vc_id=vc_id,
+                    new_puzhash=new_puzhash,
+                    new_proof_hash=bytes32.from_hexstr(new_proof_hash),
+                    fee=fee,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
         ).transactions

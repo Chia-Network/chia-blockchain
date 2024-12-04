@@ -88,6 +88,7 @@ from chia.rpc.wallet_request_types import (
     VCMint,
     VCMintResponse,
     VCRevokeResponse,
+    VCSpend,
     VCSpendResponse,
     VerifySignature,
     VerifySignatureResponse,
@@ -1683,33 +1684,16 @@ class WalletRpcClient(RpcClient):
 
     async def vc_spend(
         self,
-        vc_id: bytes32,
+        request: VCSpend,
         tx_config: TXConfig,
-        new_puzhash: Optional[bytes32] = None,
-        new_proof_hash: Optional[bytes32] = None,
-        provider_inner_puzhash: Optional[bytes32] = None,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> VCSpendResponse:
-        response = await self.fetch(
-            "vc_spend",
-            {
-                "vc_id": vc_id.hex(),
-                "new_puzhash": new_puzhash.hex() if new_puzhash is not None else new_puzhash,
-                "new_proof_hash": new_proof_hash.hex() if new_proof_hash is not None else new_proof_hash,
-                "provider_inner_puzhash": (
-                    provider_inner_puzhash.hex() if provider_inner_puzhash is not None else provider_inner_puzhash
-                ),
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return VCSpendResponse.from_json_dict(
+            await self.fetch(
+                "vc_spend", {**request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)}
+            )
         )
-        return json_deserialize_with_clvm_streamable(response, VCSpendResponse)
 
     async def vc_add_proofs(self, proofs: dict[str, Any]) -> None:
         await self.fetch("vc_add_proofs", {"proofs": proofs})

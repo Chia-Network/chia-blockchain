@@ -566,6 +566,21 @@ class VCMintResponse(TransactionEndpointResponse):
     vc_record: VCRecord
 
 
+@streamable
+@dataclass(frozen=True)
+class VCSpend(TransactionEndpointRequest):
+    vc_id: bytes32 = field(default_factory=default_raise)
+    new_puzhash: Optional[bytes32] = None
+    new_proof_hash: Optional[bytes32] = None
+    provider_inner_puzhash: Optional[bytes32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VCSpendResponse(TransactionEndpointResponse):
+    pass
+
+
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
 @streamable
@@ -760,12 +775,6 @@ class DAOSendToLockupResponse(TransactionEndpointResponse):
 class DAOExitLockupResponse(TransactionEndpointResponse):
     tx_id: bytes32
     tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class VCSpendResponse(TransactionEndpointResponse):
-    pass
 
 
 @streamable
