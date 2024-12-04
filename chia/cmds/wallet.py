@@ -39,7 +39,10 @@ def wallet_cmd(ctx: click.Context) -> None:
 #  member of and later attachment to a group using standard click mechanisms.
 
 
-import chia.cmds.signer  # noqa: E402, F401
+import chia.cmds.signer  # noqa: E402
+
+# TODO: ignoring as i'm guessing this is tied to the import loop
+wallet_cmd.add_command(chia.cmds.signer.signer_cmd)  # type: ignore[has-type]
 
 
 @wallet_cmd.command("get_transaction", help="Get a transaction")
