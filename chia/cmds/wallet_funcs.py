@@ -26,6 +26,7 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     SendTransactionResponse,
     VCGet,
+    VCGetList,
     VCMint,
     VCRevoke,
     VCSpend,
@@ -1617,14 +1618,14 @@ async def mint_vc(
 
 async def get_vcs(wallet_rpc_port: Optional[int], fp: Optional[int], start: int, count: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, config):
-        vc_records, proofs = await wallet_client.vc_get_list(start, count)
+        get_list_response = await wallet_client.vc_get_list(VCGetList(uint32(start), uint32(count)))
         print("Proofs:")
-        for hash, proof_dict in proofs.items():
+        for hash, proof_dict in get_list_response.proof_dict.items():
             if proof_dict is not None:
                 print(f"- {hash}")
                 for proof in proof_dict:
                     print(f"  - {proof}")
-        for record in vc_records:
+        for record in get_list_response.vc_records:
             print("")
             print(f"Launcher ID: {record.vc.launcher_id.hex()}")
             print(f"Coin ID: {record.vc.coin.name().hex()}")

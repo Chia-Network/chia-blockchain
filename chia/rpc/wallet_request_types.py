@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, final
 
 from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform
@@ -25,7 +25,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.tx_config import TXConfig
-from chia.wallet.vc_wallet.vc_store import VCRecord
+from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
@@ -385,6 +385,78 @@ class VCGet(Streamable):
 @dataclass(frozen=True)
 class VCGetResponse(Streamable):
     vc_record: Optional[VCRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetList(Streamable):
+    start: uint32 = uint32(0)
+    end: uint32 = uint32(50)
+
+
+# utility for VCGetListResponse
+@final
+@streamable
+@dataclass(frozen=True)
+class VCProofsRPC(Streamable):
+    key_value_pairs: list[tuple[str, str]]
+
+    @classmethod
+    def from_vc_proofs(cls, vc_proofs: VCProofs) -> VCProofsRPC:
+        return cls([(key, value) for key, value in vc_proofs.key_value_pairs.items()])
+
+
+# utility for VCGetListResponse
+@streamable
+@dataclass(frozen=True)
+class VCProofWithHash(Streamable):
+    hash: bytes32
+    proof: Optional[VCProofsRPC]
+
+
+# utility for VCGetListResponse
+@final
+@streamable
+@dataclass(frozen=True)
+class VCRecordWithCoinID(VCRecord):
+    coin_id: bytes32
+
+    @classmethod
+    def from_vc_record(cls, vc_record: VCRecord) -> VCRecordWithCoinID:
+        return cls(coin_id=vc_record.vc.coin.name(), **vc_record.__dict__)
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetListResponse(Streamable):
+    vc_records: list[VCRecordWithCoinID]
+    proofs: list[VCProofWithHash]
+
+    @property
+    def proof_dict(self) -> dict[bytes32, Optional[dict[str, str]]]:
+        return {
+            pwh.hash: None if pwh.proof is None else {key: value for key, value in pwh.proof.key_value_pairs}
+            for pwh in self.proofs
+        }
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "vc_records": [vc_record.to_json_dict() for vc_record in self.vc_records],
+            "proofs": {proof_hash.hex(): proof_data for proof_hash, proof_data in self.proof_dict.items()},
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> VCGetListResponse:
+        return cls(
+            [VCRecordWithCoinID.from_json_dict(vc_record) for vc_record in json_dict["vc_records"]],
+            [
+                VCProofWithHash(
+                    bytes32.from_hexstr(proof_hash),
+                    None if potential_proofs is None else VCProofsRPC.from_vc_proofs(VCProofs(potential_proofs)),
+                )
+                for proof_hash, potential_proofs in json_dict["proofs"].items()
+            ],
+        )
 
 
 @streamable

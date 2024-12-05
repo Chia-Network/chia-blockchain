@@ -86,6 +86,8 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactionsResponse,
     TakeOfferResponse,
     VCGet,
+    VCGetList,
+    VCGetListResponse,
     VCGetResponse,
     VCMint,
     VCMintResponse,
@@ -111,7 +113,6 @@ from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamab
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 
 
@@ -1680,9 +1681,8 @@ class WalletRpcClient(RpcClient):
     async def vc_get(self, request: VCGet) -> VCGetResponse:
         return VCGetResponse.from_json_dict(await self.fetch("vc_get", {**request.to_json_dict()}))
 
-    async def vc_get_list(self, start: int = 0, count: int = 50) -> tuple[list[VCRecord], dict[str, Any]]:
-        response = await self.fetch("vc_get_list", {"start": start, "count": count})
-        return [VCRecord.from_json_dict(rec) for rec in response["vc_records"]], response["proofs"]
+    async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
+        return VCGetListResponse.from_json_dict(await self.fetch("vc_get_list", {**request.to_json_dict()}))
 
     async def vc_spend(
         self,

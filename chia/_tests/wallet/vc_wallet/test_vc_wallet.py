@@ -10,7 +10,7 @@ from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.rpc.wallet_request_types import VCGet, VCMint, VCRevoke, VCSpend
+from chia.rpc.wallet_request_types import VCGet, VCGetList, VCMint, VCRevoke, VCSpend
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
@@ -303,9 +303,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     await client_0.vc_add_proofs(proofs.key_value_pairs)
     await client_0.vc_add_proofs(proofs.key_value_pairs)  # Doing it again just to make sure it doesn't care
     assert await client_0.vc_get_proofs_for_root(proof_root) == proofs.key_value_pairs
-    vc_records, fetched_proofs = await client_0.vc_get_list()
-    assert len(vc_records) == 1
-    assert fetched_proofs[proof_root.hex()] == proofs.key_value_pairs
+    get_list_reponse = await client_0.vc_get_list(VCGetList())
+    assert len(get_list_reponse.vc_records) == 1
+    assert get_list_reponse.proof_dict[proof_root] == proofs.key_value_pairs
 
     # Mint CR-CAT
     await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])

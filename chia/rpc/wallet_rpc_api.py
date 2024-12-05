@@ -57,9 +57,14 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     VCGet,
+    VCGetList,
+    VCGetListResponse,
     VCGetResponse,
     VCMint,
     VCMintResponse,
+    VCProofsRPC,
+    VCProofWithHash,
+    VCRecordWithCoinID,
     VCRevoke,
     VCRevokeResponse,
     VCSpend,
@@ -4566,35 +4571,28 @@ class WalletRpcApi:
         vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(request.vc_id)
         return VCGetResponse(vc_record)
 
-    async def vc_get_list(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
         """
         Get a list of verified credentials
         :param request: optional parameters for pagination 'start' and 'count'
         :return: all 'vc_records' in the specified range and any 'proofs' associated with the roots contained within
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCGetList(Streamable):
-            start: uint32 = uint32(0)
-            end: uint32 = uint32(50)
-
-        parsed_request = VCGetList.from_json_dict(request)
-
-        vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(
-            parsed_request.start, parsed_request.end
-        )
-        return {
-            "vc_records": [{"coin_id": "0x" + vc.vc.coin.name().hex(), **vc.to_json_dict()} for vc in vc_list],
-            "proofs": {
-                rec.vc.proof_hash.hex(): None if fetched_proof is None else fetched_proof.key_value_pairs
+        vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(request.start, request.end)
+        return VCGetListResponse(
+            [VCRecordWithCoinID.from_vc_record(vc) for vc in vc_list],
+            [
+                VCProofWithHash(
+                    rec.vc.proof_hash, None if fetched_proof is None else VCProofsRPC.from_vc_proofs(fetched_proof)
+                )
                 for rec in vc_list
                 if rec.vc.proof_hash is not None
                 for fetched_proof in (
                     await self.service.wallet_state_manager.vc_store.get_proofs_for_root(rec.vc.proof_hash),
                 )
-            },
-        }
+            ],
+        )
 
     @tx_endpoint(push=True)
     @marshal

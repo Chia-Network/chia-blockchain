@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from chia_rs import Coin
 
@@ -9,9 +9,14 @@ from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient,
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.rpc.wallet_request_types import (
     VCGet,
+    VCGetList,
+    VCGetListResponse,
     VCGetResponse,
     VCMint,
     VCMintResponse,
+    VCProofsRPC,
+    VCProofWithHash,
+    VCRecordWithCoinID,
     VCRevoke,
     VCRevokeResponse,
     VCSpend,
@@ -99,22 +104,25 @@ def test_vcs_get(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pat
 
     # set RPC Client
     class VcsGetRpcClient(TestWalletRpcClient):
-        async def vc_get_list(self, start: int = 0, count: int = 50) -> tuple[list[VCRecord], dict[str, Any]]:
-            class FakeVC:
-                def __init__(self) -> None:
-                    self.launcher_id = get_bytes32(3)
-                    self.coin = Coin(get_bytes32(1), get_bytes32(2), uint64(12345678))
-                    self.inner_puzzle_hash = get_bytes32(3)
-                    self.proof_hash = get_bytes32(4)
-
-                def __getattr__(self, item: str) -> Any:
-                    if item == "vc":
-                        return self
-
-            self.add_to_log("vc_get_list", (start, count))
-            proofs = {get_bytes32(1).hex(): ["proof here"]}
-            records = [cast(VCRecord, FakeVC())]
-            return records, proofs
+        async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
+            self.add_to_log("vc_get_list", (request.start, request.end))
+            proofs = [VCProofWithHash(get_bytes32(1), VCProofsRPC([("proof here", "")]))]
+            records = [
+                VCRecordWithCoinID(
+                    VerifiedCredential(
+                        STD_TX.removals[0],
+                        LineageProof(None, None, None),
+                        VCLineageProof(None, None, None, None),
+                        bytes32([3] * 32),
+                        bytes32.zeros,
+                        bytes32([1] * 32),
+                        None,
+                    ),
+                    uint32(0),
+                    bytes32.zeros,
+                )
+            ]
+            return VCGetListResponse(records, proofs)
 
     inst_rpc_client = VcsGetRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -123,7 +131,7 @@ def test_vcs_get(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pat
     assert_list = [
         f"Proofs:\n- {get_bytes32(1).hex()}\n  - proof here",
         f"Launcher ID: {get_bytes32(3).hex()}",
-        f"Inner Address: {encode_puzzle_hash(get_bytes32(3), 'xch')}",
+        f"Inner Address: {encode_puzzle_hash(bytes32.zeros, 'xch')}",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {"vc_get_list": [(10, 10)]}
