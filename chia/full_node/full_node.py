@@ -1838,9 +1838,10 @@ class FullNode:
                 return await self.add_block(new_block, peer, bls_cache)
         state_change_summary: Optional[StateChangeSummary] = None
         ppp_result: Optional[PeakPostProcessingResult] = None
-        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high), enable_profiler(
-            self.profile_block_validation
-        ) as pr:
+        async with (
+            self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
+            enable_profiler(self.profile_block_validation) as pr,
+        ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 return None
