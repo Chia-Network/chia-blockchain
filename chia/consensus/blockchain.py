@@ -466,8 +466,8 @@ class Blockchain:
         try:
             # Always add the block to the database
             async with self.block_store.db_wrapper.writer() as conn:
-                frame = inspect.currentframe().f_back
-                log.info(f"BEGIN WJB task {asyncio.current_task().get_name()} add_block writer {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
+                # frame = inspect.currentframe().f_back
+                # log.info(f"BEGIN WJB task {asyncio.current_task().get_name()} add_block writer {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
@@ -475,7 +475,7 @@ class Blockchain:
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
                 # This is done after all async/DB operations, so there is a decreased chance of failure.
                 self.add_block_record(block_record)
-                log.info(f"END WJB task {asyncio.current_task().get_name()} add_block writer {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
+                # log.info(f"END WJB task {asyncio.current_task().get_name()} add_block writer {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
 
             # there's a suspension point here, as we leave the async context
             # manager

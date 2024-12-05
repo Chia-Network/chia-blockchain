@@ -155,10 +155,10 @@ class CoinStore:
         coins: List[CoinRecord] = []
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            frame = inspect.currentframe().f_back
-            log.info(
-                f"BEGIN WJB task {asyncio.current_task().get_name()}  get_coin_records reader_no_transaction {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
-            )
+            # frame = inspect.currentframe().f_back
+            # log.info(
+            #     f"BEGIN WJB task {asyncio.current_task().get_name()}  get_coin_records reader_no_transaction {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+            # )
             cursors: List[Cursor] = []
             for batch in to_batches(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: Tuple[Any, ...] = tuple(batch.entries)
@@ -176,9 +176,9 @@ class CoinStore:
                     coin = self.row_to_coin(row)
                     record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                     coins.append(record)
-            log.info(
-                f"END WJB task {asyncio.current_task().get_name()} get_coin_records reader_no_transaction {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
-            )
+            # log.info(
+            #     f"END WJB task {asyncio.current_task().get_name()} get_coin_records reader_no_transaction {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+            # )
 
         return coins
 
@@ -587,17 +587,17 @@ class CoinStore:
             )
         if len(values2) > 0:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
-                frame = inspect.currentframe().f_back
-                log.info(
-                    f"BEGIN WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
-                )
+                # frame = inspect.currentframe().f_back
+                # log.info(
+                #     f"BEGIN WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+                # )
                 await conn.executemany(
                     "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                     values2,
                 )
-                log.info(
-                    f"END WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
-                )
+                # log.info(
+                #     f"END WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+                # )
 
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_names: List[bytes32], index: uint32) -> None:

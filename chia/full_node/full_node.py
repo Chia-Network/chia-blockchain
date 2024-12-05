@@ -611,15 +611,15 @@ class FullNode:
                     # add_block_batch should only be called under priority_mutex so this will not stall other
                     # writes to the DB.
                     async with self.block_store.db_wrapper.writer() as conn:
-                        self.log.info(
-                            f"BEGIN WJB task {asyncio.current_task().get_name()} short sync add_block_batch writer {conn}"
-                        )
+                        # self.log.info(
+                        #     f"BEGIN WJB task {asyncio.current_task().get_name()} short sync add_block_batch writer {conn}"
+                        # )
                         success, state_change_summary, ssi, diff, _, _ = await self.add_block_batch(
                             response.blocks, peer_info, None, ssi, diff
                         )
-                        self.log.info(
-                            f"END WJB task {asyncio.current_task().get_name()} short sync add_block_batch writer {conn}"
-                        )
+                        # self.log.info(
+                        #     f"END WJB task {asyncio.current_task().get_name()} short sync add_block_batch writer {conn}"
+                        # )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1186,9 +1186,9 @@ class FullNode:
                 # add_block_batch should only be called under priority_mutex so this will not stall other
                 # writes to the DB.
                 async with self.block_store.db_wrapper.writer() as conn:
-                    self.log.info(
-                        f"BEGIN WJB task {asyncio.current_task().get_name()} validate_block_batches add_block_batch writer {conn}"
-                    )
+                    # self.log.info(
+                    #     f"BEGIN WJB task {asyncio.current_task().get_name()} validate_block_batches add_block_batch writer {conn}"
+                    # )
                     success, state_change_summary, ssi, diff, prev_ses_block, err = await self.add_block_batch(
                         blocks,
                         peer.get_peer_logging(),
@@ -1198,9 +1198,9 @@ class FullNode:
                         prev_ses_block,
                         summaries,
                     )
-                    self.log.info(
-                        f"END WJB task {asyncio.current_task().get_name()} validate_block_batches add_block_batch writer {conn}"
-                    )
+                    # self.log.info(
+                    #     f"END WJB task {asyncio.current_task().get_name()} validate_block_batches add_block_batch writer {conn}"
+                    # )
                 if success is False:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
