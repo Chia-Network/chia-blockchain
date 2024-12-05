@@ -366,7 +366,7 @@ async def test_concurrent_readers(
         # WJB
         for index in range(10000):
             async with db_wrapper.writer() as connection:
-                await connection.execute("UPDATE counter SET value = ?", index)
+                await connection.execute(f"UPDATE counter SET value = {index}")
             async with db_wrapper.reader_no_transaction() as connection:
                 async with connection.execute("SELECT value FROM counter") as cursor:
                     row = await cursor.fetchone()
