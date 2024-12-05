@@ -89,14 +89,12 @@ class CombineCMD(TransactionEndpoint):
     )
     input_coins: Sequence[bytes32] = option(
         "--input-coin",
-        "input_coins",
         multiple=True,
         help="Only combine coins with these ids.",
         type=Bytes32ParamType(),
     )
     largest_first: bool = option(
         "--largest-first/--smallest-first",
-        "largest_first",
         default=False,
         help="Sort coins from largest to smallest or smallest to largest.",
     )

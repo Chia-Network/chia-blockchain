@@ -368,14 +368,12 @@ class NeedsCoinSelectionConfig:
     )
     coins_to_exclude: Sequence[bytes32] = option(
         "--exclude-coin",
-        "coins_to_exclude",
         multiple=True,
         type=Bytes32ParamType(),
         help="Exclude this coin from being spent.",
     )
     amounts_to_exclude: Sequence[CliAmount] = option(
         "--exclude-amount",
-        "amounts_to_exclude",
         multiple=True,
         type=AmountParamType(),
         help="Exclude any coins with this XCH or CAT amount from being included.",
