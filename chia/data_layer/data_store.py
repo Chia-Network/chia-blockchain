@@ -495,8 +495,8 @@ class DataStore:
 
             async with self.db_wrapper.reader() as reader:
                 async with reader.execute(query, (store_id, *chunk)) as cursor:
-		    rows = await cursor.fetchall()
-		    result.update(row["hash"] for row in rows)
+                    rows = await cursor.fetchall()
+                    result.update(row["hash"] for row in rows)
 
         return result
 
