@@ -1,0 +1,30 @@
+; This is a "limitations_program" for use with cat.clsp.
+; It allows a singleton to both mint and melt this CAT.
+(mod (
+    SINGLETON_MOD_HASH
+    SINGLETON_STRUCT_HASH
+    NONCE
+    Truths
+    parent_is_cat
+    lineage_proof
+    delta
+    inner_conditions
+    (  ; solution
+      singleton_inner_puzzle_hash
+    )
+  )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH inner_puzzle_hash)
+    (curry_hashes_inline SINGLETON_MOD_HASH
+      SINGLETON_STRUCT_HASH
+      inner_puzzle_hash
+    )
+  )
+
+  (list
+    (list RECEIVE_MESSAGE 23 delta (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH singleton_inner_puzzle_hash))
+  )
+)
