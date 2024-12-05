@@ -559,6 +559,17 @@ async def test_plotnft_cli_join(
     # Create a farming plotnft to url http://pool.example.com
     wallet_id = await create_new_plotnft(wallet_environments)
 
+    # Test joining the same pool again
+    with pytest.raises(CliRpcConnectionError, match="already farming to pool http://pool.example.com"):
+        await JoinPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                client_info=client_info,
+            ),
+            id=wallet_id,
+            pool_url="http://pool.example.com",
+            dont_prompt=not prompt,
+        ).run()
+
     # HTTPS check on mainnet
     with pytest.raises(CliRpcConnectionError, match="must be HTTPS on mainnet"):
         config_override = wallet_state_manager.config.copy()
@@ -695,18 +706,6 @@ async def test_plotnft_cli_join(
         count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
     )
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
-
-    # Join the same pool test - code not ready yet for test
-    # Needs PR #18822
-    # with pytest.raises(CliRpcConnectionError, match="already joined"):
-    #     await JoinPlotNFTCMD(
-    #         rpc_info=NeedsWalletRPC(
-    #             client_info=client_info,
-    #         ),
-    #         id=wallet_id,
-    #         pool_url="http://127.0.0.1",
-    #         dont_prompt=not prompt,
-    #     ).run()
 
 
 @pytest.mark.parametrize(

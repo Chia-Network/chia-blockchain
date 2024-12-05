@@ -316,8 +316,7 @@ async def join_pool(
         pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
         and pool_wallet_info.current.pool_url == pool_url
     ):
-        print(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
-        return
+        raise CliRpcConnectionError(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
 
     enforce_https = wallet_info.config["selected_network"] == "mainnet"
 

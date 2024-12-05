@@ -1057,7 +1057,6 @@ class TestPoolWalletRpc:
             return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
         await time_out_assert(45, status_is_farming_to_pool, True, wallet_id)
-        # primary_fingerprint = await client.get_logged_in_fingerprint()
 
         # Test joining the same pool via the RPC client
         with pytest.raises(ValueError, match="Already farming to pool"):
