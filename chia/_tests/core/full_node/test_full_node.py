@@ -6,8 +6,8 @@ import dataclasses
 import logging
 import random
 import time
-from collections.abc import Coroutine
-from typing import Awaitable, Optional
+from collections.abc import Awaitable, Coroutine
+from typing import Optional
 
 import pytest
 from chia_rs import (
@@ -59,6 +59,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program
@@ -2299,16 +2300,6 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
         prev_hash = block.header_hash
         rewards = block.get_included_reward_coins()
         records = {rec.coin.name(): rec for rec in await coin_store.get_coins_added_at_height(block.height)}
-        if block.transactions_generator is None:
-            if len(records) > 0:  # pragma: no cover
-                print(f"height: {block.height} rewards: {rewards} TX: No")
-                print_coin_records(records)
-            assert records == {}
-            continue
-
-        if len(block.transactions_generator_ref_list) > 0:  # pragma: no cover
-            # TODO: Support block references
-            assert False
 
         # validate reward coins
         for reward in rewards:
@@ -2318,8 +2309,20 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
             assert rec.coin == reward
             assert rec.coinbase
 
+        if block.transactions_generator is None:
+            if len(records) > 0:  # pragma: no cover
+                print(f"height: {block.height} unexpected coins in the DB: {records} TX: No")
+                print_coin_records(records)
+            assert records == {}
+            continue
+
+        if len(block.transactions_generator_ref_list) > 0:  # pragma: no cover
+            # TODO: Support block references
+            assert False
+
         flags = get_flags_for_height_and_constants(block.height, test_constants)
         additions, removals = additions_and_removals(bytes(block.transactions_generator), [], flags, test_constants)
+
         for add, hint in additions:
             rec = records.pop(add.name())
             assert rec is not None
@@ -2328,7 +2331,7 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
             assert not rec.coinbase
 
         if len(records) > 0:  # pragma: no cover
-            print(f"height: {block.height} rewards: {rewards} TX: Yes")
+            print(f"height: {block.height} unexpected coins in the DB: {records} TX: Yes")
             print_coin_records(records)
         assert records == {}
 
@@ -2340,7 +2343,7 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
             assert rec.coin == rem
 
         if len(records) > 0:  # pragma: no cover
-            print(f"height: {block.height} rewards: {rewards} TX: Yes")
+            print(f"height: {block.height} unexpected removals: {records} TX: Yes")
             print_coin_records(records)
         assert records == {}
 
@@ -2529,6 +2532,126 @@ async def test_long_reorg_nodes(
     await validate_coin_set(full_node_1.full_node._coin_store, blocks)
     await validate_coin_set(full_node_2.full_node._coin_store, blocks)
     await validate_coin_set(full_node_3.full_node._coin_store, blocks)
+
+
+@pytest.mark.anyio
+async def test_shallow_reorg_nodes(
+    three_nodes,
+    self_hostname: str,
+    bt: BlockTools,
+):
+    full_node_1, full_node_2, _ = three_nodes
+
+    # node 1 has chan A, then we replace the top block and ensure
+    # node 2 follows along correctly
+
+    await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
+
+    wallet_a = WalletTool(bt.constants)
+    WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(2)]
+    coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+    chain = bt.get_consecutive_blocks(
+        10,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+    await add_blocks_in_batches(chain, full_node_1.full_node)
+
+    all_coins = []
+    for spend_block in chain:
+        for coin in spend_block.get_included_reward_coins():
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+
+    def check_nodes_in_sync():
+        p1 = full_node_2.full_node.blockchain.get_peak()
+        p2 = full_node_1.full_node.blockchain.get_peak()
+        return p1 == p2
+
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain)
+
+    # we spend a coin in the next block
+    spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
+
+    # make a non transaction block with fewer iterations than a, which should
+    # replace it
+    chain_b = bt.get_consecutive_blocks(
+        1,
+        chain,
+        guarantee_transaction_block=False,
+        seed=b"{seed}",
+    )
+
+    chain_a = bt.get_consecutive_blocks(
+        1,
+        chain,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+        min_signage_point=chain_b[-1].reward_chain_block.signage_point_index,
+    )
+
+    print(f"chain A: {chain_a[-1].header_hash.hex()}")
+    print(f"chain B: {chain_b[-1].header_hash.hex()}")
+
+    assert chain_b[-1].total_iters < chain_a[-1].total_iters
+
+    await add_blocks_in_batches(chain_a[-1:], full_node_1.full_node, chain[-1].header_hash)
+
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_a)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_a)
+
+    await add_blocks_in_batches(chain_b[-1:], full_node_1.full_node, chain[-1].header_hash)
+
+    # make sure node 1 reorged onto chain B
+    assert full_node_1.full_node.blockchain.get_peak().header_hash == chain_b[-1].header_hash
+
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_b)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_b)
+
+    # now continue building the chain on top of B
+    # since spend_bundle was supposed to have been reorged-out, we should be
+    # able to include it in another block, howerver, since we replaced a TX
+    # block with a non-TX block, it won't be available immediately at height 11
+
+    # add a TX block, this will make spend_bundle valid in the next block
+    chain = bt.get_consecutive_blocks(
+        1,
+        chain,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+    for coin in chain[-1].get_included_reward_coins():
+        if coin.puzzle_hash == coinbase_puzzlehash:
+            all_coins.append(coin)
+
+    for i in range(3):
+        chain = bt.get_consecutive_blocks(
+            1,
+            chain,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+            transaction_data=spend_bundle,
+            guarantee_transaction_block=True,
+        )
+        for coin in chain[-1].get_included_reward_coins():
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
+
+    await add_blocks_in_batches(chain[-4:], full_node_1.full_node, chain[-5].header_hash)
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain)
 
 
 @pytest.mark.anyio

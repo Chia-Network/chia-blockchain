@@ -926,22 +926,6 @@ class WalletStateManager:
                             clawback_coins[coin.coin] = metadata
                             if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
                                 await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
-                                async with action_scope.use() as interface:
-                                    # TODO: editing this is not ideal, action scopes should know what coins are spent
-                                    action_scope._config = dataclasses.replace(
-                                        action_scope._config,
-                                        tx_config=dataclasses.replace(
-                                            action_scope._config.tx_config,
-                                            excluded_coin_ids=[
-                                                *action_scope.config.tx_config.excluded_coin_ids,
-                                                *(
-                                                    c.name()
-                                                    for tx in interface.side_effects.transactions
-                                                    for c in tx.removals
-                                                ),
-                                            ],
-                                        ),
-                                    )
                                 clawback_coins = {}
                 except Exception as e:
                     self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)

@@ -704,10 +704,13 @@ class FullNode:
                     break
                 curr_height -= 1
             if found_fork_point:
+                first_block = blocks[-1]  # blocks are reveresd this is the lowest block to add
+                # we create the fork_info and pass it here so it would be updated on each call to add_block
+                fork_info = ForkInfo(first_block.height - 1, first_block.height - 1, first_block.prev_header_hash)
                 for block in reversed(blocks):
                     # when syncing, we won't share any signatures with the
                     # mempool, so there's no need to pass in the BLS cache.
-                    await self.add_block(block, peer)
+                    await self.add_block(block, peer, fork_info=fork_info)
         except (asyncio.CancelledError, Exception):
             self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
             raise
@@ -1993,6 +1996,7 @@ class FullNode:
         peer: Optional[WSChiaConnection] = None,
         bls_cache: Optional[BLSCache] = None,
         raise_on_disconnected: bool = False,
+        fork_info: Optional[ForkInfo] = None,
     ) -> Optional[Message]:
         """
         Add a full block from a peer full node (or ourselves).
@@ -2119,7 +2123,8 @@ class FullNode:
                             f"{block.height}: {Err(pre_validation_result.error).name}"
                         )
                 else:
-                    fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+                    if fork_info is None:
+                        fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
                         block, pre_validation_result, ssi, fork_info
                     )

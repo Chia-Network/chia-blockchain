@@ -1032,7 +1032,7 @@ async def test_dao_proposal_partial_vote(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
     # Create a mint proposal
-    recipient_puzzle_hash = await cat_wallet_1.get_new_inner_hash()
+    recipient_puzzle_hash = await cat_wallet_1.standard_wallet.get_puzzle_hash(new=False)
     new_mint_amount = uint64(500)
     mint_proposal_inner = await generate_mint_proposal_innerpuz(
         treasury_id,
@@ -1104,7 +1104,7 @@ async def test_dao_proposal_partial_vote(
     await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
     # Can we spend the newly minted CATs?
     old_balance = await cat_wallet_0.get_spendable_balance()
-    ph_0 = await cat_wallet_0.get_new_inner_hash()
+    ph_0 = await cat_wallet_0.standard_wallet.get_puzzle_hash(new=False)
     async with cat_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await cat_wallet_1.generate_signed_transaction([balance + new_mint_amount], [ph_0], action_scope)
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
