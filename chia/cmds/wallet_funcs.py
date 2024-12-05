@@ -25,6 +25,7 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
     SendTransactionResponse,
+    VCAddProofs,
     VCGet,
     VCGetList,
     VCMint,
@@ -1696,7 +1697,7 @@ async def add_proof_reveal(
             print(f"Proof Hash: {VCProofs(proof_dict).root()}")
             return
         else:
-            await wallet_client.vc_add_proofs(proof_dict)
+            await wallet_client.vc_add_proofs(VCAddProofs.from_json_dict({"proofs": proof_dict}))
             print("Proofs added to DB successfully!")
             return
 

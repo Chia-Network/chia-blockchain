@@ -394,16 +394,21 @@ class VCGetList(Streamable):
     end: uint32 = uint32(50)
 
 
-# utility for VCGetListResponse
-@final
+# utility for VC endpoints
 @streamable
 @dataclass(frozen=True)
 class VCProofsRPC(Streamable):
     key_value_pairs: list[tuple[str, str]]
 
+    def to_vc_proofs(self) -> VCProofs:
+        return VCProofs({key: value for key, value in self.key_value_pairs})
+
     @classmethod
-    def from_vc_proofs(cls, vc_proofs: VCProofs) -> VCProofsRPC:
+    def from_vc_proofs(cls: type[_T_VCProofsRPC], vc_proofs: VCProofs) -> _T_VCProofsRPC:
         return cls([(key, value) for key, value in vc_proofs.key_value_pairs.items()])
+
+
+_T_VCProofsRPC = TypeVar("_T_VCProofsRPC", bound=VCProofsRPC)
 
 
 # utility for VCGetListResponse
@@ -457,6 +462,18 @@ class VCGetListResponse(Streamable):
                 for proof_hash, potential_proofs in json_dict["proofs"].items()
             ],
         )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class VCAddProofs(VCProofsRPC):
+    def to_json_dict(self) -> dict[str, Any]:
+        return {"proofs": self.to_vc_proofs().key_value_pairs}
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> VCAddProofs:
+        return cls([(key, value) for key, value in json_dict["proofs"].items()])
 
 
 @streamable

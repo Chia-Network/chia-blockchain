@@ -56,6 +56,7 @@ from chia.rpc.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    VCAddProofs,
     VCGet,
     VCGetList,
     VCGetListResponse,
@@ -4624,7 +4625,8 @@ class WalletRpcApi:
 
         return VCSpendResponse([], [])  # tx_endpoint takes care of filling this out
 
-    async def vc_add_proofs(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_add_proofs(self, request: VCAddProofs) -> Empty:
         """
         Add a set of proofs to the DB that can be used when spending a VC. VCs are near useless until their proofs have
         been added.
@@ -4633,9 +4635,9 @@ class WalletRpcApi:
         """
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
-        await vc_wallet.store.add_vc_proofs(VCProofs(request["proofs"]))
+        await vc_wallet.store.add_vc_proofs(request.to_vc_proofs())
 
-        return {}
+        return Empty()
 
     async def vc_get_proofs_for_root(self, request: dict[str, Any]) -> EndpointResult:
         """

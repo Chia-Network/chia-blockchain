@@ -8,6 +8,7 @@ from chia_rs import Coin
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.rpc.wallet_request_types import (
+    VCAddProofs,
     VCGet,
     VCGetList,
     VCGetListResponse,
@@ -212,8 +213,8 @@ def test_vcs_add_proof_reveal(capsys: object, get_test_cli_clients: tuple[TestRp
 
     # set RPC Client
     class VcsAddProofRevealRpcClient(TestWalletRpcClient):
-        async def vc_add_proofs(self, proofs: dict[str, Any]) -> None:
-            self.add_to_log("vc_add_proofs", (proofs,))
+        async def vc_add_proofs(self, request: VCAddProofs) -> None:
+            self.add_to_log("vc_add_proofs", (request.to_json_dict()["proofs"],))
 
     inst_rpc_client = VcsAddProofRevealRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
