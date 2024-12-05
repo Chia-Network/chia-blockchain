@@ -39,6 +39,8 @@ permissions:
 jobs:
   version:
     uses: ./.github/workflows/reflow-version.yml
+    with:
+      release_type: ${{ inputs.release_type }}
 
   build:
     name: Build ${{ matrix.os.arch }}
@@ -133,8 +135,8 @@ jobs:
           mkdir "$GITHUB_WORKSPACE"/bladebit
           cd "$GITHUB_WORKSPACE"/bladebit
           gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
-          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
-          ls bladebit* | xargs -I{} chmod +x {}
+          find . -maxdepth 1 -name '*.tar.gz' -print0 | xargs -0 -I{} bash -c 'tar -xzf {} && rm {}'
+          find . -maxdepth 1 -name 'bladebit*' -print0 | xargs -0 -I{} chmod +x {}
           cd "$OLDPWD"
 
       - uses: ./.github/actions/install
@@ -332,7 +334,7 @@ jobs:
         shell: bash
         if: matrix.mode.name == 'GUI'
         run: |
-          [ $(stat -c %a:%G:%U /opt/chia/chrome-sandbox) == "4755:root:root" ]
+          [ "$(stat -c %a:%G:%U /opt/chia/chrome-sandbox)" == "4755:root:root" ]
 
       - name: Remove package
         run: |

@@ -3,9 +3,9 @@ from __future__ import annotations
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, G2Element, Program
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32

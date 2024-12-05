@@ -137,7 +137,7 @@ class PoolWallet:
     @classmethod
     def _verify_self_pooled(cls, state: PoolState) -> Optional[str]:
         err = ""
-        if state.pool_url not in [None, ""]:
+        if state.pool_url not in {None, ""}:
             err += " Unneeded pool_url for self-pooling"
 
         if state.relative_lock_height != 0:
@@ -159,7 +159,7 @@ class PoolWallet:
                 f"is greater than recommended maximum ({cls.MAXIMUM_RELATIVE_LOCK_HEIGHT})"
             )
 
-        if state.pool_url in [None, ""]:
+        if state.pool_url in {None, ""}:
             err += " Empty pool url in pooling state"
         return err
 
@@ -177,10 +177,7 @@ class PoolWallet:
 
         if state.state == PoolSingletonState.SELF_POOLING.value:
             return cls._verify_self_pooled(state)
-        elif (
-            state.state == PoolSingletonState.FARMING_TO_POOL.value
-            or state.state == PoolSingletonState.LEAVING_POOL.value
-        ):
+        elif state.state in {PoolSingletonState.FARMING_TO_POOL.value, PoolSingletonState.LEAVING_POOL.value}:
             return cls._verify_pooling_state(state)
         else:
             return "Internal Error"
@@ -242,7 +239,15 @@ class PoolWallet:
         payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
 
         if len(payout_instructions) == 0:
-            payout_instructions = (await self.standard_wallet.get_new_puzzlehash()).hex()
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.root_pubkey.get_fingerprint()), False
+                )
+
+            payout_instructions = (await self.standard_wallet.get_puzzle_hash(new=not reuse_puzhash)).hex()
             self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
 
         new_config: PoolWalletConfig = PoolWalletConfig(
@@ -405,7 +410,9 @@ class PoolWallet:
         standard_wallet = main_wallet
 
         if p2_singleton_delayed_ph is None:
-            p2_singleton_delayed_ph = await main_wallet.get_new_puzzlehash()
+            p2_singleton_delayed_ph = await main_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         if p2_singleton_delay_time is None:
             p2_singleton_delay_time = uint64(604800)
 
@@ -414,7 +421,7 @@ class PoolWallet:
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE:
             raise ValueError("Not enough balance in main wallet to create a managed plotting pool.")
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE + fee:
-            raise ValueError("Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
+            raise ValueError(f"Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
 
         # Verify Parameters - raise if invalid
         PoolWallet._verify_initial_target_state(initial_target_state)
@@ -663,7 +670,7 @@ class PoolWallet:
             msg = f"Asked to change to current state. Target = {target_state}"
             self.log.info(msg)
             raise ValueError(msg)
-        elif current_state.current.state in [SELF_POOLING.value, LEAVING_POOL.value]:
+        elif current_state.current.state in {SELF_POOLING.value, LEAVING_POOL.value}:
             total_fee = fee
         elif current_state.current.state == FARMING_TO_POOL.value:
             total_fee = uint64(fee * 2)
@@ -821,7 +828,7 @@ class PoolWallet:
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=claim_spend,
-                    additions=claim_spend.additions(),
+                    additions=[add for add in claim_spend.additions() if add.amount == last_solution.coin.amount],
                     removals=claim_spend.removals(),
                     wallet_id=uint32(self.wallet_id),
                     sent_to=[],
@@ -846,7 +853,7 @@ class PoolWallet:
             raise ValueError(f"Internal error. Pool wallet {self.wallet_id} state: {pool_wallet_info.current}")
 
         if (
-            self.target_state.state in [FARMING_TO_POOL.value, SELF_POOLING.value]
+            self.target_state.state in {FARMING_TO_POOL.value, SELF_POOLING.value}
             and pool_wallet_info.current.state == LEAVING_POOL.value
         ):
             leave_height = tip_height + pool_wallet_info.current.relative_lock_height

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Optional
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
@@ -43,8 +44,8 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg, capa, capb):
-        return True
+    def process_msg_and_check(self, msg, capa, capb) -> Optional[str]:
+        return None
 
 
 class TestDos:
@@ -182,8 +183,8 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
@@ -237,8 +238,8 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
@@ -286,8 +287,8 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)

@@ -216,7 +216,7 @@ def function_to_convert_one_item(
     elif hasattr(f_type, "from_json_dict"):
         if json_parser is None:
             json_parser = f_type.from_json_dict
-        return lambda item: json_parser(item)
+        return json_parser
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
@@ -297,7 +297,7 @@ def recurse_jsonify(
     elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
-        ret: Union[list[Any], dict[str, Any], str, None, int] = d.to_json_dict()
+        ret: Union[list[Any], dict[str, Any], str, int, None] = d.to_json_dict()
         return ret
     raise UnsupportedType(f"failed to jsonify {d} (type: {type(d)})")
 
@@ -516,7 +516,7 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
 class Streamable:
     """
     This class defines a simple serialization format, and adds methods to parse from/to bytes and json. It also
-    validates and parses all fields at construction in ´__post_init__` to make sure all fields have the correct type
+    validates and parses all fields at construction in `__post_init__` to make sure all fields have the correct type
     and can be streamed/parsed properly.
 
     The available primitives are:

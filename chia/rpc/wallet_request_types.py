@@ -257,10 +257,10 @@ class GetTransactionMemoResponse(Streamable):
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> GetTransactionMemoResponse:
         return cls(
-            bytes32.from_hexstr(list(json_dict.keys())[0]),
+            bytes32.from_hexstr(next(iter(json_dict.keys()))),
             [
                 CoinIDWithMemos(bytes32.from_hexstr(coin_id), [bytes32.from_hexstr(memo) for memo in memos])
-                for coin_id, memos in list(json_dict.values())[0].items()
+                for coin_id, memos in next(iter(json_dict.values())).items()
             ],
         )
 

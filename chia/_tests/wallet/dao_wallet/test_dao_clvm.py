@@ -596,8 +596,6 @@ def test_validator() -> None:
     conds = proposal_validator.run(solution)
     assert len(conds.as_python()) == 3
 
-    return
-
 
 def test_spend_p2_singleton() -> None:
     # Curried values
@@ -750,8 +748,6 @@ def test_merge_p2_singleton() -> None:
         assert aca in agg_ccas
         assert cca in agg_acas
         assert merge_conds[ConditionOpcode.ASSERT_MY_COIN_ID][0].vars[0] == coin_id
-
-    return
 
 
 def test_treasury() -> None:

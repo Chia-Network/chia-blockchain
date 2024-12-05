@@ -291,9 +291,9 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
     return new_ownership_puzzle
 
 
-def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Union[None, Literal[b""], bytes32]:
+def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Union[Literal[b""], bytes32, None]:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
-    new_did_id: Union[None, Literal[b""], bytes32] = None
+    new_did_id: Union[Literal[b""], bytes32, None] = None
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition

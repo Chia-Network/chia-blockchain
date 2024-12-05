@@ -156,14 +156,26 @@ def test_completeness() -> None:
         ConditionSerializations(
             ConditionOpcode.SEND_MESSAGE,
             Program.to([0x3F, b"foobar", Program.to(HASH)]),
-            ["mode", "msg", "args"],
-            ["63", "0x" + b"foobar".hex(), "a0" + HASH_HEX],
+            ["mode_integer", "msg", "var_args", "sender", "receiver"],
+            [
+                "63",
+                "0x" + b"foobar".hex(),
+                ["a0" + HASH_HEX],
+                {"mode_integer": 0b111},
+                {"mode_integer": 0b111, "coin_id_committed": "0x" + HASH_HEX},
+            ],
         ),
         ConditionSerializations(
             ConditionOpcode.RECEIVE_MESSAGE,
             Program.to([0x3F, b"foobar", Program.to(HASH)]),
-            ["mode", "msg", "args"],
-            ["63", "0x" + b"foobar".hex(), "a0" + HASH_HEX],
+            ["mode_integer", "msg", "var_args", "sender", "receiver"],
+            [
+                "63",
+                "0x" + b"foobar".hex(),
+                ["a0" + HASH_HEX],
+                {"mode_integer": 0b111, "coin_id_committed": "0x" + HASH_HEX},
+                {"mode_integer": 0b111},
+            ],
         ),
     ],
 )
@@ -381,7 +393,7 @@ def test_invalid_condition(
     ],
     prg: bytes,
 ) -> None:
-    if (cond == Remark or cond == UnknownCondition) and prg != b"\x80":
+    if (cond in {Remark, UnknownCondition}) and prg != b"\x80":
         pytest.skip("condition takes arbitrary arguments")
 
     with pytest.raises((ValueError, EvalError, KeyError)):

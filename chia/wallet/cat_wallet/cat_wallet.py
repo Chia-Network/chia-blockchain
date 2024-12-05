@@ -144,10 +144,10 @@ class CATWallet:
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.id())
             raise
         if spend_bundle is None:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
 
         await self.wallet_state_manager.add_new_wallet(self)
@@ -422,27 +422,6 @@ class CATWallet:
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
-    async def get_new_inner_hash(self) -> bytes32:
-        puzzle = await self.get_new_inner_puzzle()
-        return puzzle.get_tree_hash()
-
-    async def get_new_inner_puzzle(self) -> Program:
-        return await self.standard_wallet.get_new_puzzle()
-
-    async def get_new_puzzlehash(self) -> bytes32:
-        return await self.standard_wallet.get_new_puzzlehash()
-
-    async def get_puzzle_hash(self, new: bool) -> bytes32:
-        if new:
-            return await self.get_new_puzzlehash()
-        else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
-            if record is None:
-                return await self.get_new_puzzlehash()
-            return record.puzzle_hash
-
     def require_derivation_paths(self) -> bool:
         return True
 
@@ -456,8 +435,15 @@ class CATWallet:
         limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
         return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
 
-    async def get_new_cat_puzzle_hash(self) -> bytes32:
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+    async def get_cat_puzzle_hash(self, new: bool) -> bytes32:
+        if new:
+            return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        else:
+            derivation_record = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            if derivation_record is None:
+                return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+
+            return derivation_record.puzzle_hash
 
     async def get_spendable_balance(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         coins = await self.get_cat_spendable_coins(records)
@@ -579,7 +565,7 @@ class CATWallet:
                     fee,
                     action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
                     uint64(0),
                     (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
@@ -595,7 +581,7 @@ class CATWallet:
                     fee,
                     action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
                     uint64(selected_amount + amount_to_claim - fee),
@@ -666,17 +652,17 @@ class CATWallet:
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                list(cat_coins)[0].puzzle_hash
+                next(iter(cat_coins)).puzzle_hash
             )
             if derivation_record is not None and action_scope.config.tx_config.reuse_puzhash:
                 change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
                         # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.get_new_inner_hash()
+                        change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
                         break
             else:
-                change_puzhash = await self.get_new_inner_hash()
+                change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
             primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
 
         # Loop through the coins we've selected and gather the information we need to spend them

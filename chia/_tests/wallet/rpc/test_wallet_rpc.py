@@ -387,7 +387,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     assert tx_confirmed.confirmed
     assert len(tx_confirmed.get_memos()) == 1
     assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
-    assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in spend_bundle.additions()]
+    assert next(iter(tx_confirmed.get_memos().keys())) in [a.name() for a in spend_bundle.additions()]
 
     await time_out_assert(20, get_confirmed_balance, generated_funds - tx_amount, client, 1)
 
@@ -2100,7 +2100,7 @@ async def test_get_coin_records_rpc_failures(
         with pytest.raises(ValueError, match=name):
             await client.get_coin_records(request)
 
-    # Type validation is handled via `Streamable.from_json_dict´ but the below should make at least sure it triggers.
+    # Type validation is handled via `Streamable.from_json_dict` but the below should make at least sure it triggers.
     for field, value in {
         "offset": "invalid",
         "limit": "invalid",
@@ -2678,7 +2678,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
 
     # Test XCH first
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        target_coin = next(iter(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope)))
         assert target_coin.amount == 250_000_000_000
 
     xch_request = SplitCoins(
@@ -2728,10 +2728,11 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
     )
     assert response == SplitCoinsResponse([], [])
 
-    await env.rpc_client.split_coins(
-        xch_request,
-        wallet_environments.tx_config,
-    )
+    with wallet_environments.new_puzzle_hashes_allowed():
+        await env.rpc_client.split_coins(
+            xch_request,
+            wallet_environments.tx_config,
+        )
 
     await wallet_environments.process_pending_states(
         [
@@ -2786,7 +2787,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
     )
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await cat_wallet.select_coins(uint64(50), action_scope))[0]
+        target_coin = next(iter(await cat_wallet.select_coins(uint64(50), action_scope)))
         assert target_coin.amount == 50
 
     cat_request = SplitCoins(
@@ -2797,10 +2798,11 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
         push=True,
     )
 
-    await env.rpc_client.split_coins(
-        cat_request,
-        wallet_environments.tx_config,
-    )
+    with wallet_environments.new_puzzle_hashes_allowed():
+        await env.rpc_client.split_coins(
+            cat_request,
+            wallet_environments.tx_config,
+        )
 
     await wallet_environments.process_pending_states(
         [
@@ -2852,7 +2854,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
 
     # Grab one of the 0.25 ones to specify
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        target_coin = next(iter(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope)))
         assert target_coin.amount == 250_000_000_000
 
     # These parameters will give us the maximum amount of behavior coverage
@@ -2966,7 +2968,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await cat_wallet.generate_signed_transaction(
             [BIG_COIN_AMOUNT, SMALL_COIN_AMOUNT, REALLY_SMALL_COIN_AMOUNT],
-            [await env.xch_wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash)] * 3,
+            [await env.xch_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)] * 3,
             action_scope,
         )
 
@@ -3064,7 +3066,7 @@ async def test_fee_bigger_than_selection_coin_combining(wallet_environments: Wal
 
     # Grab one of the 0.25 ones to specify
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        target_coin = next(iter(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope)))
         assert target_coin.amount == 250_000_000_000
 
     fee = uint64(1_750_000_000_000)

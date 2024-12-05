@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.name }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
@@ -49,8 +49,10 @@ jobs:
             matrix: windows
         arch:
           - name: ARM
+            emoji: 💪
             matrix: arm
           - name: Intel
+            emoji: 🌀
             matrix: intel
         development:
           - name: Non-dev
@@ -119,7 +121,7 @@ jobs:
           PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
           POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
         run: |
-          [ "$POST_VERSION" = "shooby-doowah" -a "$PRE_VERSION" != "shooby-doowah" ]
+          [ "$POST_VERSION" = "shooby-doowah" ] && [ "$PRE_VERSION" != "shooby-doowah" ]
 
       - name: Check non-editable
         if: matrix.editable.matrix == 'non-editable'
@@ -128,7 +130,7 @@ jobs:
           PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
           POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
         run: |
-          [ "$POST_VERSION" != "shooby-doowah" -a "$PRE_VERSION" = "$POST_VERSION" ]
+          [ "$POST_VERSION" != "shooby-doowah" ] && [ "$PRE_VERSION" = "$POST_VERSION" ]
 
   test_scripts_in_docker:
     name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
@@ -257,7 +259,6 @@ jobs:
 
       - uses: ./.github/actions/install
         with:
-          python-version: ${{ matrix.python-version }}
           development: true
           do-system-installs: true
 

@@ -51,7 +51,7 @@ def list_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     paginate: Optional[bool],
 ) -> None:
-    from .coin_funcs import async_list
+    from chia.cmds.coin_funcs import async_list
 
     asyncio.run(
         async_list(
@@ -129,7 +129,7 @@ def combine_cmd(
     condition_valid_times: ConditionValidTimes,
     override: bool,
 ) -> list[TransactionRecord]:
-    from .coin_funcs import async_combine
+    from chia.cmds.coin_funcs import async_combine
 
     return asyncio.run(
         async_combine(
@@ -199,7 +199,7 @@ def split_cmd(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    from .coin_funcs import async_split
+    from chia.cmds.coin_funcs import async_split
 
     return asyncio.run(
         async_split(

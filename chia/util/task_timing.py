@@ -163,7 +163,7 @@ def get_file(frame: FrameType) -> str:
 
 
 def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
-    if event in ["c_call", "c_return", "c_exception"]:
+    if event in {"c_call", "c_return", "c_exception"}:
         return
 
     # we only care about instrumenting co-routines
@@ -175,9 +175,6 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
     task = asyncio.current_task()
     if task is None:
         return
-
-    global g_tasks
-    global g_function_infos
 
     ti = g_tasks.get(task)
     if ti is None:
@@ -265,7 +262,6 @@ def fontcolor(pct: float) -> str:
 
 def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -> None:
     sys.setprofile(None)
-    global g_function_infos
 
     try:
         os.mkdir(target_dir)

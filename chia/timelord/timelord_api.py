@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.rpc.rpc_server import StateChangedProtocol
+from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
 from chia.timelord.types import Chain, IterationType
-from chia.util.api_decorators import api_request
 from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ class TimelordAPI:
 
     log: logging.Logger
     timelord: Timelord
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, timelord) -> None:
         self.log = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ class TimelordAPI:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.timelord.state_changed_callback = callback
 
-    @api_request()
+    @metadata.request()
     async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord) -> None:
         if self.timelord.last_state is None:
             return None
@@ -57,7 +58,7 @@ class TimelordAPI:
                     new_peak.reward_chain_block.height == self.timelord.last_state.last_height + 1
                     and self.check_orphaned_unfinished_block(new_peak) is True
                 ):
-                    log.info("there is an unfinished block that this peak would orphan - " "skip peak")
+                    log.info("there is an unfinished block that this peak would orphan - skip peak")
                     self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
                     return
 
@@ -92,7 +93,7 @@ class TimelordAPI:
                 return True
         return False
 
-    @api_request()
+    @metadata.request()
     async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
         if self.timelord.last_state is None:
             return None
@@ -125,7 +126,7 @@ class TimelordAPI:
                     self.timelord.total_unfinished += 1
                     log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
-    @api_request()
+    @metadata.request()
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
         async with self.timelord.lock:
             if not self.timelord.bluebox_mode:

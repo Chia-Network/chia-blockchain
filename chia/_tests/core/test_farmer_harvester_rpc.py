@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) -> None:
     def wait() -> bool:
         current_last_sync_id = receiver.last_sync().sync_id
-        return current_last_sync_id != 0 and current_last_sync_id != previous_last_sync_id
+        return current_last_sync_id not in {0, previous_last_sync_id}
 
     await time_out_assert(30, wait)
 

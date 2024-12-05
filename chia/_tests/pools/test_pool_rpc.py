@@ -35,6 +35,7 @@ from chia.util.config import load_config
 from chia.util.ints import uint32, uint64
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
@@ -444,6 +445,16 @@ class TestPoolWalletRpc:
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
             await full_node_api.check_transactions_confirmed(wallet_node.wallet_state_manager, absorb_txs)
+            assert (
+                len(
+                    [
+                        tx
+                        for tx in await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
+                        if TransactionType(tx.type) is TransactionType.INCOMING_TX and tx.amount == 1_750_000_000_000
+                    ]
+                )
+                == 2
+            )
             new_status: PoolWalletInfo = (await client.pw_status(2))[0]
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id

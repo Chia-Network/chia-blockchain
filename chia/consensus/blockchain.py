@@ -36,6 +36,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
@@ -114,6 +115,8 @@ class Blockchain:
     priority_mutex: PriorityMutex[BlockchainMutexPriority]
     compact_proof_lock: asyncio.Lock
 
+    _log_coins: bool
+
     @staticmethod
     async def create(
         coin_store: CoinStore,
@@ -123,6 +126,7 @@ class Blockchain:
         reserved_cores: int,
         *,
         single_threaded: bool = False,
+        log_coins: bool = False,
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -130,6 +134,7 @@ class Blockchain:
         in the consensus constants config.
         """
         self = Blockchain()
+        self._log_coins = log_coins
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
         self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
@@ -355,7 +360,7 @@ class Blockchain:
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
         assert block.transactions_generator is None or pre_validation_result.validated_signature
-        error_code, _ = await validate_block_body(
+        error_code = await validate_block_body(
             self.constants,
             self,
             self.coin_store.get_coin_records,
@@ -363,6 +368,7 @@ class Blockchain:
             block.height,
             pre_validation_result.conds,
             fork_info,
+            log_coins=self._log_coins,
         )
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
@@ -389,6 +395,7 @@ class Blockchain:
         # in case we fail and need to restore the blockchain state, remember the
         # peak height
         previous_peak_height = self._peak_height
+        prev_fork_peak = (fork_info.peak_height, fork_info.peak_hash)
 
         try:
             # Always add the block to the database
@@ -425,7 +432,8 @@ class Blockchain:
                 self.remove_block_record(header_hash)
             except KeyError:
                 pass
-            fork_info.rollback(header_hash, -1 if previous_peak_height is None else previous_peak_height)
+            # restore fork_info to the state before adding the block
+            fork_info.rollback(prev_fork_peak[1], prev_fork_peak[0])
             self.block_store.rollback_cache_block(header_hash)
             self._peak_height = previous_peak_height
             log.error(
@@ -471,10 +479,39 @@ class Blockchain:
             if block_record.weight == peak.weight and peak.total_iters <= block_record.total_iters:
                 # this is an equal weight block but our peak has lower iterations, so we dont change the coin set
                 return [], None
+            if block_record.weight == peak.weight:
+                log.info(
+                    f"block has equal weight as our peak ({peak.weight}), but fewer "
+                    f"total iterations {block_record.total_iters} "
+                    f"peak: {peak.total_iters} "
+                    f"peak-hash: {peak.header_hash}"
+                )
 
             if block_record.prev_hash != peak.header_hash:
                 for coin_record in await self.coin_store.rollback_to_block(fork_info.fork_height):
                     rolled_back_state[coin_record.name] = coin_record
+                if self._log_coins and len(rolled_back_state) > 0:
+                    log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
+                    log.info(
+                        "removed: %s",
+                        ",".join(
+                            [
+                                name.hex()[0:6]
+                                for name, state in rolled_back_state.items()
+                                if state.confirmed_block_index == 0
+                            ]
+                        ),
+                    )
+                    log.info(
+                        "unspent: %s",
+                        ",".join(
+                            [
+                                name.hex()[0:6]
+                                for name, state in rolled_back_state.items()
+                                if state.confirmed_block_index != 0
+                            ]
+                        ),
+                    )
 
         # Collects all blocks from fork point to new peak
         records_to_add: list[BlockRecord] = []
@@ -521,6 +558,15 @@ class Blockchain:
                 tx_additions,
                 tx_removals,
             )
+            if self._log_coins and (len(tx_removals) > 0 or len(tx_additions) > 0):
+                log.info(
+                    f"adding new block to coin_store "
+                    f"(hh: {fetched_block_record.header_hash} "
+                    f"height: {fetched_block_record.height}), {len(tx_removals)} spends"
+                )
+                log.info("rewards: %s", ",".join([add.name().hex()[0:6] for add in included_reward_coins]))
+                log.info("additions: %s", ",".join([add.name().hex()[0:6] for add in tx_additions]))
+                log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
 
         # we made it to the end successfully
         # Rollback sub_epoch_summaries
@@ -677,13 +723,13 @@ class Blockchain:
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants, len(unfinished_header_block.finished_sub_slots) > 0, prev_b, self
         )
+        expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
             self.constants,
             self,
             unfinished_header_block,
             False,
-            difficulty,
-            sub_slot_iters,
+            expected_vs,
             skip_overflow_ss_validation,
         )
         if error is not None:
@@ -706,20 +752,22 @@ class Blockchain:
 
         fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
 
-        error_code, cost_result = await validate_block_body(
+        conds = None if npc_result is None else npc_result.conds
+        error_code = await validate_block_body(
             self.constants,
             self,
             self.coin_store.get_coin_records,
             block,
             uint32(prev_height + 1),
-            None if npc_result is None else npc_result.conds,
+            conds,
             fork_info,
+            log_coins=self._log_coins,
         )
 
         if error_code is not None:
             return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
 
-        return PreValidationResult(None, required_iters, cost_result, uint32(0))
+        return PreValidationResult(None, required_iters, conds, uint32(0))
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
@@ -790,7 +838,7 @@ class Blockchain:
 
             if height == 0:
                 break
-            height = height - 1
+            height -= 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
     def clean_block_records(self) -> None:
@@ -840,13 +888,13 @@ class Blockchain:
                 # blocks that do not have transactions.
                 header = get_block_header(block, [], [])
             else:
-                tx_additions: list[CoinRecord] = [
-                    c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
-                ]
-                removed: list[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
-                header = get_block_header(
-                    block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
+                added_coins_records, removed_coins_records = await asyncio.gather(
+                    self.coin_store.get_coins_added_at_height(block.height),
+                    self.coin_store.get_coins_removed_at_height(block.height),
                 )
+                tx_additions = [cr.coin for cr in added_coins_records if not cr.coinbase]
+                removed = [cr.coin.name() for cr in removed_coins_records]
+                header = get_block_header(block, tx_additions, removed)
             header_blocks[header.header_hash] = header
 
         return header_blocks

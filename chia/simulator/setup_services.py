@@ -5,7 +5,6 @@ import gc
 import logging
 import signal
 import sqlite3
-import time
 from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
@@ -310,7 +309,7 @@ async def setup_wallet_node(
                         break
                     except PermissionError as e:
                         print(f"db_path.unlink(): {e}")
-                        time.sleep(0.1)
+                        await asyncio.sleep(0.1)
                         # filesystem operations are async on windows
                         # [WinError 32] The process cannot access the file because it is
                         # being used by another process

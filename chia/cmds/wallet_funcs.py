@@ -638,11 +638,11 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
         print(f"Included Fees: {fees / units['chia']} XCH, {fees} mojos")
         print("Timelock information:")
         if record.valid_times.min_time is not None:
-            print("  - Not valid until " f"{format_timestamp_with_timezone(record.valid_times.min_time)}")
+            print(f"  - Not valid until {format_timestamp_with_timezone(record.valid_times.min_time)}")
         if record.valid_times.min_height is not None:
             print(f"  - Not valid until height {record.valid_times.min_height}")
         if record.valid_times.max_time is not None:
-            print("  - Expires at " f"{format_timestamp_with_timezone(record.valid_times.max_time)} " "(+/- 10 min)")
+            print(f"  - Expires at {format_timestamp_with_timezone(record.valid_times.max_time)} (+/- 10 min)")
         if record.valid_times.max_height is not None:
             print(f"  - Expires at height {record.valid_times.max_height} (wait ~10 blocks after to be reorg safe)")
     print("---------------")
@@ -659,6 +659,7 @@ async def get_offers(
     include_completed: bool = False,
     summaries: bool = False,
     reverse: bool = False,
+    sort_by_relevance: bool = True,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         file_contents: bool = (filepath is not None) or summaries
@@ -673,6 +674,7 @@ async def get_offers(
                 new_records: list[TradeRecord] = await wallet_client.get_all_offers(
                     start,
                     end,
+                    sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
                     reverse=reverse,
                     file_contents=file_contents,
                     exclude_my_offers=exclude_my_offers,
@@ -836,7 +838,7 @@ async def cancel_offer(
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> tuple[str, int]:
     if typ in {WalletType.CAT, WalletType.CRCAT}:
         return "", units["cat"]
-    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
+    if typ in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG}:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 

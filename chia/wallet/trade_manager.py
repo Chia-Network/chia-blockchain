@@ -506,9 +506,14 @@ class TradeManager:
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets.get(wallet_id)
                         assert isinstance(wallet, (CATWallet, Wallet))
-                        p2_ph: bytes32 = await wallet.get_puzzle_hash(
-                            new=not action_scope.config.tx_config.reuse_puzhash
-                        )
+                        if isinstance(wallet, Wallet):
+                            p2_ph: bytes32 = await wallet.get_puzzle_hash(
+                                new=not action_scope.config.tx_config.reuse_puzhash
+                            )
+                        else:
+                            p2_ph = await wallet.standard_wallet.get_puzzle_hash(
+                                new=not action_scope.config.tx_config.reuse_puzhash
+                            )
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 assert isinstance(wallet, CATWallet)
@@ -852,7 +857,7 @@ class TradeManager:
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
                     raise ValueError(f"Do not have a wallet for asset ID: {asset_id} to fulfill offer")
-                elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
+                elif wallet is None or wallet.type() in {WalletType.NFT, WalletType.DATA_LAYER}:
                     key = asset_id
                 else:
                     key = int(wallet.id())
@@ -999,12 +1004,12 @@ class TradeManager:
                 k: v
                 for k, v in valid_times.to_json_dict().items()
                 if k
-                not in (
+                not in {
                     "max_secs_after_created",
                     "min_secs_since_created",
                     "max_blocks_after_created",
                     "min_blocks_since_created",
-                )
+                }
             },
         }
 
@@ -1033,8 +1038,7 @@ class TradeManager:
                     if WalletType(wallet.type()) == WalletType.VC:
                         assert isinstance(wallet, VCWallet)
                         return await wallet.add_vc_authorization(offer, solver, action_scope)
-                else:
-                    raise ValueError("No VCs to approve CR-CATs with")  # pragma: no cover
+                raise ValueError("No VCs to approve CR-CATs with")  # pragma: no cover
 
         return offer, Solver({})
 

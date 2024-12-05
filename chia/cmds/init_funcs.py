@@ -41,8 +41,8 @@ from chia.wallet.derive_keys import (
 
 
 def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_not_migrate_keys: dict[str, Any]) -> None:
-    for k in do_not_migrate_keys:
-        if k in updated and do_not_migrate_keys[k] == "":
+    for k, v in do_not_migrate_keys.items():
+        if k in updated and v == "":
             updated.pop(k)
     for k, v in default.items():
         ignore = False
@@ -56,7 +56,7 @@ def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_no
             # If there is an intermediate key with empty string value, do not migrate all descendants
             if do_not_migrate_keys.get(k, None) == "":
                 do_not_migrate_keys[k] = v
-            dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))
+            dict_add_new_default(updated[k], v, do_not_migrate_keys.get(k, {}))
         elif k not in updated or ignore is True:
             updated[k] = v
 

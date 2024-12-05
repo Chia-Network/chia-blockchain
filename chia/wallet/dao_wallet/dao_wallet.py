@@ -184,7 +184,7 @@ class DAOWallet:
                 fee_for_cat=fee_for_cat,
             )
         except Exception as e_info:  # pragma: no cover
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.id())
             self.log.exception(f"Failed to create dao wallet: {e_info}")
             raise
 
@@ -450,7 +450,6 @@ class DAOWallet:
                 self.log.info(f"DAO funding coin added: {coin.name().hex()}:{coin}. Asset ID: {asset_id}")
         except Exception as e:  # pragma: no cover
             self.log.exception(f"Error occurred during dao wallet coin addition: {e}")
-        return
 
     def get_cat_tail_hash(self) -> bytes32:
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
@@ -471,7 +470,6 @@ class DAOWallet:
         ]
         dao_info = dataclasses.replace(self.dao_info, proposals_list=new_list)
         await self.save_info(dao_info)
-        return
 
     async def resync_treasury_state(self) -> None:
         """
@@ -607,8 +605,6 @@ class DAOWallet:
             request = RequestBlockHeader(children_state.created_height)
             response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
             await wallet_node.sync_from_untrusted_close_to_peak(response.header_block, peer)
-
-        return
 
     async def generate_new_dao(
         self,
@@ -1826,7 +1822,7 @@ class DAOWallet:
                     )
                     await self.add_parent(new_state.coin.name(), future_parent)
                     return
-                index = index + 1
+                index += 1
 
         # check if we are the finished state
         if current_innerpuz == get_finished_state_inner_puzzle(singleton_id):
@@ -1853,7 +1849,7 @@ class DAOWallet:
         ) = c_a.as_iter()
 
         if current_coin is None:  # pragma: no cover
-            raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
+            raise RuntimeError(f"get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
 
         timer_coin = None
         if solution.at("rrrrrrf").as_int() == 0:
@@ -1910,7 +1906,7 @@ class DAOWallet:
                 )
                 await self.add_parent(new_state.coin.name(), future_parent)
                 return
-            index = index + 1
+            index += 1
 
         # Search for the timer coin
         if not ended:
@@ -2005,7 +2001,7 @@ class DAOWallet:
                 )
                 await self.add_parent(new_state.coin.name(), future_parent)
                 return
-            index = index + 1
+            index += 1
 
     async def get_proposal_state(self, proposal_id: bytes32) -> dict[str, Union[int, bool]]:
         """
@@ -2087,7 +2083,6 @@ class DAOWallet:
             uint64(new_state.coin.amount),
         )
         await self.add_parent(new_state.coin.name(), future_parent)
-        return
 
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """

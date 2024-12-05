@@ -7,21 +7,22 @@ select = [
 	"I",  # Isort
 	"FA",  # Flake8: future-annotations
 	"UP",  # Pyupgrade
-	# Flake8 core
-	"F",
+	"RUF",  # Ruff specific
+	"F",  # Flake8 core
+	"ASYNC",  # Flake8 async
+	"ISC",  # flake8-implicit-str-concat
+    "TID",  # flake8-tidy-imports
 	"E",
 	"W",
 ]
 explicit-preview-rules = false
 ignore = [
     # Pylint convention
-    "PLC0105", # type-name-incorrect-variance
     "PLC0415", # import-outside-top-level
-    "PLC2801", # unnecessary-dunder-call
-    "PLC0206", # dict-index-missing-items
     "PLC1901", # compare-to-empty-string
+    # Should probably fix these
+    "PLC2801", # unnecessary-dunder-call
     "PLC2701", # import-private-name
-    "PLC0414", # useless-import-alias
 
     # Pylint refactor
     "PLR0915", # too-many-statements
@@ -30,35 +31,52 @@ ignore = [
     "PLR0912", # too-many-branches
     "PLR1702", # too-many-nested-blocks
     "PLR0904", # too-many-public-methods
-    "PLR6301", # no-self-use
     "PLR0917", # too-many-positional-arguments
-    "PLR6201", # literal-membership
-    "PLR0911", # too-many-return-statements
-    "PLR2004", # magic-value-comparison
-    "PLR1714", # repeated-equality-comparison
-    "PLR6104", # non-augmented-assignment
-    "PLR1704", # redefined-argument-from-local
     "PLR0916", # too-many-boolean-expressions
+    "PLR0911", # too-many-return-statements
+    # Should probably fix these
+    "PLR6301", # no-self-use
+    "PLR2004", # magic-value-comparison
+    "PLR1704", # redefined-argument-from-local
     "PLR5501", # collapsible-else-if
-    "PLR1711", # useless-return
-    "PLR1730", # if-stmt-min-max
-    "PLR1736", # unnecessary-list-index-lookup
-    "PLR1733", # unnecessary-dict-index-lookup
 
     # Pylint warning
-    "PLW2901", # redefined-loop-name
     "PLW1641", # eq-without-hash
+    # Should probably fix these
+    "PLW2901", # redefined-loop-name
     "PLW1514", # unspecified-encoding
-    "PLW0602", # global-variable-not-assigned
     "PLW0603", # global-statement
-    "PLW0108", # unnecessary-lambda
-    "PLW1510", # subprocess-run-without-check
-    "PLW0120", # useless-else-on-loop
 
-    # Flake8 core
-    # "F841",  # unused-variable (540)
+    # Flake8 async
+    # Should probably fix these
+    "ASYNC230", # blocking-open-call-in-async-function
+    # Should probably fix these after dealing with shielding for anyio
+    "ASYNC109", # async-function-with-timeout
+
+    # flake8-implicit-str-concat
+    "ISC003", # explicit-string-concatenation
+
+    # Ruff Specific
+
+    # This code is problematic because using instantiated types as defaults is so common across the codebase.
+    # Its purpose is to prevent accidenatally assigning mutable defaults. However, this is a bit overkill for that.
+    # That being said, it would be nice to add some way to actually guard against that specific mutable default behavior.
+    "RUF009", # function-call-in-dataclass-default-argument
+    # Should probably fix this
+    "RUF029",
 ]
 
+
+[lint.flake8-implicit-str-concat]
+# Found 3279 errors.
+# allow-multiline = false
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-tidy-imports.banned-api]
+# for use with another pr
+# "asyncio.create_task".msg = "Use `from chia.util.pit import pit` and `pit.create_task()`"
 
 [lint.isort]
 required-imports = ["from __future__ import annotations"]

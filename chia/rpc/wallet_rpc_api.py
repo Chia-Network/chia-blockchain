@@ -966,7 +966,9 @@ class WalletRpcApi:
                 if "initial_target_state" not in request:
                     raise AttributeError("Daemon didn't send `initial_target_state`. Try updating the daemon.")
 
-                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
+                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(
+                    new=not action_scope.config.tx_config.reuse_puzhash
+                )
 
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
 
@@ -1131,7 +1133,12 @@ class WalletRpcApi:
             raise ValueError("Cannot split coins from non-fungible wallet types")
 
         outputs = [
-            Payment(await wallet.get_puzzle_hash(new=True), request.amount_per_coin)
+            Payment(
+                await wallet.get_puzzle_hash(new=True)
+                if isinstance(wallet, Wallet)
+                else await wallet.standard_wallet.get_puzzle_hash(new=True),
+                request.amount_per_coin,
+            )
             for _ in range(request.number_of_coins)
         ]
         if len(outputs) == 0:
@@ -1256,7 +1263,7 @@ class WalletRpcApi:
             primary_output_amount = uint64(primary_output_amount - request.fee)
             await wallet.generate_signed_transaction(
                 primary_output_amount,
-                await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash),
+                await wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
                 action_scope,
                 request.fee,
                 set(coins),
@@ -1266,7 +1273,7 @@ class WalletRpcApi:
             assert isinstance(wallet, CATWallet)
             await wallet.generate_signed_transaction(
                 [primary_output_amount],
-                [await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash)],
+                [await wallet.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
                 action_scope,
                 request.fee,
                 coins=set(coins),
@@ -1785,7 +1792,7 @@ class WalletRpcApi:
             except ValueError:
                 raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
 
-        if signing_mode == SigningMode.CHIP_0002 or signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
+        if signing_mode in {SigningMode.CHIP_0002, SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS}:
             # CHIP-0002 message signatures are made over the tree hash of:
             #   ("Chia Signed Message", message)
             message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
@@ -2086,11 +2093,11 @@ class WalletRpcApi:
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer: dict[Union[int, bytes32], int] = {}
-        for key in offer:
+        for wallet_identifier, change in offer.items():
             try:
-                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+                modified_offer[bytes32.from_hexstr(wallet_identifier)] = change
             except ValueError:
-                modified_offer[int(key)] = offer[key]
+                modified_offer[int(wallet_identifier)] = change
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
@@ -2149,12 +2156,12 @@ class WalletRpcApi:
                         k: v
                         for k, v in valid_times.to_json_dict().items()
                         if k
-                        not in (
+                        not in {
                             "max_secs_after_created",
                             "min_secs_since_created",
                             "max_blocks_after_created",
                             "min_blocks_since_created",
-                        )
+                        }
                     },
                 },
                 "id": offer.name(),
@@ -2963,7 +2970,7 @@ class WalletRpcApi:
         wallet_type = self.service.wallet_state_manager.wallets[funding_wallet_id].type()
         amount = request.get("amount")
         assert amount
-        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:  # pragma: no cover
+        if wallet_type not in {WalletType.STANDARD_WALLET, WalletType.CAT}:  # pragma: no cover
             raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
         await dao_wallet.create_add_funds_to_treasury_spend(
             uint64(amount),
@@ -3310,14 +3317,18 @@ class WalletRpcApi:
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
-            royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+            royalty_puzhash = await nft_wallet.standard_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         else:
             royalty_puzhash = royalty_address
         target_address = request.get("target_address")
         if isinstance(target_address, str):
             target_puzhash = decode_puzzle_hash(target_address)
         elif target_address is None:
-            target_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+            target_puzhash = await nft_wallet.standard_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         else:
             target_puzhash = target_address
         if "uris" not in request:
@@ -3815,7 +3826,7 @@ class WalletRpcApi:
         royalty_address = request.get("royalty_address", None)
         if isinstance(royalty_address, str) and royalty_address != "":
             royalty_puzhash = decode_puzzle_hash(royalty_address)
-        elif royalty_address in [None, ""]:
+        elif royalty_address in {None, ""}:
             royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
         else:
             royalty_puzhash = bytes32.from_hexstr(royalty_address)

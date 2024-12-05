@@ -5,10 +5,11 @@ from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from typing import Optional
 
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
+from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -41,7 +42,7 @@ class CoinStore:
         puzzle_hash: bytes32,
         birthday: CoinTimestamp,
         amount: int = 1024,
-        prefix=bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),  # noqa
+        prefix=bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),
     ) -> Coin:
         parent = bytes32(
             [
