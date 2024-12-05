@@ -438,9 +438,9 @@ async def test_mixed_readers_writers(
             await connection.execute("UPDATE counter SET value = ?", index)
         async with db_wrapper.reader_no_transaction() as connection:
             async with connection.execute("SELECT value FROM counter") as cursor:
-            row = await cursor.fetchone()
-            assert row is not None
-            assert row[0] == index
+                row = await cursor.fetchone()
+                assert row is not None
+                assert row[0] == index
 
 
 @pytest.mark.parametrize(
