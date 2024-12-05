@@ -13,10 +13,17 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
-from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError, NestedForeignKeyDelayedRequestError
+from chia.util.db_wrapper import (
+    DBWrapper2,
+    ForeignKeyError,
+    InternalError,
+    NestedForeignKeyDelayedRequestError,
+)
 
 if TYPE_CHECKING:
-    ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
+    ConnectionContextManager = contextlib.AbstractAsyncContextManager[
+        aiosqlite.core.Connection
+    ]
     GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
@@ -37,7 +44,9 @@ async def increment_counter(db_wrapper: DBWrapper2) -> None:
         await asyncio.sleep(0)
 
         new_value = old_value + 1
-        await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
+        await connection.execute(
+            "UPDATE counter SET value = :value", {"value": new_value}
+        )
 
 
 async def decrement_counter(db_wrapper: DBWrapper2) -> None:
@@ -51,7 +60,9 @@ async def decrement_counter(db_wrapper: DBWrapper2) -> None:
         await asyncio.sleep(0)
 
         new_value = old_value - 1
-        await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
+        await connection.execute(
+            "UPDATE counter SET value = :value", {"value": new_value}
+        )
 
 
 async def sum_counter(db_wrapper: DBWrapper2, output: list[int]) -> None:
@@ -82,11 +93,15 @@ async def query_value(connection: aiosqlite.Connection) -> int:
         return await get_value(cursor=cursor)
 
 
-def _get_reader_no_transaction_method(db_wrapper: DBWrapper2) -> Callable[[], ConnectionContextManager]:
+def _get_reader_no_transaction_method(
+    db_wrapper: DBWrapper2,
+) -> Callable[[], ConnectionContextManager]:
     return db_wrapper.reader_no_transaction
 
 
-def _get_regular_reader_method(db_wrapper: DBWrapper2) -> Callable[[], ConnectionContextManager]:
+def _get_regular_reader_method(
+    db_wrapper: DBWrapper2,
+) -> Callable[[], ConnectionContextManager]:
     return db_wrapper.reader
 
 
@@ -97,7 +112,9 @@ def _get_regular_reader_method(db_wrapper: DBWrapper2) -> Callable[[], Connectio
         pytest.param(_get_regular_reader_method, id="reader"),
     ],
 )
-def get_reader_method_fixture(request: SubRequest) -> Callable[[], ConnectionContextManager]:
+def get_reader_method_fixture(
+    request: SubRequest,
+) -> Callable[[], ConnectionContextManager]:
     # https://github.com/pytest-dev/pytest/issues/8763
     return request.param  # type: ignore[no-any-return]
 
@@ -105,9 +122,14 @@ def get_reader_method_fixture(request: SubRequest) -> Callable[[], ConnectionCon
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="acquire_outside",
-    argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
+    argvalues=[
+        pytest.param(False, id="not acquired outside"),
+        pytest.param(True, id="acquired outside"),
+    ],
 )
-async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
+async def test_concurrent_writers(
+    acquire_outside: bool, get_reader_method: GetReaderMethod
+) -> None:
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
@@ -115,7 +137,9 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
 
         async with contextlib.AsyncExitStack() as exit_stack:
             if acquire_outside:
-                await exit_stack.enter_async_context(db_wrapper.writer_maybe_transaction())
+                await exit_stack.enter_async_context(
+                    db_wrapper.writer_maybe_transaction()
+                )
 
             tasks = []
             for index in range(concurrent_task_count):
@@ -144,7 +168,9 @@ async def test_writers_nests() -> None:
             async with db_wrapper.writer_maybe_transaction() as conn2:
                 assert conn1 == conn2
                 value += 1
-                await conn2.execute("UPDATE counter SET value = :value", {"value": value})
+                await conn2.execute(
+                    "UPDATE counter SET value = :value", {"value": value}
+                )
                 async with db_wrapper.writer_maybe_transaction() as conn3:
                     assert conn1 == conn3
                     async with conn3.execute("SELECT value FROM counter") as cursor:
@@ -256,7 +282,9 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
         assert await query_value(connection=writer) == 1
 
     async with PathDBConnection(2) as db_wrapper:
-        get_reader = db_wrapper.reader if transactioned else db_wrapper.reader_no_transaction
+        get_reader = (
+            db_wrapper.reader if transactioned else db_wrapper.reader_no_transaction
+        )
 
         await setup_table(db_wrapper)
 
@@ -324,9 +352,14 @@ async def test_reader_transaction_is_deferred() -> None:
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="acquire_outside",
-    argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
+    argvalues=[
+        pytest.param(False, id="not acquired outside"),
+        pytest.param(True, id="acquired outside"),
+    ],
 )
-async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
+async def test_concurrent_readers(
+    acquire_outside: bool, get_reader_method: GetReaderMethod
+) -> None:
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
@@ -353,9 +386,14 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="acquire_outside",
-    argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
+    argvalues=[
+        pytest.param(False, id="not acquired outside"),
+        pytest.param(True, id="acquired outside"),
+    ],
 )
-async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
+async def test_mixed_readers_writers(
+    acquire_outside: bool, get_reader_method: GetReaderMethod
+) -> None:
     async with PathDBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
@@ -393,6 +431,16 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
     for v in values:
         assert v > -99
         assert v <= 100
+
+    # WJB
+    for index in range(10000):
+        async with db_wrapper.writer() as connection:
+            await connection.execute("UPDATE counter SET value = ?", index)
+        async with db_wrapper.reader_no_transaction() as connection:
+            await connection.execute("SELECT value FROM counter")
+            row = await cursor.fetchone()
+            assert row is not None
+            assert row[0] == index
 
 
 @pytest.mark.parametrize(
@@ -436,7 +484,9 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
 @boolean_datacases(name="initial", false="initially disabled", true="initially enabled")
 @boolean_datacases(name="forced", false="forced disabled", true="forced enabled")
 @pytest.mark.anyio
-async def test_foreign_key_pragma_controlled_by_writer(initial: bool, forced: bool) -> None:
+async def test_foreign_key_pragma_controlled_by_writer(
+    initial: bool, forced: bool
+) -> None:
     async with DBConnection(2, foreign_keys=initial) as db_wrapper:
         async with db_wrapper.writer(foreign_key_enforcement_enabled=forced) as writer:
             async with writer.execute("PRAGMA foreign_keys") as cursor:
@@ -449,7 +499,9 @@ async def test_foreign_key_pragma_controlled_by_writer(initial: bool, forced: bo
 
 @pytest.mark.anyio
 async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
-    async with DBConnection(2, foreign_keys=True, row_factory=aiosqlite.Row) as db_wrapper:
+    async with DBConnection(
+        2, foreign_keys=True, row_factory=aiosqlite.Row
+    ) as db_wrapper:
         async with db_wrapper.writer() as writer:
             async with writer.execute(
                 """
@@ -477,7 +529,9 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
 
         # make sure the writer raises a foreign key error on exit
         with pytest.raises(ForeignKeyError):
-            async with db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+            async with db_wrapper.writer(
+                foreign_key_enforcement_enabled=False
+            ) as writer:
                 async with writer.execute("DELETE FROM people WHERE id = 1"):
                     pass
 
@@ -508,7 +562,9 @@ row_factory_cases: list[RowFactoryCase] = [
 @datacases(*row_factory_cases)
 @pytest.mark.anyio
 async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> None:
-    async with DBConnection(2, foreign_keys=True, row_factory=case.factory) as db_wrapper:
+    async with DBConnection(
+        2, foreign_keys=True, row_factory=case.factory
+    ) as db_wrapper:
         async with db_wrapper.writer() as writer:
             async with writer.execute(
                 """
@@ -536,11 +592,15 @@ async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> 
 
         # make sure the writer raises a foreign key error on exit
         with pytest.raises(ForeignKeyError) as error:
-            async with db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+            async with db_wrapper.writer(
+                foreign_key_enforcement_enabled=False
+            ) as writer:
                 async with writer.execute("DELETE FROM people WHERE id = 1"):
                     pass
 
-        assert error.value.violations == [{"table": "people", "rowid": 2, "parent": "people", "fkid": 0}]
+        assert error.value.violations == [
+            {"table": "people", "rowid": 2, "parent": "people", "fkid": 0}
+        ]
 
 
 @pytest.mark.anyio
