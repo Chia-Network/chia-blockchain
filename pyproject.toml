@@ -37,7 +37,7 @@ priority = "supplemental"
 "Changelog" = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
-python = ">=3.8.10, <3.13"
+python = ">=3.9, <3.13"
 aiofiles = "24.1.0"  # Async IO for files
 aiohttp = "3.10.4"  # HTTP server for full node rpc
 aiosqlite = "0.20.0"  # asyncio wrapper for sqlite, to store blocks
@@ -150,7 +150,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.black]
 line-length = 120
-target-version =  ['py38', 'py39', 'py310', 'py311', 'py312']
+target-version =  ['py39', 'py310', 'py311', 'py312']
 include = '''
 ^/(
     [^/]*.py

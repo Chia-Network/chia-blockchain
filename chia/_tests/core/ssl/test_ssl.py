@@ -151,8 +151,10 @@ class TestSSL:
 
                 ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
                 caplog.clear()
-                with pytest.raises(Exception), ignore_ssl_cert_error(), caplog.at_level(
-                    logging.DEBUG, logger="asyncio"
+                with (
+                    pytest.raises(Exception),
+                    ignore_ssl_cert_error(),
+                    caplog.at_level(logging.DEBUG, logger="asyncio"),
                 ):
                     await establish_connection(farmer_server, self_hostname, ssl_context)
 
