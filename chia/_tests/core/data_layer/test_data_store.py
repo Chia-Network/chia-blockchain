@@ -1982,3 +1982,27 @@ async def test_migration(
     assert await data_store.get_keys_values(store_id=store_id) == []
     await data_store.migrate_db(tmp_path)
     assert await data_store.get_keys_values(store_id=store_id) == kv_before
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("num_keys", [10, 1000])
+async def test_get_existing_hashes(
+    data_store: DataStore,
+    store_id: bytes32,
+    num_keys: int,
+) -> None:
+    changelist: list[dict[str, Any]] = []
+    for i in range(num_keys):
+        key = i.to_bytes(4, byteorder="big")
+        value = (2 * i).to_bytes(4, byteorder="big")
+        changelist.append({"action": "insert", "key": key, "value": value})
+    await data_store.insert_batch(store_id, changelist, status=Status.COMMITTED)
+    await data_store.add_node_hashes(store_id)
+
+    root = await data_store.get_tree_root(store_id=store_id)
+    merkle_blob = await data_store.get_merkle_blob(root_hash=root.node_hash)
+    hash_to_index = merkle_blob.get_hashes_indexes()
+    existing_hashes = list(hash_to_index.keys())
+    not_existing_hashes = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_keys)]
+    result = await data_store.get_existing_hashes(existing_hashes + not_existing_hashes, store_id)
+    assert result == set(existing_hashes)
