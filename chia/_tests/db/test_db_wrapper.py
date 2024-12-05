@@ -363,6 +363,17 @@ async def test_concurrent_readers(
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
+        # WJB
+        for index in range(10000):
+            async with db_wrapper.writer() as connection:
+                await connection.execute("UPDATE counter SET value = ?", index)
+            async with db_wrapper.reader_no_transaction() as connection:
+                async with connection.execute("SELECT value FROM counter") as cursor:
+                    row = await cursor.fetchone()
+                    assert row is not None
+                    assert row[0] == index
+        # end WJB
+
         async with db_wrapper.writer_maybe_transaction() as connection:
             await connection.execute("UPDATE counter SET value = 1")
 
@@ -431,16 +442,6 @@ async def test_mixed_readers_writers(
     for v in values:
         assert v > -99
         assert v <= 100
-
-    # WJB
-    for index in range(10000):
-        async with db_wrapper.writer() as connection:
-            await connection.execute("UPDATE counter SET value = ?", index)
-        async with db_wrapper.reader_no_transaction() as connection:
-            async with connection.execute("SELECT value FROM counter") as cursor:
-                row = await cursor.fetchone()
-                assert row is not None
-                assert row[0] == index
 
 
 @pytest.mark.parametrize(
