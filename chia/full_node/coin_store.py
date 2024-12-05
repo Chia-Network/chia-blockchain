@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+import asyncio
 import dataclasses
 import logging
 import sqlite3
@@ -18,7 +20,6 @@ from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.ints import uint32, uint64
-from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -31,13 +32,12 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
-    coins_added_at_height_cache: LRUCache[uint32, List[CoinRecord]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"CoinStore does not support database schema v{db_wrapper.db_version}")
-        self = CoinStore(db_wrapper, LRUCache(100))
+        self = CoinStore(db_wrapper)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating coin store tables and indexes.")
@@ -155,6 +155,10 @@ class CoinStore:
         coins: List[CoinRecord] = []
 
         async with self.db_wrapper.reader_no_transaction() as conn:
+            frame = inspect.currentframe().f_back
+            log.info(
+                f"BEGIN WJB task {asyncio.current_task().get_name()}  get_coin_records reader_no_transaction {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+            )
             cursors: List[Cursor] = []
             for batch in to_batches(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: Tuple[Any, ...] = tuple(batch.entries)
@@ -172,14 +176,13 @@ class CoinStore:
                     coin = self.row_to_coin(row)
                     record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                     coins.append(record)
+            log.info(
+                f"END WJB task {asyncio.current_task().get_name()} get_coin_records reader_no_transaction {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+            )
 
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
-        coins_added: Optional[List[CoinRecord]] = self.coins_added_at_height_cache.get(height)
-        if coins_added is not None:
-            return coins_added
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -191,7 +194,6 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
-                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -565,7 +567,6 @@ class CoinStore:
                         coin_changes[record.name] = record
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
-        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 
     # Store CoinRecord in DB
@@ -586,9 +587,16 @@ class CoinStore:
             )
         if len(values2) > 0:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
+                frame = inspect.currentframe().f_back
+                log.info(
+                    f"BEGIN WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+                )
                 await conn.executemany(
                     "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                     values2,
+                )
+                log.info(
+                    f"END WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
                 )
 
     # Update coin_record to be spent in DB
