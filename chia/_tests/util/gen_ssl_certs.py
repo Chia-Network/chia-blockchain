@@ -83,6 +83,8 @@ def gen_ssl(suffix: str = "") -> None:
             ca_crt = chia_ca_crt if cert_type == "public" else private_ca_crt
             ca_key = chia_ca_key if cert_type == "public" else private_ca_key
 
+            assert ca_crt is not None
+            assert ca_key is not None
             generate_ca_signed_cert(ca_crt, ca_key, Path(crt), Path(key))
 
     patch.undo()
