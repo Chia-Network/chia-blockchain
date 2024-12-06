@@ -1390,14 +1390,6 @@ class FullNode:
                         f"END WJB task {asyncio.current_task().get_name()} ingest add_prevalidated_blocks writer {conn}"
                     )
 
-                state_change_summary, err = await self.add_prevalidated_blocks(
-                    blockchain,
-                    blocks,
-                    pre_validation_results,
-                    fork_info,
-                    peer.peer_info,
-                    vs,
-                )
                 if err is not None:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
