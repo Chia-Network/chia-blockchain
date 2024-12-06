@@ -1003,6 +1003,10 @@ class TestPoolWalletRpc:
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(
             count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
         )
+        await wallet_environments.full_node.wait_for_wallet_synced(
+            wallet_node=wallet_environments.environments[0].node, timeout=20
+        )
+
         pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
         assert pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
         assert pw_status.current.pool_url == "https://pool-b.org"
