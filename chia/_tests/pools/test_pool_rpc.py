@@ -1007,6 +1007,35 @@ class TestPoolWalletRpc:
             wallet_node=wallet_environments.environments[0].node, timeout=20
         )
 
+        async def farm_blocks_until_state(
+            state: PoolSingletonState,
+            wallet_rpc: WalletRpcClient,
+            wallet_id: int,
+            full_node: FullNodeSimulator,
+            wallet_node: WalletNode,
+            max_blocks: int = 10 * (LOCK_HEIGHT + 2),
+        ) -> bool:
+            block_chunk = LOCK_HEIGHT + 2
+            total_blocks_farmed = 0
+            while total_blocks_farmed < max_blocks:
+                await full_node.farm_blocks_to_puzzlehash(count=block_chunk, guarantee_transaction_blocks=True)
+                total_blocks_farmed += block_chunk
+                print(f"Checking state after {total_blocks_farmed} blocks")
+
+                await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+                pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
+                if pw_status.current.state == state.value:
+                    return True
+            return False
+
+        assert await farm_blocks_until_state(
+            PoolSingletonState.FARMING_TO_POOL,
+            wallet_rpc,
+            wallet_id,
+            wallet_environments.full_node,
+            wallet_environments.environments[0].node,
+        )
+
         pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
         assert pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
         assert pw_status.current.pool_url == "https://pool-b.org"
