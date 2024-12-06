@@ -1003,10 +1003,10 @@ class TestPoolWalletRpc:
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(
             count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
         )
-        await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
-        await wallet_environments.full_node.wait_for_wallet_synced(
-            wallet_node=wallet_environments.environments[0].node, timeout=20
-        )
+        pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
+        assert pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+        assert pw_status.current.pool_url == "https://pool-b.org"
+        assert pw_status.current.relative_lock_height == LOCK_HEIGHT
 
     @pytest.mark.anyio
     async def test_change_pools_reorg(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
