@@ -74,7 +74,7 @@ async def _create_connection(
     log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
 ) -> aiosqlite.Connection:
-    connection = await aiosqlite.connect(database=database, uri=uri)
+    connection = await aiosqlite.connect(database=database, uri=uri, cached_statements=0)
 
     if log_file is not None:
         await connection.set_trace_callback(functools.partial(sql_trace_callback, file=log_file, name=name))

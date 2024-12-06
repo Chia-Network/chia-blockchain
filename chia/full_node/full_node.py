@@ -720,21 +720,20 @@ class FullNode:
                 # we create the fork_info and pass it here so it would be updated on each call to add_block
                 fork_info = ForkInfo(first_block.height - 1, first_block.height - 1, first_block.prev_header_hash)
 
-                if len(blocks) > 0: 
-                    # Wrap add_block with writer to ensure all writes and reads are on same connection.
-                    # add_block should only be called under priority_mutex so this will not stall other
-                    # writes to the DB.
-                    async with self.block_store.db_wrapper.writer() as conn:
-                        self.log.info(
-                            f"BEGIN WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
-                        )
-                        for block in reversed(blocks):
-                            # when syncing, we won't share any signatures with the
-                            # mempool, so there's no need to pass in the BLS cache.
-                            await self.add_block(block, peer, fork_info=fork_info)
-                        self.log.info(
-                            f"END WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
-                        )
+                # Wrap add_block with writer to ensure all writes and reads are on same connection.
+                # add_block should only be called under priority_mutex so this will not stall other
+                # writes to the DB.
+                async with self.block_store.db_wrapper.writer() as conn:
+                    self.log.info(
+                        f"BEGIN WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
+                    )
+                    for block in reversed(blocks):
+                        # when syncing, we won't share any signatures with the
+                        # mempool, so there's no need to pass in the BLS cache.
+                        await self.add_block(block, peer, fork_info=fork_info)
+                    self.log.info(
+                        f"END WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
+                    )
         except (asyncio.CancelledError, Exception):
             self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
             raise
