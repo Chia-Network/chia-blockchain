@@ -4,6 +4,8 @@ import builtins
 from dataclasses import dataclass
 from typing import Any, Generic, Optional, TypeVar
 
+from chia_rs import SpendBundle
+
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -144,3 +146,13 @@ class TransactionRecordOld(Streamable):
 @dataclass(frozen=True)
 class TransactionRecord(TransactionRecordOld):
     valid_times: ConditionValidTimes
+
+
+@streamable
+@dataclass(frozen=True)
+class LightTransactionRecord(Streamable):
+    name: bytes32
+    type: uint32
+    additions: list[Coin]
+    removals: list[Coin]
+    spend_bundle: Optional[SpendBundle]

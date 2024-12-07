@@ -13,7 +13,12 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.conditions import ConditionValidTimes
-from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
+from chia.wallet.transaction_record import (
+    LightTransactionRecord,
+    TransactionRecord,
+    TransactionRecordOld,
+    minimum_send_attempts,
+)
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
@@ -37,6 +42,7 @@ class WalletTransactionStore:
 
     db_wrapper: DBWrapper2
     tx_submitted: dict[bytes32, tuple[int, int]]  # tx_id: [time submitted: count]
+    unconfirmed_txs: list[LightTransactionRecord]  # tx_id: [time submitted: count]
     last_wallet_tx_resend_time: int  # Epoch time in seconds
 
     @classmethod
@@ -93,6 +99,7 @@ class WalletTransactionStore:
 
         self.tx_submitted = {}
         self.last_wallet_tx_resend_time = int(time.time())
+        await self.load_unconfirmed()
         return self
 
     async def add_transaction_record(self, record: TransactionRecord) -> None:
@@ -138,6 +145,9 @@ class WalletTransactionStore:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO tx_times VALUES (?, ?)", (record.name, bytes(record.valid_times))
             )
+            ltx = get_light_transaction_record(record)
+            if record.confirmed is False and ltx not in self.unconfirmed_txs:
+                self.unconfirmed_txs.append(ltx)
 
     async def delete_transaction_record(self, tx_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -154,6 +164,7 @@ class WalletTransactionStore:
             return
         tx: TransactionRecord = dataclasses.replace(current, confirmed_at_height=height, confirmed=True)
         await self.add_transaction_record(tx)
+        self.unconfirmed_txs.remove(get_light_transaction_record(current))
 
     async def increment_sent(
         self,
@@ -269,13 +280,20 @@ class WalletTransactionStore:
             )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
-    async def get_all_unconfirmed(self) -> list[TransactionRecord]:
+    async def get_all_unconfirmed(self) -> list[LightTransactionRecord]:
         """
         Returns the list of all transaction that have not yet been confirmed.
         """
+        return self.unconfirmed_txs
+
+    async def load_unconfirmed(self) -> None:
+        """
+        loads the list of all transaction that have not yet been confirmed into the cache.
+        """
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record WHERE confirmed=0")
-        return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
+        records = [TransactionRecordOld.from_bytes(row[0]) for row in rows]
+        self.unconfirmed_txs = [get_light_transaction_record(rec) for rec in records]
 
     async def get_unconfirmed_for_wallet(self, wallet_id: int) -> list[TransactionRecord]:
         """
@@ -470,3 +488,9 @@ class WalletTransactionStore:
             )
             for record in old_records
         ]
+
+
+def get_light_transaction_record(rec: TransactionRecordOld) -> LightTransactionRecord:
+    return LightTransactionRecord(
+        name=rec.name, additions=rec.additions, removals=rec.removals, type=rec.type, spend_bundle=rec.spend_bundle
+    )

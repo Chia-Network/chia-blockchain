@@ -2694,7 +2694,12 @@ async def test_dao_cat_exits(
         dao_id_0 = dao_wallet_res_0.wallet_id
         cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.cat_wallet_id]
         dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_res_0.dao_cat_wallet_id]
-        txs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
+        ltxs = await wallet_0.wallet_state_manager.tx_store.get_all_unconfirmed()
+        txs: list[TransactionRecord] = []
+        for ltx in ltxs:
+            tx = await wallet_0.wallet_state_manager.tx_store.get_transaction_record(ltx.name)
+            assert tx is not None
+            txs.append(tx)
         await full_node_api.wait_transaction_records_entered_mempool(records=txs, timeout=60)
         await full_node_api.process_transaction_records(records=txs, timeout=60)
         await full_node_api.process_all_wallet_transactions(wallet_0, 60)
