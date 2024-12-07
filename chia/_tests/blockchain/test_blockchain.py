@@ -169,7 +169,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
                 )
-                header_block_bad = get_block_header(block_bad, [], [])
+                header_block_bad = get_block_header(block_bad, [], [], tx_filter=False)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -192,7 +192,7 @@ class TestBlockHeaderValidation:
                     block, "finished_sub_slots", [new_finished_ss_2] + block.finished_sub_slots[1:]
                 )
 
-                header_block_bad_2 = get_block_header(block_bad_2, [], [])
+                header_block_bad_2 = get_block_header(block_bad_2, [], [], tx_filter=False)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -222,7 +222,7 @@ class TestBlockHeaderValidation:
                 log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
                 block_bad_3 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_3])
 
-                header_block_bad_3 = get_block_header(block_bad_3, [], [])
+                header_block_bad_3 = get_block_header(block_bad_3, [], [], tx_filter=False)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -251,7 +251,7 @@ class TestBlockHeaderValidation:
                 )
                 block_bad_4 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_4])
 
-                header_block_bad_4 = get_block_header(block_bad_4, [], [])
+                header_block_bad_4 = get_block_header(block_bad_4, [], [], tx_filter=False)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -507,7 +507,7 @@ class TestBlockHeaderValidation:
             blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
         )
 
-        header_block_bad = get_block_header(block_0_bad, [], [])
+        header_block_bad = get_block_header(block_0_bad, [], [], tx_filter=False)
         expected_vs = ValidationState(
             empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
         )
@@ -536,7 +536,7 @@ class TestBlockHeaderValidation:
         )
 
         await _validate_and_add_block(empty_blockchain, blocks[0])
-        header_block_bad = get_block_header(block_1_bad, [], [])
+        header_block_bad = get_block_header(block_1_bad, [], [], tx_filter=False)
         # TODO: Inspect these block values as they are currently None
         expected_difficulty = blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -563,7 +563,7 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, blocks[0])
 
-        header_block_bad = get_block_header(block_1_bad, [], [])
+        header_block_bad = get_block_header(block_1_bad, [], [], tx_filter=False)
         # TODO: Inspect these block values as they are currently None
         expected_difficulty = blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -718,7 +718,7 @@ class TestBlockHeaderValidation:
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
                 )
 
-                header_block_bad = get_block_header(block_bad, [], [])
+                header_block_bad = get_block_header(block_bad, [], [], tx_filter=False)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -789,7 +789,7 @@ class TestBlockHeaderValidation:
             blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
         )
 
-        header_block_bad = get_block_header(block_bad, [], [])
+        header_block_bad = get_block_header(block_bad, [], [], tx_filter=False)
         expected_vs = ValidationState(
             empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
         )
