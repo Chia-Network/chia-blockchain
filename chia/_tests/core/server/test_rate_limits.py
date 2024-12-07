@@ -5,6 +5,8 @@ import asyncio
 import pytest
 
 from chia._tests.conftest import node_with_params
+from chia._tests.util.time_out_assert import time_out_assert
+from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks, RespondBlock, RespondBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import make_msg
@@ -13,7 +15,9 @@ from chia.server.rate_limit_numbers import rate_limits as rl_numbers
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint32
 
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
 rl_v1 = [Capability.BASE]
@@ -68,10 +72,13 @@ class TestRateLimits:
 
         small_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 5 * 1024))
         large_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 600 * 1024))
+        large_blocks_message = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 51 * 1024 * 1024))
         r = RateLimiter(incoming=True)
         assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2) is None
         assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2) is None
         assert r.process_msg_and_check(large_vdf_message, rl_v2, rl_v2) is not None
+        # this limit applies even though this message type is unlimited
+        assert r.process_msg_and_check(large_blocks_message, rl_v2, rl_v2) is not None
 
     @pytest.mark.anyio
     async def test_too_much_data(self):
@@ -89,7 +96,7 @@ class TestRateLimits:
         assert saw_disconnect
 
         r = RateLimiter(incoming=True)
-        block_message = make_msg(ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
+        block_message = make_msg(ProtocolMessageTypes.respond_unfinished_block, bytes([1] * 1024 * 1024))
         for i in range(10):
             assert r.process_msg_and_check(block_message, rl_v2, rl_v2) is None
 
@@ -124,7 +131,7 @@ class TestRateLimits:
         # Size limits
         r = RateLimiter(incoming=True)
         message_4 = make_msg(ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 49 * 1024 * 1024))
-        message_5 = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 49 * 1024 * 1024))
+        message_5 = make_msg(ProtocolMessageTypes.request_blocks, bytes([1] * 49 * 1024 * 1024))
 
         for i in range(2):
             assert r.process_msg_and_check(message_4, rl_v2, rl_v2) is None
@@ -183,7 +190,7 @@ class TestRateLimits:
         assert saw_disconnect
 
         r = RateLimiter(True, 60, 40)
-        block_message = make_msg(ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
+        block_message = make_msg(ProtocolMessageTypes.respond_unfinished_block, bytes([1] * 1024 * 1024))
         for i in range(5):
             assert r.process_msg_and_check(block_message, rl_v2, rl_v2) is None
 
@@ -215,7 +222,7 @@ class TestRateLimits:
         # Aggregate percentage limit max total size
         r = RateLimiter(True, 60, 40)
         message_4 = make_msg(ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 18 * 1024 * 1024))
-        message_5 = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 24 * 1024 * 1024))
+        message_5 = make_msg(ProtocolMessageTypes.respond_unfinished_block, bytes([1] * 24 * 1024 * 1024))
 
         for i in range(2):
             assert r.process_msg_and_check(message_4, rl_v2, rl_v2) is None
@@ -367,3 +374,109 @@ class TestRateLimits:
         # Otherwise, fall back to v1
         assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
         assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "msg_type, size",
+    [
+        (ProtocolMessageTypes.respond_blocks, 10 * 1024 * 1024),
+        (ProtocolMessageTypes.reject_blocks, 90),
+        (ProtocolMessageTypes.respond_block, 1024 * 1024),
+        (ProtocolMessageTypes.reject_block, 90),
+    ],
+)
+async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
+    r = RateLimiter(incoming=False)
+
+    message = make_msg(msg_type, bytes([1] * size))
+
+    for i in range(1000):
+        # since this is a backwards compatible change, it also affects V1
+        assert r.process_msg_and_check(message, rl_v1, rl_v1) is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "msg_type",
+    [
+        ProtocolMessageTypes.respond_blocks,
+        ProtocolMessageTypes.reject_blocks,
+        ProtocolMessageTypes.respond_block,
+        ProtocolMessageTypes.reject_block,
+    ],
+)
+@pytest.mark.parametrize(
+    "node_with_params",
+    [
+        pytest.param(
+            dict(
+                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+            ),
+            id="V1",
+        ),
+        pytest.param(
+            dict(
+                disable_capabilities=[],
+            ),
+            id="V2",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize(
+    "node_with_params_b",
+    [
+        pytest.param(
+            dict(
+                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+            ),
+            id="V1",
+        ),
+        pytest.param(
+            dict(
+                disable_capabilities=[],
+            ),
+            id="V2",
+        ),
+    ],
+    indirect=True,
+)
+async def test_unsolicited_responses(
+    node_with_params, node_with_params_b, self_hostname: str, msg_type: ProtocolMessageTypes, bt: BlockTools
+):
+    node_a = node_with_params
+    node_b = node_with_params_b
+
+    msg = {
+        ProtocolMessageTypes.respond_blocks: make_msg(
+            ProtocolMessageTypes.respond_blocks, bytes(RespondBlocks(uint32(1), uint32(2), []))
+        ),
+        ProtocolMessageTypes.reject_blocks: make_msg(
+            ProtocolMessageTypes.reject_blocks, bytes(RejectBlocks(uint32(1), uint32(2)))
+        ),
+        ProtocolMessageTypes.respond_block: make_msg(
+            ProtocolMessageTypes.respond_block, bytes(RespondBlock(bt.get_consecutive_blocks(1)[0]))
+        ),
+        ProtocolMessageTypes.reject_block: make_msg(ProtocolMessageTypes.reject_block, bytes(RejectBlock(uint32(0)))),
+    }[msg_type]
+
+    full_node_server_a: ChiaServer = node_a.full_node.server
+    full_node_server_b: ChiaServer = node_b.full_node.server
+
+    await full_node_server_b.start_client(PeerInfo(self_hostname, full_node_server_a.get_port()), None)
+
+    assert len(full_node_server_b.get_connections()) == 1
+    assert len(full_node_server_a.get_connections()) == 1
+
+    a_con: WSChiaConnection = full_node_server_a.get_connections()[0]
+    b_con: WSChiaConnection = full_node_server_b.get_connections()[0]
+
+    assert not a_con.closed
+    assert not b_con.closed
+
+    await a_con.send_message(msg)
+
+    # make sure the connection is closed because of the unsolicited response
+    # message
+    await time_out_assert(5, lambda: a_con.closed)
