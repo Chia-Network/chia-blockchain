@@ -155,6 +155,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     async def test_long_chain(self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock]) -> None:
         blocks = default_1000_blocks
+        fork_info = ForkInfo(blocks[0].height - 1, blocks[0].height - 1, blocks[0].prev_header_hash)
         for block in blocks:
             if (
                 len(block.finished_sub_slots) > 0
@@ -181,7 +182,9 @@ class TestBlockHeaderValidation:
                 assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
 
                 # Also fails calling the outer methods, but potentially with a different error
-                await _validate_and_add_block(empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
+                await _validate_and_add_block(
+                    empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+                )
 
                 new_finished_ss_2 = recursive_replace(
                     block.finished_sub_slots[0],
@@ -205,7 +208,7 @@ class TestBlockHeaderValidation:
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_2, expected_result=AddBlockResult.INVALID_BLOCK
+                    empty_blockchain, block_bad_2, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
                 )
 
                 # 3c
@@ -235,7 +238,7 @@ class TestBlockHeaderValidation:
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_3, expected_result=AddBlockResult.INVALID_BLOCK
+                    empty_blockchain, block_bad_3, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
                 )
 
                 # 3d
@@ -264,9 +267,9 @@ class TestBlockHeaderValidation:
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_4, expected_result=AddBlockResult.INVALID_BLOCK
+                    empty_blockchain, block_bad_4, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
                 )
-            await _validate_and_add_block(empty_blockchain, block)
+            await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
             log.info(
                 f"Added block {block.height} total iters {block.total_iters} "
                 f"new slot? {len(block.finished_sub_slots)}"
@@ -3041,8 +3044,13 @@ class TestBodyValidation:
             await _validate_and_add_block(b, block)
 
         blocks_reorg = bt.get_consecutive_blocks(2, block_list_input=blocks[:-7], guarantee_transaction_block=True)
-        await _validate_and_add_block(b, blocks_reorg[-2], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
-        await _validate_and_add_block(b, blocks_reorg[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+        fork_info = ForkInfo(blocks[-8].height, blocks[-8].height, blocks[-8].header_hash)
+        await _validate_and_add_block(
+            b, blocks_reorg[-2], expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+        )
+        await _validate_and_add_block(
+            b, blocks_reorg[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+        )
 
         # Coin does not exist in reorg
         blocks_reorg = bt.get_consecutive_blocks(
@@ -3050,7 +3058,6 @@ class TestBodyValidation:
         )
         peak = b.get_peak()
         assert peak is not None
-        fork_info = await get_fork_info(b, blocks_reorg[-1], peak)
         await _validate_and_add_block(b, blocks_reorg[-1], expected_error=Err.UNKNOWN_UNSPENT, fork_info=fork_info)
 
         # Finally add the block to the fork (spending both in same bundle, this is ephemeral)
@@ -3061,7 +3068,6 @@ class TestBodyValidation:
 
         peak = b.get_peak()
         assert peak is not None
-        fork_info = await get_fork_info(b, blocks_reorg[-1], peak)
         await _validate_and_add_block(
             b, blocks_reorg[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
         )
@@ -3071,7 +3077,6 @@ class TestBodyValidation:
         )
         peak = b.get_peak()
         assert peak is not None
-        fork_info = await get_fork_info(b, blocks_reorg[-1], peak)
         await _validate_and_add_block(b, blocks_reorg[-1], expected_error=Err.DOUBLE_SPEND_IN_FORK, fork_info=fork_info)
 
         rewards_ph = wt.get_new_puzzlehash()
@@ -3084,7 +3089,6 @@ class TestBodyValidation:
 
         peak = b.get_peak()
         assert peak is not None
-        fork_info = await get_fork_info(b, blocks_reorg[-10], peak)
         for block in blocks_reorg[-10:]:
             await _validate_and_add_block_multi_result(
                 b, block, expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.NEW_PEAK], fork_info=fork_info
@@ -3264,13 +3268,18 @@ class TestReorgs:
         assert peak.height == 14
 
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
-                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
+                await _validate_and_add_block(
+                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                )
             elif reorg_block.height < 15:
-                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+                await _validate_and_add_block(
+                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                )
             elif reorg_block.height >= 15:
-                await _validate_and_add_block(b, reorg_block)
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
         peak = b.get_peak()
         assert peak is not None
         assert peak.height == 16
@@ -3463,7 +3472,7 @@ class TestReorgs:
 
         # start the fork point a few blocks back, to test that the blockchain
         # can catch up
-        fork_block = default_10000_blocks[num_blocks_chain_2_start - 200]
+        fork_block = default_10000_blocks[num_blocks_chain_2_start - 101]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         await b.warmup(fork_block.height)
         for block in blocks:
@@ -3514,22 +3523,34 @@ class TestReorgs:
 
         # Reorg to alternate chain that is 1 height longer
         blocks_reorg_chain = bt.get_consecutive_blocks(16, [], seed=b"2")
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 15:
                 await _validate_and_add_block_multi_result(
                     b,
                     reorg_block,
                     expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.ALREADY_HAVE_BLOCK],
+                    fork_info=fork_info,
                 )
             elif reorg_block.height >= 15:
-                await _validate_and_add_block(b, reorg_block)
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
 
         # Back to original chain
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(3, blocks, seed=b"3")
 
-        await _validate_and_add_block(b, blocks_reorg_chain_2[-3], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
-        await _validate_and_add_block(b, blocks_reorg_chain_2[-2])
-        await _validate_and_add_block(b, blocks_reorg_chain_2[-1])
+        # we start from the beginning to make sure fork_info is built correctly
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        for reorg_block in blocks_reorg_chain_2:
+            if reorg_block.height < 15:
+                await _validate_and_add_block(
+                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                )
+            elif reorg_block.height < 16:
+                await _validate_and_add_block(
+                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                )
+            else:
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
 
         peak = b.get_peak()
         assert peak is not None
@@ -3579,7 +3600,7 @@ class TestReorgs:
             await _validate_and_add_block(b, block)
         fork_block = blocks[11]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
-        for block in blocks_fork:
+        for block in blocks_fork[12:]:
             await _validate_and_add_block_no_error(b, block, fork_info=fork_info)
 
     @pytest.mark.anyio
@@ -3694,8 +3715,8 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
     )
     blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
 
+    fork_info = ForkInfo(-1, -1, b.constants.GENESIS_CHALLENGE)
     for i, block in enumerate(blocks_reorg_chain):
-        fork_info: Optional[ForkInfo] = None
         if i < 10:
             expected = AddBlockResult.ALREADY_HAVE_BLOCK
         elif i < 19:
@@ -3709,8 +3730,6 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
             expected = AddBlockResult.NEW_PEAK
         else:
             expected = AddBlockResult.NEW_PEAK
-            if fork_info is None:
-                fork_info = ForkInfo(blocks[1].height, blocks[1].height, blocks[1].header_hash)
         await _validate_and_add_block(b, block, expected_result=expected, fork_info=fork_info)
     peak = b.get_peak()
     assert peak is not None
@@ -3762,7 +3781,7 @@ async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTo
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK)
 
     # fake the fork_info to make every new block look like a reorg
-    fork_info = ForkInfo(blocks[1].height, blocks[1].height, blocks[1].header_hash)
+    fork_info = ForkInfo(blocks[4].height, blocks[4].height, blocks[4].header_hash)
     for block in blocks[5:]:
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info)
     peak = b.get_peak()
@@ -3812,8 +3831,10 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
         guarantee_transaction_block=True,
     )
 
+    fork_block = blocks_reorg_chain[9]
+    fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
     for block in blocks_reorg_chain[10:-1]:
-        await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
 
     # Incorrectly set the height as spent in DB to trigger an error
     print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
@@ -3823,7 +3844,7 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
     print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
 
     fork_block = blocks_reorg_chain[10 - 1]
-    fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
+    # fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
     with pytest.raises(ValueError, match="Invalid operation to set spent"):
         await _validate_and_add_block(b, blocks_reorg_chain[-1], fork_info=fork_info)
 
@@ -3924,28 +3945,36 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             block1, block2 = b1, b2
         counter += 1
 
-        future = await pre_validate_block(
-            b.constants,
-            AugmentedBlockchain(b),
-            block1,
-            b.pool,
-            None,
-            ValidationState(ssi, diff, None),
+        preval = await (
+            await pre_validate_block(
+                b.constants,
+                AugmentedBlockchain(b),
+                block1,
+                b.pool,
+                None,
+                ValidationState(ssi, diff, None),
+            )
         )
-        preval = await future
-        fork_info = ForkInfo(block1.height - 1, block1.height - 1, block1.prev_header_hash)
+        peak = b.get_peak()
+        if peak is None:
+            fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        else:
+            fork_info = await get_fork_info(b, block1, peak)
         _, err, _ = await b.add_block(block1, preval, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
-        future = await pre_validate_block(
-            b.constants,
-            AugmentedBlockchain(b),
-            block2,
-            b.pool,
-            None,
-            ValidationState(ssi, diff, None),
+        preval = await (
+            await pre_validate_block(
+                b.constants,
+                AugmentedBlockchain(b),
+                block2,
+                b.pool,
+                None,
+                ValidationState(ssi, diff, None),
+            )
         )
-        preval = await future
-        fork_info = ForkInfo(block2.height - 1, block2.height - 1, block2.prev_header_hash)
+        peak = b.get_peak()
+        assert peak is not None
+        fork_info = await get_fork_info(b, block2, peak)
         _, err, _ = await b.add_block(block2, preval, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
 
@@ -4042,11 +4071,13 @@ async def test_lookup_block_generators(
     # 507, 516, 527, 535, 539, 543, 547
 
     # start with adding some blocks to test lookups from the mainchain
+    fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
     for block in blocks_2[:550]:
-        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info)
 
+    fork_info = ForkInfo(blocks_1[500].height - 1, blocks_1[500].height - 1, blocks_1[500].prev_header_hash)
     for block in blocks_1[500:550]:
-        await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
 
     # now we have a blockchain with two forks, the peak is at blocks_2[550] and
     # the leight weight peak is at blocks_1[550]

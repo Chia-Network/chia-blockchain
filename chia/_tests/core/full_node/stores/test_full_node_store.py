@@ -452,8 +452,9 @@ async def test_basic_store(
         normalized_to_identity_cc_sp=normalized_to_identity,
     )
 
+    fork_info = ForkInfo(blocks[0].height - 1, blocks[0].height - 1, blocks[0].prev_header_hash)
     for block in blocks:
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
         sb = blockchain.block_record(block.header_hash)
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
             blockchain.constants, False, sb, blockchain
@@ -834,6 +835,7 @@ async def test_basic_store(
 
     # Test future EOS cache
     store.initialize_genesis_sub_slot()
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     blocks = custom_block_tools.get_consecutive_blocks(
         1,
         normalized_to_identity_cc_eos=normalized_to_identity,
@@ -841,7 +843,7 @@ async def test_basic_store(
         normalized_to_identity_cc_ip=normalized_to_identity,
         normalized_to_identity_cc_sp=normalized_to_identity,
     )
-    await _validate_and_add_block_no_error(blockchain, blocks[-1])
+    await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
     while True:
         blocks = custom_block_tools.get_consecutive_blocks(
             1,
@@ -851,7 +853,7 @@ async def test_basic_store(
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
-        await _validate_and_add_block_no_error(blockchain, blocks[-1])
+        await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
         sb = blockchain.block_record(blocks[-1].header_hash)
         if sb.first_in_sub_slot:
             break
@@ -982,6 +984,7 @@ async def test_basic_store(
     #     i2 .........  i1
     # Then do a reorg up to B2, removing all signage points after B2, but not before
     log.warning(f"Adding blocks up to {blocks[-1]}")
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks:
         await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
 
@@ -1042,7 +1045,7 @@ async def test_basic_store(
                 assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
             # Adding a new peak clears all SPs after that peak
-            await _validate_and_add_block_no_error(blockchain, blocks[-2])
+            await _validate_and_add_block_no_error(blockchain, blocks[-2], fork_info=fork_info)
             peak = blockchain.get_peak()
             assert peak is not None
             result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
@@ -1090,7 +1093,7 @@ async def test_basic_store(
             assert_sp_none(i1 + 1, False)
             assert_sp_none(i1 + 4, False)
 
-            await _validate_and_add_block_no_error(blockchain, blocks[-1])
+            await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
             peak = blockchain.get_peak()
             assert peak is not None
             result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
@@ -1120,7 +1123,7 @@ async def test_basic_store(
             break
         else:
             for block in blocks[-2:]:
-                await _validate_and_add_block_no_error(blockchain, block)
+                await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")

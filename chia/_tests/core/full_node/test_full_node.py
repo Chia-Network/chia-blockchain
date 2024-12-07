@@ -549,8 +549,9 @@ class TestFullNodeProtocol:
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for block in bt.get_consecutive_blocks(30):
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.add_block(block, peer, fork_info=fork_info)
 
         assert full_node_1.full_node.blockchain.get_peak().height == 29
 
@@ -2665,8 +2666,7 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
     blocks = bt.get_consecutive_blocks(
         3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
     )
-    for block in blocks:
-        await full_node_1.full_node.add_block(block)
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
     wt = bt.get_pool_wallet_tool()
     reward_coins = blocks[-1].get_included_reward_coins()
     # Setup a test block with two pk msg pairs

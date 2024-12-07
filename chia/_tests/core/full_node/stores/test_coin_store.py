@@ -12,6 +12,7 @@ from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import Marks, datacases
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -364,13 +365,20 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
 
             blocks_reorg_chain = bt.get_consecutive_blocks(reorg_length, blocks[: initial_block_count - 10], seed=b"2")
 
+            fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
             for reorg_block in blocks_reorg_chain:
                 if reorg_block.height < initial_block_count - 10:
-                    await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
+                    await _validate_and_add_block(
+                        b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                    )
                 elif reorg_block.height < initial_block_count:
-                    await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+                    await _validate_and_add_block(
+                        b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                    )
                 elif reorg_block.height >= initial_block_count:
-                    await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.NEW_PEAK)
+                    await _validate_and_add_block(
+                        b, reorg_block, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info
+                    )
                     if reorg_block.is_transaction_block():
                         coins = reorg_block.get_included_reward_coins()
                         records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
