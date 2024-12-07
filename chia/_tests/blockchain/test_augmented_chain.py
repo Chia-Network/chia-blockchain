@@ -22,6 +22,7 @@ class NullBlockchain:
 
     added_blocks: set[bytes32] = field(default_factory=set)
     heights: dict[uint32, bytes32] = field(default_factory=dict)
+    _peak_height: Optional[uint32] = None
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -51,6 +52,9 @@ class NullBlockchain:
 
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
+
+    def get_peak_height(self) -> Optional[uint32]:
+        return self._peak_height
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
@@ -124,13 +128,17 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
         assert await abc.prev_block_hash([blocks[i].header_hash]) == [blocks[i].prev_header_hash]
         assert abc.contains_block(blocks[i].header_hash) is True
         assert await abc.get_block_record_from_db(blocks[i].header_hash) == block_records[i]
-        assert abc.contains_height(uint32(i))
+        peak_height = abc.get_peak_height()
+        assert peak_height is not None
+        assert uint32(i) <= peak_height
 
     for i in range(5, 10):
         assert abc.height_to_hash(uint32(i)) is None
         assert not abc.contains_block(blocks[i].header_hash)
         assert not await abc.get_block_record_from_db(blocks[i].header_hash)
-        assert not abc.contains_height(uint32(i))
+        peak_height = abc.get_peak_height()
+        assert peak_height is not None
+        assert uint32(i) > peak_height
 
     assert abc.height_to_hash(uint32(5)) is None
     null.heights = {uint32(5): blocks[5].header_hash}
