@@ -11,7 +11,7 @@ from click.testing import CliRunner
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo, chia_command
+from chia.cmds.cmd_classes import NeedsWalletRPC, TransactionsIn, TransactionsOut, WalletClientInfo, chia_command
 from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.signer import (
     ApplySignaturesCMD,
@@ -21,8 +21,6 @@ from chia.cmds.signer import (
     QrCodeDisplay,
     SPIn,
     SPOut,
-    TransactionsIn,
-    TransactionsOut,
 )
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import (
@@ -698,7 +696,7 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
@@ -729,9 +727,9 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_out=TransactionsOut(transaction_file_out="out"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
-        "-o",
+        "--transaction-file-out",
         "out",
         "-p",
         "sp-in",
@@ -742,7 +740,7 @@ def test_signer_command_default_parsing() -> None:
             rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
