@@ -789,7 +789,9 @@ class FullNode:
                 # Wrap add_block with writer to ensure all writes and reads are on same connection.
                 # add_block should only be called under priority_mutex so this will not stall other
                 # writes to the DB.
-                if len(blocks) > 0:
+                if (len(blocks) == 1) and (self.blockchain.contains_block(blocks[0].header_hash)):
+                    self.log.info(f"short_sync_backtrack already has {blocks[0].header_hash.hex()}")
+                else:
                     self.log.info(f"PM LOCK ATTEMPT WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
                     async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                         self.log.info(
