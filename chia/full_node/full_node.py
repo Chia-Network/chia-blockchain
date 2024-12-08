@@ -1472,27 +1472,21 @@ class FullNode:
                 # Wrap add_prevalidated_blocks with writer to ensure all writes and reads are on same connection.
                 # add_prevalidated_blocks should only be called under priority_mutex so this will not stall other
                 # writes to the DB.
-                self.log.info(f"PM LOCK ATTEMPT WJB task {asyncio.current_task().get_name()} add_prevalidated_blocks")
-                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                async with self.block_store.db_wrapper.writer() as conn:
                     self.log.info(
-                        f"PM LOCK ACQUIRE WJB task {asyncio.current_task().get_name()} add_prevalidated_blocks"
+                        f"BEGIN WJB task {asyncio.current_task().get_name()} ingest add_prevalidated_blocks writer {conn}"
                     )
-                    async with self.block_store.db_wrapper.writer() as conn:
-                        self.log.info(
-                            f"BEGIN WJB task {asyncio.current_task().get_name()} ingest add_prevalidated_blocks writer {conn}"
-                        )
-                        state_change_summary, err = await self.add_prevalidated_blocks(
-                            blockchain,
-                            blocks,
-                            pre_validation_results,
-                            fork_info,
-                            peer.peer_info,
-                            vs,
-                        )
-                        self.log.info(
-                            f"END WJB task {asyncio.current_task().get_name()} ingest add_prevalidated_blocks writer {conn}"
-                        )
-                    self.log.info(f"PM LOCK END WJB task {asyncio.current_task().get_name()} add_prevalidated_blocks")
+                    state_change_summary, err = await self.add_prevalidated_blocks(
+                        blockchain,
+                        blocks,
+                        pre_validation_results,
+                        fork_info,
+                        peer.peer_info,
+                        vs,
+                    )
+                    self.log.info(
+                        f"END WJB task {asyncio.current_task().get_name()} ingest add_prevalidated_blocks writer {conn}"
+                    )
 
                 if err is not None:
                     await peer.close(600)
