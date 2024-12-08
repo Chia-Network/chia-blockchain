@@ -107,7 +107,7 @@ async def test_api_not_ready(
 
     with caplog.at_level(logging.WARNING):
         assert await connection.send_message(
-            make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(uint32(0)))
+            make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(uint32(0))), None
         )
         await time_out_assert(10, request_ignored)
 
@@ -171,8 +171,8 @@ async def test_error_receive(
         return f"ApiError: {error} from {connection.peer_node_id}, {connection.peer_info}" in caplog.text
 
     with caplog.at_level(logging.WARNING):
-        await full_node_connection.outgoing_queue.put(message)
-        await wallet_connection.outgoing_queue.put(message)
+        await full_node_connection.outgoing_queue.put((message, None))
+        await wallet_connection.outgoing_queue.put((message, None))
         await time_out_assert(10, error_log_found, True, full_node_connection)
         await time_out_assert(10, error_log_found, True, wallet_connection)
 

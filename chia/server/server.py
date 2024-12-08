@@ -603,7 +603,7 @@ class ChiaServer:
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
                 for message in messages:
-                    await connection.send_message(message)
+                    await connection.send_message(message, None)
 
     async def send_to_all_if(
         self,
@@ -616,13 +616,13 @@ class ChiaServer:
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude and predicate(connection):
                 for message in messages:
-                    await connection.send_message(message)
+                    await connection.send_message(message, None)
 
     async def send_to_specific(self, messages: list[Message], node_id: bytes32) -> None:
         if node_id in self.all_connections:
             connection = self.all_connections[node_id]
             for message in messages:
-                await connection.send_message(message)
+                await connection.send_message(message, None)
 
     async def call_api_of_specific(
         self, request_method: Callable[..., Awaitable[Optional[Message]]], message_data: Streamable, node_id: bytes32

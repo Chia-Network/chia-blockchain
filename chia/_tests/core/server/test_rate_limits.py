@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 import pytest
 
 from chia._tests.conftest import node_with_params
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks, RespondBlock, RespondBlocks
+from chia.protocols.full_node_protocol import (
+    RejectBlock,
+    RejectBlocks,
+    RequestBlock,
+    RequestBlocks,
+    RespondBlock,
+    RespondBlocks,
+)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import make_msg
@@ -19,6 +27,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32
 
+rl_v3 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2, Capability.RATE_LIMITS_V3]
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
 rl_v1 = [Capability.BASE]
 node_with_params_b = node_with_params
@@ -28,9 +37,23 @@ test_different_versions_results: list[int] = []
 class TestRateLimits:
     @pytest.mark.anyio
     async def test_get_rate_limits_to_use(self):
-        assert get_rate_limits_to_use(rl_v2, rl_v2) != get_rate_limits_to_use(rl_v2, rl_v1)
-        assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v2, rl_v1)
-        assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v1, rl_v2)
+        v1_limits = get_rate_limits_to_use(rl_v1, rl_v1)
+        v2_limits = get_rate_limits_to_use(rl_v2, rl_v2)
+        v3_limits = get_rate_limits_to_use(rl_v3, rl_v3)
+
+        assert v1_limits != v2_limits
+        assert v2_limits != v3_limits
+        assert v3_limits != v1_limits
+
+        # using V1 limits
+        assert get_rate_limits_to_use(rl_v1, rl_v3) == v1_limits
+        assert get_rate_limits_to_use(rl_v3, rl_v1) == v1_limits
+        assert get_rate_limits_to_use(rl_v2, rl_v1) == v1_limits
+        assert get_rate_limits_to_use(rl_v1, rl_v2) == v1_limits
+
+        # using V2 limits
+        assert get_rate_limits_to_use(rl_v3, rl_v2) == v2_limits
+        assert get_rate_limits_to_use(rl_v2, rl_v3) == v2_limits
 
     @pytest.mark.anyio
     async def test_too_many_messages(self):
@@ -285,15 +308,25 @@ class TestRateLimits:
         [
             pytest.param(
                 dict(
-                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                    disable_capabilities=[
+                        Capability.BLOCK_HEADERS,
+                        Capability.RATE_LIMITS_V2,
+                        Capability.RATE_LIMITS_V3,
+                    ],
                 ),
                 id="V1",
             ),
             pytest.param(
                 dict(
-                    disable_capabilities=[],
+                    disable_capabilities=[Capability.RATE_LIMITS_V3],
                 ),
                 id="V2",
+            ),
+            pytest.param(
+                dict(
+                    disable_capabilities=[],
+                ),
+                id="V3",
             ),
         ],
         indirect=True,
@@ -303,15 +336,25 @@ class TestRateLimits:
         [
             pytest.param(
                 dict(
-                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                    disable_capabilities=[
+                        Capability.BLOCK_HEADERS,
+                        Capability.RATE_LIMITS_V2,
+                        Capability.RATE_LIMITS_V3,
+                    ],
                 ),
                 id="V1",
             ),
             pytest.param(
                 dict(
-                    disable_capabilities=[],
+                    disable_capabilities=[Capability.RATE_LIMITS_V3],
                 ),
                 id="V2",
+            ),
+            pytest.param(
+                dict(
+                    disable_capabilities=[],
+                ),
+                id="V3",
             ),
         ],
         indirect=True,
@@ -411,15 +454,21 @@ async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
     [
         pytest.param(
             dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2, Capability.RATE_LIMITS_V3],
             ),
             id="V1",
         ),
         pytest.param(
             dict(
-                disable_capabilities=[],
+                disable_capabilities=[Capability.RATE_LIMITS_V3],
             ),
             id="V2",
+        ),
+        pytest.param(
+            dict(
+                disable_capabilities=[],
+            ),
+            id="V3",
         ),
     ],
     indirect=True,
@@ -429,15 +478,21 @@ async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
     [
         pytest.param(
             dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
+                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2, Capability.RATE_LIMITS_V3],
             ),
             id="V1",
         ),
         pytest.param(
             dict(
-                disable_capabilities=[],
+                disable_capabilities=[Capability.RATE_LIMITS_V3],
             ),
             id="V2",
+        ),
+        pytest.param(
+            dict(
+                disable_capabilities=[],
+            ),
+            id="V3",
         ),
     ],
     indirect=True,
@@ -475,8 +530,113 @@ async def test_unsolicited_responses(
     assert not a_con.closed
     assert not b_con.closed
 
-    await a_con.send_message(msg)
+    await a_con.send_message(msg, None)
 
     # make sure the connection is closed because of the unsolicited response
     # message
     await time_out_assert(5, lambda: a_con.closed)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "msg_type",
+    [
+        ProtocolMessageTypes.request_blocks,
+        ProtocolMessageTypes.request_block,
+    ],
+)
+@pytest.mark.parametrize(
+    "node_with_params",
+    [
+        pytest.param(
+            dict(
+                disable_capabilities=[],
+            ),
+            id="V3",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize(
+    "node_with_params_b",
+    [
+        pytest.param(
+            dict(
+                disable_capabilities=[],
+            ),
+            id="V3",
+        ),
+    ],
+    indirect=True,
+)
+async def test_concurrent_requests_limit(
+    node_with_params,
+    node_with_params_b,
+    self_hostname: str,
+    msg_type: ProtocolMessageTypes,
+    bt: BlockTools,
+    caplog: pytest.LogCaptureFixture,
+):
+    node_a = node_with_params
+    node_b = node_with_params_b
+
+    msg = {
+        ProtocolMessageTypes.request_blocks: make_msg(
+            ProtocolMessageTypes.request_blocks, bytes(RequestBlocks(uint32(0), uint32(32), True))
+        ),
+        ProtocolMessageTypes.request_block: make_msg(
+            ProtocolMessageTypes.request_block, bytes(RequestBlock(uint32(1), True))
+        ),
+    }[msg_type]
+
+    full_node_server_a: ChiaServer = node_a.full_node.server
+    full_node_server_b: ChiaServer = node_b.full_node.server
+
+    await full_node_server_b.start_client(PeerInfo(self_hostname, full_node_server_a.get_port()), None)
+
+    assert len(full_node_server_b.get_connections()) == 1
+    assert len(full_node_server_a.get_connections()) == 1
+
+    a_con: WSChiaConnection = full_node_server_a.get_connections()[0]
+    b_con: WSChiaConnection = full_node_server_b.get_connections()[0]
+
+    assert not a_con.closed
+    assert not b_con.closed
+
+    # this is testing that we limit outbound messages. We will print to the log,
+    with caplog.at_level(logging.INFO):
+        futures = []
+        # we need to use send_request() to ensure the response isn't considered
+        # unsolicited
+        for msg_id in range(11):
+            futures.append(a_con.send_request(msg, msg_id))
+        await asyncio.gather(*futures)
+
+    if msg_type == ProtocolMessageTypes.request_blocks:
+        assert (
+            "Rate limiting ourselves. Dropping outbound message: request_blocks, "
+            "sz: 0.01 kB, peer: 127.0.0.1, message window count: 6> 5" in caplog.messages
+        )
+    elif msg_type == ProtocolMessageTypes.request_block:
+        assert (
+            "Rate limiting ourselves. Dropping outbound message: request_block, "
+            "sz: 0.01 kB, peer: 127.0.0.1, message window count: 11> 10" in caplog.messages
+        )
+    else:
+        assert False
+
+    # Since this is a loopback connection, we won't actually drop the
+    # message. This means that the receiving side will also experience peer A
+    # exceeding the limits, and try to ban it.
+    if msg_type == ProtocolMessageTypes.request_blocks:
+        assert (
+            "Peer exceeded the rate limit (will not disconnect): 127.0.0.1, message: request_blocks, "
+            "message window count: 6> 5" in caplog.messages
+        )
+    elif msg_type == ProtocolMessageTypes.request_block:
+        assert (
+            "Peer exceeded the rate limit (will not disconnect): 127.0.0.1, message: request_block, "
+            "message window count: 11> 10" in caplog.messages
+        )
+    else:
+        assert False

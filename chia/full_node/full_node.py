@@ -111,6 +111,24 @@ class WalletUpdate:
     hints: dict[bytes32, bytes32]
 
 
+# given a peer, how long do we need to wait between request blocks
+# messages?
+def request_timestamp_bump(peer: WSChiaConnection) -> float:
+    if is_localhost(peer.peer_info.host) or Capability.RATE_LIMITS_V3 in peer.peer_capabilities:
+        # we don't apply rate limits to localhost, and our
+        # tests depend on it. 1000 / second
+        # with rate limits v3, there is no rate limit, there's only a
+        # limit to the number of outstanding requests. We only have 1
+        # outstanding request at a time now anyway.
+        return 0.001
+    else:
+        # the rate limit for respond_blocks is 100 messages / 60 seconds.
+        # But the limit is scaled to 30% for outbound messages, so that's 30
+        # messages per 60 seconds.
+        # That's 2 seconds per request.
+        return 2
+
+
 @final
 @dataclasses.dataclass
 class FullNode:
@@ -921,7 +939,7 @@ class FullNode:
                 mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
                 msg = make_msg(ProtocolMessageTypes.request_mempool_transactions, mempool_request)
-                await connection.send_message(msg)
+                await connection.send_message(msg, None)
 
         peak_full: Optional[FullBlock] = await self.blockchain.get_full_peak()
 
@@ -935,7 +953,7 @@ class FullNode:
                     peak.height,
                     peak_full.reward_chain_block.get_unfinished().get_hash(),
                 )
-                await connection.send_message(make_msg(ProtocolMessageTypes.new_peak, request_node))
+                await connection.send_message(make_msg(ProtocolMessageTypes.new_peak, request_node), None)
 
             elif connection.connection_type is NodeType.WALLET:
                 # If connected to a wallet, send the Peak
@@ -945,7 +963,7 @@ class FullNode:
                     peak.weight,
                     peak.height,
                 )
-                await connection.send_message(make_msg(ProtocolMessageTypes.new_peak_wallet, request_wallet))
+                await connection.send_message(make_msg(ProtocolMessageTypes.new_peak_wallet, request_wallet), None)
             elif connection.connection_type is NodeType.TIMELORD:
                 await self.send_peak_to_timelords()
 
@@ -1166,11 +1184,6 @@ class FullNode:
         peers_with_peak: list[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
 
         async def fetch_blocks(output_queue: asyncio.Queue[Optional[tuple[WSChiaConnection, list[FullBlock]]]]) -> None:
-            # the rate limit for respond_blocks is 100 messages / 60 seconds.
-            # But the limit is scaled to 30% for outbound messages, so that's 30
-            # messages per 60 seconds.
-            # That's 2 seconds per request.
-            seconds_per_request = 2
             start_height, end_height = 0, 0
 
             # the timestamp of when the next request_block message is allowed to
@@ -1212,12 +1225,7 @@ class FullNode:
                         # it's OK for the timestamp to fall behind wall-clock
                         # time. It just means we're allowed to send more
                         # requests to catch up
-                        if is_localhost(peer.peer_info.host):
-                            # we don't apply rate limits to localhost, and our
-                            # tests depend on it
-                            bump = 0.1
-                        else:
-                            bump = seconds_per_request
+                        bump = request_timestamp_bump(peer)
 
                         new_peers_with_peak[idx] = (
                             new_peers_with_peak[idx][0],
@@ -1458,7 +1466,7 @@ class FullNode:
                     wallet_update.peak.header_hash,
                     list(changes),
                 )
-                await connection.send_message(make_msg(ProtocolMessageTypes.coin_state_update, state))
+                await connection.send_message(make_msg(ProtocolMessageTypes.coin_state_update, state), None)
 
         # Tell wallets about the new peak
         new_peak_message = make_msg(
@@ -2818,7 +2826,7 @@ class FullNode:
             msg = make_msg(
                 ProtocolMessageTypes.mempool_items_added, wallet_protocol.MempoolItemsAdded([mempool_item.name])
             )
-            await peer.send_message(msg)
+            await peer.send_message(msg, None)
 
         total_time = time.monotonic() - start_time
 
@@ -2883,7 +2891,7 @@ class FullNode:
                 ProtocolMessageTypes.mempool_items_removed,
                 wallet_protocol.MempoolItemsRemoved(removals),
             )
-            await peer.send_message(msg)
+            await peer.send_message(msg, None)
 
         total_time = time.monotonic() - start_time
 
@@ -3119,7 +3127,7 @@ class FullNode:
             vdf_proof,
         )
         msg = make_msg(ProtocolMessageTypes.respond_compact_vdf, compact_vdf)
-        await peer.send_message(msg)
+        await peer.send_message(msg, ProtocolMessageTypes.request_compact_vdf)
 
     async def add_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
         field_vdf = CompressibleVDFField(int(request.field_vdf))

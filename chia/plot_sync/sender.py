@@ -215,7 +215,7 @@ class Sender:
         self._response = ExpectedResponse(message_generator.message_type, identifier)
         log.debug(f"_send_next_message send {message_generator.message_type.name}: {payload}")
         if self._connection is None or not await self._connection.send_message(
-            make_msg(message_generator.message_type, payload)
+            make_msg(message_generator.message_type, payload), None
         ):
             return failed(f"Send failed {self._connection}")
         if not await self._wait_for_response():

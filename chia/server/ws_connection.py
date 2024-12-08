@@ -91,7 +91,13 @@ class WSChiaConnection:
     # Messaging
     received_message_callback: Optional[ConnectionCallback] = field(repr=False)
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
-    outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
+
+    # the second, optional, element is the message this is a response to. If
+    # set, we'll decrement the concurrent_countes in the rate limiter when this
+    # message is sent
+    outgoing_queue: asyncio.Queue[tuple[Message, Optional[ProtocolMessageTypes]]] = field(
+        default_factory=asyncio.Queue, repr=False
+    )
     api_tasks: dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
     # Contains task ids of api tasks which should not be canceled
     execute_tasks: set[bytes32] = field(default_factory=set, repr=False)
@@ -373,9 +379,11 @@ class WSChiaConnection:
     async def outbound_handler(self) -> None:
         try:
             while not self.closed:
-                msg = await self.outgoing_queue.get()
+                msg, response = await self.outgoing_queue.get()
                 if msg is not None:
                     await self._send_message(msg)
+                    if response is not None:
+                        self.inbound_rate_limiter.sent_response(response)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -468,7 +476,7 @@ class WSChiaConnection:
 
             if response is not None:
                 response_message = Message(response.type, full_message.id, response.data)
-                await self.send_message(response_message)
+                await self.send_message(response_message, ProtocolMessageTypes(full_message.type))
             # todo uncomment when enabling none response capability
             # check that this call needs a reply
             # elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and self.has_capability(
@@ -526,11 +534,11 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message) -> bool:
+    async def send_message(self, message: Message, response: Optional[ProtocolMessageTypes]) -> bool:
         """Send message sends a message with no tracking / callback."""
         if self.closed:
             return False
-        await self.outgoing_queue.put(message)
+        await self.outgoing_queue.put((message, response))
         return True
 
     async def call_api(
@@ -596,7 +604,7 @@ class WSChiaConnection:
         message = Message(message_no_id.type, request_id, message_no_id.data)
         assert message.id is not None
         self.pending_requests[message.id] = event
-        await self.outgoing_queue.put(message)
+        await self.outgoing_queue.put((message, None))
 
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
@@ -618,7 +626,7 @@ class WSChiaConnection:
     async def _wait_and_retry(self, msg: Message) -> None:
         try:
             await asyncio.sleep(1)
-            await self.outgoing_queue.put(msg)
+            await self.outgoing_queue.put((msg, None))
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
@@ -631,33 +639,28 @@ class WSChiaConnection:
             message, self.local_capabilities, self.peer_capabilities
         )
         if limiter_msg is not None:
-            if not is_localhost(self.peer_info.host):
-                message_type = ProtocolMessageTypes(message.type)
-                last_time = self.log_rate_limit_last_time[message_type]
-                now = time.monotonic()
-                if now - last_time >= 30:
-                    self.log_rate_limit_last_time[message_type] = now
-                    details = ", ".join(
-                        [
-                            f"{message_type.name}",
-                            f"sz: {len(message.data) / 1000:0.2f} kB",
-                            f"peer: {self.peer_info.host}",
-                            f"{limiter_msg}",
-                        ]
-                    )
-                    self.log.info(f"Rate limiting ourselves. Dropping outbound message: {details}")
+            message_type = ProtocolMessageTypes(message.type)
+            last_time = self.log_rate_limit_last_time[message_type]
+            now = time.monotonic()
+            if now - last_time >= 30:
+                self.log_rate_limit_last_time[message_type] = now
+                details = ", ".join(
+                    [
+                        f"{message_type.name}",
+                        f"sz: {len(message.data) / 1000:0.2f} kB",
+                        f"peer: {self.peer_info.host}",
+                        f"{limiter_msg}",
+                    ]
+                )
+                self.log.info(f"Rate limiting ourselves. Dropping outbound message: {details}")
 
+            if not is_localhost(self.peer_info.host):
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
                     # TODO: stop dropping tasks on the floor
                     asyncio.create_task(self._wait_and_retry(message))  # noqa: RUF006
 
                 return None
-            else:
-                self.log.debug(
-                    f"Not rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
-                    f"peer: {self.peer_info.host}"
-                )
 
         await self.ws.send_bytes(encoded)
         self.log.debug(
@@ -709,19 +712,16 @@ class WSChiaConnection:
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
             )
             if limiter_msg is not None:
+                details = ", ".join([f"{self.peer_info.host}", f"message: {message_type}", limiter_msg])
                 if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_info.host):
-                    details = ", ".join([f"{self.peer_info.host}", f"message: {message_type}", limiter_msg])
-                    self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
+                    self.log.error(f"Peer exceeded the rate limit and will be disconnected: {details}")
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
                     # TODO: stop dropping tasks on the floor
                     asyncio.create_task(self.close(RATE_LIMITER_BAN_SECONDS))  # noqa: RUF006
                     await asyncio.sleep(3)
                     return None
                 else:
-                    self.log.debug(
-                        f"Peer surpassed rate limit {self.peer_info.host}, message: {message_type}, "
-                        f"port {self.peer_info.port} but not disconnecting"
-                    )
+                    self.log.info(f"Peer exceeded the rate limit (will not disconnect): {details}")
                     return full_message_loaded
             return full_message_loaded
         elif message.type == WSMsgType.ERROR:

@@ -9,7 +9,7 @@ from typing import Optional
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import Message
-from chia.server.rate_limit_numbers import RLSettings, Unlimited, get_rate_limits_to_use
+from chia.server.rate_limit_numbers import RLSettings, RLWindow, Unlimited, get_rate_limits_to_use
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class RateLimiter:
     incoming: bool
     reset_seconds: int
     current_minute: int
+    concurrent_counts: Counter[ProtocolMessageTypes]
     message_counts: Counter[ProtocolMessageTypes]
     message_cumulative_sizes: Counter[ProtocolMessageTypes]
     percentage_of_limit: int
@@ -36,11 +37,16 @@ class RateLimiter:
         self.incoming = incoming
         self.reset_seconds = reset_seconds
         self.current_minute = int(time.time() // reset_seconds)
+        self.concurrent_counts = Counter()
         self.message_counts = Counter()
         self.message_cumulative_sizes = Counter()
         self.percentage_of_limit = percentage_of_limit
         self.non_tx_message_counts = 0
         self.non_tx_cumulative_size = 0
+
+    def sent_response(self, msg_type: ProtocolMessageTypes) -> None:
+        assert self.concurrent_counts[msg_type] > 0
+        self.concurrent_counts[msg_type] -= 1
 
     def process_msg_and_check(
         self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
@@ -54,6 +60,7 @@ class RateLimiter:
         current_minute = int(time.time() // self.reset_seconds)
         if current_minute != self.current_minute:
             self.current_minute = current_minute
+            self.concurrent_counts = Counter()
             self.message_counts = Counter()
             self.message_cumulative_sizes = Counter()
             self.non_tx_message_counts = 0
@@ -64,6 +71,8 @@ class RateLimiter:
             log.warning(f"Invalid message: {message.type}, {e}")
             return None
 
+        self.concurrent_counts[message_type] += 1
+        concurrent_count: int = self.concurrent_counts[message_type]
         new_message_counts: int = self.message_counts[message_type] + 1
         new_cumulative_size: int = self.message_cumulative_sizes[message_type] + len(message.data)
         new_non_tx_count: int = self.non_tx_message_counts
@@ -77,6 +86,8 @@ class RateLimiter:
             limits: RLSettings = rate_limits["default_settings"]
             if message_type in rate_limits["rate_limits_tx"]:
                 limits = rate_limits["rate_limits_tx"][message_type]
+            elif message_type in rate_limits["rate_limits_sync"]:
+                limits = rate_limits["rate_limits_sync"][message_type]
             elif message_type in rate_limits["rate_limits_other"]:
                 limits = rate_limits["rate_limits_other"][message_type]
                 if isinstance(limits, RLSettings):
@@ -104,13 +115,24 @@ class RateLimiter:
                 log.warning(
                     f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})",
                 )
-
             if isinstance(limits, Unlimited):
                 # this message type is not rate limited. This is used for
                 # response messages and must be combined with banning peers
                 # sending unsolicited responses of this type
                 if len(message.data) > limits.max_size:
                     return f"message size: {len(message.data)} > {limits.max_size}"
+                ret = True
+                return None
+            elif isinstance(limits, RLWindow):
+                # this message type is limited in the number of outstanding
+                # requests are allowed at a time
+
+                if concurrent_count > limits.count:
+                    return " ".join([f"message window count: {concurrent_count}> {limits.count}"])
+
+                if len(message.data) > limits.max_size:
+                    return f"message size: {len(message.data)} > {limits.max_size}"
+
                 ret = True
                 return None
             elif isinstance(limits, RLSettings):
