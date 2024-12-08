@@ -540,7 +540,7 @@ class WalletNode:
                 ):
                     continue
                 self.log.debug(f"sending: {msg}")
-                await peer.send_message(msg)
+                await peer.send_message(msg, None)
                 self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
                 self._tx_messages_in_progress[peer.peer_node_id].append(msg_name)
 
@@ -759,7 +759,7 @@ class WalletNode:
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
-            await peer.send_message(msg)
+            await peer.send_message(msg, None)
 
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
@@ -1730,7 +1730,7 @@ class WalletNode:
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
-            await peer.send_message(msg)
+            await peer.send_message(msg, None)
 
     async def _update_balance_cache(self, wallet_id: uint32) -> None:
         assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"

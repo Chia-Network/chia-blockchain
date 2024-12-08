@@ -91,7 +91,13 @@ class WSChiaConnection:
     # Messaging
     received_message_callback: Optional[ConnectionCallback] = field(repr=False)
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
-    outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
+
+    # the second, optional, element is the message this is a response to. If
+    # set, we'll decrement the concurrent_countes in the rate limiter when this
+    # message is sent
+    outgoing_queue: asyncio.Queue[tuple[Message, Optional[ProtocolMessageTypes]]] = field(
+        default_factory=asyncio.Queue, repr=False
+    )
     api_tasks: dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
     # Contains task ids of api tasks which should not be canceled
     execute_tasks: set[bytes32] = field(default_factory=set, repr=False)
@@ -373,9 +379,11 @@ class WSChiaConnection:
     async def outbound_handler(self) -> None:
         try:
             while not self.closed:
-                msg = await self.outgoing_queue.get()
+                msg, response = await self.outgoing_queue.get()
                 if msg is not None:
                     await self._send_message(msg)
+                    if response is not None:
+                        self.inbound_rate_limiter.sent_response(response)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -468,7 +476,7 @@ class WSChiaConnection:
 
             if response is not None:
                 response_message = Message(response.type, full_message.id, response.data)
-                await self.send_message(response_message)
+                await self.send_message(response_message, ProtocolMessageTypes(full_message.type))
             # todo uncomment when enabling none response capability
             # check that this call needs a reply
             # elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and self.has_capability(
@@ -526,11 +534,11 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message) -> bool:
+    async def send_message(self, message: Message, response: Optional[ProtocolMessageTypes]) -> bool:
         """Send message sends a message with no tracking / callback."""
         if self.closed:
             return False
-        await self.outgoing_queue.put(message)
+        await self.outgoing_queue.put((message, response))
         return True
 
     async def call_api(
@@ -596,7 +604,7 @@ class WSChiaConnection:
         message = Message(message_no_id.type, request_id, message_no_id.data)
         assert message.id is not None
         self.pending_requests[message.id] = event
-        await self.outgoing_queue.put(message)
+        await self.outgoing_queue.put((message, None))
 
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
@@ -618,7 +626,7 @@ class WSChiaConnection:
     async def _wait_and_retry(self, msg: Message) -> None:
         try:
             await asyncio.sleep(1)
-            await self.outgoing_queue.put(msg)
+            await self.outgoing_queue.put((msg, None))
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None

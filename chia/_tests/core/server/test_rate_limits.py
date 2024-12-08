@@ -475,7 +475,7 @@ async def test_unsolicited_responses(
     assert not a_con.closed
     assert not b_con.closed
 
-    await a_con.send_message(msg)
+    await a_con.send_message(msg, None)
 
     # make sure the connection is closed because of the unsolicited response
     # message

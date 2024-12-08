@@ -179,7 +179,7 @@ class FarmerAPI:
                 )
                 self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
-                await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
+                await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request), None)
 
             p2_singleton_puzzle_hash = new_proof_of_space.proof.pool_contract_puzzle_hash
             if p2_singleton_puzzle_hash is not None:

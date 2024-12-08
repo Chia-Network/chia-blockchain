@@ -212,7 +212,7 @@ class FullNodeAPI:
                         random_peer = full_node.server.all_connections[peer_id]
                         request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
                         msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
-                        await random_peer.send_message(msg)
+                        await random_peer.send_message(msg, None)
                         await asyncio.sleep(5)
                         counter += 1
                         if full_node.mempool_manager.seen(transaction_id):
@@ -779,7 +779,7 @@ class FullNodeAPI:
         for item in items:
             transaction = full_node_protocol.RespondTransaction(item)
             msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
-            await peer.send_message(msg)
+            await peer.send_message(msg, None)
         return None
 
     # FARMER PROTOCOL
@@ -1056,7 +1056,7 @@ class FullNodeAPI:
                 foliage_transaction_block_data=foliage_transaction_block_data,
                 rc_block_unfinished=rc_block_unfinished,
             )
-            await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
+            await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message), None)
 
             # Adds backup in case the first one fails
             if unfinished_block.is_transaction_block() and unfinished_block.transactions_generator is not None:
@@ -1146,7 +1146,7 @@ class FullNodeAPI:
                     unfinished_block.foliage.foliage_block_data.get_hash(),
                     unfinished_block.foliage.foliage_transaction_block_hash,
                 )
-                await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
+                await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message), None)
         return None
 
     # TIMELORD PROTOCOL
@@ -1956,7 +1956,7 @@ class FullNodeAPI:
 
         if len(transaction_ids) > 0:
             message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
-            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message))
+            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message), None)
 
         total_time = time.monotonic() - start_time
 
@@ -1975,7 +1975,7 @@ class FullNodeAPI:
 
         if len(transaction_ids) > 0:
             message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
-            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message))
+            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message), None)
 
         total_time = time.monotonic() - start_time
 
