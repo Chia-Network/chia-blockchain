@@ -2098,8 +2098,6 @@ class FullNode:
             prev_ses_block = None
             if block.height > 0:
                 prev_b = await self.blockchain.get_block_record_from_db(block.prev_header_hash)
-                if prev_b is None:
-                    self.log.info(f"height is {block.height}")
                 assert prev_b is not None
                 curr = prev_b
                 while curr.height > 0 and curr.sub_epoch_summary_included is None:
