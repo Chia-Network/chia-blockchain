@@ -634,8 +634,8 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    success, state_change_summary, _err = await self.add_block_batch(
-                        AugmentedBlockchain(self.blockchain), response.blocks, peer_info, fork_info, vs
+                    success, state_change_summary = await self.add_block_batch(
+                        response.blocks, peer_info, fork_info, vs
                     )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
@@ -1467,13 +1467,12 @@ class FullNode:
 
     async def add_block_batch(
         self,
-        blockchain: AugmentedBlockchain,
         all_blocks: list[FullBlock],
         peer_info: PeerInfo,
         fork_info: ForkInfo,
         vs: ValidationState,  # in-out parameter
         wp_summaries: Optional[list[SubEpochSummary]] = None,
-    ) -> tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
+    ) -> tuple[bool, Optional[StateChangeSummary]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
@@ -1482,7 +1481,7 @@ class FullNode:
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
 
         if len(blocks_to_validate) == 0:
-            return True, None, None
+            return True, None
 
         futures = await self.prevalidate_blocks(
             blockchain,
@@ -1508,7 +1507,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.monotonic() - pre_validate_start}, "
                 f"advanced: True"
             )
-        return err is None, agg_state_change_summary, err
+        return err is None, agg_state_change_summary
 
     async def skip_blocks(
         self,
