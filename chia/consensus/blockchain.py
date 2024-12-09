@@ -774,7 +774,14 @@ class Blockchain:
         True if we have already added this block to the chain. This may return false for orphan blocks
         that we have added but no longer keep in memory.
         """
-        return header_hash in self.__block_records
+        # check block records
+        block_rec = self.__block_records[header_hash]
+        if block_rec is None:
+            return False
+        block_rec = self.height_to_block_record(block_rec.height)
+        assert block_rec is not None
+        assert block_rec.header_hash == header_hash
+        return True
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__block_records[header_hash]
