@@ -2230,6 +2230,9 @@ class FullNode:
         state_change_summary: Optional[StateChangeSummary] = None
         ppp_result: Optional[PeakPostProcessingResult] = None
         async with enable_profiler(self.profile_block_validation) as pr:
+            # After acquiring the lock, check again, because another asyncio thread might have added it
+            if self.blockchain.contains_block(header_hash):
+                return None
             validation_start = time.monotonic()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
             conds = None
