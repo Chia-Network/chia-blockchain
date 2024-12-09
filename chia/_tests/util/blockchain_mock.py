@@ -77,7 +77,8 @@ class BlockchainMock:
                 return False
             height = block_rec.height
         block_hash_from_hh = self.height_to_hash(height)
-        assert block_hash_from_hh is not None
+        if block_hash_from_hh is None:
+            return False
         assert block_hash_from_hh == header_hash
         return True
 

@@ -123,8 +123,11 @@ class AugmentedBlockchain:
             if block_rec is None:
                 return False
             height = block_rec.height
+        if not self.contains_height(height):
+            return False
         block_hash_from_hh = self.height_to_hash(height)
-        assert block_hash_from_hh is not None
+        if block_hash_from_hh is None:
+            return False
         assert block_hash_from_hh == header_hash
         return True
 
