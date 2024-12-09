@@ -781,7 +781,7 @@ class Blockchain:
             height = block_rec.height
         block_hash_from_hh = self.height_to_hash(height)
         if block_hash_from_hh is None or block_hash_from_hh != header_hash:
-            return False        
+            return False
         return True
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:

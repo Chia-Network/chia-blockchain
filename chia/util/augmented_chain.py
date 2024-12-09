@@ -127,7 +127,7 @@ class AugmentedBlockchain:
             return False
         block_hash_from_hh = self.height_to_hash(height)
         if block_hash_from_hh is None or block_hash_from_hh != header_hash:
-            return False        
+            return False
         return True
 
     def contains_height(self, height: uint32) -> bool:
