@@ -787,9 +787,6 @@ class FullNode:
                 )
 
                 for block in reversed(blocks):
-                    # Wrap add_block with writer to ensure all writes and reads are on same connection.
-                    # add_block should only be called under priority_mutex so this will not stall other
-                    # writes to the DB.
                     if self.blockchain.contains_block(block.header_hash):
                         self.log.info(f"short_sync_backtrack already has {block.header_hash.hex()}")
                     else:
