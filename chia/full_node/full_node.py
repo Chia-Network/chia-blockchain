@@ -635,7 +635,7 @@ class FullNode:
                     )
                     vs = ValidationState(ssi, diff, None)
                     success, state_change_summary, _err = await self.add_block_batch(
-                        AugmentedBlockchain(self.blockchain), response.blocks, peer_info, fork_info, vs
+                        response.blocks, peer_info, fork_info, vs
                     )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
@@ -1467,7 +1467,6 @@ class FullNode:
 
     async def add_block_batch(
         self,
-        blockchain: AugmentedBlockchain,
         all_blocks: list[FullBlock],
         peer_info: PeerInfo,
         fork_info: ForkInfo,
