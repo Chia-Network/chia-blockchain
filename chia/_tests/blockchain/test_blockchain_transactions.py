@@ -320,7 +320,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
-        await add_blocks_in_batches([new_blocks[-1]], full_node_api_1.full_node, blocks[5].prev_header_hash)
+        await add_blocks_in_batches([new_blocks[-1]], full_node_api_1.full_node)
 
         coin_2 = None
         for coin in run_and_get_removals_and_additions(
