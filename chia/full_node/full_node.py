@@ -595,7 +595,7 @@ class FullNode:
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
                 return False
-            if not self.blockchain.contains_block(first.block.prev_header_hash):
+            if not self.blockchain.contains_block(first.block.prev_header_hash, first.block.height - 1):
                 self.log.info("Batch syncing stopped, this is a deep chain")
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 # First sb not connected to our blockchain, do a long sync instead
@@ -699,7 +699,10 @@ class FullNode:
                         f"Failed to fetch block {curr_height} from {peer.get_peer_logging()}, wrong type {type(curr)}"
                     )
                 blocks.append(curr.block)
-                if self.blockchain.contains_block(curr.block.prev_header_hash) or curr_height == 0:
+                if (
+                    self.blockchain.contains_block(curr.block.prev_header_hash, curr.block.height - 1)
+                    or curr_height == 0
+                ):
                     found_fork_point = True
                     break
                 curr_height -= 1
@@ -748,7 +751,7 @@ class FullNode:
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
-        if self.blockchain.contains_block(request.header_hash):
+        if self.blockchain.contains_block(request.header_hash, request.height):
             return None
 
         # Not interested in less heavy peaks
@@ -2006,7 +2009,7 @@ class FullNode:
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = block.header_hash
-        if self.blockchain.contains_block(header_hash):
+        if self.blockchain.contains_block(header_hash, block.height):
             return None
 
         pre_validation_result: Optional[PreValidationResult] = None
@@ -2078,7 +2081,7 @@ class FullNode:
             enable_profiler(self.profile_block_validation) as pr,
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
-            if self.blockchain.contains_block(header_hash):
+            if self.blockchain.contains_block(header_hash, block.height):
                 return None
             validation_start = time.monotonic()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again

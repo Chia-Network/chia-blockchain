@@ -192,8 +192,20 @@ class WalletBlockchain:
     def get_latest_timestamp(self) -> uint64:
         return self._latest_timestamp
 
-    def contains_block(self, header_hash: bytes32) -> bool:
-        return header_hash in self._block_records
+    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
+        """
+        True if we have already added this block to the chain. This may return false for orphan blocks
+        that we have added but no longer keep in memory.
+        """
+        if height is None:
+            block_rec = self.block_record(header_hash)
+            if block_rec is None:
+                return False
+            height = block_rec.height
+        block_hash_from_hh = self.height_to_hash(height)
+        assert block_hash_from_hh is not None
+        assert block_hash_from_hh == header_hash
+        return True
 
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash

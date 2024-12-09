@@ -775,7 +775,7 @@ class Blockchain:
         that we have added but no longer keep in memory.
         """
         if height is None:
-            block_rec = self.__block_records[header_hash]
+            block_rec = self.try_block_record(header_hash)
             if block_rec is None:
                 return False
             height = block_rec.height
