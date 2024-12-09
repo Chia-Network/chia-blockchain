@@ -787,17 +787,17 @@ class FullNode:
                 )
 
                 for block in reversed(blocks):
-                    if self.blockchain.contains_block(block.header_hash):
-                        self.log.info(f"short_sync_backtrack already has {block.header_hash.hex()}")
-                    else:
-                        # Wrap add_block with writer to ensure all writes and reads are on same connection.
-                        # add_block should only be called under priority_mutex so this will not stall other
-                        # writes to the DB.
-                        self.log.info(f"PM LOCK ATTEMPT WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
-                        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                            self.log.info(
-                                f"PM LOCK ACQUIRE WJB task {asyncio.current_task().get_name()} short_sync_backtrack"
-                            )
+                    # Wrap add_block with writer to ensure all writes and reads are on same connection.
+                    # add_block should only be called under priority_mutex so this will not stall other
+                    # writes to the DB.
+                    self.log.info(f"PM LOCK ATTEMPT WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
+                    async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                        self.log.info(
+                            f"PM LOCK ACQUIRE WJB task {asyncio.current_task().get_name()} short_sync_backtrack"
+                        )
+                        if self.blockchain.contains_block(block.header_hash):
+                            self.log.info(f"short_sync_backtrack main has {block.header_hash.hex()}")
+                        else:
                             async with self.block_store.db_wrapper.writer() as conn:
                                 self.log.info(
                                     f"BEGIN WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
@@ -808,7 +808,7 @@ class FullNode:
                                 self.log.info(
                                     f"END WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
                                 )
-                            self.log.info(f"PM LOCK END WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
+                        self.log.info(f"PM LOCK END WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
 
         except (asyncio.CancelledError, Exception):
             self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
