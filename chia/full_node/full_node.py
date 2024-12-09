@@ -786,29 +786,32 @@ class FullNode:
                     first_block.prev_header_hash,
                 )
 
-                # Wrap add_block with writer to ensure all writes and reads are on same connection.
-                # add_block should only be called under priority_mutex so this will not stall other
-                # writes to the DB.
-                if (len(blocks) == 1) and (self.blockchain.contains_block(blocks[0].header_hash)):
-                    self.log.info(f"short_sync_backtrack already has {blocks[0].header_hash.hex()}")
-                else:
-                    self.log.info(f"PM LOCK ATTEMPT WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
-                    async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                        self.log.info(
-                            f"PM LOCK ACQUIRE WJB task {asyncio.current_task().get_name()} short_sync_backtrack"
-                        )
-                        async with self.block_store.db_wrapper.writer() as conn:
+                for block in reversed(blocks):
+                    # Wrap add_block with writer to ensure all writes and reads are on same connection.
+                    # add_block should only be called under priority_mutex so this will not stall other
+                    # writes to the DB.
+                    if self.blockchain.contains_block(block.header_hash):
+                        self.log.info(f"short_sync_backtrack already has {block.header_hash.hex()}")
+                    else:
+                        # Wrap add_block with writer to ensure all writes and reads are on same connection.
+                        # add_block should only be called under priority_mutex so this will not stall other
+                        # writes to the DB.
+                        self.log.info(f"PM LOCK ATTEMPT WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
+                        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                             self.log.info(
-                                f"BEGIN WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
+                                f"PM LOCK ACQUIRE WJB task {asyncio.current_task().get_name()} short_sync_backtrack"
                             )
-                            for block in reversed(blocks):
+                            async with self.block_store.db_wrapper.writer() as conn:
+                                self.log.info(
+                                    f"BEGIN WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
+                                )
                                 # when syncing, we won't share any signatures with the
                                 # mempool, so there's no need to pass in the BLS cache.
                                 await self.add_block(block, peer, fork_info=fork_info)
-                            self.log.info(
-                                f"END WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
-                            )
-                        self.log.info(f"PM LOCK END WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
+                                self.log.info(
+                                    f"END WJB task {asyncio.current_task().get_name()} short_sync_backtrack add_block writer {conn}"
+                                )
+                            self.log.info(f"PM LOCK END WJB task {asyncio.current_task().get_name()} short_sync_backtrack")
 
         except (asyncio.CancelledError, Exception):
             self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
