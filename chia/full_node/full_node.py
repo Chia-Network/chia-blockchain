@@ -2239,6 +2239,8 @@ class FullNode:
 
                     # After acquiring the lock, check again, because another asyncio thread might have added it
                     if self.blockchain.contains_block(header_hash):
+                        self.log.info(f"END WJB*** task {asyncio.current_task().get_name()} add_block writer {conn}")
+                        self.log.info(f"PM LOCK END WJB*** task {asyncio.current_task().get_name()} add_block")
                         return None
                     validation_start = time.monotonic()
                     # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
