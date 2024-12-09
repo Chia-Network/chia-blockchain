@@ -54,6 +54,12 @@ class BlockCache:
     def contains_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
+    def contains_height(self, height: uint32) -> bool:
+        peak_height = self.get_peak_height()
+        if peak_height is None:
+            return False
+        return height <= peak_height
+
     def get_peak_height(self) -> Optional[uint32]:
         return self._peak_height
 

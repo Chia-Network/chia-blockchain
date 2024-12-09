@@ -127,6 +127,12 @@ class AugmentedBlockchain:
     def contains_block(self, header_hash: bytes32) -> bool:
         return (header_hash in self._extra_blocks) or self._underlying.contains_block(header_hash)
 
+    def contains_height(self, height: uint32) -> bool:
+        peak_height = self.get_peak_height()
+        if peak_height is None:
+            return False
+        return height <= peak_height
+
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret: list[bytes32] = []
         for hh in header_hashes:

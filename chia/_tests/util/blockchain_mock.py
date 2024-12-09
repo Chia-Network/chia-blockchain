@@ -76,6 +76,12 @@ class BlockchainMock:
     async def contains_block_from_db(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
+    def contains_height(self, height: uint32) -> bool:
+        peak_height = self.get_peak_height()
+        if peak_height is None:
+            return False
+        return height <= peak_height
+
     async def warmup(self, fork_point: uint32) -> None:
         return
 

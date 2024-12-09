@@ -325,8 +325,7 @@ class FullNodeAPI:
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
-        peak_height = self.full_node.blockchain.get_peak_height()
-        if peak_height is None or not request.height <= peak_height:
+        if not self.full_node.blockchain.contains_height(request.height):
             reject = RejectBlock(request.height)
             msg = make_msg(ProtocolMessageTypes.reject_block, reject)
             return msg
@@ -354,8 +353,7 @@ class FullNodeAPI:
             msg: Message = make_msg(ProtocolMessageTypes.reject_blocks, reject)
             return msg
         for i in range(request.start_height, request.end_height + 1):
-            peak_height = self.full_node.blockchain.get_peak_height()
-            if peak_height is None or not uint32(i) <= peak_height:
+            if not self.full_node.blockchain.contains_height(uint32(i)):
                 reject = RejectBlocks(request.start_height, request.end_height)
                 msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                 return msg

@@ -41,5 +41,4 @@ async def test_block_cache(seeded_random: random.Random) -> None:
         assert a.height_to_hash(uint32(i + 1)) == hh
         assert a.height_to_block_record(uint32(i + 1)) == BR(i + 1, hh, hashes[i - 1])
         assert a.contains_block(hh)
-        peak_height = a.get_peak_height()
-        assert peak_height is not None and (uint32(i + 1)) <= peak_height
+        assert a.contains_height(uint32(i + 1))
