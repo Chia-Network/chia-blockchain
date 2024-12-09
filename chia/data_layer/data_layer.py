@@ -935,6 +935,8 @@ class DataLayer:
                 subscriptions = await self.data_store.get_subscriptions()
 
             self.log.debug(f"Processing {len(subscriptions)} subscriptions")
+
+            self.log.debug("Doing get_owned_stores")
             # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
             try:
@@ -958,7 +960,9 @@ class DataLayer:
             # Optionally
             # Subscribe to all local non-owned store_ids that we can find on chain.
             # This is the prior behavior where all local stores, both owned and not owned, are subscribed to.
+            self.log.debug("Checking auto_subscribe_to_local_stores")
             if self.config.get("auto_subscribe_to_local_stores", False):
+                self.log.debug("Subscribing to all local stores")
                 local_store_ids = await self.data_store.get_store_ids()
                 subscription_store_ids = {subscription.store_id for subscription in subscriptions}
                 for local_id in local_store_ids:
