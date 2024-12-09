@@ -940,7 +940,7 @@ class Blockchain:
         return records
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if self.contains_block(header_hash):
+        if header_hash in self.__block_records:
             return self.block_record(header_hash)
         return None
 
