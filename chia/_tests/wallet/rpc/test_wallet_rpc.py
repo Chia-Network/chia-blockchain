@@ -2735,7 +2735,8 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
     output = (capsys.readouterr()).out
     assert "Transaction sent" not in output
 
-    await dataclasses.replace(xch_request).run()
+    with wallet_environments.new_puzzle_hashes_allowed():
+        await dataclasses.replace(xch_request).run()
 
     await wallet_environments.process_pending_states(
         [
@@ -2806,7 +2807,8 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
         }
     )
 
-    await dataclasses.replace(cat_request).run()
+    with wallet_environments.new_puzzle_hashes_allowed():
+        await dataclasses.replace(cat_request).run()
 
     await wallet_environments.process_pending_states(
         [
