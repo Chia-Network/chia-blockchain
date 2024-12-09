@@ -992,6 +992,7 @@ class DataLayer:
                 await asyncio.gather(*(job.done.wait() for job in jobs), return_exceptions=True)
 
             # Do unsubscribes after the fetching of data is complete, to avoid races.
+            self.log.debug("Processing unsubscribe queue")
             async with self.subscription_lock:
                 for unsubscribe_data in self.unsubscribe_data_queue:
                     await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
