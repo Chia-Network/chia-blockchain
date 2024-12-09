@@ -14,7 +14,7 @@ from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.rpc.wallet_request_types import VCAddProofs, VCGetList, VCMint, VCSpend
+from chia.rpc.wallet_request_types import VCAddProofs, VCGetList, VCGetProofsForRoot, VCMint, VCSpend
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -393,13 +393,17 @@ async def test_cat_trades(
 
     if credential_restricted:
         await client_maker.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs_maker))
-        assert await client_maker.vc_get_proofs_for_root(proof_root_maker) == proofs_maker.key_value_pairs
+        assert (
+            await client_maker.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root_maker))
+        ).to_vc_proofs().key_value_pairs == proofs_maker.key_value_pairs
         get_list_reponse = await client_maker.vc_get_list(VCGetList())
         assert len(get_list_reponse.vc_records) == 1
         assert get_list_reponse.proof_dict[proof_root_maker] == proofs_maker.key_value_pairs
 
         await client_taker.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs_taker))
-        assert await client_taker.vc_get_proofs_for_root(proof_root_taker) == proofs_taker.key_value_pairs
+        assert (
+            await client_taker.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root_taker))
+        ).to_vc_proofs().key_value_pairs == proofs_taker.key_value_pairs
         get_list_reponse = await client_taker.vc_get_list(VCGetList())
         assert len(get_list_reponse.vc_records) == 1
         assert get_list_reponse.proof_dict[proof_root_taker] == proofs_taker.key_value_pairs

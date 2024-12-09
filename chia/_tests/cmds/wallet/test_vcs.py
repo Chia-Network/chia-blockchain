@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from chia_rs import Coin
 
@@ -12,6 +11,8 @@ from chia.rpc.wallet_request_types import (
     VCGet,
     VCGetList,
     VCGetListResponse,
+    VCGetProofsForRoot,
+    VCGetProofsForRootResponse,
     VCGetResponse,
     VCMint,
     VCMintResponse,
@@ -236,9 +237,9 @@ def test_vcs_get_proofs_for_root(capsys: object, get_test_cli_clients: tuple[Tes
 
     # set RPC Client
     class VcsGetProofsForRootRpcClient(TestWalletRpcClient):
-        async def vc_get_proofs_for_root(self, root: bytes32) -> dict[str, Any]:
-            self.add_to_log("vc_get_proofs_for_root", (root,))
-            return {"test_proof": "1", "test_proof2": "1"}
+        async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
+            self.add_to_log("vc_get_proofs_for_root", (request.root,))
+            return VCGetProofsForRootResponse([("test_proof", "1"), ("test_proof2", "1")])
 
     inst_rpc_client = VcsGetProofsForRootRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

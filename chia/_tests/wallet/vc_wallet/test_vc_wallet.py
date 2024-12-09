@@ -10,7 +10,7 @@ from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.rpc.wallet_request_types import VCAddProofs, VCGet, VCGetList, VCMint, VCRevoke, VCSpend
+from chia.rpc.wallet_request_types import VCAddProofs, VCGet, VCGetList, VCGetProofsForRoot, VCMint, VCRevoke, VCSpend
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
@@ -303,7 +303,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     await client_0.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
     # Doing it again just to make sure it doesn't care
     await client_0.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
-    assert await client_0.vc_get_proofs_for_root(proof_root) == proofs.key_value_pairs
+    assert (
+        await client_0.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root))
+    ).to_vc_proofs().key_value_pairs == proofs.key_value_pairs
     get_list_reponse = await client_0.vc_get_list(VCGetList())
     assert len(get_list_reponse.vc_records) == 1
     assert get_list_reponse.proof_dict[proof_root] == proofs.key_value_pairs

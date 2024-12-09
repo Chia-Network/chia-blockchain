@@ -89,6 +89,8 @@ from chia.rpc.wallet_request_types import (
     VCGet,
     VCGetList,
     VCGetListResponse,
+    VCGetProofsForRoot,
+    VCGetProofsForRootResponse,
     VCGetResponse,
     VCMint,
     VCMintResponse,
@@ -1701,9 +1703,10 @@ class WalletRpcClient(RpcClient):
     async def vc_add_proofs(self, request: VCAddProofs) -> None:
         await self.fetch("vc_add_proofs", {**request.to_json_dict()})
 
-    async def vc_get_proofs_for_root(self, root: bytes32) -> dict[str, Any]:
-        response = await self.fetch("vc_get_proofs_for_root", {"root": root.hex()})
-        return cast(dict[str, Any], response["proofs"])
+    async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
+        return VCGetProofsForRootResponse.from_json_dict(
+            await self.fetch("vc_get_proofs_for_root", {**request.to_json_dict()})
+        )
 
     async def vc_revoke(
         self,

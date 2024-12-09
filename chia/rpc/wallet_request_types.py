@@ -464,7 +464,6 @@ class VCGetListResponse(Streamable):
         )
 
 
-@final
 @streamable
 @dataclass(frozen=True)
 class VCAddProofs(VCProofsRPC):
@@ -472,8 +471,23 @@ class VCAddProofs(VCProofsRPC):
         return {"proofs": self.to_vc_proofs().key_value_pairs}
 
     @classmethod
-    def from_json_dict(cls, json_dict: dict[str, Any]) -> VCAddProofs:
+    def from_json_dict(cls: type[_T_VCAddProofs], json_dict: dict[str, Any]) -> _T_VCAddProofs:
         return cls([(key, value) for key, value in json_dict["proofs"].items()])
+
+
+_T_VCAddProofs = TypeVar("_T_VCAddProofs", bound=VCAddProofs)
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetProofsForRoot(Streamable):
+    root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetProofsForRootResponse(VCAddProofs):
+    pass
 
 
 @streamable

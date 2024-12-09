@@ -28,6 +28,7 @@ from chia.rpc.wallet_request_types import (
     VCAddProofs,
     VCGet,
     VCGetList,
+    VCGetProofsForRoot,
     VCMint,
     VCRevoke,
     VCSpend,
@@ -1704,7 +1705,11 @@ async def add_proof_reveal(
 
 async def get_proofs_for_root(wallet_rpc_port: Optional[int], fp: Optional[int], proof_hash: str) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        proof_dict: dict[str, str] = await wallet_client.vc_get_proofs_for_root(bytes32.from_hexstr(proof_hash))
+        proof_dict: dict[str, str] = (
+            (await wallet_client.vc_get_proofs_for_root(VCGetProofsForRoot(bytes32.from_hexstr(proof_hash))))
+            .to_vc_proofs()
+            .key_value_pairs
+        )
         print("Proofs:")
         for proof in proof_dict:
             print(f" - {proof}")

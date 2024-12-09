@@ -60,6 +60,8 @@ from chia.rpc.wallet_request_types import (
     VCGet,
     VCGetList,
     VCGetListResponse,
+    VCGetProofsForRoot,
+    VCGetProofsForRootResponse,
     VCGetResponse,
     VCMint,
     VCMintResponse,
@@ -4639,25 +4641,20 @@ class WalletRpcApi:
 
         return Empty()
 
-    async def vc_get_proofs_for_root(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
         """
         Given a specified vc root, get any proofs associated with that root.
         :param request: must specify 'root' representing the tree hash of some set of proofs
         :return: a dictionary of root hashes mapped to dictionaries of key value pairs of 'proofs'
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCGetProofsForRoot(Streamable):
-            root: bytes32
-
-        parsed_request = VCGetProofsForRoot.from_json_dict(request)
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
-        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(parsed_request.root)
+        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(request.root)
         if vc_proofs is None:
             raise ValueError("no proofs found for specified root")  # pragma: no cover
-        return {"proofs": vc_proofs.key_value_pairs}
+        return VCGetProofsForRootResponse.from_vc_proofs(vc_proofs)
 
     @tx_endpoint(push=True)
     @marshal
