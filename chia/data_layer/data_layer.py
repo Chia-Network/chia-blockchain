@@ -992,6 +992,8 @@ class DataLayer:
                 for unsubscribe_data in self.unsubscribe_data_queue:
                     await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
                 self.unsubscribe_data_queue.clear()
+
+            self.log.debug(f"Finished job loop: sleeping for {manage_data_interval} seconds")
             await asyncio.sleep(manage_data_interval)
 
     async def update_subscription(
