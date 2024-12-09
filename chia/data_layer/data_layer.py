@@ -906,10 +906,12 @@ class DataLayer:
 
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
+        self.log.debug(f"Doing periodically_manage_data : {manage_data_interval}")
         while not self._shut_down:
             async with self.subscription_lock:
                 try:
                     subscriptions = await self.data_store.get_subscriptions()
+                    self.log.debug(f"Asking wallet to track {len(subscriptions)} subscriptions")
                     for subscription in subscriptions:
                         await self.wallet_rpc.dl_track_new(subscription.store_id)
                     break
@@ -927,10 +929,12 @@ class DataLayer:
                 await asyncio.sleep(0.1)
 
         while not self._shut_down:
+            self.log.debug("Starting job loop")
             # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
 
+            self.log.debug(f"Processing {len(subscriptions)} subscriptions")
             # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
             try:
@@ -967,6 +971,7 @@ class DataLayer:
                                 f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
                             )
 
+            self.log.debug(f"Building worker queue to process {len(subscriptions)} subscriptions")
             work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
             async with QueuedAsyncPool.managed(
                 name="DataLayer subscription update pool",
@@ -979,6 +984,7 @@ class DataLayer:
                 for job in jobs:
                     await work_queue.put(job)
 
+                self.log.debug(f"Waiting for {len(jobs)} jobs to finish")
                 await asyncio.gather(*(job.done.wait() for job in jobs), return_exceptions=True)
 
             # Do unsubscribes after the fetching of data is complete, to avoid races.
