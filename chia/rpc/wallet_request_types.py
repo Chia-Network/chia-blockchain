@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, final
 
 from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform
@@ -25,7 +25,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.tx_config import TXConfig
-from chia.wallet.vc_wallet.vc_store import VCRecord
+from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
@@ -377,6 +377,121 @@ class NFTCoin(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class VCGet(Streamable):
+    vc_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetResponse(Streamable):
+    vc_record: Optional[VCRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetList(Streamable):
+    start: uint32 = uint32(0)
+    end: uint32 = uint32(50)
+
+
+# utility for VC endpoints
+@streamable
+@dataclass(frozen=True)
+class VCProofsRPC(Streamable):
+    key_value_pairs: list[tuple[str, str]]
+
+    def to_vc_proofs(self) -> VCProofs:
+        return VCProofs({key: value for key, value in self.key_value_pairs})
+
+    @classmethod
+    def from_vc_proofs(cls: type[_T_VCProofsRPC], vc_proofs: VCProofs) -> _T_VCProofsRPC:
+        return cls([(key, value) for key, value in vc_proofs.key_value_pairs.items()])
+
+
+_T_VCProofsRPC = TypeVar("_T_VCProofsRPC", bound=VCProofsRPC)
+
+
+# utility for VCGetListResponse
+@streamable
+@dataclass(frozen=True)
+class VCProofWithHash(Streamable):
+    hash: bytes32
+    proof: Optional[VCProofsRPC]
+
+
+# utility for VCGetListResponse
+@final
+@streamable
+@dataclass(frozen=True)
+class VCRecordWithCoinID(VCRecord):
+    coin_id: bytes32
+
+    @classmethod
+    def from_vc_record(cls, vc_record: VCRecord) -> VCRecordWithCoinID:
+        return cls(coin_id=vc_record.vc.coin.name(), **vc_record.__dict__)
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetListResponse(Streamable):
+    vc_records: list[VCRecordWithCoinID]
+    proofs: list[VCProofWithHash]
+
+    @property
+    def proof_dict(self) -> dict[bytes32, Optional[dict[str, str]]]:
+        return {
+            pwh.hash: None if pwh.proof is None else {key: value for key, value in pwh.proof.key_value_pairs}
+            for pwh in self.proofs
+        }
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "vc_records": [vc_record.to_json_dict() for vc_record in self.vc_records],
+            "proofs": {proof_hash.hex(): proof_data for proof_hash, proof_data in self.proof_dict.items()},
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> VCGetListResponse:
+        return cls(
+            [VCRecordWithCoinID.from_json_dict(vc_record) for vc_record in json_dict["vc_records"]],
+            [
+                VCProofWithHash(
+                    bytes32.from_hexstr(proof_hash),
+                    None if potential_proofs is None else VCProofsRPC.from_vc_proofs(VCProofs(potential_proofs)),
+                )
+                for proof_hash, potential_proofs in json_dict["proofs"].items()
+            ],
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class VCAddProofs(VCProofsRPC):
+    def to_json_dict(self) -> dict[str, Any]:
+        return {"proofs": self.to_vc_proofs().key_value_pairs}
+
+    @classmethod
+    def from_json_dict(cls: type[_T_VCAddProofs], json_dict: dict[str, Any]) -> _T_VCAddProofs:
+        return cls([(key, value) for key, value in json_dict["proofs"].items()])
+
+
+_T_VCAddProofs = TypeVar("_T_VCAddProofs", bound=VCAddProofs)
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetProofsForRoot(Streamable):
+    root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class VCGetProofsForRootResponse(VCAddProofs):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: list[Spend]
 
@@ -551,6 +666,46 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
     tx_num: uint16
     spend_bundle: WalletSpendBundle
+
+
+@streamable
+@dataclass(frozen=True)
+class VCMint(TransactionEndpointRequest):
+    did_id: str = field(default_factory=default_raise)
+    target_address: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VCMintResponse(TransactionEndpointResponse):
+    vc_record: VCRecord
+
+
+@streamable
+@dataclass(frozen=True)
+class VCSpend(TransactionEndpointRequest):
+    vc_id: bytes32 = field(default_factory=default_raise)
+    new_puzhash: Optional[bytes32] = None
+    new_proof_hash: Optional[bytes32] = None
+    provider_inner_puzhash: Optional[bytes32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VCSpendResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class VCRevoke(TransactionEndpointRequest):
+    vc_parent_id: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class VCRevokeResponse(TransactionEndpointResponse):
+    pass
 
 
 # TODO: The section below needs corresponding request types
@@ -747,21 +902,3 @@ class DAOSendToLockupResponse(TransactionEndpointResponse):
 class DAOExitLockupResponse(TransactionEndpointResponse):
     tx_id: bytes32
     tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class VCMintResponse(TransactionEndpointResponse):
-    vc_record: VCRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class VCSpendResponse(TransactionEndpointResponse):
-    pass
-
-
-@streamable
-@dataclass(frozen=True)
-class VCRevokeResponse(TransactionEndpointResponse):
-    pass

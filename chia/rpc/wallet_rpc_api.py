@@ -56,6 +56,22 @@ from chia.rpc.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    VCAddProofs,
+    VCGet,
+    VCGetList,
+    VCGetListResponse,
+    VCGetProofsForRoot,
+    VCGetProofsForRootResponse,
+    VCGetResponse,
+    VCMint,
+    VCMintResponse,
+    VCProofsRPC,
+    VCProofWithHash,
+    VCRecordWithCoinID,
+    VCRevoke,
+    VCRevokeResponse,
+    VCSpend,
+    VCSpendResponse,
 )
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -4530,12 +4546,13 @@ class WalletRpcApi:
     # Verified Credential
     ##########################################################################################
     @tx_endpoint(push=True)
+    @marshal
     async def vc_mint(
         self,
-        request: dict[str, Any],
+        request: VCMint,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> VCMintResponse:
         """
         Mint a verified credential using the assigned DID
         :param request: We require 'did_id' that will be minting the VC and options for a new 'target_address' as well
@@ -4543,84 +4560,58 @@ class WalletRpcApi:
         :return: a 'vc_record' containing all the information of the soon-to-be-confirmed vc as well as any relevant
         'transactions'
         """
-
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCMint(Streamable):
-            did_id: str
-            target_address: Optional[str] = None
-            fee: uint64 = uint64(0)
-
-        parsed_request = VCMint.from_json_dict(request)
-
-        did_id = decode_puzzle_hash(parsed_request.did_id)
+        did_id = decode_puzzle_hash(request.did_id)
         puzhash: Optional[bytes32] = None
-        if parsed_request.target_address is not None:
-            puzhash = decode_puzzle_hash(parsed_request.target_address)
+        if request.target_address is not None:
+            puzhash = decode_puzzle_hash(request.target_address)
 
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
         vc_record = await vc_wallet.launch_new_vc(
-            did_id, action_scope, puzhash, parsed_request.fee, extra_conditions=extra_conditions
+            did_id, action_scope, puzhash, request.fee, extra_conditions=extra_conditions
         )
-        return {
-            "vc_record": vc_record.to_json_dict(),
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        return VCMintResponse([], [], vc_record)
 
-    async def vc_get(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_get(self, request: VCGet) -> VCGetResponse:
         """
         Given a launcher ID get the verified credential
         :param request: the 'vc_id' launcher id of a verifiable credential
         :return: the 'vc_record' representing the specified verifiable credential
         """
+        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(request.vc_id)
+        return VCGetResponse(vc_record)
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCGet(Streamable):
-            vc_id: bytes32
-
-        parsed_request = VCGet.from_json_dict(request)
-
-        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(parsed_request.vc_id)
-        return {"vc_record": vc_record}
-
-    async def vc_get_list(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
         """
         Get a list of verified credentials
         :param request: optional parameters for pagination 'start' and 'count'
         :return: all 'vc_records' in the specified range and any 'proofs' associated with the roots contained within
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCGetList(Streamable):
-            start: uint32 = uint32(0)
-            end: uint32 = uint32(50)
-
-        parsed_request = VCGetList.from_json_dict(request)
-
-        vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(
-            parsed_request.start, parsed_request.end
-        )
-        return {
-            "vc_records": [{"coin_id": "0x" + vc.vc.coin.name().hex(), **vc.to_json_dict()} for vc in vc_list],
-            "proofs": {
-                rec.vc.proof_hash.hex(): None if fetched_proof is None else fetched_proof.key_value_pairs
+        vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(request.start, request.end)
+        return VCGetListResponse(
+            [VCRecordWithCoinID.from_vc_record(vc) for vc in vc_list],
+            [
+                VCProofWithHash(
+                    rec.vc.proof_hash, None if fetched_proof is None else VCProofsRPC.from_vc_proofs(fetched_proof)
+                )
                 for rec in vc_list
                 if rec.vc.proof_hash is not None
                 for fetched_proof in (
                     await self.service.wallet_state_manager.vc_store.get_proofs_for_root(rec.vc.proof_hash),
                 )
-            },
-        }
+            ],
+        )
 
     @tx_endpoint(push=True)
+    @marshal
     async def vc_spend(
         self,
-        request: dict[str, Any],
+        request: VCSpend,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> VCSpendResponse:
         """
         Spend a verified credential
         :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional parameters for a 'new_puzhash'
@@ -4629,34 +4620,22 @@ class WalletRpcApi:
         :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCSpend(Streamable):
-            vc_id: bytes32
-            new_puzhash: Optional[bytes32] = None
-            new_proof_hash: Optional[bytes32] = None
-            provider_inner_puzhash: Optional[bytes32] = None
-            fee: uint64 = uint64(0)
-
-        parsed_request = VCSpend.from_json_dict(request)
-
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         await vc_wallet.generate_signed_transaction(
-            parsed_request.vc_id,
+            request.vc_id,
             action_scope,
-            parsed_request.fee,
-            parsed_request.new_puzhash,
-            new_proof_hash=parsed_request.new_proof_hash,
-            provider_inner_puzhash=parsed_request.provider_inner_puzhash,
+            request.fee,
+            request.new_puzhash,
+            new_proof_hash=request.new_proof_hash,
+            provider_inner_puzhash=request.provider_inner_puzhash,
             extra_conditions=extra_conditions,
         )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        return VCSpendResponse([], [])  # tx_endpoint takes care of filling this out
 
-    async def vc_add_proofs(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_add_proofs(self, request: VCAddProofs) -> Empty:
         """
         Add a set of proofs to the DB that can be used when spending a VC. VCs are near useless until their proofs have
         been added.
@@ -4665,63 +4644,50 @@ class WalletRpcApi:
         """
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
-        await vc_wallet.store.add_vc_proofs(VCProofs(request["proofs"]))
+        await vc_wallet.store.add_vc_proofs(request.to_vc_proofs())
 
-        return {}
+        return Empty()
 
-    async def vc_get_proofs_for_root(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
         """
         Given a specified vc root, get any proofs associated with that root.
         :param request: must specify 'root' representing the tree hash of some set of proofs
         :return: a dictionary of root hashes mapped to dictionaries of key value pairs of 'proofs'
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCGetProofsForRoot(Streamable):
-            root: bytes32
-
-        parsed_request = VCGetProofsForRoot.from_json_dict(request)
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
-        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(parsed_request.root)
+        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(request.root)
         if vc_proofs is None:
             raise ValueError("no proofs found for specified root")  # pragma: no cover
-        return {"proofs": vc_proofs.key_value_pairs}
+        return VCGetProofsForRootResponse.from_vc_proofs(vc_proofs)
 
     @tx_endpoint(push=True)
+    @marshal
     async def vc_revoke(
         self,
-        request: dict[str, Any],
+        request: VCRevoke,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> VCRevokeResponse:
         """
         Revoke an on chain VC provided the correct DID is available
         :param request: required 'vc_parent_id' for the VC coin. Standard transaction params 'fee' & 'reuse_puzhash'.
         :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCRevoke(Streamable):
-            vc_parent_id: bytes32
-            fee: uint64 = uint64(0)
-
-        parsed_request = VCRevoke.from_json_dict(request)
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         await vc_wallet.revoke_vc(
-            parsed_request.vc_parent_id,
+            request.vc_parent_id,
             self.service.get_full_node_peer(),
             action_scope,
-            parsed_request.fee,
+            request.fee,
             extra_conditions=extra_conditions,
         )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        return VCRevokeResponse([], [])  # tx_endpoint takes care of filling this out
 
     @tx_endpoint(push=True)
     async def crcat_approve_pending(
