@@ -8,6 +8,7 @@ import click
 
 from chia.cmds import options
 from chia.cmds.sim_funcs import async_config_wizard, farm_blocks, print_status, revert_block_height, set_auto_farm
+from chia.cmds.util import ChiaCliContext
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 
 
@@ -35,9 +36,12 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
 @click.pass_context
 def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulator_name: str) -> None:
     ctx.ensure_object(dict)
-    ctx.obj["root_path"] = Path(root_path) / simulator_name
-    ctx.obj["sim_name"] = simulator_name
-    ctx.obj["rpc_port"] = rpc_port
+    ctx.obj.update(
+        ChiaCliContext(
+            root_path=Path(root_path) / simulator_name,
+            rpc_port=rpc_port,
+        )
+    )
 
 
 @sim_cmd.command("create", help="Guides you through the process of setting up a Chia Simulator")
@@ -73,13 +77,14 @@ def create_simulator_config(
     docker_mode: bool,
     no_bitfield: bool,
 ) -> None:
-    print(f"Using this Directory: {ctx.obj['root_path']}\n")
+    root_path = ChiaCliContext.from_click(ctx).root_path
+    print(f"Using this Directory: {root_path}\n")
     if fingerprint and mnemonic:
         print("You can't use both a fingerprint and a mnemonic. Please choose one.")
         return None
     asyncio.run(
         async_config_wizard(
-            ctx.obj["root_path"],
+            root_path,
             fingerprint,
             reward_address,
             plot_directory,
@@ -132,10 +137,12 @@ def status_cmd(
     include_rewards: bool,
     show_addresses: bool,
 ) -> None:
+    context = ChiaCliContext.from_click(ctx)
+
     asyncio.run(
         print_status(
-            ctx.obj["rpc_port"],
-            ctx.obj["root_path"],
+            context.rpc_port,
+            context.root_path,
             fingerprint,
             show_key,
             show_coins,
@@ -174,10 +181,13 @@ def revert_cmd(
     if reset and blocks != 1:
         print("\nBlocks, '-b' must not be set if all blocks are selected by reset, '-r'. Exiting.\n")
         return
+
+    context = ChiaCliContext.from_click(ctx)
+
     asyncio.run(
         revert_block_height(
-            ctx.obj["rpc_port"],
-            ctx.obj["root_path"],
+            context.rpc_port,
+            context.root_path,
             blocks,
             new_blocks,
             reset,
@@ -192,10 +202,11 @@ def revert_cmd(
 @click.option("-a", "--target-address", type=str, default="", help="Block reward address")
 @click.pass_context
 def farm_cmd(ctx: click.Context, blocks: int, non_transaction: bool, target_address: str) -> None:
+    context = ChiaCliContext.from_click(ctx)
     asyncio.run(
         farm_blocks(
-            ctx.obj["rpc_port"],
-            ctx.obj["root_path"],
+            context.rpc_port,
+            context.root_path,
             blocks,
             not non_transaction,
             target_address,
@@ -208,10 +219,11 @@ def farm_cmd(ctx: click.Context, blocks: int, non_transaction: bool, target_addr
 @click.pass_context
 def autofarm_cmd(ctx: click.Context, set_autofarm: str) -> None:
     autofarm = bool(set_autofarm == "on")
+    context = ChiaCliContext.from_click(ctx)
     asyncio.run(
         set_auto_farm(
-            ctx.obj["rpc_port"],
-            ctx.obj["root_path"],
+            context.rpc_port,
+            context.root_path,
             autofarm,
         )
     )

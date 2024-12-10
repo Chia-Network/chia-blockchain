@@ -8,6 +8,7 @@ import click
 from chia.cmds.db_backup_func import db_backup_func
 from chia.cmds.db_upgrade_func import db_upgrade_func
 from chia.cmds.db_validate_func import db_validate_func
+from chia.cmds.util import ChiaCliContext
 
 
 @click.group("db", help="Manage the blockchain database")
@@ -41,7 +42,7 @@ def db_upgrade_cmd(
 ) -> None:
     try:
         db_upgrade_func(
-            Path(ctx.obj["root_path"]),
+            ChiaCliContext.from_click(ctx).root_path,
             None if in_db_path is None else Path(in_db_path),
             None if out_db_path is None else Path(out_db_path),
             no_update_config=no_update_config,
@@ -63,7 +64,7 @@ def db_upgrade_cmd(
 def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_blocks: bool) -> None:
     try:
         db_validate_func(
-            Path(ctx.obj["root_path"]),
+            ChiaCliContext.from_click(ctx).root_path,
             None if in_db_path is None else Path(in_db_path),
             validate_blocks=validate_blocks,
         )
@@ -78,7 +79,7 @@ def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_bloc
 def db_backup_cmd(ctx: click.Context, db_backup_file: Optional[str], no_indexes: bool) -> None:
     try:
         db_backup_func(
-            Path(ctx.obj["root_path"]),
+            ChiaCliContext.from_click(ctx).root_path,
             None if db_backup_file is None else Path(db_backup_file),
             no_indexes=no_indexes,
         )

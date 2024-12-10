@@ -7,6 +7,7 @@ from typing import Any, Callable, Optional, Union
 import click
 
 from chia.cmds.units import units
+from chia.cmds.util import ChiaCliContext
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
@@ -173,9 +174,11 @@ class AddressParamType(click.ParamType):
             hrp, _b32data = bech32_decode(value)
             if hrp in {"xch", "txch"}:  # I hate having to load the config here
                 addr_type: AddressType = AddressType.XCH
-                expected_prefix = ctx.obj.get("expected_prefix") if ctx else None  # attempt to get cached prefix
+                expected_prefix = (
+                    ChiaCliContext.from_click(ctx).expected_prefix if ctx else None
+                )  # attempt to get cached prefix
                 if expected_prefix is None:
-                    root_path = ctx.obj["root_path"] if ctx is not None else DEFAULT_ROOT_PATH
+                    root_path = ChiaCliContext.from_click(ctx).root_path if ctx is not None else DEFAULT_ROOT_PATH
                     config = load_config(root_path, "config.yaml")
                     expected_prefix = selected_network_address_prefix(config)
 
