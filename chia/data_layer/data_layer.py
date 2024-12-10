@@ -944,7 +944,7 @@ class DataLayer:
                 self.log.debug("Calling self.get_owned_stores")
                 owned_stores = await self.get_owned_stores()
                 self.log.debug(f"Owned stores: len{owned_stores}")
-            except ValueError:
+            except (ValueError, aiohttp.client_exceptions.ClientConnectorError):
                 # Sometimes the DL wallet isn't available, so we can't get the owned stores.
                 # We'll try again next time.
                 self.log.warning("Can't get owned stores, will try again next time.")
