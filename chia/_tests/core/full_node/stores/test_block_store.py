@@ -15,6 +15,7 @@ from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
@@ -148,9 +149,10 @@ async def test_get_full_blocks_at(
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         count = 0
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for b1, b2 in zip(blocks, alt_blocks):
             await _validate_and_add_block(bc, b1)
-            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             ret = await block_store.get_full_blocks_at([uint32(count)])
             assert set(ret) == set([b1, b2])
             count += 1
@@ -174,9 +176,10 @@ async def test_get_block_records_in_range(
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         count = 0
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for b1, b2 in zip(blocks, alt_blocks):
             await _validate_and_add_block(bc, b1)
-            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             # the range is inclusive
             ret = await block_store.get_block_records_in_range(count, count)
             assert len(ret) == 1
@@ -202,9 +205,10 @@ async def test_get_block_bytes_in_range_in_main_chain(
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         count = 0
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for b1, b2 in zip(blocks, alt_blocks):
             await _validate_and_add_block(bc, b1)
-            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             # the range is inclusive
             ret = await block_store.get_block_bytes_in_range(count, count)
             assert ret == [bytes(b1)]
@@ -261,9 +265,10 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
 
         # insert all blocks
         count = 0
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for b1, b2 in zip(blocks, alt_blocks):
             await _validate_and_add_block(bc, b1)
-            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+            await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             count += 1
             ret = await block_store.get_random_not_compactified(count)
             assert len(ret) == count

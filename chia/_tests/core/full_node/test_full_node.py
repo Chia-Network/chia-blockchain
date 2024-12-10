@@ -549,8 +549,9 @@ class TestFullNodeProtocol:
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for block in bt.get_consecutive_blocks(30):
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.add_block(block, peer, fork_info=fork_info)
 
         assert full_node_1.full_node.blockchain.get_peak().height == 29
 
@@ -1018,7 +1019,7 @@ class TestFullNodeProtocol:
             block_list_input=blocks[:-1],
             guarantee_transaction_block=True,
         )
-        await add_blocks_in_batches(blocks[-2:], full_node_1.full_node, blocks[-2].prev_header_hash)
+        await add_blocks_in_batches(blocks[-2:], full_node_1.full_node)
         # Can now resubmit a transaction after the reorg
         status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
@@ -2602,13 +2603,13 @@ async def test_shallow_reorg_nodes(
 
     assert chain_b[-1].total_iters < chain_a[-1].total_iters
 
-    await add_blocks_in_batches(chain_a[-1:], full_node_1.full_node, chain[-1].header_hash)
+    await add_blocks_in_batches(chain_a[-1:], full_node_1.full_node)
 
     await time_out_assert(10, check_nodes_in_sync)
     await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_a)
     await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_a)
 
-    await add_blocks_in_batches(chain_b[-1:], full_node_1.full_node, chain[-1].header_hash)
+    await add_blocks_in_batches(chain_b[-1:], full_node_1.full_node)
 
     # make sure node 1 reorged onto chain B
     assert full_node_1.full_node.blockchain.get_peak().header_hash == chain_b[-1].header_hash
@@ -2648,7 +2649,7 @@ async def test_shallow_reorg_nodes(
                 all_coins.append(coin)
         spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
 
-    await add_blocks_in_batches(chain[-4:], full_node_1.full_node, chain[-5].header_hash)
+    await add_blocks_in_batches(chain[-4:], full_node_1.full_node)
     await time_out_assert(10, check_nodes_in_sync)
     await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain)
     await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain)
@@ -2665,8 +2666,7 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
     blocks = bt.get_consecutive_blocks(
         3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
     )
-    for block in blocks:
-        await full_node_1.full_node.add_block(block)
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
     wt = bt.get_pool_wallet_tool()
     reward_coins = blocks[-1].get_included_reward_coins()
     # Setup a test block with two pk msg pairs

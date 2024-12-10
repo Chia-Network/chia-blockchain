@@ -43,6 +43,7 @@ from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -373,8 +374,7 @@ async def next_block(full_node_1: FullNodeSimulator, wallet_a: WalletTool, bt: B
         time_per_block=10,
     )
 
-    for block in blocks:
-        await full_node_1.full_node.add_block(block)
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 1)
     return blocks[-1].get_included_reward_coins()[0]
@@ -569,8 +569,7 @@ class TestMempoolManager:
         )
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         spend_bundle1 = generate_test_spend_bundle(wallet_a, blocks[-1].get_included_reward_coins()[0])
@@ -615,8 +614,7 @@ class TestMempoolManager:
         )
 
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coins = iter(blocks[-1].get_included_reward_coins())
@@ -698,8 +696,7 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coins = iter(blocks[-1].get_included_reward_coins())
@@ -743,8 +740,7 @@ class TestMempoolManager:
         else:
             raise Exception("dummy peer not found")
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + num_blocks)
 
@@ -786,8 +782,7 @@ class TestMempoolManager:
         else:
             raise Exception("dummy peer not found")
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
@@ -1740,8 +1735,7 @@ class TestMempoolManager:
 
         peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 5)
 
@@ -1799,8 +1793,7 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
         # coin = blocks[-1].get_included_reward_coins()[0]
@@ -1848,8 +1841,7 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
@@ -2854,8 +2846,7 @@ class TestMaliciousGenerators:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 

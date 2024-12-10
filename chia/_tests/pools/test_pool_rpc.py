@@ -22,6 +22,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
@@ -432,8 +433,7 @@ class TestPoolWalletRpc:
                 guarantee_transaction_block=True,
             )
 
-            for block in blocks[-3:]:
-                await full_node_api.full_node.add_block(block)
+            await add_blocks_in_batches(blocks[-3:], full_node_api.full_node)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
             bal = await client.get_wallet_balance(2)
@@ -532,8 +532,7 @@ class TestPoolWalletRpc:
             )
 
             block_count = 3
-            for block in blocks[-block_count:]:
-                await full_node_api.full_node.add_block(block)
+            await add_blocks_in_batches(blocks[-block_count:], full_node_api.full_node)
             await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -604,8 +603,7 @@ class TestPoolWalletRpc:
             )
 
             block_count = 3
-            for block in blocks[-block_count:]:
-                await full_node_api.full_node.add_block(block)
+            await add_blocks_in_batches(blocks[-block_count:], full_node_api.full_node)
             await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
             # Pooled plots don't have balance
@@ -664,8 +662,7 @@ class TestPoolWalletRpc:
                         block_list_input=blocks,
                         guarantee_transaction_block=True,
                     )
-                    for block in blocks[-2:]:
-                        await full_node_api.full_node.add_block(block)
+                    await add_blocks_in_batches(blocks[-2:], full_node_api.full_node)
                     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
                     # Absorb the farmed reward
@@ -1007,8 +1004,7 @@ class TestPoolWalletRpc:
             transaction_data=next(tx.spend_bundle for tx in join_pool_txs if tx.spend_bundle is not None),
         )
 
-        for block in more_blocks[-3:]:
-            await full_node_api.full_node.add_block(block)
+        await add_blocks_in_batches(more_blocks[-3:], full_node_api.full_node)
 
         await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving_no_blocks)
 
