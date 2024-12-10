@@ -38,7 +38,7 @@ def _clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
-@wallet_cmd.group("signer", help="Get information for an external signer")
+@click.group("signer", help="Get information for an external signer")
 def signer_cmd() -> None:
     pass  # pragma: no cover
 
