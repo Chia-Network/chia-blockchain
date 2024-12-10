@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Set, Tuple
+from typing import Callable, Optional
 
 from chia.consensus.blockchain import StateChangeSummary
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -10,16 +10,16 @@ def get_hints_and_subscription_coin_ids(
     state_change_summary: StateChangeSummary,
     has_coin_subscription: Callable[[bytes32], bool],
     has_puzzle_subscription: Callable[[bytes32], bool],
-) -> Tuple[List[Tuple[bytes32, bytes]], List[bytes32]]:
+) -> tuple[list[tuple[bytes32, bytes]], list[bytes32]]:
     # Precondition: all hints passed in are max 32 bytes long
     # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
 
     # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
     hint: Optional[bytes]
-    hints_to_add: List[Tuple[bytes32, bytes]] = []
+    hints_to_add: list[tuple[bytes32, bytes]] = []
 
     # Goes through additions and removals for each block and flattens to a map and a set
-    lookup_coin_ids: Set[bytes32] = set()
+    lookup_coin_ids: set[bytes32] = set()
 
     def add_if_coin_subscription(coin_id: bytes32) -> None:
         if has_coin_subscription(coin_id):

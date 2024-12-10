@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from collections.abc import AsyncIterator
+from typing import Optional
 
 import pytest
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.util.blockchain import create_blockchain
+from chia._tests.util.blockchain_mock import BlockchainMock
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -24,7 +27,6 @@ from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.recursive_replace import recursive_replace
@@ -48,7 +50,7 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
         DISCRIMINANT_SIZE_BITS=uint16(32),
         SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
-    async with create_blockchain(patched_constants, db_version) as (bc1, db_wrapper):
+    async with create_blockchain(patched_constants, db_version) as (bc1, _):
         yield bc1
 
 
@@ -56,7 +58,7 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
 async def empty_blockchain_with_original_constants(
     db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    async with create_blockchain(blockchain_constants, db_version) as (bc1, db_wrapper):
+    async with create_blockchain(blockchain_constants, db_version) as (bc1, _):
         yield bc1
 
 
@@ -82,7 +84,7 @@ async def test_unfinished_block_rank(
     # create variants of the unfinished block, where all we do is to change
     # the foliage_transaction_block_hash. As if they all had different foliage,
     # but the same reward block hash (i.e. the same proof-of-space)
-    unfinished: List[UnfinishedBlock] = [
+    unfinished: list[UnfinishedBlock] = [
         recursive_replace(unf, "foliage.foliage_transaction_block_hash", bytes32([idx + 4] * 32))
         for idx in range(num_duplicates)
     ]
@@ -93,9 +95,7 @@ async def test_unfinished_block_rank(
     # shuffle them to ensure the order we add them to the store isn't relevant
     seeded_random.shuffle(unfinished)
     for new_unf in unfinished:
-        store.add_unfinished_block(
-            uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, False, uint32(0))
-        )
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
 
     # now ask for "the" unfinished block given the proof-of-space.
     # the FullNodeStore should return the one with the lowest foliage tx block
@@ -130,12 +130,12 @@ async def test_unfinished_block_rank(
 )
 async def test_find_best_block(
     seeded_random: random.Random,
-    blocks: List[Tuple[Optional[int], bool]],
+    blocks: list[tuple[Optional[int], bool]],
     expected: Optional[int],
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     bt: BlockTools,
 ) -> None:
-    result: Dict[Optional[bytes32], UnfinishedBlockEntry] = {}
+    result: dict[Optional[bytes32], UnfinishedBlockEntry] = {}
     i = 0
     for b, with_unf in blocks:
         unf: Optional[UnfinishedBlock]
@@ -149,7 +149,7 @@ async def test_find_best_block(
         else:
             result[bytes32(b.to_bytes(1, "big") * 32)] = UnfinishedBlockEntry(unf, None, uint32(123))
 
-    foliage_hash, block = find_best_block(result)
+    foliage_hash, _block = find_best_block(result)
     if expected is None:
         assert foliage_hash is None
     else:
@@ -219,7 +219,7 @@ async def test_basic_store(
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
         store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False, uint32(0))
+            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, uint32(0))
         )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
         assert store.get_unfinished_block2(
@@ -275,9 +275,7 @@ async def test_basic_store(
     assert unf3.foliage.foliage_transaction_block_hash is None
     assert unf4.foliage.foliage_transaction_block_hash is None
     for val, unf_block in enumerate([unf1, unf2, unf3, unf4]):
-        store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(val), None, False, uint32(0))
-        )
+        store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(val), None, uint32(0)))
 
     # when not specifying a foliage hash, you get the "best" one
     # best is defined as the lowest foliage hash
@@ -338,7 +336,7 @@ async def test_basic_store(
 
     assert (
         store.get_finished_sub_slots(
-            BlockCache({}),
+            BlockchainMock({}),
             None,
             sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
         )
@@ -379,11 +377,12 @@ async def test_basic_store(
         assert slot_i is not None
         assert slot_i[0] == sub_slots[i]
 
-    assert store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-1].challenge_chain.get_hash()) == sub_slots
-    assert store.get_finished_sub_slots(BlockCache({}), None, std_hash(b"not a valid hash")) is None
+    assert store.get_finished_sub_slots(BlockchainMock({}), None, sub_slots[-1].challenge_chain.get_hash()) == sub_slots
+    assert store.get_finished_sub_slots(BlockchainMock({}), None, std_hash(b"not a valid hash")) is None
 
     assert (
-        store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-2].challenge_chain.get_hash()) == sub_slots[:-1]
+        store.get_finished_sub_slots(BlockchainMock({}), None, sub_slots[-2].challenge_chain.get_hash())
+        == sub_slots[:-1]
     )
 
     # Test adding genesis peak
@@ -453,8 +452,9 @@ async def test_basic_store(
         normalized_to_identity_cc_sp=normalized_to_identity,
     )
 
+    fork_info = ForkInfo(blocks[0].height - 1, blocks[0].height - 1, blocks[0].prev_header_hash)
     for block in blocks:
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
         sb = blockchain.block_record(block.header_hash)
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
             blockchain.constants, False, sb, blockchain
@@ -475,11 +475,13 @@ async def test_basic_store(
         normalized_to_identity_cc_ip=normalized_to_identity,
         normalized_to_identity_cc_sp=normalized_to_identity,
     )
+
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks_reorg:
         peak = blockchain.get_peak()
         assert peak is not None
 
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
 
         peak_here = blockchain.get_peak()
         assert peak_here is not None
@@ -557,7 +559,7 @@ async def test_basic_store(
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
-        await _validate_and_add_block(blockchain, blocks[-1])
+        await _validate_and_add_block(blockchain, blocks[-1], fork_info=fork_info)
         peak_here = blockchain.get_peak()
         assert peak_here is not None
         if peak_here.header_hash == blocks[-1].header_hash:
@@ -736,7 +738,7 @@ async def test_basic_store(
     ):
         sp = get_signage_point(
             custom_block_tools.constants,
-            BlockCache({}, {}),
+            BlockchainMock({}, {}),
             None,
             uint128(0),
             uint8(i),
@@ -771,7 +773,7 @@ async def test_basic_store(
         ):
             sp = get_signage_point(
                 custom_block_tools.constants,
-                BlockCache({}, {}),
+                BlockchainMock({}, {}),
                 None,
                 uint128(slot_offset * peak.sub_slot_iters),
                 uint8(i),
@@ -833,6 +835,7 @@ async def test_basic_store(
 
     # Test future EOS cache
     store.initialize_genesis_sub_slot()
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     blocks = custom_block_tools.get_consecutive_blocks(
         1,
         normalized_to_identity_cc_eos=normalized_to_identity,
@@ -840,7 +843,7 @@ async def test_basic_store(
         normalized_to_identity_cc_ip=normalized_to_identity,
         normalized_to_identity_cc_sp=normalized_to_identity,
     )
-    await _validate_and_add_block_no_error(blockchain, blocks[-1])
+    await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
     while True:
         blocks = custom_block_tools.get_consecutive_blocks(
             1,
@@ -850,7 +853,7 @@ async def test_basic_store(
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
-        await _validate_and_add_block_no_error(blockchain, blocks[-1])
+        await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
         sb = blockchain.block_record(blocks[-1].header_hash)
         if sb.first_in_sub_slot:
             break
@@ -909,8 +912,9 @@ async def test_basic_store(
         normalized_to_identity_icc_eos=normalized_to_identity,
     )
 
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks[:5]:
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
         sb = blockchain.block_record(block.header_hash)
         result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
         assert result is not None
@@ -939,7 +943,7 @@ async def test_basic_store(
         )
         store.add_to_future_ip(new_ip)
 
-        await _validate_and_add_block_no_error(blockchain, prev_block)
+        await _validate_and_add_block_no_error(blockchain, prev_block, fork_info=fork_info)
         result = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
         assert result is not None
         sp_sub_slot, ip_sub_slot = result
@@ -957,7 +961,7 @@ async def test_basic_store(
         else:
             case_1 = True
             assert res.new_infusion_points == []
-            found_ips: List[timelord_protocol.NewInfusionPointVDF] = []
+            found_ips: list[timelord_protocol.NewInfusionPointVDF] = []
             peak = blockchain.get_peak()
 
             for ss in block.finished_sub_slots:
@@ -980,14 +984,15 @@ async def test_basic_store(
     #     i2 .........  i1
     # Then do a reorg up to B2, removing all signage points after B2, but not before
     log.warning(f"Adding blocks up to {blocks[-1]}")
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks:
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
 
     log.warning("Starting loop")
     while True:
         log.warning("Looping")
         blocks = custom_block_tools.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
-        await _validate_and_add_block_no_error(blockchain, blocks[-1])
+        await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
         peak = blockchain.get_peak()
         assert peak is not None
         result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
@@ -1014,7 +1019,7 @@ async def test_basic_store(
             and i1 > (i2 + 3)
         ):
             # We hit all the conditions that we want
-            all_sps: List[Optional[SignagePoint]] = [None] * custom_block_tools.constants.NUM_SPS_SUB_SLOT
+            all_sps: list[Optional[SignagePoint]] = [None] * custom_block_tools.constants.NUM_SPS_SUB_SLOT
 
             def assert_sp_none(sp_index: int, is_none: bool) -> None:
                 sp_to_check: Optional[SignagePoint] = all_sps[sp_index]
@@ -1040,7 +1045,7 @@ async def test_basic_store(
                 assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
             # Adding a new peak clears all SPs after that peak
-            await _validate_and_add_block_no_error(blockchain, blocks[-2])
+            await _validate_and_add_block_no_error(blockchain, blocks[-2], fork_info=fork_info)
             peak = blockchain.get_peak()
             assert peak is not None
             result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
@@ -1088,7 +1093,7 @@ async def test_basic_store(
             assert_sp_none(i1 + 1, False)
             assert_sp_none(i1 + 4, False)
 
-            await _validate_and_add_block_no_error(blockchain, blocks[-1])
+            await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
             peak = blockchain.get_peak()
             assert peak is not None
             result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
@@ -1118,14 +1123,14 @@ async def test_basic_store(
             break
         else:
             for block in blocks[-2:]:
-                await _validate_and_add_block_no_error(blockchain, block)
+                await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_chain_slots(
     empty_blockchain_with_original_constants: Blockchain,
-    default_1000_blocks: List[FullBlock],
+    default_1000_blocks: list[FullBlock],
 ) -> None:
     blockchain = empty_blockchain_with_original_constants
     store = FullNodeStore(blockchain.constants)

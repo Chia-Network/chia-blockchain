@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import List
 
 import yaml
 
@@ -10,7 +9,7 @@ from chia.data_layer.data_layer_util import PluginRemote
 from chia.util.log_exceptions import log_exceptions
 
 
-async def load_plugin_configurations(root_path: Path, config_type: str, log: logging.Logger) -> List[PluginRemote]:
+async def load_plugin_configurations(root_path: Path, config_type: str, log: logging.Logger) -> list[PluginRemote]:
     """
     Loads plugin configurations from the specified directory and validates that the contents
     are in the expected JSON format (an array of PluginRemote objects). It gracefully handles errors
@@ -21,7 +20,7 @@ async def load_plugin_configurations(root_path: Path, config_type: str, log: log
         config_type (str): The type of plugins to load ('downloaders' or 'uploaders').
 
     Returns:
-        List[PluginRemote]: A list of valid PluginRemote instances for the specified plugin type.
+        list[PluginRemote]: A list of valid PluginRemote instances for the specified plugin type.
     """
     config_path = root_path / "plugins" / config_type
     config_path.mkdir(parents=True, exist_ok=True)  # Ensure the config directory exists

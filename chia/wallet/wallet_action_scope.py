@@ -1,83 +1,84 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast
+from collections.abc import AsyncIterator
+from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING, Optional, cast, final
 
-from chia.types.spend_bundle import SpendBundle
+from chia.types.blockchain_format.coin import Coin
 from chia.util.action_scope import ActionScope
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     # Avoid a circular import here
     from chia.wallet.wallet_state_manager import WalletStateManager
 
 
+@streamable
+@dataclass(frozen=True)
+class _StreamableWalletSideEffects(Streamable):
+    transactions: list[TransactionRecord]
+    signing_responses: list[SigningResponse]
+    extra_spends: list[WalletSpendBundle]
+    selected_coins: list[Coin]
+
+
 @dataclass
 class WalletSideEffects:
-    transactions: List[TransactionRecord] = field(default_factory=list)
-    signing_responses: List[SigningResponse] = field(default_factory=list)
-    extra_spends: List[SpendBundle] = field(default_factory=list)
+    transactions: list[TransactionRecord] = field(default_factory=list)
+    signing_responses: list[SigningResponse] = field(default_factory=list)
+    extra_spends: list[WalletSpendBundle] = field(default_factory=list)
+    selected_coins: list[Coin] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
-        blob = b""
-        blob += len(self.transactions).to_bytes(4, "big")
-        for tx in self.transactions:
-            tx_bytes = bytes(tx)
-            blob += len(tx_bytes).to_bytes(4, "big") + tx_bytes
-        blob += len(self.signing_responses).to_bytes(4, "big")
-        for sr in self.signing_responses:
-            sr_bytes = bytes(sr)
-            blob += len(sr_bytes).to_bytes(4, "big") + sr_bytes
-        blob += len(self.extra_spends).to_bytes(4, "big")
-        for sb in self.extra_spends:
-            sb_bytes = bytes(sb)
-            blob += len(sb_bytes).to_bytes(4, "big") + sb_bytes
-        return blob
+        return bytes(_StreamableWalletSideEffects(**self.__dict__))
 
     @classmethod
     def from_bytes(cls, blob: bytes) -> WalletSideEffects:
-        instance = cls()
-        while blob != b"":
-            tx_len_prefix = int.from_bytes(blob[:4], "big")
-            blob = blob[4:]
-            for _ in range(0, tx_len_prefix):
-                len_prefix = int.from_bytes(blob[:4], "big")
-                blob = blob[4:]
-                instance.transactions.append(TransactionRecord.from_bytes(blob[:len_prefix]))
-                blob = blob[len_prefix:]
-            sr_len_prefix = int.from_bytes(blob[:4], "big")
-            blob = blob[4:]
-            for _ in range(0, sr_len_prefix):
-                len_prefix = int.from_bytes(blob[:4], "big")
-                blob = blob[4:]
-                instance.signing_responses.append(SigningResponse.from_bytes(blob[:len_prefix]))
-                blob = blob[len_prefix:]
-            sb_len_prefix = int.from_bytes(blob[:4], "big")
-            blob = blob[4:]
-            for _ in range(0, sb_len_prefix):
-                len_prefix = int.from_bytes(blob[:4], "big")
-                blob = blob[4:]
-                instance.extra_spends.append(SpendBundle.from_bytes(blob[:len_prefix]))
-                blob = blob[len_prefix:]
-
-        return instance
+        return cls(**_StreamableWalletSideEffects.from_bytes(blob).__dict__)
 
 
-WalletActionScope = ActionScope[WalletSideEffects]
+@final
+@dataclass(frozen=True)
+class WalletActionConfig:
+    push: bool
+    merge_spends: bool
+    sign: Optional[bool]
+    additional_signing_responses: list[SigningResponse]
+    extra_spends: list[WalletSpendBundle]
+    tx_config: TXConfig
+
+    def adjust_for_side_effects(self, side_effects: WalletSideEffects) -> WalletActionConfig:
+        return replace(
+            self,
+            tx_config=replace(
+                self.tx_config,
+                excluded_coin_ids=[*self.tx_config.excluded_coin_ids, *(c.name() for c in side_effects.selected_coins)],
+            ),
+        )
+
+
+WalletActionScope = ActionScope[WalletSideEffects, WalletActionConfig]
 
 
 @contextlib.asynccontextmanager
 async def new_wallet_action_scope(
     wallet_state_manager: WalletStateManager,
+    tx_config: TXConfig,
     push: bool = False,
     merge_spends: bool = True,
     sign: Optional[bool] = None,
-    additional_signing_responses: List[SigningResponse] = [],
-    extra_spends: List[SpendBundle] = [],
+    additional_signing_responses: list[SigningResponse] = [],
+    extra_spends: list[WalletSpendBundle] = [],
 ) -> AsyncIterator[WalletActionScope]:
-    async with ActionScope.new_scope(WalletSideEffects) as self:
+    async with ActionScope.new_scope(
+        WalletSideEffects,
+        WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config),
+    ) as self:
         self = cast(WalletActionScope, self)
         async with self.use() as interface:
             interface.side_effects.signing_responses = additional_signing_responses.copy()

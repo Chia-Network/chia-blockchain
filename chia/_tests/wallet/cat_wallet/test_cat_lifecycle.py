@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -9,12 +9,11 @@ from clvm.casts import int_to_bytes
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia._tests.conftest import ConsensusMode
-from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
@@ -25,6 +24,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -35,15 +35,15 @@ async def do_spend(
     sim: SpendSim,
     sim_client: SimClient,
     tail: Program,
-    coins: List[Coin],
-    lineage_proofs: List[LineageProof],
-    inner_solutions: List[Program],
-    expected_result: Tuple[MempoolInclusionStatus, Optional[Err]],
+    coins: list[Coin],
+    lineage_proofs: list[LineageProof],
+    inner_solutions: list[Program],
+    expected_result: tuple[MempoolInclusionStatus, Optional[Err]],
     reveal_limitations_program: bool = True,
-    signatures: List[G2Element] = [],
-    extra_deltas: Optional[List[int]] = None,
-    additional_spends: List[SpendBundle] = [],
-    limitations_solutions: Optional[List[Program]] = None,
+    signatures: list[G2Element] = [],
+    extra_deltas: Optional[list[int]] = None,
+    additional_spends: list[WalletSpendBundle] = [],
+    limitations_solutions: Optional[list[Program]] = None,
     cost_logger: Optional[CostLogger] = None,
     cost_log_msg: str = "",
 ) -> int:
@@ -52,7 +52,7 @@ async def do_spend(
     if extra_deltas is None:
         extra_deltas = [0] * len(coins)
 
-    spendable_cat_list: List[SpendableCAT] = []
+    spendable_cat_list: list[SpendableCAT] = []
     for coin, innersol, proof, limitations_solution, extra_delta in zip(
         coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
     ):
@@ -71,8 +71,8 @@ async def do_spend(
 
     spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
     agg_sig = AugSchemeMPL.aggregate(signatures)
-    final_bundle = SpendBundle.aggregate(
-        [*additional_spends, spend_bundle, SpendBundle([], agg_sig)]  # "Signing" the spend bundle
+    final_bundle = WalletSpendBundle.aggregate(
+        [*additional_spends, spend_bundle, WalletSpendBundle([], agg_sig)]  # "Signing" the spend bundle
     )
     if cost_logger is not None:
         final_bundle = cost_logger.add_cost(cost_log_msg, final_bundle)
@@ -201,7 +201,7 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
         # Mint some value
         await sim.farm_block(acs_ph)
         acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
-        acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
+        acs_bundle = WalletSpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
         await do_spend(
             sim,
             sim_client,
@@ -260,8 +260,8 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
         # Find the two new coins
         all_cats = await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
         all_cat_coins = [cr.coin for cr in all_cats]
-        standard_to_mint = list(filter(lambda cr: cr.parent_coin_info == parent_of_mint.name(), all_cat_coins))[0]
-        standard_to_melt = list(filter(lambda cr: cr.parent_coin_info == parent_of_melt.name(), all_cat_coins))[0]
+        standard_to_mint = next(filter(lambda cr: cr.parent_coin_info == parent_of_mint.name(), all_cat_coins))
+        standard_to_melt = next(filter(lambda cr: cr.parent_coin_info == parent_of_melt.name(), all_cat_coins))
 
         # Do the complex spend
         # We have both and eve and non-eve doing both minting and melting
@@ -297,7 +297,9 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
         cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
-            SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
+            WalletSpendBundle(
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+            )
         )
         await sim.farm_block()
 
@@ -327,7 +329,9 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
         cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
-            SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
+            WalletSpendBundle(
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+            )
         )
         await sim.farm_block()
 
@@ -400,7 +404,7 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
         # Need something to fund the minting
         await sim.farm_block(acs_ph)
         acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
-        acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
+        acs_bundle = WalletSpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
 
         await do_spend(
             sim,
@@ -431,7 +435,9 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
         cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
-            SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
+            WalletSpendBundle(
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+            )
         )
         await sim.farm_block()
 

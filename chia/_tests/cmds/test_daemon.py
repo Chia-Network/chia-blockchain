@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pytest
 from _pytest.capture import CaptureFixture
@@ -9,7 +10,7 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from chia.cmds.chia import cli
-from chia.cmds.start_funcs import create_start_daemon_connection
+from chia.cmds.start_funcs import create_start_daemon_connection, launch_start_daemon
 
 
 @pytest.mark.anyio
@@ -27,7 +28,7 @@ async def test_daemon(
         async def unlock_keyring(_passphrase: str) -> bool:
             return True
 
-    async def connect_to_daemon_and_validate(_root_path: Path, _config: Dict[str, Any]) -> DummyConnection:
+    async def connect_to_daemon_and_validate(_root_path: Path, _config: dict[str, Any]) -> DummyConnection:
         return DummyConnection()
 
     class DummyKeychain:
@@ -52,6 +53,20 @@ async def test_daemon(
         assert not captured.out.endswith("Skipping to unlock keyring\n")
 
 
+@pytest.mark.anyio
+def test_launch_start_daemon(tmp_path: Path) -> None:
+    sys.argv[0] = "not-exist"
+    with pytest.raises(FileNotFoundError):
+        launch_start_daemon(tmp_path)
+
+    helper: Path = Path(sys.executable)
+    sys.argv[0] = str(helper.parent) + "/chia"
+    process = launch_start_daemon(tmp_path)
+    assert process is not None
+    process.kill()
+    process.wait()
+
+
 def test_start_daemon(tmp_path: Path, empty_keyring: Any, mocker: MockerFixture) -> None:
     class DummyDaemon:
         @staticmethod
@@ -59,7 +74,7 @@ def test_start_daemon(tmp_path: Path, empty_keyring: Any, mocker: MockerFixture)
             return None
 
     async def create_start_daemon_connection_dummy(
-        root_path: Path, config: Dict[str, Any], *, skip_keyring: bool
+        root_path: Path, config: dict[str, Any], *, skip_keyring: bool
     ) -> DummyDaemon:
         return DummyDaemon()
 

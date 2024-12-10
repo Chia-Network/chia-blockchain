@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Awaitable, Callable, List, Optional
+from collections.abc import Awaitable
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G2Element
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -31,6 +31,7 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 async def mint_cr_cat(
@@ -39,7 +40,7 @@ async def mint_cr_cat(
     wallet_node_0: WalletNode,
     client_0: WalletRpcClient,
     full_node_api: FullNodeSimulator,
-    authorized_providers: List[bytes32] = [],
+    authorized_providers: list[bytes32] = [],
     tail: Program = Program.to(None),
     proofs_checker: ProofsChecker = ProofsChecker(["foo", "bar"]),
 ) -> None:
@@ -69,7 +70,7 @@ async def mint_cr_cat(
 
     # Do the eve spend back to our wallet and add the CR layer
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == CAT_AMOUNT_0)
-    eve_spend = SpendBundle(
+    eve_spend = WalletSpendBundle(
         [
             make_spend(
                 cat_coin,
@@ -104,7 +105,7 @@ async def mint_cr_cat(
         ],
         G2Element(),
     )
-    spend_bundle = SpendBundle.aggregate([spend_bundle, eve_spend])
+    spend_bundle = WalletSpendBundle.aggregate([spend_bundle, eve_spend])
     await wallet_node_0.wallet_state_manager.add_pending_transactions(
         [dataclasses.replace(tx, spend_bundle=spend_bundle, name=spend_bundle.name())]
     )
@@ -149,11 +150,11 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_id: bytes32 = bytes32.from_hexstr(
             (
                 await DIDWallet.create_new_did_wallet(
-                    wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+                    wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
                 )
             ).get_my_DID()
         )
@@ -179,7 +180,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         # One existing coin has been removed and two ephemeral coins have been removed
                         # Does pending_coin_removal_count attempt to show the number of current pending removals
                         # Or does it intend to just mean all pending removals that we should eventually get states for?
-                        "pending_coin_removal_count": 5,  # 4 for VC mint, 1 for DID mint
+                        "pending_coin_removal_count": 3,
                         "<=#spendable_balance": -1_750_000_000_002,
                         "<=#max_send_amount": -1_750_000_000_002,
                         "set_remainder": True,
@@ -200,7 +201,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     "xch": {
                         # 1_750_000_000_000 for VC mint fee, 1 for VC singleton, 1 for DID mint
                         "confirmed_wallet_balance": -1_750_000_000_002,
-                        "pending_coin_removal_count": -5,  # 3 for VC mint, 1 for DID mint
+                        "pending_coin_removal_count": -3,  # 3 for VC mint, 1 for DID mint
                         "set_remainder": True,
                     },
                     "did": {
@@ -241,6 +242,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": -1,
                         "pending_change": 1,
                         "pending_coin_removal_count": 1,
+                        "max_send_amount": -1,
                     },
                     "vc": {
                         "pending_coin_removal_count": 1,
@@ -256,6 +258,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": 1,
                         "pending_change": -1,
                         "pending_coin_removal_count": -1,
+                        "max_send_amount": 1,
                     },
                     "vc": {
                         "pending_coin_removal_count": -1,
@@ -525,16 +528,18 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         )
 
     # Test melting a CRCAT
-    tx = (
-        await client_1.cat_spend(
-            env_1.dealias_wallet_id("crcat"),
-            wallet_environments.tx_config,
-            uint64(20),
-            wallet_1_addr,
-            uint64(0),
-            cat_discrepancy=(-50, Program.to(None), Program.to(None)),
-        )
-    ).transaction
+    # This is intended to trigger an edge case where the output and change are the same forcing a new puzhash
+    with wallet_environments.new_puzzle_hashes_allowed():
+        tx = (
+            await client_1.cat_spend(
+                env_1.dealias_wallet_id("crcat"),
+                wallet_environments.tx_config,
+                uint64(20),
+                wallet_1_addr,
+                uint64(0),
+                cat_discrepancy=(-50, Program.to(None), Program.to(None)),
+            )
+        ).transaction
     [tx] = await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
     await wallet_environments.process_pending_states(
         [
@@ -600,6 +605,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": -1,
                         "pending_change": 1,
                         "pending_coin_removal_count": 1,
+                        "max_send_amount": -1,
                     },
                 },
                 post_block_balance_updates={
@@ -612,6 +618,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": 1,
                         "pending_change": -1,
                         "pending_coin_removal_count": -1,
+                        "max_send_amount": 1,
                     },
                 },
             ),
@@ -655,9 +662,9 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
@@ -688,18 +695,21 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     # Test a negative case real quick (mostly unrelated)
     with pytest.raises(ValueError, match="at the same time"):
-        async with wallet_node_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        async with wallet_node_0.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
+        ) as action_scope:
             await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
                 new_vc_record.vc.launcher_id,
-                wallet_environments.tx_config,
                 action_scope,
-                new_proof_hash=bytes32([0] * 32),
+                new_proof_hash=bytes32.zeros,
                 self_revoke=True,
             )
 
     # Send the DID to oblivion
-    async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config, action_scope)
+    async with did_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
+        await did_wallet.transfer_did(bytes32.zeros, uint64(0), False, action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -780,7 +790,7 @@ async def test_cat_wallet_conversion(
         wallet_node_0.wallet_state_manager, wallet_0, Program.to(None).get_tree_hash().hex()
     )
 
-    did_id = bytes32([0] * 32)
+    did_id = bytes32.zeros
     await mint_cr_cat(num_blocks, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)

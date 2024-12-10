@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import random
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 
@@ -16,7 +16,11 @@ from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
+from chia.wallet.wallet_transaction_store import (
+    WalletTransactionStore,
+    filter_ok_mempool_status,
+    get_light_transaction_record,
+)
 
 module_seeded_random = random.Random()
 module_seeded_random.seed(a=0, version=2)
@@ -37,11 +41,11 @@ tr1 = TransactionRecord(
     [coin_2, coin_3],  # additions
     [coin_1],  # removals
     uint32(1),  # wallet_id
-    [],  # List[Tuple[str, uint8, Optional[str]]] sent_to
+    [],  # list[tuple[str, uint8, Optional[str]]] sent_to
     bytes32(bytes32.random(module_seeded_random)),  # trade_id
     uint32(TransactionType.OUTGOING_TX),  # type
     bytes32(bytes32.random(module_seeded_random)),  # name
-    [],  # List[Tuple[bytes32, List[bytes]]] memos
+    [],  # list[tuple[bytes32, list[bytes]]] memos
     ConditionValidTimes(),
 )
 
@@ -210,7 +214,7 @@ async def test_get_farming_rewards(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         # tr1 is type OUTGOING_TX
 
         for conf in [True, False]:
@@ -252,8 +256,8 @@ async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
         )
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
-
-        assert await store.get_all_unconfirmed() == [tr1]
+        all_unconfirmed = await store.get_all_unconfirmed()
+        assert all_unconfirmed == [get_light_transaction_record(tr1)]
 
 
 @pytest.mark.anyio
@@ -320,7 +324,7 @@ async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         for wallet_id in [1, 2]:
             for type in [
                 TransactionType.INCOMING_TX,
@@ -356,7 +360,7 @@ async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None
         assert await store.get_all_transactions_for_wallet(2, TransactionType.OUTGOING_TRADE) == [test_trs[11]]
 
 
-def cmp(lhs: List[Any], rhs: List[Any]) -> bool:
+def cmp(lhs: list[Any], rhs: list[Any]) -> bool:
     if len(rhs) != len(lhs):
         return False
 
@@ -371,7 +375,7 @@ async def test_get_all_transactions(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         assert await store.get_all_transactions() == []
         for wallet_id in [1, 2, 3, 4]:
             test_trs.append(dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=uint32(wallet_id)))
@@ -388,7 +392,7 @@ async def test_get_transaction_above(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         assert await store.get_transaction_above(uint32(0)) == []
         for height in range(10):
             test_trs.append(
@@ -440,7 +444,7 @@ async def test_rollback_to_block(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         for height in range(10):
             test_trs.append(
                 dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height))
@@ -798,7 +802,7 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_transaction_record_is_valid() -> None:
-    invalid_attempts: List[Tuple[str, uint8, Optional[str]]] = []
+    invalid_attempts: list[tuple[str, uint8, Optional[str]]] = []
     # The tx should be valid as long as we don't have minimum_send_attempts failed attempts
     while len(invalid_attempts) < minimum_send_attempts:
         assert dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()
@@ -814,9 +818,9 @@ async def test_transaction_record_is_valid() -> None:
         Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name,
     )
     # But it should become valid with one of the above attempts
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [mempool_success]).is_valid()
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [low_fee]).is_valid()
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [close_to_zero]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, mempool_success]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, low_fee]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, close_to_zero]).is_valid()
 
 
 @pytest.mark.anyio
@@ -842,7 +846,7 @@ async def test_valid_times_migration() -> None:
         old_record = TransactionRecordOld(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(1000000000),
-            to_puzzle_hash=bytes32([0] * 32),
+            to_puzzle_hash=bytes32.zeros,
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,
@@ -854,7 +858,7 @@ async def test_valid_times_migration() -> None:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32([0] * 32),
+            name=bytes32.zeros,
             memos=[],
         )
 
@@ -893,7 +897,7 @@ async def test_large_tx_record_query() -> None:
             record = TransactionRecordOld(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(1000000000),
-                to_puzzle_hash=bytes32([0] * 32),
+                to_puzzle_hash=bytes32.zeros,
                 amount=uint64(0),
                 fee_amount=uint64(0),
                 confirmed=False,

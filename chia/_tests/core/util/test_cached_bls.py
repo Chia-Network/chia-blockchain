@@ -4,10 +4,10 @@ from chia_rs import AugSchemeMPL, BLSCache
 
 from chia.util.hash import std_hash
 
-LOCAL_CACHE = BLSCache(50000)
+LOCAL_CACHE = BLSCache(50_000)
 
 
-def test_cached_bls():
+def test_cached_bls() -> None:
     n_keys = 10
     seed = b"a" * 31
     sks = [AugSchemeMPL.key_gen(seed + bytes([i])) for i in range(n_keys)]
@@ -42,7 +42,7 @@ def test_cached_bls():
     assert local_cache.aggregate_verify(pks, msgs, agg_sig)
 
 
-def test_cached_bls_repeat_pk():
+def test_cached_bls_repeat_pk() -> None:
     n_keys = 400
     seed = b"a" * 32
     sks = [AugSchemeMPL.key_gen(seed) for i in range(n_keys)] + [AugSchemeMPL.key_gen(std_hash(seed))]

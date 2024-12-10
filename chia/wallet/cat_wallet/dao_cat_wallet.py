@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element
 
@@ -10,7 +10,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
@@ -35,13 +34,14 @@ from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -128,7 +128,7 @@ class DAOCATWallet:
         if name is None:
             name = CATWallet.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
-        limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
+        limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
 
         self.dao_cat_info = DAOCATInfo(
             dao_wallet_id,
@@ -152,7 +152,7 @@ class DAOCATWallet:
         parent_spend = await fetch_coin_spend(height, parent_coin.coin, peer)
         uncurried = parent_spend.puzzle_reveal.uncurry()
         cat_inner = uncurried[1].at("rrf")
-        active_votes_list: List[Optional[bytes32]] = []
+        active_votes_list: list[Optional[bytes32]] = []
 
         record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
         if record:
@@ -227,7 +227,7 @@ class DAOCATWallet:
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         await self.lineage_store.remove_lineage_proof(name)
 
-    async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> List[LockedCoinInfo]:
+    async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> list[LockedCoinInfo]:
         coins = []
         s = 0
         for coin in self.dao_cat_info.locked_coins:
@@ -257,8 +257,8 @@ class DAOCATWallet:
         proposal_id: bytes32,
         is_yes_vote: bool,
         proposal_puzzle: Optional[Program] = None,
-    ) -> SpendBundle:
-        coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
+    ) -> WalletSpendBundle:
+        coins: list[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
         running_sum = 0  # this will be used for change calculation
         change = sum(c.coin.amount for c in coins) - amount
         extra_delta, limitations_solution = 0, Program.to([])
@@ -288,7 +288,7 @@ class DAOCATWallet:
             lockup_innerpuz_list = []
             if running_sum + coin.amount <= amount:
                 vote_amount = coin.amount
-                running_sum = running_sum + coin.amount
+                running_sum += coin.amount
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
@@ -303,7 +303,7 @@ class DAOCATWallet:
                 )
             else:
                 vote_amount = uint64(amount - running_sum)
-                running_sum = running_sum + coin.amount
+                running_sum += coin.amount
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
@@ -363,11 +363,10 @@ class DAOCATWallet:
     async def enter_dao_cat_voting_mode(
         self,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[TransactionRecord]:
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> list[TransactionRecord]:
         """
         Enter existing CATs for the DAO into voting mode
         """
@@ -379,10 +378,9 @@ class DAOCATWallet:
         # get the lockup puzzle hash
         lockup_puzzle = await self.get_new_puzzle()
         # create the cat spend
-        txs: List[TransactionRecord] = await cat_wallet.generate_signed_transaction(
+        txs: list[TransactionRecord] = await cat_wallet.generate_signed_transaction(
             [amount],
             [lockup_puzzle.get_tree_hash()],
-            tx_config,
             action_scope,
             fee=fee,
             extra_conditions=extra_conditions,
@@ -395,11 +393,10 @@ class DAOCATWallet:
 
     async def exit_vote_state(
         self,
-        coins: List[LockedCoinInfo],
-        tx_config: TXConfig,
+        coins: list[LockedCoinInfo],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
@@ -408,7 +405,7 @@ class DAOCATWallet:
         spent_coins = []
         for lci in coins:
             coin = lci.coin
-            if tx_config.reuse_puzhash:  # pragma: no cover
+            if action_scope.config.tx_config.reuse_puzhash:  # pragma: no cover
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=False)
             else:
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
@@ -458,7 +455,6 @@ class DAOCATWallet:
         if fee > 0:  # pragma: no cover
             await self.standard_wallet.create_tandem_xch_tx(
                 fee,
-                tx_config,
                 action_scope,
             )
 
@@ -499,12 +495,11 @@ class DAOCATWallet:
 
     async def remove_active_proposal(
         self,
-        proposal_id_list: List[bytes32],
-        tx_config: TXConfig,
+        proposal_id_list: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-    ) -> SpendBundle:
-        locked_coins: List[Tuple[LockedCoinInfo, List[bytes32]]] = []
+    ) -> WalletSpendBundle:
+        locked_coins: list[tuple[LockedCoinInfo, list[bytes32]]] = []
         for lci in self.dao_cat_info.locked_coins:
             my_finished_proposals = []
             for active_vote in lci.active_votes:
@@ -563,7 +558,7 @@ class DAOCATWallet:
         spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
         if fee > 0:  # pragma: no cover
-            await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config, action_scope=action_scope)
+            await self.standard_wallet.create_tandem_xch_tx(fee, action_scope=action_scope)
 
         return spend_bundle
 
@@ -614,16 +609,16 @@ class DAOCATWallet:
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         raise NotImplementedError("Method not implemented for DAO CAT Wallet")  # pragma: no cover
 
-    async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_spendable_balance(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         amount = 0
         for coin in self.dao_cat_info.locked_coins:
             amount += coin.coin.amount
         return uint128(amount)
 
-    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
     async def get_pending_change_balance(self) -> uint64:
@@ -632,11 +627,11 @@ class DAOCATWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
-    ) -> Set[Coin]:
+        action_scope: WalletActionScope,
+    ) -> set[Coin]:
         return set()
 
-    async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_max_send_amount(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
     async def get_votable_balance(

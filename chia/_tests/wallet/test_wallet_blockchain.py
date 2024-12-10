@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from chia._tests.util.db_connection import DBConnection
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.consensus.blockchain import AddBlockResult
 from chia.protocols import full_node_protocol
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.types.peer_info import PeerInfo
-from chia.util.batches import to_batches
 from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32
 from chia.wallet.key_val_store import KeyValStore
@@ -22,13 +19,11 @@ from chia.wallet.wallet_blockchain import WalletBlockchain
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_wallet_blockchain(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: list[FullBlock]
 ) -> None:
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
-    for block_batch in to_batches(default_1000_blocks[:600], 64):
-        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
-
+    await add_blocks_in_batches(default_1000_blocks[:600], full_node_api.full_node)
     resp = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(
             uint32(default_1000_blocks[499].height + 1), default_1000_blocks[499].header_hash
@@ -78,7 +73,7 @@ async def test_wallet_blockchain(
         assert peak_block is not None
         assert peak_block.height == 505
 
-        header_blocks: List[HeaderBlock] = []
+        header_blocks: list[HeaderBlock] = []
         for block in default_1000_blocks:
             header_block = get_block_header(block, [], [])
             header_blocks.append(header_block)

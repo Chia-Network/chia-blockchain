@@ -6,7 +6,7 @@ helper it's required to install the `legacy_keyring` extra dependency which can 
 from __future__ import annotations
 
 import sys
-from typing import Callable, List, Union, cast
+from typing import Callable, Union, cast
 
 import click
 from chia_rs import G1Element
@@ -23,9 +23,8 @@ except ImportError:
     CryptFileKeyring = None
 
 
-from chia.cmds.cmds_util import prompt_yes_no
 from chia.util.errors import KeychainUserNotFound
-from chia.util.keychain import KeyData, KeyDataSecrets, get_private_key_user
+from chia.util.keychain import MAX_KEYS, KeyData, KeyDataSecrets, get_private_key_user
 
 LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
 
@@ -33,7 +32,6 @@ LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
-MAX_KEYS = 100
 
 
 # casting to compensate for a combination of mypy and keyring issues
@@ -86,9 +84,9 @@ def get_key_data(keyring: LegacyKeyring, index: int) -> KeyData:
     )
 
 
-def get_keys(keyring: LegacyKeyring) -> List[KeyData]:
-    keys: List[KeyData] = []
-    for index in range(MAX_KEYS + 1):
+def get_keys(keyring: LegacyKeyring) -> list[KeyData]:
+    keys: list[KeyData] = []
+    for index in range(MAX_KEYS):
         try:
             keys.append(get_key_data(keyring, index))
         except KeychainUserNotFound:
@@ -112,7 +110,7 @@ def print_keys(keyring: LegacyKeyring) -> None:
 
 def remove_keys(keyring: LegacyKeyring) -> None:
     removed = 0
-    for index in range(MAX_KEYS + 1):
+    for index in range(MAX_KEYS):
         try:
             keyring.delete_password(DEFAULT_SERVICE, get_private_key_user(DEFAULT_USER, index))
             removed += 1
@@ -145,7 +143,9 @@ def clear() -> None:
 
     print_keys(keyring)
 
-    if not prompt_yes_no("\nDo you really want to remove all the keys from the legacy keyring? This can't be undone."):
+    if not click.confirm(
+        "\nDo you really want to remove all the keys from the legacy keyring? This can't be undone.", default=None
+    ):
         raise click.ClickException("Aborted!")
 
     remove_keys(keyring)

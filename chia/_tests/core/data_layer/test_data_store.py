@@ -7,10 +7,11 @@ import random
 import re
 import statistics
 import time
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Callable, Optional, cast
 
 import aiohttp
 import aiosqlite
@@ -38,11 +39,10 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
-    get_delta_filename,
-    get_full_tree_filename,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     insert_from_delta_file,
     insert_into_data_store_from_file,
-    is_filename_valid,
     write_files_for_root,
 )
 from chia.types.blockchain_format.program import Program
@@ -56,7 +56,7 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.data_layer
 
 
-table_columns: Dict[str, List[str]] = {
+table_columns: dict[str, list[str]] = {
     "node": ["hash", "node_type", "left", "right", "key", "value"],
     "root": ["tree_id", "generation", "node_hash", "status"],
 }
@@ -67,7 +67,7 @@ table_columns: Dict[str, List[str]] = {
 
 
 @pytest.mark.anyio
-async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: Dict[str, Any]) -> None:
+async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: dict[str, Any]) -> None:
     async with data_store.db_wrapper.writer() as writer:
         await writer.execute(
             """
@@ -81,7 +81,7 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
-    database_uri: str, table_name: str, expected_columns: List[str]
+    database_uri: str, table_name: str, expected_columns: list[str]
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
@@ -102,7 +102,7 @@ async def test_create_creates_tables_and_columns(
 
 @pytest.mark.anyio
 async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
-    store_id = bytes32(b"\0" * 32)
+    store_id = bytes32.zeros
 
     await raw_data_store.create_tree(store_id=store_id)
 
@@ -299,7 +299,7 @@ async def test_get_ancestors(data_store: DataStore, store_id: bytes32) -> None:
 
 @pytest.mark.anyio
 async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32) -> None:
-    ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
+    ancestors: list[tuple[int, bytes32, list[InternalNode]]] = []
     random = Random()
     random.seed(100, version=2)
 
@@ -386,23 +386,23 @@ async def test_batch_update(
 ) -> None:
     total_operations = 1000 if use_optimized else 100
     num_ops_per_batch = total_operations // num_batches
-    saved_batches: List[List[Dict[str, Any]]] = []
-    saved_kv: List[List[TerminalNode]] = []
+    saved_batches: list[list[dict[str, Any]]] = []
+    saved_kv: list[list[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
     async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(store_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
 
-        batch: List[Dict[str, Any]] = []
-        keys_values: Dict[bytes, bytes] = {}
+        batch: list[dict[str, Any]] = []
+        keys_values: dict[bytes, bytes] = {}
         for operation in range(num_batches * num_ops_per_batch):
             [op_type] = random.choices(
                 ["insert", "upsert-insert", "upsert-update", "delete"],
                 [0.4, 0.2, 0.2, 0.2],
                 k=1,
             )
-            if op_type == "insert" or op_type == "upsert-insert" or len(keys_values) == 0:
+            if op_type in {"insert", "upsert-insert"} or len(keys_values) == 0:
                 if len(keys_values) == 0:
                     op_type = "insert"
                 key = operation.to_bytes(4, byteorder="big")
@@ -469,8 +469,8 @@ async def test_batch_update(
         assert {node.key: node.value for node in current_kv} == {
             node.key: node.value for node in saved_kv[batch_number]
         }
-        queue: List[bytes32] = [root.node_hash]
-        ancestors: Dict[bytes32, bytes32] = {}
+        queue: list[bytes32] = [root.node_hash]
+        ancestors: dict[bytes32, bytes32] = {}
         while len(queue) > 0:
             node_hash = queue.pop(0)
             expected_ancestors = []
@@ -723,7 +723,7 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, store_id: bytes32
         if i == 0 or i > 10:
             insert_result = await data_store.autoinsert(key, value, store_id, status=Status.COMMITTED)
         else:
-            reference_node_hash = await data_store.get_terminal_node_for_seed(store_id, bytes32([0] * 32))
+            reference_node_hash = await data_store.get_terminal_node_for_seed(store_id, bytes32.zeros)
             insert_result = await data_store.insert(
                 key=key,
                 value=value,
@@ -1125,7 +1125,7 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
     insertions = 0
-    expected_diff: Set[DiffData] = set()
+    expected_diff: set[DiffData] = set()
     root_start = None
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
@@ -1176,7 +1176,7 @@ async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
         reference_node_hash=None,
         side=None,
     )
-    empty_hash = bytes32([0] * 32)
+    empty_hash = bytes32.zeros
     invalid_hash = bytes32([0] * 31 + [1])
     diff_1 = await data_store.get_kv_diff(store_id, empty_hash, insert_result.node_hash)
     assert diff_1 == {DiffData(OperationType.INSERT, b"000", b"000")}
@@ -1252,7 +1252,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
 
     await data_store.unsubscribe(store_id)
     assert await data_store.get_subscriptions() == []
-    store_id2 = bytes32([0] * 32)
+    store_id2 = bytes32.zeros
 
     await data_store.subscribe(
         Subscription(
@@ -1353,11 +1353,11 @@ async def test_server_http_ban(
     await data_store.subscribe(Subscription(store_id, [sinfo]))
 
     async def mock_http_download(
-        client_folder: Path,
+        target_filename_path: Path,
         filename: str,
         proxy_url: str,
         server_info: ServerInfo,
-        timeout: int,
+        timeout: aiohttp.ClientTimeout,
         log: logging.Logger,
     ) -> None:
         if error:
@@ -1370,10 +1370,11 @@ async def test_server_http_ban(
             data_store=data_store,
             store_id=store_id,
             existing_generation=3,
+            target_generation=4,
             root_hashes=[bytes32.random(seeded_random)],
             server_info=sinfo,
             client_foldername=tmp_path,
-            timeout=15,
+            timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
             log=log,
             proxy_url="",
             downloader=None,
@@ -1393,10 +1394,11 @@ async def test_server_http_ban(
             data_store=data_store,
             store_id=store_id,
             existing_generation=3,
+            target_generation=4,
             root_hashes=[bytes32.random(seeded_random)],
             server_info=sinfo,
             client_foldername=tmp_path,
-            timeout=15,
+            timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
             log=log,
             proxy_url="",
             downloader=None,
@@ -1412,9 +1414,16 @@ async def test_server_http_ban(
     "test_delta",
     [True, False],
 )
+@boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
 @pytest.mark.anyio
-async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_delta: bool, tmp_path: Path) -> None:
-    roots: List[Root] = []
+async def test_data_server_files(
+    data_store: DataStore,
+    store_id: bytes32,
+    test_delta: bool,
+    group_files_by_store: bool,
+    tmp_path: Path,
+) -> None:
+    roots: list[Root] = []
     num_batches = 10
     num_ops_per_batch = 100
 
@@ -1424,11 +1433,11 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
         random = Random()
         random.seed(100, version=2)
 
-        keys: List[bytes] = []
+        keys: list[bytes] = []
         counter = 0
 
         for batch in range(num_batches):
-            changelist: List[Dict[str, Any]] = []
+            changelist: list[dict[str, Any]] = []
             for operation in range(num_ops_per_batch):
                 if random.randint(0, 4) > 0 or len(keys) == 0:
                     key = counter.to_bytes(4, byteorder="big")
@@ -1442,7 +1451,9 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
                 counter += 1
             await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(store_id)
-            await write_files_for_root(data_store_server, store_id, root, tmp_path, 0)
+            await write_files_for_root(
+                data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
+            )
             roots.append(root)
 
     generation = 1
@@ -1450,10 +1461,11 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
     for root in roots:
         assert root.node_hash is not None
         if not test_delta:
-            filename = get_full_tree_filename(store_id, root.node_hash, generation)
+            filename = get_full_tree_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
+            assert filename.exists()
         else:
-            filename = get_delta_filename(store_id, root.node_hash, generation)
-        assert is_filename_valid(filename)
+            filename = get_delta_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
+            assert filename.exists()
         await insert_into_data_store_from_file(data_store, store_id, root.node_hash, tmp_path.joinpath(filename))
         current_root = await data_store.get_tree_root(store_id=store_id)
         assert current_root.node_hash == root.node_hash
@@ -1638,7 +1650,7 @@ async def test_benchmark_batch_insert_speed_multiple_batches(
 
 @pytest.mark.anyio
 async def test_delete_store_data(raw_data_store: DataStore) -> None:
-    store_id = bytes32(b"\0" * 32)
+    store_id = bytes32.zeros
     store_id_2 = bytes32(b"\0" * 31 + b"\1")
     await raw_data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     await raw_data_store.create_tree(store_id=store_id_2, status=Status.COMMITTED)
@@ -1820,6 +1832,133 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
 
 
 @pytest.mark.anyio
+@boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
+@pytest.mark.parametrize("max_full_files", [1, 2, 5])
+async def test_insert_from_delta_file(
+    data_store: DataStore,
+    store_id: bytes32,
+    monkeypatch: Any,
+    tmp_path: Path,
+    seeded_random: random.Random,
+    group_files_by_store: bool,
+    max_full_files: int,
+) -> None:
+    await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
+    num_files = 5
+    for generation in range(num_files):
+        key = generation.to_bytes(4, byteorder="big")
+        value = generation.to_bytes(4, byteorder="big")
+        await data_store.autoinsert(
+            key=key,
+            value=value,
+            store_id=store_id,
+            status=Status.COMMITTED,
+        )
+
+    root = await data_store.get_tree_root(store_id=store_id)
+    assert root.generation == num_files + 1
+    root_hashes = []
+
+    tmp_path_1 = tmp_path.joinpath("1")
+    tmp_path_2 = tmp_path.joinpath("2")
+
+    for generation in range(1, num_files + 2):
+        root = await data_store.get_tree_root(store_id=store_id, generation=generation)
+        await write_files_for_root(data_store, store_id, root, tmp_path_1, 0, False, group_files_by_store)
+        root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
+    store_path = tmp_path_1.joinpath(f"{store_id}") if group_files_by_store else tmp_path_1
+    with os.scandir(store_path) as entries:
+        filenames = {entry.name for entry in entries}
+        assert len(filenames) == 2 * (num_files + 1)
+    for filename in filenames:
+        if "full" in filename:
+            store_path.joinpath(filename).unlink()
+    with os.scandir(store_path) as entries:
+        filenames = {entry.name for entry in entries}
+        assert len(filenames) == num_files + 1
+    kv_before = await data_store.get_keys_values(store_id=store_id)
+    await data_store.rollback_to_generation(store_id, 0)
+    root = await data_store.get_tree_root(store_id=store_id)
+    assert root.generation == 0
+    os.rename(store_path, tmp_path_2)
+
+    async def mock_http_download(
+        target_filename_path: Path,
+        filename: str,
+        proxy_url: str,
+        server_info: ServerInfo,
+        timeout: int,
+        log: logging.Logger,
+    ) -> None:
+        pass
+
+    async def mock_http_download_2(
+        target_filename_path: Path,
+        filename: str,
+        proxy_url: str,
+        server_info: ServerInfo,
+        timeout: int,
+        log: logging.Logger,
+    ) -> None:
+        try:
+            os.rmdir(store_path)
+        except OSError:
+            pass
+        os.rename(tmp_path_2, store_path)
+
+    sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
+    with monkeypatch.context() as m:
+        m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
+        success = await insert_from_delta_file(
+            data_store=data_store,
+            store_id=store_id,
+            existing_generation=0,
+            target_generation=num_files + 1,
+            root_hashes=root_hashes,
+            server_info=sinfo,
+            client_foldername=tmp_path_1,
+            timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
+            log=log,
+            proxy_url="",
+            downloader=None,
+            group_files_by_store=group_files_by_store,
+            maximum_full_file_count=max_full_files,
+        )
+        assert not success
+
+    root = await data_store.get_tree_root(store_id=store_id)
+    assert root.generation == 0
+
+    sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
+    with monkeypatch.context() as m:
+        m.setattr("chia.data_layer.download_data.http_download", mock_http_download_2)
+        success = await insert_from_delta_file(
+            data_store=data_store,
+            store_id=store_id,
+            existing_generation=0,
+            target_generation=num_files + 1,
+            root_hashes=root_hashes,
+            server_info=sinfo,
+            client_foldername=tmp_path_1,
+            timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
+            log=log,
+            proxy_url="",
+            downloader=None,
+            group_files_by_store=group_files_by_store,
+            maximum_full_file_count=max_full_files,
+        )
+        assert success
+
+    root = await data_store.get_tree_root(store_id=store_id)
+    assert root.generation == num_files + 1
+    with os.scandir(store_path) as entries:
+        filenames = {entry.name for entry in entries}
+        assert len(filenames) == num_files + 1 + max_full_files  # 6 deltas and max_full_files full files
+    kv = await data_store.get_keys_values(store_id=store_id)
+    assert kv == kv_before
+
+
+@pytest.mark.anyio
 async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) -> None:
     num_stores = 5
     num_keys = 20
@@ -1859,8 +1998,9 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
 
 
 @pytest.mark.anyio
+@boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
 async def test_insert_from_delta_file_correct_file_exists(
-    data_store: DataStore, store_id: bytes32, tmp_path: Path
+    data_store: DataStore, store_id: bytes32, tmp_path: Path, group_files_by_store: bool
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     num_files = 5
@@ -1879,15 +2019,16 @@ async def test_insert_from_delta_file_correct_file_exists(
     root_hashes = []
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
-        await write_files_for_root(data_store, store_id, root, tmp_path, 0)
-        root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
-    with os.scandir(tmp_path) as entries:
+        await write_files_for_root(data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
+        root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
+    store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
+    with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
     for filename in filenames:
         if "full" in filename:
-            tmp_path.joinpath(filename).unlink()
-    with os.scandir(tmp_path) as entries:
+            store_path.joinpath(filename).unlink()
+    with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + 1
     kv_before = await data_store.get_keys_values(store_id=store_id)
@@ -1900,28 +2041,31 @@ async def test_insert_from_delta_file_correct_file_exists(
         data_store=data_store,
         store_id=store_id,
         existing_generation=0,
+        target_generation=num_files + 1,
         root_hashes=root_hashes,
         server_info=sinfo,
         client_foldername=tmp_path,
-        timeout=15,
+        timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
         log=log,
         proxy_url="",
         downloader=None,
+        group_files_by_store=group_files_by_store,
     )
     assert success
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
-    with os.scandir(tmp_path) as entries:
+    with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
-        assert len(filenames) == 2 * (num_files + 1)
+        assert len(filenames) == num_files + 2  # 1 full and 6 deltas
     kv = await data_store.get_keys_values(store_id=store_id)
     assert kv == kv_before
 
 
 @pytest.mark.anyio
+@boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
 async def test_insert_from_delta_file_incorrect_file_exists(
-    data_store: DataStore, store_id: bytes32, tmp_path: Path
+    data_store: DataStore, store_id: bytes32, tmp_path: Path, group_files_by_store: bool
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     root = await data_store.get_tree_root(store_id=store_id)
@@ -1938,19 +2082,20 @@ async def test_insert_from_delta_file_incorrect_file_exists(
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 2
-    await write_files_for_root(data_store, store_id, root, tmp_path, 0)
+    await write_files_for_root(data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
 
     incorrect_root_hash = bytes32([0] * 31 + [1])
-    with os.scandir(tmp_path) as entries:
+    store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
+    with os.scandir(store_path) as entries:
         filenames = [entry.name for entry in entries]
         assert len(filenames) == 2
         os.rename(
-            tmp_path.joinpath(filenames[0]),
-            tmp_path.joinpath(get_delta_filename(store_id, incorrect_root_hash, 2)),
+            store_path.joinpath(filenames[0]),
+            get_delta_filename_path(tmp_path, store_id, incorrect_root_hash, 2, group_files_by_store),
         )
         os.rename(
-            tmp_path.joinpath(filenames[1]),
-            tmp_path.joinpath(get_full_tree_filename(store_id, incorrect_root_hash, 2)),
+            store_path.joinpath(filenames[1]),
+            get_full_tree_filename_path(tmp_path, store_id, incorrect_root_hash, 2, group_files_by_store),
         )
 
     await data_store.rollback_to_generation(store_id, 1)
@@ -1959,19 +2104,21 @@ async def test_insert_from_delta_file_incorrect_file_exists(
         data_store=data_store,
         store_id=store_id,
         existing_generation=1,
+        target_generation=6,
         root_hashes=[incorrect_root_hash],
         server_info=sinfo,
         client_foldername=tmp_path,
-        timeout=15,
+        timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
         log=log,
         proxy_url="",
         downloader=None,
+        group_files_by_store=group_files_by_store,
     )
     assert not success
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 1
-    with os.scandir(tmp_path) as entries:
+    with os.scandir(store_path) as entries:
         filenames = [entry.name for entry in entries]
         assert len(filenames) == 0
 
@@ -2010,7 +2157,7 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
     num_values = 10
     new_keys = 10
     for value in range(num_values):
-        changelist: List[Dict[str, Any]] = []
+        changelist: list[dict[str, Any]] = []
         bytes_value = value.to_bytes(4, byteorder="big")
         if use_upsert:
             for key in range(num_keys):
@@ -2055,10 +2202,10 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
 
 async def _check_ancestors(
     data_store: DataStore, store_id: bytes32, root_hash: bytes32
-) -> Dict[bytes32, Optional[bytes32]]:
-    ancestors: Dict[bytes32, Optional[bytes32]] = {}
+) -> dict[bytes32, Optional[bytes32]]:
+    ancestors: dict[bytes32, Optional[bytes32]] = {}
     root_node: Node = await data_store.get_node(root_hash)
-    queue: List[Node] = [root_node]
+    queue: list[Node] = [root_node]
 
     while queue:
         node = queue.pop(0)
@@ -2085,7 +2232,7 @@ async def _check_ancestors(
 @pytest.mark.anyio
 async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) -> None:
     num_values = 1000
-    changelist: List[Dict[str, Any]] = []
+    changelist: list[dict[str, Any]] = []
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
         changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
@@ -2149,12 +2296,12 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
     assert previous_generation_count == 184
 
 
-async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> List[Node]:
+async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> list[Node]:
     root = await data_store.get_tree_root(store_id)
     assert root.node_hash is not None
     root_node = await data_store.get_node(root.node_hash)
-    nodes: List[Node] = []
-    queue: List[Node] = [root_node]
+    nodes: list[Node] = []
+    queue: list[Node] = [root_node]
 
     while len(queue) > 0:
         node = queue.pop(0)
@@ -2171,7 +2318,7 @@ async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> List[Node]:
 @pytest.mark.anyio
 async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
     num_values = 50
-    changelist: List[Dict[str, Any]] = []
+    changelist: list[dict[str, Any]] = []
 
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
@@ -2186,7 +2333,7 @@ async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
     nodes = await data_store.get_nodes([node.hash for node in expected_nodes])
     assert nodes == expected_nodes
 
-    node_hash = bytes32([0] * 32)
+    node_hash = bytes32.zeros
     node_hash_2 = bytes32([0] * 31 + [1])
     with pytest.raises(Exception, match=f"^Nodes not found for hashes: {node_hash.hex()}, {node_hash_2.hex()}"):
         await data_store.get_nodes([node_hash, node_hash_2] + [node.hash for node in expected_nodes])
@@ -2203,11 +2350,11 @@ async def test_get_leaf_at_minimum_height(
 ) -> None:
     num_values = 1000
     value_offset = 1000000
-    all_min_leafs: Set[TerminalNode] = set()
+    all_min_leafs: set[TerminalNode] = set()
 
     if pre > 0:
         # This builds a complete binary tree, in order to test more than one batch in the queue before finding the leaf
-        changelist: List[Dict[str, Any]] = []
+        changelist: list[dict[str, Any]] = []
 
         for value in range(pre):
             value_bytes = (value * value).to_bytes(8, byteorder="big")
@@ -2229,12 +2376,12 @@ async def test_get_leaf_at_minimum_height(
         )
 
         if (value + 1) % batch_size == 0:
-            hash_to_parent: Dict[bytes32, InternalNode] = {}
+            hash_to_parent: dict[bytes32, InternalNode] = {}
             root = await data_store.get_tree_root(store_id)
             assert root.node_hash is not None
             min_leaf = await data_store.get_leaf_at_minimum_height(root.node_hash, hash_to_parent)
             all_nodes = await get_all_nodes(data_store, store_id)
-            heights: Dict[bytes32, int] = {}
+            heights: dict[bytes32, int] = {}
             heights[root.node_hash] = 0
             min_leaf_height = None
 

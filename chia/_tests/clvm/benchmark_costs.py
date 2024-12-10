@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle

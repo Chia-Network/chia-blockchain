@@ -4,7 +4,7 @@ import os
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import yaml
 
@@ -40,9 +40,9 @@ from chia.wallet.derive_keys import (
 )
 
 
-def dict_add_new_default(updated: Dict[str, Any], default: Dict[str, Any], do_not_migrate_keys: Dict[str, Any]) -> None:
-    for k in do_not_migrate_keys:
-        if k in updated and do_not_migrate_keys[k] == "":
+def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_not_migrate_keys: dict[str, Any]) -> None:
+    for k, v in do_not_migrate_keys.items():
+        if k in updated and v == "":
             updated.pop(k)
     for k, v in default.items():
         ignore = False
@@ -56,7 +56,7 @@ def dict_add_new_default(updated: Dict[str, Any], default: Dict[str, Any], do_no
             # If there is an intermediate key with empty string value, do not migrate all descendants
             if do_not_migrate_keys.get(k, None) == "":
                 do_not_migrate_keys[k] = v
-            dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))
+            dict_add_new_default(updated[k], v, do_not_migrate_keys.get(k, {}))
         elif k not in updated or ignore is True:
             updated[k] = v
 
@@ -168,8 +168,8 @@ def copy_files_rec(old_path: Path, new_path: Path) -> None:
 def migrate_from(
     old_root: Path,
     new_root: Path,
-    manifest: List[str],
-    do_not_migrate_settings: List[str],
+    manifest: list[str],
+    do_not_migrate_settings: list[str],
 ) -> int:
     """
     Copy all the files in "manifest" to the new config directory.
@@ -192,7 +192,7 @@ def migrate_from(
 
     with lock_and_load_config(new_root, "config.yaml") as config:
         config_str: str = initial_config_file("config.yaml")
-        default_config: Dict[str, Any] = yaml.safe_load(config_str)
+        default_config: dict[str, Any] = yaml.safe_load(config_str)
         flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
         dict_add_new_default(config, default_config, flattened_keys)
 
@@ -331,7 +331,7 @@ def chia_init(
     if should_check_keys:
         check_keys(root_path)
 
-    config: Dict[str, Any]
+    config: dict[str, Any]
 
     db_path_replaced: str
     if v1_db:

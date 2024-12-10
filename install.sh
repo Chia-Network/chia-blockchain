@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -61,7 +61,7 @@ fi
 git submodule update --init mozilla-ca
 
 # You can specify preferred python version by exporting `INSTALL_PYTHON_VERSION`
-# e.g. `export INSTALL_PYTHON_VERSION=3.8`
+# e.g. `export INSTALL_PYTHON_VERSION=3.9`
 INSTALL_PYTHON_PATH=
 PYTHON_MAJOR_VER=
 PYTHON_MINOR_VER=
@@ -74,7 +74,7 @@ OPENSSL_VERSION_INT=
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 312 3.12 311 3.11 310 3.10 39 3.9 38 3.8 3; do
+  for V in 312 3.12 311 3.11 310 3.10 39 3.9 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
@@ -138,7 +138,7 @@ if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
 fi
 
 if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "13" ]; then
-  echo "Chia requires Python version >= 3.8 and  < 3.13.0" >&2
+  echo "Chia requires Python version >= 3.9 and  < 3.13.0" >&2
   echo "Current Python version = $INSTALL_PYTHON_VERSION" >&2
   # If Arch, direct to Arch Wiki
   if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
@@ -168,15 +168,27 @@ if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
   echo "Your OS may have patched OpenSSL and not updated the version to 1.1.1n"
 fi
 
-./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
+if [ ! -f .penv/bin/poetry ]; then
+  ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
+fi
+
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
-# TODO: Decide if this is needed or should be handled automatically in some way
-.penv/bin/pip install "poetry-dynamic-versioning[plugin]"
 # shellcheck disable=SC2086
 .penv/bin/poetry install ${EXTRAS}
-ln -s -f .venv venv
+
+if [ -e venv ]; then
+  if [ -d venv ] && [ ! -L venv ]; then
+    echo "The 'venv' directory already exists. Please delete it before installing."
+    exit 1
+  elif [ -L venv ]; then
+    ln -sfn .venv venv
+  fi
+else
+  ln -s .venv venv
+fi
+
 if [ ! -f "activate" ]; then
-  ln -s venv/bin/activate .
+  ln -s .venv/bin/activate .
 fi
 
 if [ -z "$EDITABLE" ]; then
@@ -185,11 +197,11 @@ fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
-  PREV_VENV="$VIRTUAL_ENV"
-  export VIRTUAL_ENV="venv"
+  # shellcheck disable=SC1091
+  . .venv/bin/activate
   ./install-plotter.sh bladebit
   ./install-plotter.sh madmax
-  export VIRTUAL_ENV="$PREV_VENV"
+  deactivate
   set -e
 fi
 
@@ -199,7 +211,7 @@ echo "For assistance join us on Discord in the #support chat channel:"
 echo "https://discord.gg/chia"
 echo ""
 echo "Try the Quick Start Guide to running chia-blockchain:"
-echo "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
+echo "https://docs.chia.net/introduction"
 echo ""
 echo "To install the GUI run '. ./activate' then 'sh install-gui.sh'."
 echo ""

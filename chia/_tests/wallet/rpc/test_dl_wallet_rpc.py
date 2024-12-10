@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 
 import pytest
@@ -28,7 +29,7 @@ class TestWalletRpc:
         self, two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
     ) -> None:
         num_blocks = 5
-        [full_node_service], wallet_services, bt = two_wallet_nodes_services
+        [full_node_service], wallet_services, _bt = two_wallet_nodes_services
         full_node_api = full_node_service._api
         full_node_server = full_node_api.full_node.server
         wallet_node = wallet_services[0]._node
@@ -61,27 +62,31 @@ class TestWalletRpc:
         assert wallet_services[0].rpc_server is not None
         assert wallet_services[1].rpc_server is not None
 
-        client = await WalletRpcClient.create(
-            self_hostname,
-            wallet_services[0].rpc_server.listen_port,
-            wallet_services[0].root_path,
-            wallet_services[0].config,
-        )
-        await validate_get_routes(client, wallet_services[0].rpc_server.rpc_api)
-        client_2 = await WalletRpcClient.create(
-            self_hostname,
-            wallet_services[1].rpc_server.listen_port,
-            wallet_services[1].root_path,
-            wallet_services[1].config,
-        )
-        await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
+        async with contextlib.AsyncExitStack() as exit_stack:
+            client = await exit_stack.enter_async_context(
+                WalletRpcClient.create_as_context(
+                    self_hostname,
+                    wallet_services[0].rpc_server.listen_port,
+                    wallet_services[0].root_path,
+                    wallet_services[0].config,
+                )
+            )
+            await validate_get_routes(client, wallet_services[0].rpc_server.rpc_api)
+            client_2 = await exit_stack.enter_async_context(
+                WalletRpcClient.create_as_context(
+                    self_hostname,
+                    wallet_services[1].rpc_server.listen_port,
+                    wallet_services[1].root_path,
+                    wallet_services[1].config,
+                )
+            )
+            await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
 
-        try:
-            merkle_root: bytes32 = bytes32([0] * 32)
+            merkle_root: bytes32 = bytes32.zeros
             txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             async def is_singleton_confirmed(rpc_client: WalletRpcClient, lid: bytes32) -> bool:
@@ -99,7 +104,7 @@ class TestWalletRpc:
             await client.dl_update_root(launcher_id, new_root, uint64(100))
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             new_singleton_record = await client.dl_latest_singleton(launcher_id)
@@ -119,7 +124,7 @@ class TestWalletRpc:
                 if await is_singleton_confirmed(rpc_client, lid):
                     rec = await rpc_client.dl_latest_singleton(lid)
                     if rec is None:
-                        raise Exception("No latest singleton for: {lid!r}")
+                        raise Exception(f"No latest singleton for: {lid!r}")
                     return rec.generation == generation
                 else:
                     return False
@@ -163,7 +168,7 @@ class TestWalletRpc:
             txs, launcher_id_3 = await client.create_new_dl(merkle_root, uint64(50))
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
@@ -180,7 +185,7 @@ class TestWalletRpc:
             )
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
@@ -204,13 +209,13 @@ class TestWalletRpc:
             height = full_node_api.full_node.blockchain.get_peak_height()
             assert height is not None
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             additions = []
             for tx in txs:
                 if tx.spend_bundle is not None:
                     additions.extend(tx.spend_bundle.additions())
-            mirror_coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
+            mirror_coin = next(c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash())
             mirror = Mirror(
                 mirror_coin.name(),
                 launcher_id,
@@ -222,23 +227,16 @@ class TestWalletRpc:
             await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
             await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)
-
-        finally:
-            # Checks that the RPC manages to stop the node
-            client.close()
-            client_2.close()
-            await client.await_closed()
-            await client_2.await_closed()
 
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_dl_verify_proof(
         self, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
     ) -> None:
-        [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator_services
+        [full_node_service], [wallet_service], _bt = one_wallet_and_one_simulator_services
         full_node_api = full_node_service._api
         full_node_server = full_node_api.full_node.server
         wallet_node = wallet_service._node

@@ -43,9 +43,6 @@ def gen_ssl(suffix: str = "") -> None:
     private_ca_key: Optional[bytes] = None
     capture_cert_and_key = True
 
-    print("from typing import Dict, Tuple")
-    print()
-
     make_ca_cert(Path("SSL_TEST_PRIVATE_CA_CRT"), Path("SSL_TEST_PRIVATE_CA_KEY"))
 
     capture_cert_and_key = False
@@ -86,17 +83,19 @@ def gen_ssl(suffix: str = "") -> None:
             ca_crt = chia_ca_crt if cert_type == "public" else private_ca_crt
             ca_key = chia_ca_key if cert_type == "public" else private_ca_key
 
+            assert ca_crt is not None
+            assert ca_key is not None
             generate_ca_signed_cert(ca_crt, ca_key, Path(crt), Path(key))
 
     patch.undo()
 
     append_str = "" if suffix == "" else f"_{suffix}"
     print(
-        f"SSL_TEST_PRIVATE_CA_CERT_AND_KEY{append_str}: Tuple[bytes, bytes] = "
+        f"SSL_TEST_PRIVATE_CA_CERT_AND_KEY{append_str}: tuple[bytes, bytes] = "
         "(SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)"
     )
     print()
-    print(f"SSL_TEST_NODE_CERTS_AND_KEYS{append_str}: Dict[str, Dict[str, Dict[str, bytes]]] = {{")
+    print(f"SSL_TEST_NODE_CERTS_AND_KEYS{append_str}: dict[str, dict[str, dict[str, bytes]]] = {{")
     for node_name, cert_type_dict in node_certs_and_keys.items():
         print(f'    "{node_name}": {{')
         for cert_type, cert_dict in cert_type_dict.items():

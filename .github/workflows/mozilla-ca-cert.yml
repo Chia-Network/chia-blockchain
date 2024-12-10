@@ -1,8 +1,6 @@
 name: "Update Mozilla CA sub module"
 on:
   workflow_dispatch:
-    branches:
-      - $default-branch
 
 jobs:
   update_ca_module:
@@ -11,7 +9,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: "${{ github.event.inputs.chia_ref }}"
           repository: chia-network/chia-blockchain
           submodules: recursive
           token: "${{ secrets.GITHUB_TOKEN }}"
@@ -28,7 +25,7 @@ jobs:
           git pull origin main
 
       - name: "Create Pull Request"
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           base: main
           body: "Newest Mozilla CA cert"

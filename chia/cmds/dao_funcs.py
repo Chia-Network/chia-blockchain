@@ -4,7 +4,7 @@ import asyncio
 import json
 import time
 from decimal import Decimal
-from typing import List, Optional
+from typing import Optional
 
 from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.param_types import CliAmount
@@ -14,6 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.util.wallet_types import WalletType
@@ -60,7 +61,8 @@ async def create_dao_wallet(
     cat_amount: CliAmount,
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     if proposal_minimum % 2 == 0:
         proposal_minimum = uint64(1 + proposal_minimum)
         print("Adding 1 mojo to proposal minimum amount")
@@ -92,6 +94,7 @@ async def create_dao_wallet(
             fee_for_cat=fee_for_cat,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:
@@ -127,7 +130,8 @@ async def add_funds_to_treasury(
     fee: uint64,
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
@@ -143,6 +147,7 @@ async def add_funds_to_treasury(
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:
@@ -279,7 +284,8 @@ async def vote_on_proposal(
     fee: uint64,
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_vote_on_proposal(
             wallet_id=wallet_id,
@@ -289,6 +295,7 @@ async def vote_on_proposal(
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
         if push:
             start = time.time()
@@ -314,7 +321,8 @@ async def close_proposal(
     self_destruct: bool,
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_close_proposal(
             wallet_id=wallet_id,
@@ -323,6 +331,7 @@ async def close_proposal(
             self_destruct=self_destruct,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:
@@ -348,7 +357,8 @@ async def lockup_coins(
     fee: uint64,
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     final_amount: uint64 = amount.convert_amount(units["cat"])
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_send_to_lockup(
@@ -357,6 +367,7 @@ async def lockup_coins(
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
         if push:
             start = time.time()
@@ -381,13 +392,15 @@ async def release_coins(
     fee: uint64,
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_free_coins_from_finished_proposals(
             wallet_id=wallet_id,
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
         if push:
             start = time.time()
@@ -411,7 +424,8 @@ async def exit_lockup(
     fee: uint64,
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_exit_lockup(
             wallet_id=wallet_id,
@@ -419,6 +433,7 @@ async def exit_lockup(
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:
@@ -448,7 +463,8 @@ async def create_spend_proposal(
     additions_file: Optional[str],
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     if additions_file is None and (address is None or amount is None):
         raise ValueError("Must include a json specification or an address / amount pair.")
     if additions_file:  # pragma: no cover
@@ -476,6 +492,7 @@ async def create_spend_proposal(
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         asset_id_name = asset_id if asset_id else "XCH"
@@ -500,7 +517,8 @@ async def create_update_proposal(
     oracle_spend_delay: Optional[uint64],
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     new_dao_rules = {
         "proposal_timelock": proposal_timelock,
         "soft_close_length": soft_close_length,
@@ -518,6 +536,7 @@ async def create_update_proposal(
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:
@@ -536,7 +555,8 @@ async def create_mint_proposal(
     vote_amount: Optional[int],
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
-) -> List[TransactionRecord]:
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,
@@ -547,6 +567,7 @@ async def create_mint_proposal(
             fee=fee,
             tx_config=cli_tx_config.to_tx_config(units["chia"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:

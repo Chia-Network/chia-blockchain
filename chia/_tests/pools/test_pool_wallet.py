@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import Any, Optional, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,10 +20,14 @@ class MockStandardWallet:
     async def get_new_puzzlehash(self) -> bytes32:
         return self.canned_puzzlehash
 
+    async def get_puzzle_hash(self, new: bool) -> bytes32:
+        return self.canned_puzzlehash
+
 
 @dataclass
 class MockWalletStateManager:
     root_path: Optional[Path] = None
+    config: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -56,7 +60,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     Test that PoolWallet can create a new pool config
     """
 
-    updated_configs: List[MockPoolWalletConfig] = []
+    updated_configs: list[MockPoolWalletConfig] = []
     payout_instructions_ph = rand_hash()
     launcher_id: bytes32 = rand_hash()
     p2_singleton_puzzle_hash: bytes32 = rand_hash()
@@ -75,14 +79,14 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     )
 
     # No config data
-    def mock_load_pool_config(root_path: Path) -> List[MockPoolWalletConfig]:
+    def mock_load_pool_config(root_path: Path) -> list[MockPoolWalletConfig]:
         return []
 
     monkeypatch.setattr("chia.pools.pool_wallet.load_pool_config", mock_load_pool_config)
 
     # Mock pool_config.update_pool_config to capture the updated configs
     async def mock_pool_config_update_pool_config(
-        root_path: Path, pool_config_list: List[MockPoolWalletConfig]
+        root_path: Path, pool_config_list: list[MockPoolWalletConfig]
     ) -> None:
         nonlocal updated_configs
         updated_configs = pool_config_list
@@ -121,7 +125,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
     Test that PoolWallet will retain existing payout_instructions when updating the pool config.
     """
 
-    updated_configs: List[MockPoolWalletConfig] = []
+    updated_configs: list[MockPoolWalletConfig] = []
     payout_instructions_ph = rand_hash()
     launcher_id: bytes32 = rand_hash()
     p2_singleton_puzzle_hash: bytes32 = rand_hash()
@@ -157,7 +161,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
     )
 
     # No config data
-    def mock_load_pool_config(root_path: Path) -> List[MockPoolWalletConfig]:
+    def mock_load_pool_config(root_path: Path) -> list[MockPoolWalletConfig]:
         nonlocal existing_config
         return [existing_config]
 
@@ -165,7 +169,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
 
     # Mock pool_config.update_pool_config to capture the updated configs
     async def mock_pool_config_update_pool_config(
-        root_path: Path, pool_config_list: List[MockPoolWalletConfig]
+        root_path: Path, pool_config_list: list[MockPoolWalletConfig]
     ) -> None:
         nonlocal updated_configs
         updated_configs = pool_config_list

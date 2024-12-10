@@ -36,7 +36,7 @@ async def test_notification_store_backwards_compat() -> None:
                 cursor = await conn.execute(
                     "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
                     (
-                        bytes32([0] * 32),
+                        bytes32.zeros,
                         bytes([0] * 10),
                         bytes([0]),
                     ),
@@ -121,7 +121,7 @@ async def test_notifications(
             wallet_node_2.config["enable_notifications"] = True
             AMOUNT = uint64(1)
             FEE = uint64(0)
-        elif case in ("allow", "allow_larger"):
+        elif case in {"allow", "allow_larger"}:
             wallet_node_2.config["required_notification_amount"] = 750000000000
             if case == "allow_larger":
                 AMOUNT = uint64(1000000000000)
@@ -140,10 +140,10 @@ async def test_notifications(
             allow_height = peak.height + 1
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
-        async with notification_manager_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
-            await notification_manager_1.send_new_notification(
-                ph_2, msg, AMOUNT, DEFAULT_TX_CONFIG, action_scope, fee=FEE
-            )
+        async with notification_manager_1.wallet_state_manager.new_action_scope(
+            DEFAULT_TX_CONFIG, push=True
+        ) as action_scope:
+            await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, action_scope, fee=FEE)
         [tx] = action_scope.side_effects.transactions
         await time_out_assert_not_none(
             5,

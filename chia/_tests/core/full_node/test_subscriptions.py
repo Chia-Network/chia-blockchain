@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from chia_rs import AugSchemeMPL, Coin, CoinSpend, Program
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, G2Element, Program
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -456,7 +456,7 @@ def test_peers_for_spent_coin() -> None:
 
     coin_spends = [CoinSpend(IDENTITY_COIN, IDENTITY_PUZZLE, Program.to([]))]
 
-    spend_bundle = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
+    spend_bundle = SpendBundle(coin_spends, G2Element())
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(
         generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
@@ -481,7 +481,7 @@ def test_peers_for_created_coin() -> None:
         CoinSpend(IDENTITY_COIN, IDENTITY_PUZZLE, Program.to([[51, OTHER_PUZZLE_HASH, 1000, [HINT_PUZZLE_HASH]]]))
     ]
 
-    spend_bundle = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
+    spend_bundle = SpendBundle(coin_spends, G2Element())
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(
         generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS

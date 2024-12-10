@@ -4,7 +4,8 @@ import asyncio
 import contextlib
 import logging
 import time
-from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, cast
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
@@ -53,7 +54,7 @@ class Introducer:
         # TODO: fill this out?
         pass
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def set_server(self, server: ChiaServer):
@@ -99,13 +100,13 @@ class Introducer:
                         peer.last_attempt = uint64(time.time())
 
                         self.log.info(f"Vetting peer {peer.host} {peer.port}")
-                        r, w = await asyncio.wait_for(
+                        _r, w = await asyncio.wait_for(
                             asyncio.open_connection(peer.host, int(peer.port)),
                             timeout=3,
                         )
                         w.close()
                     except Exception as e:
-                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{str(e)}")
+                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{e!s}")
                         peer.vetted = min(peer.vetted - 1, -1)
 
                         # if we have failed 6 times in a row, remove the peer

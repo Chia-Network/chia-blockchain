@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from collections.abc import Iterator
+from typing import Optional, Union
 
 from chia_rs import G1Element
 
@@ -40,7 +41,7 @@ INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
 
 def create_innerpuz(
     p2_puzzle_or_hash: Union[Program, bytes32],
-    recovery_list: List[bytes32],
+    recovery_list: list[bytes32],
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
@@ -69,7 +70,7 @@ def create_innerpuz(
 
 def get_inner_puzhash_by_p2(
     p2_puzhash: bytes32,
-    recovery_list: List[bytes32],
+    recovery_list: list[bytes32],
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
@@ -111,7 +112,7 @@ def is_did_innerpuz(inner_f: Program) -> bool:
     return inner_f == DID_INNERPUZ_MOD
 
 
-def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program, Program, Program, Program]]:
+def uncurry_innerpuz(puzzle: Program) -> Optional[tuple[Program, Program, Program, Program, Program]]:
     """
     Uncurry a DID inner puzzle
     :param puzzle: DID puzzle
@@ -196,7 +197,7 @@ def check_is_did_puzzle(puzzle: Program) -> bool:
     return is_singleton(inner_f)
 
 
-def metadata_to_program(metadata: Dict[str, str]) -> Program:
+def metadata_to_program(metadata: dict[str, str]) -> Program:
     """
     Convert the metadata dict to a Chialisp program
     :param metadata: User defined metadata
@@ -208,7 +209,7 @@ def metadata_to_program(metadata: Dict[str, str]) -> Program:
     return Program.to(kv_list)
 
 
-def did_program_to_metadata(program: Program) -> Dict[str, str]:
+def did_program_to_metadata(program: Program) -> dict[str, str]:
     """
     Convert a program to a metadata dict
     :param program: Chialisp program contains the metadata

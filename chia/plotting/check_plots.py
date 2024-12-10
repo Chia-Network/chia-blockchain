@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 from threading import Lock
 from time import sleep, time
-from typing import List, Optional
+from typing import Optional
 
 from chia_rs import G1Element
 from chiapos import Verifier
@@ -103,7 +103,7 @@ def check_plots(
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
 
     if list_duplicates:
-        all_filenames: List[Path] = []
+        all_filenames: list[Path] = []
         for paths in get_plot_filenames(root_path).values():
             all_filenames += paths
         find_duplicate_plot_IDs(all_filenames)
@@ -135,7 +135,7 @@ def check_plots(
         log.info(f"Starting to test each plot with {num} challenges each\n")
     total_good_plots: Counter[str] = Counter()
     total_size = 0
-    bad_plots_list: List[Path] = []
+    bad_plots_list: list[Path] = []
 
     with plot_manager:
 
@@ -148,7 +148,7 @@ def check_plots(
 
             # Look up local_sk from plot to save locked memory
             (
-                pool_public_key_or_puzzle_hash,
+                _pool_public_key_or_puzzle_hash,
                 farmer_public_key,
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())
@@ -161,8 +161,8 @@ def check_plots(
                 if plot_info.pool_contract_puzzle_hash is not None:
                     pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
                     log.info(f"\t{'Pool contract address:':<23} {pca}")
-                log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
-                log.info(f"\t{'Local sk:' :<23} {local_sk}")
+                log.info(f"\t{'Farmer public key:':<23} {farmer_public_key}")
+                log.info(f"\t{'Local sk:':<23} {local_sk}")
 
             total_proofs = 0
             caught_exception: bool = False
@@ -229,14 +229,14 @@ def check_plots(
 
             if total_proofs > 0 and caught_exception is False:
                 log.info(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}. "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
                 total_good_plots[pr.get_size()] += 1
                 total_size += plot_path.stat().st_size
             else:
                 log.error(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)} "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)} "
                     f"Filepath: {plot_path}"
                 )
                 bad_plots_list.append(plot_path)

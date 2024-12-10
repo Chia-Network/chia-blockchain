@@ -35,6 +35,7 @@ associated with the coin being spent. Condition Opcodes are verified by every cl
 and in this way they control whether a spend is valid or not.
 
 """
+
 from __future__ import annotations
 
 import json
@@ -76,4 +77,4 @@ def get_config_and_constants():
 
 
 if __name__ == "__main__":
-    cmd_run_json_block_file()  # pylint: disable=no-value-for-parameter
+    cmd_run_json_block_file()

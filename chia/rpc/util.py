@@ -3,14 +3,14 @@ from __future__ import annotations
 import dataclasses
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_type_hints
+from collections.abc import Awaitable
+from typing import TYPE_CHECKING, Any, Callable, Optional, get_type_hints
 
 import aiohttp
 from chia_rs import AugSchemeMPL
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.json_util import obj_to_response
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
@@ -25,17 +25,24 @@ from chia.wallet.util.clvm_streamable import (
 )
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 log = logging.getLogger(__name__)
 
 # TODO: consolidate this with chia.rpc.rpc_server.Endpoint
 # Not all endpoints only take a dictionary so that definition is imperfect
 # This definition is weaker than that one however because the arguments can be anything
-RpcEndpoint = Callable[..., Awaitable[Dict[str, Any]]]
+RpcEndpoint = Callable[..., Awaitable[dict[str, Any]]]
 MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
+if TYPE_CHECKING:
+    from chia.rpc.rpc_server import EndpointResult
+    from chia.rpc.wallet_rpc_api import WalletRpcApi
+else:
+    EndpointResult = dict[str, Any]
+    WalletRpcApi = object
 
 
-ALL_TRANSLATION_LAYERS: Dict[str, TranslationLayer] = {"CHIP-0028": BLIND_SIGNER_TRANSLATION}
+ALL_TRANSLATION_LAYERS: dict[str, TranslationLayer] = {"CHIP-0028": BLIND_SIGNER_TRANSLATION}
 
 
 def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
@@ -44,7 +51,9 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     assert issubclass(request_hint, Streamable)
     request_class = request_hint
 
-    async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
+    async def rpc_endpoint(
+        self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
+    ) -> EndpointResult:
         response_obj: Streamable = await func(
             self,
             (
@@ -77,8 +86,10 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     return rpc_endpoint
 
 
-def wrap_http_handler(f) -> Callable:
-    async def inner(request) -> aiohttp.web.Response:
+def wrap_http_handler(
+    f: Callable[[dict[str, Any]], Awaitable[EndpointResult]],
+) -> Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.StreamResponse]]:
+    async def inner(request: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
         request_data = await request.json()
         try:
             res_object = await f(request_data)
@@ -102,15 +113,11 @@ def wrap_http_handler(f) -> Callable:
 def tx_endpoint(
     push: bool = False,
     merge_spends: bool = True,
-    # The purpose of this is in case endpoints need to raise based on certain non default values
-    requires_default_information: bool = False,
 ) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
-        async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
-            if TYPE_CHECKING:
-                from chia.rpc.wallet_rpc_api import WalletRpcApi
-
-                assert isinstance(self, WalletRpcApi)
+        async def rpc_endpoint(
+            self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
+        ) -> EndpointResult:
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
@@ -124,7 +131,7 @@ def tx_endpoint(
                     excluded_coin_amounts=request.get("exclude_coin_amounts"),
                 )
             if tx_config_loader.excluded_coin_ids is None:
-                excluded_coins: Optional[List[Dict[str, Any]]] = request.get(
+                excluded_coins: Optional[list[dict[str, Any]]] = request.get(
                     "exclude_coins", request.get("excluded_coins")
                 )
                 if excluded_coins is not None:
@@ -138,7 +145,7 @@ def tx_endpoint(
                 logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
-            extra_conditions: Tuple[Condition, ...] = tuple()
+            extra_conditions: tuple[Condition, ...] = tuple()
             if "extra_conditions" in request:
                 extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
             extra_conditions = (*extra_conditions, *ConditionValidTimes.from_json_dict(request).to_conditions())
@@ -153,17 +160,16 @@ def tx_endpoint(
                 raise ValueError("Relative timelocks are not currently supported in the RPC")
 
             async with self.service.wallet_state_manager.new_action_scope(
+                tx_config,
                 push=request.get("push", push),
                 merge_spends=request.get("merge_spends", merge_spends),
                 sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
             ) as action_scope:
-                response: Dict[str, Any] = await func(
+                response: EndpointResult = await func(
                     self,
                     request,
                     *args,
                     action_scope,
-                    *([push] if requires_default_information else []),
-                    tx_config=tx_config,
                     extra_conditions=extra_conditions,
                     **kwargs,
                 )
@@ -201,12 +207,8 @@ def tx_endpoint(
             new_txs = action_scope.side_effects.transactions
             if "transaction" in response:
                 if (
-                    func.__name__ == "create_new_wallet"
-                    and request["wallet_type"] == "pool_wallet"
-                    or func.__name__ == "pw_join_pool"
-                    or func.__name__ == "pw_self_pool"
-                    or func.__name__ == "pw_absorb_rewards"
-                ):
+                    func.__name__ == "create_new_wallet" and request["wallet_type"] == "pool_wallet"
+                ) or func.__name__ in {"pw_join_pool", "pw_self_pool", "pw_absorb_rewards"}:
                     # Theses RPCs return not "convenience" for some reason
                     response["transaction"] = new_txs[-1].to_json_dict()
                 else:
@@ -227,7 +229,7 @@ def tx_endpoint(
                     tx.name.hex() for tx in new_txs if tx.type == TransactionType.OUTGOING_CLAWBACK.value
                 ]
             if "spend_bundle" in response:
-                response["spend_bundle"] = SpendBundle.aggregate(
+                response["spend_bundle"] = WalletSpendBundle.aggregate(
                     [tx.spend_bundle for tx in new_txs if tx.spend_bundle is not None]
                 )
             if "signed_txs" in response:
@@ -245,17 +247,17 @@ def tx_endpoint(
                 response["tx_id"] = new_txs[0].name
             if "trade_record" in response:
                 old_offer: Offer = Offer.from_bech32(response["offer"])
-                signed_coin_spends: List[CoinSpend] = [
+                signed_coin_spends: list[CoinSpend] = [
                     coin_spend
                     for tx in new_txs
                     if tx.spend_bundle is not None
                     for coin_spend in tx.spend_bundle.coin_spends
                 ]
-                involved_coins: List[Coin] = [spend.coin for spend in signed_coin_spends]
+                involved_coins: list[Coin] = [spend.coin for spend in signed_coin_spends]
                 signed_coin_spends.extend(
                     [spend for spend in old_offer._bundle.coin_spends if spend.coin not in involved_coins]
                 )
-                new_offer_bundle: SpendBundle = SpendBundle(
+                new_offer_bundle = WalletSpendBundle(
                     signed_coin_spends,
                     AugSchemeMPL.aggregate(
                         [tx.spend_bundle.aggregated_signature for tx in new_txs if tx.spend_bundle is not None]

@@ -5,22 +5,24 @@ import logging
 import signal
 import sys
 import traceback
+from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from multiprocessing import freeze_support
 from pathlib import Path
 from types import FrameType
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import aiosqlite
+import dns.asyncresolver
 from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
 
 from chia.seeder.crawl_store import CrawlStore
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
 
 SERVICE_NAME = "seeder"
@@ -38,8 +40,8 @@ class DomainName(str):
 
 @dataclass(frozen=True)
 class PeerList:
-    ipv4: List[IPv4Address]
-    ipv6: List[IPv6Address]
+    ipv4: list[IPv4Address]
+    ipv6: list[IPv6Address]
 
     @property
     def no_peers(self) -> bool:
@@ -79,11 +81,13 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         dns_request: Optional[DNSRecord] = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
-        asyncio.create_task(self.handler(dns_request, addr))
+        # TODO: stop dropping tasks on the floor
+        asyncio.create_task(self.handler(dns_request, addr))  # noqa: RUF006
 
     async def respond(self) -> None:
         log.info("UDP DNS responder started.")
-        while self.transport is None:  # we wait for the transport to be set.
+        # TODO: switch to event driven code
+        while self.transport is None:  # we wait for the transport to be set.  # noqa: ASYNC110
             await asyncio.sleep(0.1)
         while not self.transport.is_closing():
             try:
@@ -121,7 +125,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
     peer_info: str = field(init=False, default="")
     expected_length: int = 0
     buffer: bytearray = field(init=False, default_factory=lambda: bytearray(2))
-    futures: List[asyncio.Future[None]] = field(init=False, default_factory=list)
+    futures: list[asyncio.Future[None]] = field(init=False, default_factory=list)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         """
@@ -191,7 +195,8 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                     f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}, "
                     f"closing connection after dns replies are sent."
                 )
-            asyncio.create_task(self.wait_for_futures())
+            # TODO: stop dropping tasks on the floor
+            asyncio.create_task(self.wait_for_futures())  # noqa: RUF006
             return True  # Keep connection open, until the futures are done.
         log.info(f"Received early EOF from {self.peer_info}, closing connection.")
         return False
@@ -263,7 +268,7 @@ async def get_dns_reply(callback: DnsCallback, dns_request: DNSRecord) -> DNSRec
 
 @dataclass
 class DNSServer:
-    config: Dict[str, Any]
+    config: dict[str, Any]
     root_path: Path
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     shutdown_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -282,11 +287,14 @@ class DNSServer:
     db_path: Path = field(init=False)
     domain: DomainName = field(init=False)
     ns1: DomainName = field(init=False)
-    ns_records: List[RR] = field(init=False)
+    ns_records: list[RR] = field(init=False)
     ttl: int = field(init=False)
     soa_record: RR = field(init=False)
-    reliable_peers_v4: List[IPv4Address] = field(default_factory=list)
-    reliable_peers_v6: List[IPv6Address] = field(default_factory=list)
+    reliable_peers_v4: list[IPv4Address] = field(default_factory=list)
+    reliable_peers_v6: list[IPv6Address] = field(default_factory=list)
+    static_peers_v4: list[IPv4Address] = field(default_factory=list)
+    static_peers_v6: list[IPv6Address] = field(default_factory=list)
+    resolver: Optional[dns.asyncresolver.Resolver] = field(init=False)
     pointer_v4: int = 0
     pointer_v6: int = 0
 
@@ -307,7 +315,7 @@ class DNSServer:
         if not self.domain.endswith("."):
             self.domain = DomainName(self.domain + ".")  # Make sure the domain ends with a period, as per RFC 1035.
         self.ns1: DomainName = DomainName(self.config["nameserver"])
-        self.ns_records: List[NS] = [NS(self.ns1)]
+        self.ns_records: list[NS] = [NS(self.ns1)]
         self.ttl: int = self.config["ttl"]
         self.soa_record: SOA = SOA(
             mname=self.ns1,  # primary name server
@@ -320,6 +328,11 @@ class DNSServer:
                 self.config["soa"]["minimum"],
             ),
         )
+        try:
+            self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
+        except Exception:
+            self.resolver = None
+            log.exception("Error initializing asyncresolver for dns_server")
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
@@ -392,42 +405,77 @@ class DNSServer:
     async def periodically_get_reliable_peers(self) -> None:
         sleep_interval = 0
         while not self.shutdown_event.is_set() and self.crawl_store is not None:
+            await self.refresh_reliable_peers()
+            sleep_interval = min(15, sleep_interval + 1)
+            await asyncio.sleep(sleep_interval * 60)
+
+    async def refresh_reliable_peers(self) -> None:
+        if self.crawl_store is None:
+            return
+        new_reliable_peers: list[str] = []
+        while not self.shutdown_event.is_set():
             try:
                 new_reliable_peers = await self.crawl_store.get_good_peers()
             except Exception as e:
                 log.error(f"Error loading reliable peers from database: {e}. Traceback: {traceback.format_exc()}.")
+                await asyncio.sleep(2)
                 continue
-            if len(new_reliable_peers) == 0:
-                log.warning("No reliable peers found in database, waiting for db to be populated.")
-                await asyncio.sleep(2)  # sleep for 2 seconds, because the db has not been populated yet.
-                continue
-            async with self.lock:
-                self.reliable_peers_v4 = []
-                self.reliable_peers_v6 = []
-                self.pointer_v4 = 0
-                self.pointer_v6 = 0
-                for peer in new_reliable_peers:
+
+            static_peers = self.config.get("static_peers", [])
+            if len(static_peers) > 0:
+                log.warning("have static peers, resolving ip addresses")
+                for static_peer in static_peers:
                     try:
-                        validated_peer = ip_address(peer)
-                        if validated_peer.version == 4:
-                            self.reliable_peers_v4.append(validated_peer)
-                        elif validated_peer.version == 6:
-                            self.reliable_peers_v6.append(validated_peer)
+                        log.warning(f"Handling static peer {static_peer}")
+                        # Attempt to parse as an IP address
+                        # If this doesn't throw, we can just add to the list
+                        # Otherwise, we have to resolve the hostname
+                        ip_address(static_peer)
+                        new_reliable_peers.append(static_peer)
                     except ValueError:
-                        log.error(f"Invalid peer: {peer}")
-                        continue
-                log.warning(
-                    f"Number of reliable peers discovered in dns server:"
-                    f" IPv4 count - {len(self.reliable_peers_v4)}"
-                    f" IPv6 count - {len(self.reliable_peers_v6)}"
-                )
-            sleep_interval = min(15, sleep_interval + 1)
-            await asyncio.sleep(sleep_interval * 60)
+                        # Wasn't an IP address, so resolve the hostname
+                        log.warning(f"Not an IP address, trying to resolve {static_peer} to an IP address")
+                        if self.resolver is not None:
+                            for rdtype in ["A", "AAAA"]:
+                                result = await self.resolver.resolve(qname=static_peer, rdtype=rdtype, lifetime=30)
+                                for ip in result:
+                                    try:
+                                        ip_address(ip)
+                                        new_reliable_peers.append(ip)
+                                    except ValueError:
+                                        pass
+
+            if len(new_reliable_peers) > 0:
+                break
+
+            log.warning("No reliable peers found in database, waiting for db to be populated.")
+            await asyncio.sleep(2)  # sleep for 2 seconds, because the db has not been populated yet.
+
+        async with self.lock:
+            self.reliable_peers_v4 = []
+            self.reliable_peers_v6 = []
+            self.pointer_v4 = 0
+            self.pointer_v6 = 0
+            for peer in new_reliable_peers:
+                try:
+                    validated_peer = ip_address(peer)
+                    if validated_peer.version == 4:
+                        self.reliable_peers_v4.append(validated_peer)
+                    elif validated_peer.version == 6:
+                        self.reliable_peers_v6.append(validated_peer)
+                except ValueError:
+                    log.error(f"Invalid peer: {peer}")
+                    continue
+            log.warning(
+                f"Number of reliable peers discovered in dns server:"
+                f" IPv4 count - {len(self.reliable_peers_v4)}"
+                f" IPv6 count - {len(self.reliable_peers_v6)}"
+            )
 
     async def get_peers_to_respond(self, ipv4_count: int, ipv6_count: int) -> PeerList:
         async with self.lock:
             # Append IPv4.
-            ipv4_peers: List[IPv4Address] = []
+            ipv4_peers: list[IPv4Address] = []
             size = len(self.reliable_peers_v4)
             if ipv4_count > 0 and size <= ipv4_count:
                 ipv4_peers = self.reliable_peers_v4
@@ -437,7 +485,7 @@ class DNSServer:
                 ]
                 self.pointer_v4 = (self.pointer_v4 + ipv4_count) % size  # mark where we left off
             # Append IPv6.
-            ipv6_peers: List[IPv6Address] = []
+            ipv6_peers: list[IPv6Address] = []
             size = len(self.reliable_peers_v6)
             if ipv6_count > 0 and size <= ipv6_count:
                 ipv6_peers = self.reliable_peers_v6
@@ -473,7 +521,7 @@ class DNSServer:
 
         ttl: int = self.ttl
         # we add these to the list as it will allow us to respond to ns and soa requests
-        ips: List[RD] = [self.soa_record] + self.ns_records
+        ips: list[RD] = [self.soa_record, *self.ns_records]
         ipv4_count = 0
         ipv6_count = 0
         if question_type is QTYPE.A:
@@ -493,7 +541,7 @@ class DNSServer:
         ips.extend([A(str(peer)) for peer in peers.ipv4])
         ips.extend([AAAA(str(peer)) for peer in peers.ipv6])
 
-        records: Dict[DomainName, List[RD]] = {  # this is where we can add other records we want to serve
+        records: dict[DomainName, list[RD]] = {  # this is where we can add other records we want to serve
             self.domain: ips,
         }
 
@@ -503,7 +551,7 @@ class DNSServer:
                 valid_domain = True
                 for response in domain_responses:
                     rqt: int = getattr(QTYPE, response.__class__.__name__)
-                    if question_type == rqt or question_type == QTYPE.ANY:
+                    if question_type in {rqt, QTYPE.ANY}:
                         reply.add_answer(RR(rname=qname, rtype=rqt, rclass=1, ttl=ttl, rdata=response))
         if not valid_domain and len(reply.rr) == 0:  # if we didn't find any records to return
             reply.header.rcode = RCODE.NXDOMAIN
@@ -521,7 +569,7 @@ async def run_dns_server(dns_server: DNSServer) -> None:  # pragma: no cover
             await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
 
 
-def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSServer:
+def create_dns_server_service(config: dict[str, Any], root_path: Path) -> DNSServer:
     service_config = config[SERVICE_NAME]
 
     return DNSServer(service_config, root_path)
@@ -529,12 +577,13 @@ def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSSer
 
 def main() -> None:  # pragma: no cover
     freeze_support()
-    root_path = DEFAULT_ROOT_PATH
+    root_path = resolve_root_path(override=None)
+
     # TODO: refactor to avoid the double load
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
-    initialize_service_logging(service_name=SERVICE_NAME, config=config)
+    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
     dns_server = create_dns_server_service(config, root_path)
     asyncio.run(run_dns_server(dns_server))

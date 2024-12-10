@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Iterator, List, Optional, Union
+from collections.abc import Iterator
+from typing import Optional, Union
 
 from chia_rs import G2Element
 
@@ -10,11 +11,11 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 NULL_SIGNATURE = G2Element()
 
@@ -77,7 +78,7 @@ def construct_cat_puzzle(
     return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle_or_hash)
 
 
-def subtotals_for_deltas(deltas: List[int]) -> List[int]:
+def subtotals_for_deltas(deltas: list[int]) -> list[int]:
     """
     Given a list of deltas corresponding to input coins, create the "subtotals" list
     needed in solutions spending those coins.
@@ -103,16 +104,18 @@ def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists
-def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_list: List[SpendableCAT]) -> SpendBundle:
+def unsigned_spend_bundle_for_spendable_cats(
+    mod_code: Program, spendable_cat_list: list[SpendableCAT]
+) -> WalletSpendBundle:
     """
-    Given a list of `SpendableCAT` objects, create a `SpendBundle` that spends all those coins.
+    Given a list of `SpendableCAT` objects, create a `WalletSpendBundle` that spends all those coins.
     Note that no signing is done here, so it falls on the caller to sign the resultant bundle.
     """
 
     N = len(spendable_cat_list)
 
     # figure out what the deltas are by running the inner puzzles & solutions
-    deltas: List[int] = []
+    deltas: list[int] = []
     for spend_info in spendable_cat_list:
         conditions = conditions_dict_for_solution(spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST)
         total = spend_info.extra_delta * -1
@@ -158,4 +161,4 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
         coin_spend = make_spend(spend_info.coin, puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
-    return SpendBundle(coin_spends, NULL_SIGNATURE)
+    return WalletSpendBundle(coin_spends, NULL_SIGNATURE)
