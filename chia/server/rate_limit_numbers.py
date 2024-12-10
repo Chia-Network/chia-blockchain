@@ -12,11 +12,21 @@ from chia.protocols.shared_protocol import Capability
 compose_rate_limits_cache: dict[int, dict[str, Any]] = {}
 
 
+# this class is used to configure the *rate* limit for a message type. The
+# limits are counts and size per 60 seconds.
 @dataclasses.dataclass(frozen=True)
 class RLSettings:
     frequency: int  # Max request per time period (ie 1 min)
     max_size: int  # Max size of each request
     max_total_size: Optional[int] = None  # Max cumulative size of all requests in that period
+
+
+# this class is used to indicate that a message type is not subject to a rate
+# limit, but just a per-message size limit. This may be appropriate for response
+# messages that are implicitly limited by their corresponding request message
+@dataclasses.dataclass(frozen=True)
+class Unlimited:
+    max_size: int  # Max size of each request
 
 
 def get_rate_limits_to_use(our_capabilities: list[Capability], peer_capabilities: list[Capability]) -> dict[str, Any]:
@@ -94,11 +104,11 @@ rate_limits = {
             ProtocolMessageTypes.request_proof_of_weight: RLSettings(5, 100),
             ProtocolMessageTypes.respond_proof_of_weight: RLSettings(5, 50 * 1024 * 1024, 100 * 1024 * 1024),
             ProtocolMessageTypes.request_block: RLSettings(200, 100),
-            ProtocolMessageTypes.reject_block: RLSettings(200, 100),
+            ProtocolMessageTypes.reject_block: Unlimited(100),
             ProtocolMessageTypes.request_blocks: RLSettings(500, 100),
-            ProtocolMessageTypes.respond_blocks: RLSettings(100, 50 * 1024 * 1024, 5 * 50 * 1024 * 1024),
-            ProtocolMessageTypes.reject_blocks: RLSettings(100, 100),
-            ProtocolMessageTypes.respond_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
+            ProtocolMessageTypes.respond_blocks: Unlimited(50 * 1024 * 1024),
+            ProtocolMessageTypes.reject_blocks: Unlimited(100),
+            ProtocolMessageTypes.respond_block: Unlimited(2 * 1024 * 1024),
             ProtocolMessageTypes.new_unfinished_block: RLSettings(200, 100),
             ProtocolMessageTypes.request_unfinished_block: RLSettings(200, 100),
             ProtocolMessageTypes.new_unfinished_block2: RLSettings(200, 100),
