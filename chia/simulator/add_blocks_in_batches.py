@@ -5,7 +5,6 @@ from typing import Optional
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode, PeakPostProcessingResult
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
@@ -16,21 +15,23 @@ from chia.util.ints import uint32
 async def add_blocks_in_batches(
     blocks: list[FullBlock],
     full_node: FullNode,
-    header_hash: Optional[bytes32] = None,
 ) -> None:
-    if header_hash is None:
+    peak_hash = blocks[0].prev_header_hash
+    if blocks[0].height == 0:
+        assert peak_hash == full_node.constants.GENESIS_CHALLENGE
         diff = full_node.constants.DIFFICULTY_STARTING
         ssi = full_node.constants.SUB_SLOT_ITERS_STARTING
         fork_height = -1
-        fork_info = ForkInfo(-1, fork_height, full_node.constants.GENESIS_CHALLENGE)
     else:
-        block_record = await full_node.blockchain.get_block_record_from_db(header_hash)
+        # assume the fork point is immediately before the
+        # batch of block we're about to add
+        block_record = await full_node.blockchain.get_block_record_from_db(peak_hash)
         assert block_record is not None
         ssi, diff = get_next_sub_slot_iters_and_difficulty(
             full_node.constants, True, block_record, full_node.blockchain
         )
         fork_height = block_record.height
-        fork_info = ForkInfo(block_record.height, fork_height, block_record.header_hash)
+    fork_info = ForkInfo(fork_height, blocks[0].height - 1, peak_hash)
 
     vs = ValidationState(ssi, diff, None)
 

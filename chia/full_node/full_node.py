@@ -2006,6 +2006,8 @@ class FullNode:
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = block.header_hash
         if self.blockchain.contains_block(header_hash):
+            if fork_info is not None:
+                await self.blockchain.run_single_block(block, fork_info)
             return None
 
         pre_validation_result: Optional[PreValidationResult] = None
@@ -2078,6 +2080,8 @@ class FullNode:
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
+                if fork_info is not None:
+                    await self.blockchain.run_single_block(block, fork_info)
                 return None
             validation_start = time.monotonic()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
