@@ -686,7 +686,7 @@ class DataLayerWallet:
         self.log.debug("ZACH: Calling self.wallet_state_manager.dl_store.get_all_singletons()")
         launcher_ids = await self.wallet_state_manager.dl_store.get_all_launchers()
 
-        self.log.debug(f"Had {len(launcher_ids)} launchers")
+        self.log.debug(f"ZACH: Had {len(launcher_ids)} launchers")
         collected = []
 
         self.log.debug("ZACH: Collecting singletons")
