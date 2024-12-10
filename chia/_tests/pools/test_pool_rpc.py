@@ -24,7 +24,7 @@ from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import ReorgProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -911,6 +911,8 @@ class TestPoolWalletRpc:
         assert pw_info.current.relative_lock_height == 5
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+        # Now test changing pools
         join_pool_tx: TransactionRecord = (
             await client.pw_join_pool(
                 wallet_id,
@@ -1020,3 +1022,48 @@ class TestPoolWalletRpc:
 
         # Eventually, leaves pool
         assert await status_is_farming_to_pool()
+
+    @pytest.mark.anyio
+    async def test_join_pool_twice(
+        self,
+        setup: Setup,
+        self_hostname: str,
+    ) -> None:
+        full_node_api, wallet_node, our_ph, _total_block_rewards, client = setup
+
+        await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(our_ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(our_ph))
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+        creation_tx: TransactionRecord = await client.create_new_pool_wallet(
+            target_puzzlehash=our_ph,
+            pool_url="https://pool.example.com",
+            relative_lock_height=uint32(10),
+            backup_host="",
+            mode="new",
+            state="FARMING_TO_POOL",
+            fee=uint64(0),
+        )
+        await full_node_api.process_transaction_records(records=[creation_tx])
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+        summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
+        assert len(summaries_response) == 1
+        wallet_id: int = summaries_response[0]["id"]
+
+        async def status_is_farming_to_pool(w_id: int) -> bool:
+            pw_status: PoolWalletInfo = (await client.pw_status(w_id))[0]
+            return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+
+        await time_out_assert(45, status_is_farming_to_pool, True, wallet_id)
+
+        # Test joining the same pool via the RPC client
+        with pytest.raises(ValueError, match="Already farming to pool"):
+            await client.pw_join_pool(
+                wallet_id=wallet_id,
+                target_puzzlehash=our_ph,
+                pool_url="https://pool.example.com",
+                relative_lock_height=uint32(10),
+                fee=uint64(0),
+            )
