@@ -1081,7 +1081,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
         g1 = sk.get_g1()
         sig = AugSchemeMPL.sign(sk, IDENTITY_PUZZLE_HASH, g1)
         aggsig = G2Element()
-        for _ in range(169):
+        for _ in range(242):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
             aggsig += sig
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
@@ -2045,9 +2045,7 @@ async def test_fill_rate_block_validation(
         # and without them we won't be able to get the test bundle in.
         # This defaults to `MAX_BLOCK_COST_CLVM // 2`
         full_node_api.full_node._mempool_manager.max_tx_clvm_cost = max_block_clvm_cost
-        # This defaults to `MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR`
-        # TODO: Revisit this when we eventually raise the fille rate to 100%
-        # and `BLOCK_SIZE_LIMIT_FACTOR` is no longer relevant.
+        # This defaults to `MAX_BLOCK_COST_CLVM - BLOCK_OVERHEAD`
         full_node_api.full_node._mempool_manager.mempool.mempool_info = dataclasses.replace(
             full_node_api.full_node._mempool_manager.mempool.mempool_info,
             max_block_clvm_cost=CLVMCost(max_block_clvm_cost),
