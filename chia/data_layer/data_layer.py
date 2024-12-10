@@ -886,6 +886,7 @@ class DataLayer:
         await self.data_store.update_subscriptions_from_wallet(store_id, urls)
 
     async def get_owned_stores(self) -> List[SingletonRecord]:
+        self.log.debug("Calling self.wallet_rpc.dl_owned_singletons")
         return await self.wallet_rpc.dl_owned_singletons()
 
     async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
@@ -947,6 +948,11 @@ class DataLayer:
                 # Sometimes the DL wallet isn't available, so we can't get the owned stores.
                 # We'll try again next time.
                 self.log.warning("Can't get owned stores, will try again next time.")
+                owned_stores = []
+            except Exception as e:
+                self.log.error(
+                    f"Unexpected exception while fetching owned stores: {type(e)} {e} {traceback.format_exc()}"
+                )
                 owned_stores = []
             self.log.debug(f"Adding {len(owned_stores)} stores to subscriptions to process")
             subscription_store_ids = {subscription.store_id for subscription in subscriptions}
