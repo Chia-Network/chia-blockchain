@@ -135,10 +135,22 @@ async def test_no_callbacks_if_error() -> None:
             raise RuntimeError("This should prevent the callbacks from being called")
 
 
-# TODO: add support, change this test to test it and add a test for nested transactionality
 @pytest.mark.anyio
-async def test_nested_use_banned(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
-    async with action_scope.use():
-        with pytest.raises(RuntimeError, match="cannot currently support nested transactions"):
+async def test_nested_use(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
+    async with action_scope.use() as interface:
+        with pytest.raises(RuntimeError, match="Must pass `current_interface` when doing nested transactions"):
             async with action_scope.use():
-                pass
+                raise NotImplementedError("Should not get here")  # pragma: no cover
+
+        assert interface.side_effects.buf == b""
+        async with action_scope.use(interface) as nested_interface:
+            nested_interface.side_effects.buf = b"foo"
+
+        assert interface.side_effects.buf == b"foo"
+
+        with pytest.raises(RuntimeError, match="deliberate raise"):
+            async with action_scope.use(interface) as nested_interface:
+                nested_interface.side_effects.buf = b"bar"
+                raise RuntimeError("deliberate raise")
+
+        assert interface.side_effects.buf == b"foo"

@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Optional, Protocol, TypeVar, final
+from typing import Any, Callable, Generic, Optional, Protocol, TypeVar, final
 
 import aiosqlite
 
@@ -18,7 +18,9 @@ class ResourceManager(Protocol):
         yield  # type: ignore[misc]
 
     @contextlib.asynccontextmanager
-    async def use(self) -> AsyncIterator[None]:  # pragma: no cover
+    async def use(
+        self, current_interface: Optional[StateInterface[Any]] = None
+    ) -> AsyncIterator[None]:  # pragma: no cover
         # yield included to make this a generator as expected by @contextlib.asynccontextmanager
         yield
 
@@ -52,18 +54,25 @@ class SQLiteResourceManager:
             yield self
 
     @contextlib.asynccontextmanager
-    async def use(self) -> AsyncIterator[None]:
-        if self._active_writer is not None:
-            raise RuntimeError("SQLiteResourceManager cannot currently support nested transactions")
+    async def use(self, current_interface: Optional[StateInterface[Any]] = None) -> AsyncIterator[None]:
         async with self._db.writer() as conn:
+            if self._active_writer is not None and current_interface is None:
+                raise RuntimeError("Must pass `current_interface` when doing nested transactions")
+            previous_writer = self._active_writer
             self._active_writer = conn
             try:
                 yield
             finally:
-                self._active_writer = None
+                self._active_writer = previous_writer
+                if previous_writer is not None and current_interface is not None:
+                    current_interface.side_effects = await self.get_resource(type(current_interface.side_effects), conn)
 
-    async def get_resource(self, resource_type: type[_T_SideEffects]) -> _T_SideEffects:
-        row = await execute_fetchone(self.get_active_writer(), "SELECT total FROM side_effects")
+    async def get_resource(
+        self, resource_type: type[_T_SideEffects], _active_writer: Optional[aiosqlite.Connection] = None
+    ) -> _T_SideEffects:
+        row = await execute_fetchone(
+            self.get_active_writer() if _active_writer is None else _active_writer, "SELECT total FROM side_effects"
+        )
         assert row is not None
         side_effects = resource_type.from_bytes(row[0])
         return side_effects
@@ -140,8 +149,10 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
                 self._final_side_effects = interface.side_effects
 
     @contextlib.asynccontextmanager
-    async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:
-        async with self._resource_manager.use():
+    async def use(
+        self, current_interface: Optional[StateInterface[_T_SideEffects]] = None, _callbacks_allowed: bool = True
+    ) -> AsyncIterator[StateInterface[_T_SideEffects]]:
+        async with self._resource_manager.use(current_interface):
             side_effects = await self._resource_manager.get_resource(self._side_effects_format)
             interface = StateInterface(side_effects, _callbacks_allowed, self._callback)
 
