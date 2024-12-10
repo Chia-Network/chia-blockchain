@@ -58,6 +58,8 @@ class SQLiteResourceManager:
         async with self._db.writer() as conn:
             if self._active_writer is not None and current_interface is None:
                 raise RuntimeError("Must pass `current_interface` when doing nested transactions")
+            elif current_interface is not None:
+                await self.save_resource(current_interface.side_effects)
             previous_writer = self._active_writer
             self._active_writer = conn
             try:

@@ -143,7 +143,9 @@ async def test_nested_use(action_scope: ActionScope[TestSideEffects, TestConfig]
                 raise NotImplementedError("Should not get here")  # pragma: no cover
 
         assert interface.side_effects.buf == b""
+        interface.side_effects.buf = b"qat"
         async with action_scope.use(interface) as nested_interface:
+            assert nested_interface.side_effects.buf == b"qat"
             nested_interface.side_effects.buf = b"foo"
 
         assert interface.side_effects.buf == b"foo"
