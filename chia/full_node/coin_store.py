@@ -33,12 +33,13 @@ class CoinStore:
 
     db_wrapper: DBWrapper2
     coins_added_at_height_cache: LRUCache[uint32, list[CoinRecord]]
+    coins_removed_at_height_cache: LRUCache[uint32, list[CoinRecord]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"CoinStore does not support database schema v{db_wrapper.db_version}")
-        self = CoinStore(db_wrapper, LRUCache(100))
+        self = CoinStore(db_wrapper, LRUCache(100), LRUCache(100))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating coin store tables and indexes.")
@@ -199,6 +200,11 @@ class CoinStore:
         # Special case to avoid querying all unspent coins (spent_index=0)
         if height == 0:
             return []
+
+        removed_coins_records = self.coins_removed_at_height_cache.get(height)
+        if removed_coins_records is not None:
+            return removed_coins_records
+
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -211,6 +217,7 @@ class CoinStore:
                         coin = self.row_to_coin(row)
                         coin_record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                         coins.append(coin_record)
+                self.coins_removed_at_height_cache.put(height, coins)
                 return coins
 
     async def get_all_coins(self, include_spent_coins: bool) -> list[CoinRecord]:
@@ -567,6 +574,7 @@ class CoinStore:
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
         self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
+        self.coins_removed_at_height_cache = LRUCache(self.coins_removed_at_height_cache.capacity)
         return list(coin_changes.values())
 
     # Store CoinRecord in DB
