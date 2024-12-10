@@ -12,6 +12,7 @@ from chiabip158 import PyBIP158
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
+from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
@@ -1081,10 +1082,14 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
         g1 = sk.get_g1()
         sig = AugSchemeMPL.sign(sk, IDENTITY_PUZZLE_HASH, g1)
         aggsig = G2Element()
-        for _ in range(242):
+        cost_target = 401_000_000
+        conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
+        cost_target -= ConditionCost.CREATE_COIN.value - 143 * TEST_COST_PER_BYTE
+        while cost_target > ConditionCost.AGG_SIG.value + 38 * TEST_COST_PER_BYTE:
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
             aggsig += sig
-        conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
+            cost_target -= ConditionCost.AGG_SIG.value + 38 * TEST_COST_PER_BYTE
+
         # Create a spend bundle with a big enough cost that gets it close to the limit
         _, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, coin, aggsig)
         assert res[1] == MempoolInclusionStatus.SUCCESS
