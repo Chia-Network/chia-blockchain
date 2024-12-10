@@ -193,9 +193,11 @@ async def test_partial_failure() -> None:
                 values.append(1)
             async with conn1.execute("SELECT value FROM counter") as cursor:
                 values.append(await get_value(cursor))
+        async with conn1.execute("SELECT value FROM counter") as cursor:
+            values.append(await get_value(cursor))
 
     # the write of 1337 failed, and was restored to 42
-    assert values == [42, 1337, 1, 42]
+    assert values == [42, 1337, 1, 42. 42]
 
 
 @pytest.mark.anyio
