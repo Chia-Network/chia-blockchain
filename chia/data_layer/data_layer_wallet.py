@@ -682,32 +682,32 @@ class DataLayerWallet:
         return singleton_record, parent_lineage
 
     async def get_owned_singletons(self) -> List[SingletonRecord]:
-        self.log.debug("Getting all owned singletons")
-        self.log.debug("Calling self.wallet_state_manager.dl_store.get_all_singletons()")
+        self.log.debug("ZACH: Getting all owned singletons")
+        self.log.debug("ZACH: Calling self.wallet_state_manager.dl_store.get_all_singletons()")
         launcher_ids = await self.wallet_state_manager.dl_store.get_all_launchers()
 
         self.log.debug(f"Had {len(launcher_ids)} launchers")
         collected = []
 
-        self.log.debug("Collecting singletons")
+        self.log.debug("ZACH: Collecting singletons")
         for launcher_id in launcher_ids:
-            self.log.debug(f"Getting singleton for launcher {launcher_id}")
+            self.log.debug(f"ZACH: Getting singleton for launcher {launcher_id}")
             singleton_record = await self.wallet_state_manager.dl_store.get_latest_singleton(launcher_id=launcher_id)
             if singleton_record is None:
                 # this is likely due to a race between getting the list and acquiring the extra data
                 continue
 
-            self.log.debug("Calling get_derivation_record_for_puzzle_hash")
+            self.log.debug("ZACH: Calling get_derivation_record_for_puzzle_hash")
             inner_puzzle_derivation: Optional[DerivationRecord] = (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     singleton_record.inner_puzzle_hash
                 )
             )
             if inner_puzzle_derivation is not None:
-                self.log.debug("Adding singleton to collected")
+                self.log.debug("ZACH: Adding singleton to collected")
                 collected.append(singleton_record)
 
-        self.log.debug(f"Returning {len(collected)} singletons")
+        self.log.debug(f"ZACH: Returning {len(collected)} singletons")
         return collected
 
     async def create_new_mirror(

@@ -4417,24 +4417,24 @@ class WalletRpcApi:
         return {"history": history_json, "count": len(history_json)}
 
     async def dl_owned_singletons(self, request: Dict[str, Any]) -> EndpointResult:
-        log.debug("Wallet: Handling dl_owned_singletons")
+        log.debug("ZACH: Wallet: Handling dl_owned_singletons")
         """Get all owned singleton records"""
         if self.service.wallet_state_manager is None:
-            log.debug("Wallet: not initialized")
+            log.debug("ZACH: Wallet: not initialized")
             raise ValueError("The wallet service is not currently initialized")
 
         try:
-            log.debug("Wallet: Getting DL wallet")
+            log.debug("ZACH: Wallet: Getting DL wallet")
             wallet = self.service.wallet_state_manager.get_dl_wallet()
         except ValueError:
-            log.debug("Wallet: no DataLayer wallet available")
+            log.debug("ZACH: Wallet: no DataLayer wallet available")
             return {"success": False, "error": "no DataLayer wallet available"}
 
-        log.debug("Wallet: calling wallet.get_opwned_singletons")
+        log.debug("ZACH: Wallet: calling wallet.get_opwned_singletons")
         singletons = await wallet.get_owned_singletons()
         singletons_json = [singleton.to_json_dict() for singleton in singletons]
 
-        log.debug(f"Wallet: returning {len(singletons_json)} singletons")
+        log.debug(f"ZACH: Wallet: returning {len(singletons_json)} singletons")
         return {"singletons": singletons_json, "count": len(singletons_json)}
 
     async def dl_get_mirrors(self, request: Dict[str, Any]) -> EndpointResult:
