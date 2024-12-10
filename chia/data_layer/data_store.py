@@ -54,7 +54,7 @@ from chia.data_layer.util.merkle_blob import (
 )
 from chia.data_layer.util.merkle_blob import NodeType as NodeTypeMerkleBlob
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -484,6 +484,22 @@ class DataStore:
 
             return int(row[0])
 
+    async def get_existing_hashes(self, node_hashes: list[bytes32], store_id: bytes32) -> set[bytes32]:
+        result: set[bytes32] = set()
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+
+        for i in range(0, len(node_hashes), batch_size):
+            chunk = node_hashes[i : i + batch_size]
+            placeholders = ",".join(["?"] * len(chunk))
+            query = f"SELECT hash FROM nodes WHERE store_id = ? AND hash IN ({placeholders}) LIMIT {len(chunk)}"
+
+            async with self.db_wrapper.reader() as reader:
+                async with reader.execute(query, (store_id, *chunk)) as cursor:
+                    rows = await cursor.fetchall()
+                    result.update(row["hash"] for row in rows)
+
+        return result
+
     async def add_node_hash(
         self, store_id: bytes32, hash: bytes32, root_hash: bytes32, generation: int, index: int
     ) -> None:
@@ -503,9 +519,10 @@ class DataStore:
 
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
         hash_to_index = merkle_blob.get_hashes_indexes()
+
+        existing_hashes = await self.get_existing_hashes(list(hash_to_index.keys()), store_id)
         for hash, index in hash_to_index.items():
-            existing_generation = await self.get_first_generation(hash, store_id)
-            if existing_generation is None:
+            if hash not in existing_hashes:
                 await self.add_node_hash(store_id, hash, root.node_hash, root.generation, index)
 
     async def build_blob_from_nodes(
