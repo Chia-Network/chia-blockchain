@@ -18,7 +18,7 @@ from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import LightTransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
@@ -246,9 +246,9 @@ class WalletEnvironment:
 
     async def wait_for_transactions_to_settle(
         self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: list[bytes32] = []
-    ) -> list[TransactionRecord]:
+    ) -> list[LightTransactionRecord]:
         # Gather all pending transactions
-        pending_txs: list[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+        pending_txs: list[LightTransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
         # Filter clawback txs
         pending_txs = [
             tx
@@ -318,7 +318,7 @@ class WalletTestFramework:
                     ph_indexes[wallet_id] = await env.wallet_state_manager.puzzle_store.get_unused_count(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
-        pending_txs: list[list[TransactionRecord]] = []
+        pending_txs: list[list[LightTransactionRecord]] = []
         peak = self.full_node.full_node.blockchain.get_peak_height()
         assert peak is not None
         # Check balances prior to block
@@ -374,7 +374,9 @@ class WalletTestFramework:
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
             except TimeoutError:  # pragma: no cover
-                unconfirmed: list[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                unconfirmed: list[
+                    LightTransactionRecord
+                ] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
                 raise TimeoutError(
                     f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
                 )
