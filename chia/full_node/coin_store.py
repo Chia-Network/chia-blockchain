@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+import asyncio
 import dataclasses
 import logging
 import sqlite3
@@ -19,7 +21,6 @@ from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.ints import uint32, uint64
-from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -32,13 +33,14 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
-    coins_added_at_height_cache: LRUCache[uint32, list[CoinRecord]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
         if db_wrapper.db_version != 2:
-            raise RuntimeError(f"CoinStore does not support database schema v{db_wrapper.db_version}")
-        self = CoinStore(db_wrapper, LRUCache(100))
+            raise RuntimeError(
+                f"CoinStore does not support database schema v{db_wrapper.db_version}"
+            )
+        self = CoinStore(db_wrapper)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating coin store tables and indexes.")
@@ -58,22 +60,32 @@ class CoinStore:
 
             # Useful for reorg lookups
             log.info("DB: Creating index coin_confirmed_index")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
+            )
 
             log.info("DB: Creating index coin_spent_index")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)"
+            )
 
             log.info("DB: Creating index coin_puzzle_hash")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)"
+            )
 
             log.info("DB: Creating index coin_parent_index")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)"
+            )
 
         return self
 
     async def num_unspent(self) -> int:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index=0") as cursor:
+            async with conn.execute(
+                "SELECT COUNT(*) FROM coin_record WHERE spent_index=0"
+            ) as cursor:
                 row = await cursor.fetchone()
         if row is not None:
             count: int = row[0]
@@ -156,6 +168,18 @@ class CoinStore:
         coins: list[CoinRecord] = []
 
         async with self.db_wrapper.reader_no_transaction() as conn:
+            log.info(
+                f"BEGIN WJB task {asyncio.current_task().get_name()}  get_coin_records reader_no_transaction {conn}"
+            )
+            frame = inspect.currentframe().f_back
+            log.info(f"WJB 1 {inspect.getframeinfo(frame).filename} {frame.f_lineno} {conn}")
+            frame = frame.f_back
+            log.info(f"WJB 2 {inspect.getframeinfo(frame).filename} {frame.f_lineno} {conn}")
+            frame = frame.f_back
+            log.info(f"WJB 3 {inspect.getframeinfo(frame).filename} {frame.f_lineno} {conn}")
+            frame = frame.f_back
+            log.info(f"WJB 4 {inspect.getframeinfo(frame).filename} {frame.f_lineno} {conn}")
+
             cursors: list[Cursor] = []
             for batch in to_batches(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: tuple[Any, ...] = tuple(batch.entries)
@@ -173,14 +197,12 @@ class CoinStore:
                     coin = self.row_to_coin(row)
                     record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                     coins.append(record)
-
+            log.info(
+                f"END WJB task {asyncio.current_task().get_name()} get_coin_records reader_no_transaction {conn} {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+            )
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
-        coins_added: Optional[list[CoinRecord]] = self.coins_added_at_height_cache.get(height)
-        if coins_added is not None:
-            return coins_added
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -192,7 +214,6 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
-                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
@@ -506,7 +527,11 @@ class CoinStore:
             coin_states = list(coin_states_dict.values())
 
             if include_hinted:
-                coin_states.sort(key=lambda cr: max(cr.created_height or uint32(0), cr.spent_height or uint32(0)))
+                coin_states.sort(
+                    key=lambda cr: max(
+                        cr.created_height or uint32(0), cr.spent_height or uint32(0)
+                    )
+                )
                 while len(coin_states) > max_items + 1:
                     coin_states.pop()
 
@@ -517,13 +542,20 @@ class CoinStore:
 
         # The last item is the start of the next batch of coin states.
         next_coin_state = coin_states.pop()
-        next_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
+        next_height = uint32(
+            max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0)
+        )
 
         # In order to prevent blocks from being split up between batches, remove
         # all coin states whose max height is the same as the last coin state's height.
         while len(coin_states) > 0:
             last_coin_state = coin_states[-1]
-            height = uint32(max(last_coin_state.created_height or 0, last_coin_state.spent_height or 0))
+            height = uint32(
+                max(
+                    last_coin_state.created_height or 0,
+                    last_coin_state.spent_height or 0,
+                )
+            )
             if height != next_height:
                 break
 
@@ -551,7 +583,9 @@ class CoinStore:
                     coin_changes[record.name] = record
 
             # Delete reverted blocks from storage
-            await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
+            await conn.execute(
+                "DELETE FROM coin_record WHERE confirmed_index>?", (block_index,)
+            )
 
             # Add coins that are confirmed in the reverted blocks to the list of changed coins.
             async with conn.execute(
@@ -565,8 +599,10 @@ class CoinStore:
                     if record.name not in coin_changes:
                         coin_changes[record.name] = record
 
-            await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
-        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
+            await conn.execute(
+                "UPDATE coin_record SET spent_index=0 WHERE spent_index>?",
+                (block_index,),
+            )
         return list(coin_changes.values())
 
     # Store CoinRecord in DB
@@ -587,9 +623,16 @@ class CoinStore:
             )
         if len(values2) > 0:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
+                frame = inspect.currentframe().f_back
+                log.info(
+                    f"BEGIN WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
+                )
                 await conn.executemany(
                     "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                     values2,
+                )
+                log.info(
+                    f"END WJB task {asyncio.current_task().get_name()}  _add_coin_records writer_maybe_transaction {conn}  {inspect.getframeinfo(frame).filename} {frame.f_lineno}"
                 )
 
     # Update coin_record to be spent in DB
@@ -617,7 +660,9 @@ class CoinStore:
                 )
 
     # Lookup the most recent unspent lineage that matches a puzzle hash
-    async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+    async def get_unspent_lineage_info_for_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> Optional[UnspentLineageInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT unspent.coin_name, "
@@ -635,9 +680,15 @@ class CoinStore:
             ) as cursor:
                 rows = list(await cursor.fetchall())
                 if len(rows) != 1:
-                    log.debug("Expected 1 unspent with puzzle hash %s, but found %s", puzzle_hash.hex(), len(rows))
+                    log.debug(
+                        "Expected 1 unspent with puzzle hash %s, but found %s",
+                        puzzle_hash.hex(),
+                        len(rows),
+                    )
                     return None
-                coin_id, coin_amount, parent_id, parent_amount, parent_parent_id = rows[0]
+                coin_id, coin_amount, parent_id, parent_amount, parent_parent_id = rows[
+                    0
+                ]
                 return UnspentLineageInfo(
                     coin_id=bytes32(coin_id),
                     coin_amount=uint64(int_from_bytes(coin_amount)),
