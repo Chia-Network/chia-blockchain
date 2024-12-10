@@ -28,7 +28,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
 from chia.util.ints import uint16
 
@@ -212,8 +211,7 @@ async def run_sync_test(
                             )
                             fork_height = block_batch[0].height - 1
                             header_hash = block_batch[0].prev_header_hash
-                            success, summary, _err = await full_node.add_block_batch(
-                                AugmentedBlockchain(full_node.blockchain),
+                            success, summary = await full_node.add_block_batch(
                                 block_batch,
                                 peer_info,
                                 ForkInfo(fork_height, fork_height, header_hash),
