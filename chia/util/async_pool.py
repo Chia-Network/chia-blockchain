@@ -12,6 +12,7 @@ from typing import Generic, Optional, Protocol, TypeVar, final
 import anyio
 
 from chia.util.log_exceptions import log_exceptions
+from chia.util.task_referencer import create_referenced_task
 
 
 class InvalidTargetWorkerCountError(Exception):
@@ -153,7 +154,7 @@ class AsyncPool:
         if self._target_worker_count < 1:
             raise InvalidTargetWorkerCountError(self._target_worker_count)
 
-        task = asyncio.create_task(self._run(_check_single_use=False))
+        task = create_referenced_task(self._run(_check_single_use=False))
         try:
             # TODO: should this terminate if the run task ends?
             await self._started.wait()
@@ -187,7 +188,7 @@ class AsyncPool:
     async def _run_single(self) -> None:
         while len(self._workers) < self._target_worker_count:
             new_worker_id = next(self._worker_id_counter)
-            new_worker = asyncio.create_task(self.worker_async_callable(new_worker_id))
+            new_worker = create_referenced_task(self.worker_async_callable(new_worker_id))
             self.log.debug(f"{self.name}: adding worker {new_worker_id}")
             self._workers[new_worker] = new_worker_id
 

@@ -55,6 +55,7 @@ from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
@@ -426,12 +427,10 @@ class WalletNode:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
+                create_referenced_task(profile_task(self.root_path, "wallet", self.log), known_unreferenced=True)
 
         if self.config.get("enable_memory_profiler", False):
-            # TODO: stop dropping tasks on the floor
-            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
+            create_referenced_task(mem_profile_task(self.root_path, "wallet", self.log), known_unreferenced=True)
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -457,8 +456,8 @@ class WalletNode:
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
-        self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
-        self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
+        self._process_new_subscriptions_task = create_referenced_task(self._process_new_subscriptions())
+        self._retry_failed_states_task = create_referenced_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
         self.log_in(fingerprint)
@@ -519,8 +518,7 @@ class WalletNode:
     def _pending_tx_handler(self) -> None:
         if self._wallet_state_manager is None:
             return None
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(self._resend_queue())  # noqa: RUF006
+        create_referenced_task(self._resend_queue(), known_unreferenced=True)
 
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
@@ -721,8 +719,7 @@ class WalletNode:
                 default_port,
                 self.log,
             )
-            # TODO: stop dropping tasks on the floor
-            asyncio.create_task(self.wallet_peers.start())  # noqa: RUF006
+            create_referenced_task(self.wallet_peers.start())
 
     async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
@@ -1003,7 +1000,7 @@ class WalletNode:
                             self.log.info("Terminating receipt and validation due to shut down request")
                             await asyncio.gather(*all_tasks)
                             return False
-                    all_tasks.append(asyncio.create_task(validate_and_add(batch.entries, idx)))
+                    all_tasks.append(create_referenced_task(validate_and_add(batch.entries, idx)))
             idx += len(batch.entries)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
@@ -1242,7 +1239,7 @@ class WalletNode:
         self.log.info("Secondary peer syncing")
         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
         # that no recent transactions are being hidden.
-        self._secondary_peer_sync_task = asyncio.create_task(
+        self._secondary_peer_sync_task = create_referenced_task(
             self.long_sync(new_peak_hb.height, peer, 0, rollback=False)
         )
 
