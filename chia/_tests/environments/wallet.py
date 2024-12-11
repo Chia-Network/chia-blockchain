@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
-from chia.cmds.cmd_classes import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
+from chia.cmds.cmd_classes import NeedsTXConfig, NeedsWalletRPC, TransactionEndpoint, TransactionsOut, WalletClientInfo
 from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
@@ -28,7 +28,7 @@ from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
 
-STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = dict(
+STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
     rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
     tx_config_loader=NeedsTXConfig(
         min_coin_amount=cli_amount_none,
@@ -42,7 +42,7 @@ STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = dict(
     push=True,
     valid_at=None,
     expires_at=None,
-)
+).__dict__
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 

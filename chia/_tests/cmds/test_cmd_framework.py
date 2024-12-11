@@ -433,12 +433,8 @@ def test_tx_config_helper() -> None:
         coin_selection_loader: NeedsCoinSelectionConfig
 
         def run(self) -> None:
-            assert self.coin_selection_loader.load_coin_selection_config(100) == CoinSelectionConfig(
-                min_coin_amount=uint64(1),
-                max_coin_amount=uint64(1),
-                excluded_coin_amounts=[uint64(1)],
-                excluded_coin_ids=[bytes32([0] * 32)],
-            )
+            # ignoring the `None` return here for convenient testing sake
+            return self.coin_selection_loader.load_coin_selection_config(100)  # type: ignore[return-value]
 
     example_cs_cmd = CsCMD(
         coin_selection_loader=NeedsCoinSelectionConfig(
@@ -461,20 +457,21 @@ def test_tx_config_helper() -> None:
         bytes32([0] * 32).hex(),
     )
 
-    example_cs_cmd.run()  # trigger inner assert
+    # again, convenience for testing sake
+    assert example_cs_cmd.run() == CoinSelectionConfig(  # type: ignore[func-returns-value]
+        min_coin_amount=uint64(1),
+        max_coin_amount=uint64(1),
+        excluded_coin_amounts=[uint64(1)],
+        excluded_coin_ids=[bytes32([0] * 32)],
+    )
 
-    @chia_command(cmd, "tx_confg_cmd", "blah", "blah")
+    @chia_command(cmd, "tx_config_cmd", "blah", "blah")
     class TXConfigCMD:
         tx_config_loader: NeedsTXConfig
 
         def run(self) -> None:
-            assert self.tx_config_loader.load_tx_config(100, {}, 0) == TXConfig(
-                min_coin_amount=uint64(1),
-                max_coin_amount=uint64(1),
-                excluded_coin_amounts=[uint64(1)],
-                excluded_coin_ids=[bytes32([0] * 32)],
-                reuse_puzhash=False,
-            )
+            # ignoring the `None` return here for convenient testing sake
+            return self.tx_config_loader.load_tx_config(100, {}, 0)  # type: ignore[return-value]
 
     example_tx_config_cmd = TXConfigCMD(
         tx_config_loader=NeedsTXConfig(
@@ -499,7 +496,14 @@ def test_tx_config_helper() -> None:
         "--new-address",
     )
 
-    example_tx_config_cmd.run()  # trigger inner assert
+    # again, convenience for testing sake
+    assert example_tx_config_cmd.run() == TXConfig(  # type: ignore[func-returns-value]
+        min_coin_amount=uint64(1),
+        max_coin_amount=uint64(1),
+        excluded_coin_amounts=[uint64(1)],
+        excluded_coin_ids=[bytes32([0] * 32)],
+        reuse_puzhash=False,
+    )
 
 
 @pytest.mark.anyio
@@ -508,13 +512,12 @@ async def test_transaction_endpoint_mixin() -> None:
     def cmd() -> None:
         pass  # pragma: no cover
 
+    @chia_command(cmd, "bad_cmd", "blah", "blah")
+    class BadCMD(TransactionEndpoint):
+        def run(self) -> None:  # type: ignore[override]
+            pass  # pragma: no cover
+
     with pytest.raises(TypeError, match="transaction_endpoint_runner"):
-
-        @chia_command(cmd, "bad_cmd", "blah", "blah")
-        class BadCMD(TransactionEndpoint):
-            def run(self) -> None:
-                pass  # pragma: no cover
-
         BadCMD(**STANDARD_TX_ENDPOINT_ARGS)
 
     @chia_command(cmd, "cs_cmd", "blah", "blah")
@@ -578,13 +581,15 @@ def test_old_decorator_support() -> None:
 
     @chia_command(cmd, "tx_cmd", "blah", "blah")
     class TxCMD(TransactionEndpoint):
-        def run(self) -> None:
-            pass  # pragma: no cover
+        @transaction_endpoint_runner
+        async def run(self) -> list[TransactionRecord]:
+            return []  # pragma: no cover
 
     @chia_command(cmd, "tx_w_tl_cmd", "blah", "blah")
     class TxWTlCMD(TransactionEndpointWithTimelocks):
-        def run(self) -> None:
-            pass  # pragma: no cover
+        @transaction_endpoint_runner
+        async def run(self) -> list[TransactionRecord]:
+            return []  # pragma: no cover
 
     @cmd.command("cs_cmd_dec")
     @coin_selection_args

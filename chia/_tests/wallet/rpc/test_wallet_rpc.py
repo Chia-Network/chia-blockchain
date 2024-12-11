@@ -2702,7 +2702,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
         await dataclasses.replace(xch_request, number_of_coins=501).run()
 
     with pytest.raises(ResponseFailureError, match="Could not find coin with ID 00000000000000000"):
-        await dataclasses.replace(xch_request, target_coin_id=bytes32([0] * 32)).run()
+        await dataclasses.replace(xch_request, target_coin_id=bytes32.zeros).run()
 
     with pytest.raises(ResponseFailureError, match="is less than the total amount of the split"):
         await dataclasses.replace(
@@ -2715,7 +2715,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
     output = (capsys.readouterr()).out
     assert "Wallet id: 50 not found" in output
 
-    # This one only "works"" on the RPC
+    # This one only "works" on the RPC
     env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
     with pytest.raises(ResponseFailureError, match="Cannot split coins from non-fungible wallet types"):
         assert xch_request.amount_per_coin is not None  # hey there mypy
@@ -2736,7 +2736,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
     assert "Transaction sent" not in output
 
     with wallet_environments.new_puzzle_hashes_allowed():
-        await dataclasses.replace(xch_request).run()
+        await xch_request.run()
 
     await wallet_environments.process_pending_states(
         [
@@ -2901,7 +2901,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
         await dataclasses.replace(xch_combine_request, number_of_coins=uint16(0)).run()
 
     with pytest.raises(ResponseFailureError, match="More coin IDs specified than desired number of coins to combine"):
-        await dataclasses.replace(xch_combine_request, input_coins=(bytes32([0] * 32),) * 100).run()
+        await dataclasses.replace(xch_combine_request, input_coins=(bytes32.zeros,) * 100).run()
 
     # We catch this one
     capsys.readouterr()
@@ -2909,7 +2909,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
     output = (capsys.readouterr()).out
     assert "Wallet id: 50 not found" in output
 
-    # This one only "works"" on the RPC
+    # This one only "works" on the RPC
     env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
     with pytest.raises(ResponseFailureError, match="Cannot combine coins from non-fungible wallet types"):
         assert xch_combine_request.target_amount is not None  # hey there mypy

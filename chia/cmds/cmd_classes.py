@@ -411,6 +411,17 @@ class NeedsTXConfig(NeedsCoinSelectionConfig):
 _DECORATOR_APPLIED = "_DECORATOR_APPLIED"
 
 
+def transaction_endpoint_runner(
+    func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, list[TransactionRecord]]],
+) -> Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, None]]:
+    async def wrapped_func(self: _T_TransactionEndpoint) -> None:
+        txs = await func(self)
+        self.transaction_writer.handle_transaction_output(txs)
+
+    setattr(wrapped_func, _DECORATOR_APPLIED, True)
+    return wrapped_func
+
+
 @dataclass(frozen=True)
 class TransactionEndpoint:
     rpc_info: NeedsWalletRPC
@@ -446,7 +457,7 @@ class TransactionEndpoint:
     )
 
     def __post_init__(self) -> None:
-        if not hasattr(self.run, "_DECORATOR_APPLIED"):  # type: ignore[attr-defined]
+        if not hasattr(self.run, "_DECORATOR_APPLIED"):
             raise TypeError("TransactionEndpoints must utilize @transaction_endpoint_runner on their `run` method")
 
     def load_condition_valid_times(self) -> ConditionValidTimes:
@@ -454,6 +465,10 @@ class TransactionEndpoint:
             min_time=uint64.construct_optional(self.valid_at),
             max_time=uint64.construct_optional(self.expires_at),
         )
+
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        raise NotImplementedError("Must implement `.run()` on a TransactionEndpoint subclass")  # pragma: no cover
 
 
 @dataclass(frozen=True)
@@ -475,14 +490,3 @@ class TransactionEndpointWithTimelocks(TransactionEndpoint):
 
 
 _T_TransactionEndpoint = TypeVar("_T_TransactionEndpoint", bound=TransactionEndpoint)
-
-
-def transaction_endpoint_runner(
-    func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, list[TransactionRecord]]],
-) -> Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, None]]:
-    async def wrapped_func(self: _T_TransactionEndpoint) -> None:
-        txs = await func(self)
-        self.transaction_writer.handle_transaction_output(txs)
-
-    setattr(wrapped_func, _DECORATOR_APPLIED, True)
-    return wrapped_func

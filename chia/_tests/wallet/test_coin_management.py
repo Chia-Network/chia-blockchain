@@ -25,7 +25,7 @@ ONE_TRILLION = 1_000_000_000_000
 @dataclass
 class ValueAndArgs:
     value: Any
-    args: list[Any]
+    args: list[str]
 
 
 @pytest.mark.parametrize(
