@@ -65,7 +65,7 @@ async def ignore_block_validation(
     if "standard_block_tools" in request.keywords:
         return None
 
-    async def validate_block_body(*args: Any) -> Literal[None]:
+    async def validate_block_body(*args: Any, **kwargs: Any) -> Literal[None]:
         return None
 
     def create_wrapper(original_create: Any) -> Any:

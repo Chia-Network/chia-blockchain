@@ -28,5 +28,4 @@ class BlockRecordProtocol(Protocol):
     def prev_transaction_block_hash(self) -> Optional[bytes32]: ...
 
     @property
-    def is_transaction_block(self) -> bool:
-        return self.timestamp is not None
+    def is_transaction_block(self) -> bool: ...

@@ -204,6 +204,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
             option_decorators.append(
                 click.option(
                     *option_args["param_decls"],
+                    field_name,
                     type=type_arg,
                     **{k: v for k, v in option_args.items() if k not in {"param_decls", "type"}},
                 )

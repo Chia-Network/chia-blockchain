@@ -530,7 +530,7 @@ class Keychain:
         """
         remaining_fingerprints = {x[0].get_g1().get_fingerprint() for x in keys_to_delete}
         remaining_removals = len(remaining_fingerprints)
-        while len(remaining_fingerprints):
+        while len(remaining_fingerprints) > 0:
             key_to_delete = remaining_fingerprints.pop()
             if self.delete_key_by_fingerprint(key_to_delete) > 0:
                 remaining_removals -= 1

@@ -18,7 +18,7 @@ from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.aliases import CrawlerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -65,15 +65,15 @@ def create_full_node_crawler_service(
     )
 
 
-async def async_main() -> int:
+async def async_main(root_path: pathlib.Path) -> int:
     # TODO: refactor to avoid the double load
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
-    initialize_service_logging(service_name=SERVICE_NAME, config=config)
-    service = create_full_node_crawler_service(DEFAULT_ROOT_PATH, config, updated_constants)
+    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
+    service = create_full_node_crawler_service(root_path, config, updated_constants)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()
@@ -83,7 +83,9 @@ async def async_main() -> int:
 
 def main() -> int:
     freeze_support()
-    return async_run(async_main())
+    root_path = resolve_root_path(override=None)
+
+    return async_run(async_main(root_path=root_path))
 
 
 if __name__ == "__main__":
