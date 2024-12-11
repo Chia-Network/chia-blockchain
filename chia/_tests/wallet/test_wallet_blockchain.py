@@ -75,7 +75,7 @@ async def test_wallet_blockchain(
 
         header_blocks: list[HeaderBlock] = []
         for block in default_1000_blocks:
-            header_block = get_block_header(block, [], [])
+            header_block = get_block_header(block)
             header_blocks.append(header_block)
 
         res, err = await chain.add_block(header_blocks[50])
