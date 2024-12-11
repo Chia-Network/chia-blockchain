@@ -18,6 +18,7 @@ from chia.cmds.param_types import (
     Uint64ParamType,
 )
 from chia.cmds.units import units
+from chia.cmds.util import ChiaCliContext
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
@@ -114,7 +115,9 @@ def test_click_amount_type() -> None:
 
 
 def test_click_address_type() -> None:
-    context = cast(Context, FakeContext(obj={"expected_prefix": "xch"}))  # this makes us not have to use a config file
+    context = cast(
+        Context, FakeContext(obj=ChiaCliContext(expected_prefix="xch").to_click())
+    )  # this makes us not have to use a config file
     std_cli_address = CliAddress(burn_ph, burn_address, AddressType.XCH)
     nft_cli_address = CliAddress(burn_ph, burn_nft_addr, AddressType.DID)
     # Test CliAddress (Generally is not used)
@@ -149,7 +152,7 @@ def test_click_address_type() -> None:
 
 def test_click_address_type_config(root_path_populated_with_config: Path) -> None:
     # set a root path in context.
-    context = cast(Context, FakeContext(obj={"root_path": root_path_populated_with_config}))
+    context = cast(Context, FakeContext(obj=ChiaCliContext(root_path=root_path_populated_with_config).to_click()))
     # run test that should pass
     assert AddressParamType().convert(burn_address, None, context) == CliAddress(burn_ph, burn_address, AddressType.XCH)
     assert context.obj["expected_prefix"] == "xch"  # validate that the prefix was set correctly
