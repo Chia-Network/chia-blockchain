@@ -27,12 +27,15 @@ from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
-from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
+from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, resolve_root_path
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
 from chia.util.ssl_check import check_ssl
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {
+    "help_option_names": ["-h", "--help"],
+    "show_default": True,
+}
 
 
 @click.group(
@@ -40,7 +43,13 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
     context_settings=CONTEXT_SETTINGS,
 )
-@click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
+@click.option(
+    "--root-path",
+    default=resolve_root_path(override=None),
+    help="Config file root",
+    type=click.Path(),
+    show_default=True,
+)
 @click.option(
     "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
 )

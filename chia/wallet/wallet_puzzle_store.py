@@ -343,6 +343,22 @@ class WalletPuzzleStore:
 
         return None
 
+    async def get_unused_derivation_path_for_wallet(self, wallet_id: uint32) -> Optional[uint32]:
+        """
+        Returns the first unused derivation path by derivation_index.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "SELECT MIN(derivation_index) FROM derivation_paths WHERE wallet_id=? AND used=0 AND hardened=0;",
+                (wallet_id,),
+            )
+
+        if row is not None and row[0] is not None:
+            return uint32(row[0])
+
+        return None
+
     async def delete_wallet(self, wallet_id: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # First fetch all puzzle hashes since we need them to drop them from the cache
@@ -363,3 +379,18 @@ class WalletPuzzleStore:
         except KeyError:
             pass
         self.last_derivation_index = None
+
+    async def get_unused_count(self, wallet_id: uint32) -> int:
+        """
+        Returns a count of unused derivation indexes
+        """
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "SELECT COUNT(*) FROM derivation_paths WHERE wallet_id=? AND used=1",
+                (wallet_id,),
+            )
+            row_count = 0 if row is None else row[0]
+
+        return row_count

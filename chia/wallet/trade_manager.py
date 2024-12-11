@@ -506,9 +506,14 @@ class TradeManager:
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets.get(wallet_id)
                         assert isinstance(wallet, (CATWallet, Wallet))
-                        p2_ph: bytes32 = await wallet.get_puzzle_hash(
-                            new=not action_scope.config.tx_config.reuse_puzhash
-                        )
+                        if isinstance(wallet, Wallet):
+                            p2_ph: bytes32 = await wallet.get_puzzle_hash(
+                                new=not action_scope.config.tx_config.reuse_puzhash
+                            )
+                        else:
+                            p2_ph = await wallet.standard_wallet.get_puzzle_hash(
+                                new=not action_scope.config.tx_config.reuse_puzhash
+                            )
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 assert isinstance(wallet, CATWallet)

@@ -61,7 +61,7 @@ jobs:
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
         os:
-          - emoji: ${{ inputs.os_emoji }}
+          - emoji: ${{ inputs.os-emoji }}
             matrix: ${{ inputs.matrix }}
             name: ${{ inputs.name }}
             file_name: ${{ inputs.file_name }}
@@ -239,6 +239,8 @@ jobs:
           echo "::group::collected tests diff"
           diff --unified source_tests installed_tests; DIFF_EXIT_CODE=$?
           echo '::endgroup::'
+
+          exit $DIFF_EXIT_CODE
 
       - name: Move chia/ so we test the installed code
         run: |

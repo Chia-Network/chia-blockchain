@@ -2,7 +2,15 @@ name: identify version
 
 on:
   workflow_call:
+    inputs:
+      release_type:
+        description: "Tagged release testing scenario"
+        required: false
+        type: string
+        default: ""
     outputs:
+      chia-dev-version:
+        value: ${{ jobs.version.outputs.chia-dev-version }}
       chia-installer-version:
         value: ${{ jobs.version.outputs.chia-installer-version }}
       tag-type:
