@@ -597,7 +597,7 @@ class FullNode:
                 return False
             hash = self.blockchain.height_to_hash(first.block.height - 1)
             assert hash is not None
-            if not hash == first.block.prev_header_hash:
+            if hash != first.block.prev_header_hash:
                 self.log.info("Batch syncing stopped, this is a deep chain")
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 # First sb not connected to our blockchain, do a long sync instead
