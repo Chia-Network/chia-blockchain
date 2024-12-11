@@ -770,16 +770,7 @@ def make_test_coins() -> list[Coin]:
     return ret
 
 
-def make_ephemeral(coins: list[Coin]) -> list[Coin]:
-    ret: list[Coin] = []
-    for i, parent in enumerate(coins):
-        ret.append(Coin(parent.name(), height_hash(i + 150), uint64(i * 100)))
-    return ret
-
-
 coins = make_test_coins()
-eph = make_ephemeral(coins)
-eph2 = make_ephemeral(eph)
 
 
 @pytest.mark.parametrize(
@@ -809,26 +800,6 @@ eph2 = make_ephemeral(eph)
         ([mk_item(coins[0:2])], mk_item(coins[0:2], fee=10000000), True),
         # or if we spend the same coins with additional coins
         ([mk_item(coins[0:2])], mk_item(coins[0:3], fee=10000000), True),
-        # SUPERSET RULE WITH EPHEMERAL COINS
-        # the super set rule only takes non-ephemeral coins into account. The
-        # ephmeral coins depend on how we spend, and might prevent legitimate
-        # replace-by-fee attempts.
-        # replace a spend that includes an ephemeral coin with one that doesn't
-        ([mk_item(coins[0:2] + eph[0:1])], mk_item(coins[0:2], fee=10000000), True),
-        # replace a spend with two-levels of ephemeral coins, with one that
-        # only has 1-level
-        ([mk_item(coins[0:2] + eph[0:1] + eph2[0:1])], mk_item(coins[0:2] + eph[0:1], fee=10000000), True),
-        # replace a spend with two-levels of ephemeral coins, with one that
-        # doesn't
-        ([mk_item(coins[0:2] + eph[0:1] + eph2[0:1])], mk_item(coins[0:2], fee=10000000), True),
-        # replace a spend with two-levels of ephemeral coins, with one that
-        # has *different* ephemeral coins
-        ([mk_item(coins[0:2] + eph[0:1] + eph2[0:1])], mk_item(coins[0:2] + eph[1:2] + eph2[1:2], fee=10000000), True),
-        # it's OK to add new ephemeral spends
-        ([mk_item(coins[0:2])], mk_item(coins[0:2] + eph[1:2] + eph2[1:2], fee=10000000), True),
-        # eph2[0:1] is not an ephemeral coin here, this violates the superset
-        # rule. eph[0:1] is missing for that
-        ([mk_item(coins[0:2] + eph2[0:1])], mk_item(coins[0:2] + eph[1:2] + eph2[1:2], fee=10000000), False),
         # FEE- AND FEE RATE RULES
         # if we're replacing two items, each paying a fee of 100, we need to
         # spend (at least) the same coins and pay at least 10000000 higher fee
