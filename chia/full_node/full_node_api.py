@@ -68,7 +68,7 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.full_block_utils import header_block_from_block
+from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -1468,7 +1468,24 @@ class FullNodeAPI:
         if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         return_filter = request.return_filter
-        header_blocks_bytes: list[bytes] = [header_block_from_block(memoryview(b), return_filter) for b in blocks_bytes]
+        header_blocks_bytes: list[bytes] = []
+        for b in blocks_bytes:
+            b_mem_view = memoryview(b)
+            height, is_tx_block = get_height_and_tx_status_from_block(b_mem_view)
+            if not is_tx_block:
+                tx_addition_coins = []
+                removal_names = []
+            else:
+                added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(height)
+                removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(height)
+                added_coins_records, removed_coins_records = await asyncio.gather(
+                    added_coins_records_coroutine, removed_coins_records_coroutine
+                )
+                tx_addition_coins = [record.coin for record in added_coins_records if not record.coinbase]
+                removal_names = [record.coin.name() for record in removed_coins_records]
+            header_blocks_bytes.append(
+                header_block_from_block(b_mem_view, return_filter, tx_addition_coins, removal_names)
+            )
 
         # we're building the RespondHeaderBlocks manually to avoid cost of
         # dynamic serialization
