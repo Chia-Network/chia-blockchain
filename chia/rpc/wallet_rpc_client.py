@@ -1677,15 +1677,15 @@ class WalletRpcClient(RpcClient):
     ) -> VCMintResponse:
         return VCMintResponse.from_json_dict(
             await self.fetch(
-                "vc_mint", {**request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)}
+                "vc_mint", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 
     async def vc_get(self, request: VCGet) -> VCGetResponse:
-        return VCGetResponse.from_json_dict(await self.fetch("vc_get", {**request.to_json_dict()}))
+        return VCGetResponse.from_json_dict(await self.fetch("vc_get", request.to_json_dict()))
 
     async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
-        return VCGetListResponse.from_json_dict(await self.fetch("vc_get_list", {**request.to_json_dict()}))
+        return VCGetListResponse.from_json_dict(await self.fetch("vc_get_list", request.to_json_dict()))
 
     async def vc_spend(
         self,
@@ -1696,16 +1696,16 @@ class WalletRpcClient(RpcClient):
     ) -> VCSpendResponse:
         return VCSpendResponse.from_json_dict(
             await self.fetch(
-                "vc_spend", {**request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)}
+                "vc_spend", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 
     async def vc_add_proofs(self, request: VCAddProofs) -> None:
-        await self.fetch("vc_add_proofs", {**request.to_json_dict()})
+        await self.fetch("vc_add_proofs", request.to_json_dict())
 
     async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
         return VCGetProofsForRootResponse.from_json_dict(
-            await self.fetch("vc_get_proofs_for_root", {**request.to_json_dict()})
+            await self.fetch("vc_get_proofs_for_root", request.to_json_dict())
         )
 
     async def vc_revoke(
@@ -1717,7 +1717,7 @@ class WalletRpcClient(RpcClient):
     ) -> VCRevokeResponse:
         return VCRevokeResponse.from_json_dict(
             await self.fetch(
-                "vc_revoke", {**request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)}
+                "vc_revoke", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 

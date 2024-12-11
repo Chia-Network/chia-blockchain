@@ -50,7 +50,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> VCMintResponse:
             self.add_to_log(
-                "vc_mint", (did_id, tx_config, request.target_address, request.fee, request.push, timelock_info)
+                "vc_mint", (request.did_id, tx_config, request.target_address, request.fee, request.push, timelock_info)
             )
 
             return VCMintResponse(
