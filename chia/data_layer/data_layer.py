@@ -920,10 +920,14 @@ class DataLayer:
             # Need this to make sure we process updates and generate DAT files
             try:
                 owned_stores = await self.get_owned_stores()
-            except ValueError:
+            except (ValueError, aiohttp.client_exceptions.ClientConnectorError):
                 # Sometimes the DL wallet isn't available, so we can't get the owned stores.
                 # We'll try again next time.
                 owned_stores = []
+            except Exception as e:
+                self.log.error(f"Exception while fetching owned stores: {type(e)} {e} {traceback.format_exc()}")
+                owned_stores = []
+
             subscription_store_ids = {subscription.store_id for subscription in subscriptions}
             for record in owned_stores:
                 store_id = record.launcher_id
