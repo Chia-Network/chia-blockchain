@@ -14,11 +14,18 @@ from chia.util.ints import uint64
 
 
 def get_block_header(
-    block: FullBlock, tx_addition_coins: Collection[Coin], removals_names: Collection[bytes32]
+    block: FullBlock, additions_and_removals: Optional[tuple[Collection[Coin], Collection[bytes32]]] = None
 ) -> HeaderBlock:
-    # Create filter
+    """
+    Returns a HeaderBlock from a FullBlock.
+    If `additions_and_removals` is not None, account for them, as well as
+    reward coins, in the creation of the transactions filter, otherwise create
+    an empty one.
+    """
+    # Create an empty filter to begin with
     byte_array_tx: list[bytearray] = []
-    if block.is_transaction_block():
+    if additions_and_removals is not None and block.is_transaction_block():
+        tx_addition_coins, removals_names = additions_and_removals
         for coin in tx_addition_coins:
             byte_array_tx.append(bytearray(coin.puzzle_hash))
         for coin in block.get_included_reward_coins():
