@@ -5,7 +5,7 @@ on:
     inputs:
       repeats:
         description: "The number of times to execute each benchmark"
-        type: int
+        type: number
         default: 1
   push:
     paths-ignore:

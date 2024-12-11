@@ -528,16 +528,18 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         )
 
     # Test melting a CRCAT
-    tx = (
-        await client_1.cat_spend(
-            env_1.dealias_wallet_id("crcat"),
-            wallet_environments.tx_config,
-            uint64(20),
-            wallet_1_addr,
-            uint64(0),
-            cat_discrepancy=(-50, Program.to(None), Program.to(None)),
-        )
-    ).transaction
+    # This is intended to trigger an edge case where the output and change are the same forcing a new puzhash
+    with wallet_environments.new_puzzle_hashes_allowed():
+        tx = (
+            await client_1.cat_spend(
+                env_1.dealias_wallet_id("crcat"),
+                wallet_environments.tx_config,
+                uint64(20),
+                wallet_1_addr,
+                uint64(0),
+                cat_discrepancy=(-50, Program.to(None), Program.to(None)),
+            )
+        ).transaction
     [tx] = await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
     await wallet_environments.process_pending_states(
         [

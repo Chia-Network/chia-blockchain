@@ -59,10 +59,3 @@ def init_cmd(
         testnet,
         v1_db,
     )
-
-
-if __name__ == "__main__":
-    from chia.cmds.init_funcs import chia_init
-    from chia.util.default_root import DEFAULT_ROOT_PATH
-
-    chia_init(DEFAULT_ROOT_PATH)
