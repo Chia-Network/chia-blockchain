@@ -171,7 +171,7 @@ async def setup_mempool_with_coins(
 
     constants = DEFAULT_CONSTANTS
     if max_block_clvm_cost is not None:
-        constants = constants.replace(MAX_BLOCK_COST_CLVM=uint64(max_block_clvm_cost))
+        constants = constants.replace(MAX_BLOCK_COST_CLVM=uint64(max_block_clvm_cost + TEST_BLOCK_OVERHEAD))
     if mempool_block_buffer is not None:
         constants = constants.replace(MEMPOOL_BLOCK_BUFFER=uint8(mempool_block_buffer))
     mempool_manager = await instantiate_mempool_manager(
@@ -1066,40 +1066,63 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
 @pytest.mark.parametrize("num_skipped_items", [PRIORITY_TX_THRESHOLD, MAX_SKIPPED_ITEMS])
 @pytest.mark.anyio
 async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, caplog: pytest.LogCaptureFixture) -> None:
+    """
+    This test exercises the path where an item's inclusion would exceed the
+    maximum cumulative cost, so it gets skipped as a result.
+
+    NOTE:
+      1. After PRIORITY_TX_THRESHOLD, we skip items with eligible coins.
+      2. After skipping MAX_SKIPPED_ITEMS, we stop processing further items.
+    """
+
     async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
         assert False  # pragma: no cover
 
-    # This test exercises the path where an item's inclusion would exceed the
-    # maximum cumulative cost, so it gets skipped as a result
+    MAX_BLOCK_CLVM_COST = 550_000_000
 
-    # NOTE:
-    # 1. After PRIORITY_TX_THRESHOLD, we skip items with eligible coins.
-    # 2. After skipping MAX_SKIPPED_ITEMS, we stop processing further items.
+    mempool_manager, coins = await setup_mempool_with_coins(
+        coin_amounts=list(range(1_000_000_000, 1_000_000_030)),
+        max_block_clvm_cost=MAX_BLOCK_CLVM_COST,
+        max_tx_clvm_cost=uint64(MAX_BLOCK_CLVM_COST),
+        mempool_block_buffer=20,
+    )
 
     async def make_and_send_big_cost_sb(coin: Coin) -> None:
+        """
+        Creates a spend bundle with a big enough cost that gets it close to the
+        maximum block clvm cost limit.
+        """
         conditions = []
         sk = AugSchemeMPL.key_gen(b"7" * 32)
         g1 = sk.get_g1()
         sig = AugSchemeMPL.sign(sk, IDENTITY_PUZZLE_HASH, g1)
         aggsig = G2Element()
-        cost_target = 401_000_000
+        # Let's get as close to `MAX_BLOCK_CLVM_COST` (550_000_000) as possible.
+        # We start by accounting for execution cost
+        spend_bundle_cost = 44
+        # And then the created coin
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])
-        cost_target -= ConditionCost.CREATE_COIN.value - 143 * TEST_COST_PER_BYTE
-        while cost_target > ConditionCost.AGG_SIG.value + 38 * TEST_COST_PER_BYTE:
+        TEST_CREATE_COIN_SPEND_BYTESIZE = 93
+        TEST_CREATE_COIN_CONDITION_COST = (
+            ConditionCost.CREATE_COIN.value + TEST_CREATE_COIN_SPEND_BYTESIZE * DEFAULT_CONSTANTS.COST_PER_BYTE
+        )
+        spend_bundle_cost += TEST_CREATE_COIN_CONDITION_COST
+        # We're using agg sig conditions to increase the spend bundle's cost
+        # and reach our target cost.
+        TEST_AGG_SIG_SPEND_BYTESIZE = 88
+        TEST_AGGSIG_CONDITION_COST = (
+            ConditionCost.AGG_SIG.value + TEST_AGG_SIG_SPEND_BYTESIZE * DEFAULT_CONSTANTS.COST_PER_BYTE
+        )
+        while spend_bundle_cost + TEST_AGGSIG_CONDITION_COST < MAX_BLOCK_CLVM_COST:
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
             aggsig += sig
-            cost_target -= ConditionCost.AGG_SIG.value + 38 * TEST_COST_PER_BYTE
-
-        # Create a spend bundle with a big enough cost that gets it close to the limit
+            spend_bundle_cost += TEST_AGGSIG_CONDITION_COST
+        # We now have a spend bundle with a big enough cost that gets it close to the limit
         _, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, coin, aggsig)
-        assert res[1] == MempoolInclusionStatus.SUCCESS
+        cost, status, _ = res
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert cost == spend_bundle_cost
 
-    mempool_manager, coins = await setup_mempool_with_coins(
-        coin_amounts=list(range(1_000_000_000, 1_000_000_030)),
-        max_block_clvm_cost=550_000_000,
-        max_tx_clvm_cost=uint64(550_000_000),
-        mempool_block_buffer=20,
-    )
     # Create the spend bundles with a big enough cost that they get close to the limit
     for i in range(num_skipped_items):
         await make_and_send_big_cost_sb(coins[i])
