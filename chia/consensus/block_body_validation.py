@@ -187,6 +187,8 @@ async def validate_block_body(
     height: uint32,
     conds: Optional[SpendBundleConditions],
     fork_info: ForkInfo,
+    *,
+    log_coins: bool = False,
 ) -> Optional[Err]:
     """
     This assumes the header block has been completely validated.
@@ -474,6 +476,9 @@ async def validate_block_body(
         else:
             look_in_fork.append(unspent.name)
 
+    if log_coins and len(look_in_fork) > 0:
+        log.info("%d coins spent after fork", len(look_in_fork))
+
     if len(unspent_records) != len(removals_from_db):
         # some coins could not be found in the DB. We need to find out which
         # ones and look for them in additions_since_fork
@@ -482,6 +487,9 @@ async def validate_block_body(
             if rem in found:
                 continue
             look_in_fork.append(rem)
+
+    if log_coins and len(look_in_fork) > 0:
+        log.info("coins spent in fork: %s", ",".join([f"{name}"[0:6] for name in look_in_fork]))
 
     for rem in look_in_fork:
         # This coin is not in the current heaviest chain, so it must be in the fork

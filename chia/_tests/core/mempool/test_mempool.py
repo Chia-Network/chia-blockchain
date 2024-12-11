@@ -6,9 +6,10 @@ import random
 from typing import Callable, Optional
 
 import pytest
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element, G2Element, get_flags_for_height_and_constants
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
+from clvm_tools.binutils import assemble
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.connection_utils import add_dummy_connection, connect_and_get_peer
@@ -28,6 +29,7 @@ from chia._tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
@@ -41,6 +43,7 @@ from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -371,8 +374,7 @@ async def next_block(full_node_1: FullNodeSimulator, wallet_a: WalletTool, bt: B
         time_per_block=10,
     )
 
-    for block in blocks:
-        await full_node_1.full_node.add_block(block)
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 1)
     return blocks[-1].get_included_reward_coins()[0]
@@ -567,8 +569,7 @@ class TestMempoolManager:
         )
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         spend_bundle1 = generate_test_spend_bundle(wallet_a, blocks[-1].get_included_reward_coins()[0])
@@ -613,8 +614,7 @@ class TestMempoolManager:
         )
 
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coins = iter(blocks[-1].get_included_reward_coins())
@@ -696,8 +696,7 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coins = iter(blocks[-1].get_included_reward_coins())
@@ -741,8 +740,7 @@ class TestMempoolManager:
         else:
             raise Exception("dummy peer not found")
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + num_blocks)
 
@@ -784,8 +782,7 @@ class TestMempoolManager:
         else:
             raise Exception("dummy peer not found")
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
@@ -1738,8 +1735,7 @@ class TestMempoolManager:
 
         peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 5)
 
@@ -1797,8 +1793,7 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
         # coin = blocks[-1].get_included_reward_coins()[0]
@@ -1846,8 +1841,7 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
@@ -2852,8 +2846,7 @@ class TestMaliciousGenerators:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
@@ -3186,3 +3179,77 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
         get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram.to(None), []), TEST_COIN, 0, test_constants)
+
+
+# TODO: import this from chia_rs once we bump the version we depend on
+ENABLE_KECCAK = 0x200
+ENABLE_KECCAK_OPS_OUTSIDE_GUARD = 0x100
+
+
+def test_flags_for_height() -> None:
+    # the keccak operator is supposed to be enabled at soft-fork 6 height
+    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT, DEFAULT_CONSTANTS)
+    print(f"{flags:x}")
+    assert (flags & ENABLE_KECCAK) != 0
+
+    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT - 1, DEFAULT_CONSTANTS)
+    print(f"{flags:x}")
+    assert (flags & ENABLE_KECCAK) == 0
+
+
+def test_keccak() -> None:
+    # the keccak operator is 62. The assemble() function doesn't support it
+    # (yet)
+
+    # keccak256 is available when the softfork has activated
+    keccak_prg = Program.to(
+        assemble(
+            "(softfork (q . 1134) (q . 1) (q a (i "
+            "(= "
+            '(62 (q . "foobar"))'
+            "(q . 0x38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e))"
+            "(q . 0) (q x)) (q . ())) (q . ()))"
+        )
+    )
+
+    cost, ret = keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
+    assert cost == 1215
+    assert ret.atom == b""
+
+    # keccak is ignored when the softfork has not activated
+    cost, ret = keccak_prg.run_with_flags(1215, 0, [])
+    assert cost == 1215
+    assert ret.atom == b""
+
+    # make sure keccak is actually executed, by comparing with the wrong output
+    keccak_prg = Program.to(
+        assemble(
+            "(softfork (q . 1134) (q . 1) (q a (i "
+            '(= (62 (q . "foobar")) '
+            "(q . 0x58d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e))"
+            "(q . 0) (q x)) (q . ())) (q . ()))"
+        )
+    )
+    with pytest.raises(ValueError, match="clvm raise"):
+        keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
+
+    # keccak is ignored when the softfork has not activated
+    cost, ret = keccak_prg.run_with_flags(1215, 0, [])
+    assert cost == 1215
+    assert ret.atom == b""
+
+    # === HARD FORK ===
+    # new operators *outside* the softfork guard
+    # keccak256 is available outside the guard with the appropriate flag
+    keccak_prg = Program.to(
+        assemble(
+            "(a (i (= "
+            '(62 (q . "foobar")) '
+            "(q . 0x38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e)) "
+            "(q . 0) (q x)) (q . ()))"
+        )
+    )
+
+    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK | ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
+    assert cost == 994
+    assert ret.atom == b""

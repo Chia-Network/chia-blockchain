@@ -966,7 +966,9 @@ class WalletRpcApi:
                 if "initial_target_state" not in request:
                     raise AttributeError("Daemon didn't send `initial_target_state`. Try updating the daemon.")
 
-                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
+                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(
+                    new=not action_scope.config.tx_config.reuse_puzhash
+                )
 
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
 
@@ -1131,7 +1133,12 @@ class WalletRpcApi:
             raise ValueError("Cannot split coins from non-fungible wallet types")
 
         outputs = [
-            Payment(await wallet.get_puzzle_hash(new=True), request.amount_per_coin)
+            Payment(
+                await wallet.get_puzzle_hash(new=True)
+                if isinstance(wallet, Wallet)
+                else await wallet.standard_wallet.get_puzzle_hash(new=True),
+                request.amount_per_coin,
+            )
             for _ in range(request.number_of_coins)
         ]
         if len(outputs) == 0:
@@ -1266,7 +1273,7 @@ class WalletRpcApi:
             assert isinstance(wallet, CATWallet)
             await wallet.generate_signed_transaction(
                 [primary_output_amount],
-                [await wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
+                [await wallet.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
                 action_scope,
                 request.fee,
                 coins=set(coins),
