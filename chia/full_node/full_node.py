@@ -91,6 +91,7 @@ from chia.util.network import is_localhost
 from chia.util.path import path_from_root
 from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
+from chia.util.task_referencer import create_referenced_task
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
@@ -279,13 +280,12 @@ class FullNode:
 
             # Transactions go into this queue from the server, and get sent to respond_transaction
             self._transaction_queue = TransactionQueue(1000, self.log)
-            self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
+            self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
 
-            self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
+            self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
 
             if self.config.get("enable_profiler", False):
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(profile_task(self.root_path, "node", self.log))  # noqa: RUF006
+                create_referenced_task(profile_task(self.root_path, "node", self.log), known_unreferenced=True)
 
             self.profile_block_validation = self.config.get("profile_block_validation", False)
             if self.profile_block_validation:  # pragma: no cover
@@ -295,8 +295,7 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))  # noqa: RUF006
+                create_referenced_task(mem_profile_task(self.root_path, "node", self.log), known_unreferenced=True)
 
             time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -331,7 +330,7 @@ class FullNode:
                 if "sanitize_weight_proof_only" in self.config:
                     sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
                 assert self.config["target_uncompact_proofs"] != 0
-                self.uncompact_task = asyncio.create_task(
+                self.uncompact_task = create_referenced_task(
                     self.broadcast_uncompact_blocks(
                         self.config["send_uncompact_interval"],
                         self.config["target_uncompact_proofs"],
@@ -339,12 +338,11 @@ class FullNode:
                     )
                 )
             if self.wallet_sync_task is None or self.wallet_sync_task.done():
-                self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
+                self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
 
             self.initialized = True
             if self.full_node_peers is not None:
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(self.full_node_peers.start())  # noqa: RUF006
+                create_referenced_task(self.full_node_peers.start(), known_unreferenced=True)
             try:
                 yield
             finally:
@@ -360,8 +358,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    # TODO: stop dropping tasks on the floor
-                    asyncio.create_task(self.full_node_peers.close())  # noqa: RUF006
+                    create_referenced_task(self.full_node_peers.close(), known_unreferenced=True)
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:
@@ -517,7 +514,7 @@ class FullNode:
                     self._tx_task_list.remove(oldtask)
 
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            self._tx_task_list.append(asyncio.create_task(self._handle_one_transaction(item)))
+            self._tx_task_list.append(create_referenced_task(self._handle_one_transaction(item)))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -746,7 +743,7 @@ class FullNode:
             # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
             # Limit to 3 refreshes.
             if not seen_header_hash and len(self._ui_tasks) < 3:
-                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.5)))
+                self._ui_tasks.add(create_referenced_task(self._refresh_ui_connections(1.5)))
             # Prune completed connect tasks
             self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
         except Exception as e:
@@ -818,7 +815,7 @@ class FullNode:
             # point being in the past), or we are very far behind. Performs a long sync.
             # Multiple tasks may be created here. If we don't save all handles, a task could enter a sync object
             # and be cleaned up by the GC, corrupting the sync object and possibly not allowing anything else in.
-            self._sync_task_list.append(asyncio.create_task(self._sync()))
+            self._sync_task_list.append(create_referenced_task(self._sync()))
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
@@ -906,8 +903,7 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
-            # TODO: stop dropping tasks on the floor
-            asyncio.create_task(self.full_node_peers.on_connect(connection))  # noqa: RUF006
+            create_referenced_task(self.full_node_peers.on_connect(connection))
 
         if self.initialized is False:
             return None
@@ -1396,9 +1392,9 @@ class FullNode:
             Optional[tuple[WSChiaConnection, ValidationState, list[Awaitable[PreValidationResult]], list[FullBlock]]]
         ] = asyncio.Queue(maxsize=10)
 
-        fetch_task = asyncio.create_task(fetch_blocks(block_queue))
-        validate_task = asyncio.create_task(validate_blocks(block_queue, validation_queue))
-        ingest_task = asyncio.create_task(ingest_blocks(validation_queue))
+        fetch_task = create_referenced_task(fetch_blocks(block_queue))
+        validate_task = create_referenced_task(validate_blocks(block_queue, validation_queue))
+        ingest_task = create_referenced_task(ingest_blocks(validation_queue))
         try:
             await asyncio.gather(fetch_task, validate_task, ingest_task)
         except Exception:
@@ -2254,7 +2250,7 @@ class FullNode:
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             self._segment_task_list.append(
-                asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
+                create_referenced_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
             )
             for task in self._segment_task_list[:]:
                 if task.done():
