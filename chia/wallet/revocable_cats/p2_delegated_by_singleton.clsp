@@ -2,24 +2,29 @@
 ; The singleton will authorize the spend by sending a message via the SEND_MESSAGE condition.
 (mod (
     SINGLETON_MOD_HASH
-    SINGLETON_STRUCT_HASH
+    SINGLETON_STRUCT_HASH ; The hash of (SINGLETON_MOD_HASH . (LAUNCHER_ID . SINGLETON_LAUNCHER_HASH))
     singleton_inner_puzzle_hash
     delegated_puzzle
     delegated_solution
   )
 
   (include condition_codes.clib)
-  (include curry-and-treehash.clib)
+  (include curry.clib)
+  (include sha256tree.clib)
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH inner_puzzle_hash)
-    (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
-      inner_puzzle_hash
+    (curry_hashes_inline SINGLETON_MOD_HASH
       SINGLETON_STRUCT_HASH
+      inner_puzzle_hash
     )
   )
 
   (c
-    (list RECEIVE_MESSAGE 23 (sha256tree delegated_puzzle) (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH singleton_inner_puzzle_hash))
+    (list RECEIVE_MESSAGE
+      23 ; = 010 111, mask for puzzle hash to coin ID
+      (sha256tree delegated_puzzle)
+      (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH singleton_inner_puzzle_hash)
+    )
     (a delegated_puzzle delegated_solution)
   )
 )

@@ -1,8 +1,8 @@
 ; This is a "limitations_program" for use with cat.clsp.
-; It allows a singleton to both mint and melt this CAT.
+; It allows a singleton to both mint and melt this CAT by sending a message.
 (mod (
     SINGLETON_MOD_HASH
-    SINGLETON_STRUCT_HASH
+    SINGLETON_STRUCT_HASH ; The hash of (SINGLETON_MOD_HASH . (LAUNCHER_ID . SINGLETON_LAUNCHER_HASH))
     NONCE
     Truths
     parent_is_cat
@@ -25,6 +25,11 @@
   )
 
   (list
-    (list RECEIVE_MESSAGE 23 delta (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH singleton_inner_puzzle_hash))
+    (list RECEIVE_MESSAGE
+      23 ; = 010 111, mask for puzzle hash to coin ID
+      delta
+      (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH singleton_inner_puzzle_hash)
+    )
   )
 )
+
