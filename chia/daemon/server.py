@@ -1131,7 +1131,10 @@ class WebSocketServer:
 
         finally:
             if current_process is not None:
-                self.services[service_name].remove(current_process)
+                try:
+                    self.services[service_name].remove(current_process)
+                except KeyError:
+                    pass
                 current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
