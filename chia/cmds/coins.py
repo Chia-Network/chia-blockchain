@@ -55,6 +55,7 @@ def list_cmd(
 
     asyncio.run(
         async_list(
+            root_path=ctx.obj["root_path"],
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
@@ -111,7 +112,9 @@ def list_cmd(
 )
 @click.option("--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False)
 @tx_out_cmd()
+@click.pass_context
 def combine_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -133,6 +136,7 @@ def combine_cmd(
 
     return asyncio.run(
         async_combine(
+            root_path=ctx.obj["root_path"],
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
@@ -183,7 +187,9 @@ def combine_cmd(
 )
 @tx_config_args
 @tx_out_cmd()
+@click.pass_context
 def split_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -203,6 +209,7 @@ def split_cmd(
 
     return asyncio.run(
         async_split(
+            root_path=ctx.obj["root_path"],
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,

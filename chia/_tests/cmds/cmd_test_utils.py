@@ -409,9 +409,9 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
 
     @asynccontextmanager
     async def test_get_wallet_client(
+        root_path: Path = default_root,
         wallet_rpc_port: Optional[int] = None,
         fingerprint: Optional[int] = None,
-        root_path: Path = default_root,
     ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
         async with test_get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore
