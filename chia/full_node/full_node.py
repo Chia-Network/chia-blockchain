@@ -597,7 +597,9 @@ class FullNode:
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
                 return False
-            if not self.blockchain.contains_block(first.block.prev_header_hash):
+            hash = self.blockchain.height_to_hash(first.block.height - 1)
+            assert hash is not None
+            if hash != first.block.prev_header_hash:
                 self.log.info("Batch syncing stopped, this is a deep chain")
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 # First sb not connected to our blockchain, do a long sync instead
@@ -700,7 +702,11 @@ class FullNode:
                         f"Failed to fetch block {curr_height} from {peer.get_peer_logging()}, wrong type {type(curr)}"
                     )
                 blocks.append(curr.block)
-                if self.blockchain.contains_block(curr.block.prev_header_hash) or curr_height == 0:
+                if curr_height == 0:
+                    found_fork_point = True
+                    break
+                hash_at_height = self.blockchain.height_to_hash(curr.block.height - 1)
+                if hash_at_height is not None and hash_at_height == curr.block.prev_header_hash:
                     found_fork_point = True
                     break
                 curr_height -= 1
