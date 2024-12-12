@@ -45,8 +45,14 @@ class RateLimiter:
         self.non_tx_cumulative_size = 0
 
     def sent_response(self, msg_type: ProtocolMessageTypes) -> None:
-        assert self.concurrent_counts[msg_type] > 0
-        self.concurrent_counts[msg_type] -= 1
+        if self.concurrent_counts[msg_type] <= 0:
+            log.error(
+                f"internal error, outstanding requests for {msg_type}: "
+                f"{self.concurrent_counts[msg_type]}, expected > 0"
+            )
+            assert False
+        else:
+            self.concurrent_counts[msg_type] -= 1
 
     def process_msg_and_check(
         self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
