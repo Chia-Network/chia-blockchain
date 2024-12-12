@@ -267,7 +267,7 @@ def chia_command(
 _chia_command_metadata_attribute = f"_{__name__.replace('.', '_')}_{chia_command.__qualname__}_metadata"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class Metadata:
     command: click.Command
 
