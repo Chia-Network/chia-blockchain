@@ -285,6 +285,7 @@ class TestDos:
         self,
         setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         nodes, _, _ = setup_two_nodes_fixture
         _full_node_1, full_node_2 = nodes
@@ -315,13 +316,14 @@ class TestDos:
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
-        ws_con.outbound_rate_limiter = FakeRateLimiter()  # type: ignore[assignment]
+        with monkeypatch.context() as m:
+            m.setattr(ws_con, "outbound_rate_limiter", FakeRateLimiter())
 
-        await ws_con._send_message(new_message)
-        await time_out_assert(15, is_closed)
+            await ws_con._send_message(new_message)
+            await time_out_assert(15, is_closed)
 
-        # Banned
-        def is_banned() -> bool:
-            return "1.2.3.4" in server_2.banned_peers
+            # Banned
+            def is_banned() -> bool:
+                return "1.2.3.4" in server_2.banned_peers
 
-        await time_out_assert(15, is_banned)
+            await time_out_assert(15, is_banned)
