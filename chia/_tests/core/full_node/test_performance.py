@@ -14,23 +14,12 @@ from chia._tests.util.misc import BenchmarkRunner
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
 
 log = logging.getLogger(__name__)
-
-
-async def get_block_path(full_node: FullNodeAPI):
-    blocks_list = [await full_node.full_node.blockchain.get_full_peak()]
-    assert blocks_list[0] is not None
-    while blocks_list[0].height != 0:
-        b = await full_node.full_node.block_store.get_full_block(blocks_list[0].prev_header_hash)
-        assert b is not None
-        blocks_list.insert(0, b)
-    return blocks_list
 
 
 class TestPerformance:
