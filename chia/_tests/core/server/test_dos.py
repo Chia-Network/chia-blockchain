@@ -194,14 +194,14 @@ class TestDos:
             full_node_protocol.NewTransaction(bytes([9] * 32), uint64(0), uint64(0)),
         )
         for i in range(4000):
-            await ws_con._send_message(new_tx_message)
+            await ws_con._send_message(new_tx_message, None)
 
         await asyncio.sleep(1)
         assert not ws_con.closed
 
         # Tests outbound rate limiting, we will not send too much data
         for i in range(2000):
-            await ws_con._send_message(new_tx_message)
+            await ws_con._send_message(new_tx_message, None)
 
         await asyncio.sleep(1)
         assert not ws_con.closed
@@ -211,7 +211,7 @@ class TestDos:
 
         with pytest.raises(ConnectionResetError):
             for i in range(6000):
-                await ws_con._send_message(new_tx_message)
+                await ws_con._send_message(new_tx_message, None)
                 await asyncio.sleep(0)
         await asyncio.sleep(1)
 
@@ -252,13 +252,13 @@ class TestDos:
             full_node_protocol.RequestMempoolTransactions(bytes([])),
         )
         for i in range(2):
-            await ws_con._send_message(new_message)
+            await ws_con._send_message(new_message, None)
         await asyncio.sleep(1)
         assert not ws_con.closed
 
         # Tests outbound rate limiting, we will not send too much data
         for i in range(10):
-            await ws_con._send_message(new_message)
+            await ws_con._send_message(new_message, None)
 
         await asyncio.sleep(1)
         assert not ws_con.closed
@@ -267,7 +267,7 @@ class TestDos:
         ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
 
         for i in range(6):
-            await ws_con._send_message(new_message)
+            await ws_con._send_message(new_message, None)
         await time_out_assert(15, is_closed)
 
         # Banned
@@ -301,7 +301,7 @@ class TestDos:
             full_node_protocol.RequestMempoolTransactions(bytes([0] * 5 * 1024 * 1024)),
         )
         # Tests outbound rate limiting, we will not send big messages
-        await ws_con._send_message(new_message)
+        await ws_con._send_message(new_message, None)
 
         await asyncio.sleep(1)
         assert not ws_con.closed
@@ -309,7 +309,7 @@ class TestDos:
         # Remove outbound rate limiter to test inbound limits
         ws_con.outbound_rate_limiter = FakeRateLimiter()
 
-        await ws_con._send_message(new_message)
+        await ws_con._send_message(new_message, None)
         await time_out_assert(15, is_closed)
 
         # Banned

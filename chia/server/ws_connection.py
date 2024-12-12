@@ -93,7 +93,7 @@ class WSChiaConnection:
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
 
     # the second, optional, element is the message this is a response to. If
-    # set, we'll decrement the concurrent_countes in the rate limiter when this
+    # set, we'll decrement the concurrent_counts in the rate limiter when this
     # message is sent
     outgoing_queue: asyncio.Queue[tuple[Message, Optional[ProtocolMessageTypes]]] = field(
         default_factory=asyncio.Queue, repr=False
@@ -213,7 +213,7 @@ class WSChiaConnection:
                     self.local_capabilities_for_handshake,
                 ),
             )
-            await self._send_message(outbound_handshake)
+            await self._send_message(outbound_handshake, None)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
@@ -294,7 +294,7 @@ class WSChiaConnection:
                     self.local_capabilities_for_handshake,
                 ),
             )
-            await self._send_message(outbound_handshake)
+            await self._send_message(outbound_handshake, None)
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
@@ -379,11 +379,9 @@ class WSChiaConnection:
     async def outbound_handler(self) -> None:
         try:
             while not self.closed:
-                msg, response = await self.outgoing_queue.get()
+                msg, response_to = await self.outgoing_queue.get()
                 if msg is not None:
-                    await self._send_message(msg)
-                    if response is not None:
-                        self.inbound_rate_limiter.sent_response(response)
+                    await self._send_message(msg, response_to)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -623,15 +621,15 @@ class WSChiaConnection:
 
         return result
 
-    async def _wait_and_retry(self, msg: Message) -> None:
+    async def _wait_and_retry(self, msg: Message, response_to: Optional[ProtocolMessageTypes]) -> None:
         try:
             await asyncio.sleep(1)
-            await self.outgoing_queue.put((msg, None))
+            await self.outgoing_queue.put((msg, response_to))
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
 
-    async def _send_message(self, message: Message) -> None:
+    async def _send_message(self, message: Message, response_to: Optional[ProtocolMessageTypes]) -> None:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
@@ -658,10 +656,11 @@ class WSChiaConnection:
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
                     # TODO: stop dropping tasks on the floor
-                    asyncio.create_task(self._wait_and_retry(message))  # noqa: RUF006
+                    asyncio.create_task(self._wait_and_retry(message, response_to))  # noqa: RUF006
+                return
 
-                return None
-
+        if response_to is not None:
+            self.inbound_rate_limiter.sent_response(response_to)
         await self.ws.send_bytes(encoded)
         self.log.debug(
             f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_info.host} {self.peer_node_id}"
