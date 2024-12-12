@@ -2692,7 +2692,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
                 number_of_coins=100,
                 amount_per_coin=CliAmount(amount=uint64(100), mojos=True),
                 target_coin_id=target_coin.name(),
-                fee=1_000_000_000_000,  # 1 XCH
+                fee=uint64(1_000_000_000_000),  # 1 XCH
                 push=True,
             ),
         }
