@@ -24,9 +24,9 @@ def plotnft_cmd(ctx: click.Context) -> None:
 
 
 @chia_command(
-    plotnft_cmd,
-    "show",
-    "Show plotnft information",
+    group=plotnft_cmd,
+    name="show",
+    short_help="Show plotnft information",
     help="Show plotnft information",
 )
 class ShowPlotNFTCMD:
@@ -48,8 +48,8 @@ class ShowPlotNFTCMD:
 
 
 @chia_command(
-    plotnft_cmd,
-    "get_login_link",
+    group=plotnft_cmd,
+    name="get_login_link",
     short_help="Create a login link for a pool",
     help="Create a login link for a pool. The farmer must be running. Use 'plotnft show' to get the launcher id.",
 )
@@ -69,8 +69,8 @@ class GetLoginLinkCMD:
 # They will therefore not work with observer-only functionality
 # NOTE: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @chia_command(
-    plotnft_cmd,
-    "create",
+    group=plotnft_cmd,
+    name="create",
     short_help="Create a plot NFT",
     help="Create a plot NFT.",
 )
@@ -116,8 +116,8 @@ class CreatePlotNFTCMD:
 
 # NOTE: tx_endpoint
 @chia_command(
-    plotnft_cmd,
-    "join",
+    group=plotnft_cmd,
+    name="join",
     short_help="Join a plot NFT to a Pool",
     help="Join a plot NFT to a Pool.",
 )
@@ -153,8 +153,8 @@ class JoinPlotNFTCMD:
 
 # NOTE: tx_endpoint
 @chia_command(
-    plotnft_cmd,
-    "leave",
+    group=plotnft_cmd,
+    name="leave",
     short_help="Leave a pool and return to self-farming",
     help="Leave a pool and return to self-farming.",
 )
@@ -187,8 +187,8 @@ class LeavePlotNFTCMD:
 
 
 @chia_command(
-    plotnft_cmd,
-    "inspect",
+    group=plotnft_cmd,
+    name="inspect",
     short_help="Get Detailed plotnft information as JSON",
     help="Get Detailed plotnft information as JSON",
 )
@@ -207,8 +207,8 @@ class InspectPlotNFTCMD:
 
 # NOTE: tx_endpoint
 @chia_command(
-    plotnft_cmd,
-    "claim",
+    group=plotnft_cmd,
+    name="claim",
     short_help="Claim rewards from a plot NFT",
     help="Claim rewards from a plot NFT",
 )
@@ -239,8 +239,8 @@ class ClaimPlotNFTCMD:
 
 
 @chia_command(
-    plotnft_cmd,
-    "change_payout_instructions",
+    group=plotnft_cmd,
+    name="change_payout_instructions",
     short_help="Change the payout instructions for a pool.",
     help="Change the payout instructions for a pool. Use 'plotnft show' to get the launcher id.",
 )

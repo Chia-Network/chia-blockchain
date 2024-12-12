@@ -17,7 +17,6 @@ from segno import QRCode, make_qr
 
 from chia.cmds.cmd_classes import NeedsWalletRPC, chia_command, command_helper, option
 from chia.cmds.cmds_util import TransactionBundle
-from chia.cmds.wallet import wallet_cmd
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
@@ -38,7 +37,7 @@ def _clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
-@wallet_cmd.group("signer", help="Get information for an external signer")
+@click.group("signer", help="Get information for an external signer")
 def signer_cmd() -> None:
     pass  # pragma: no cover
 
@@ -209,10 +208,10 @@ class SPOut(QrCodeDisplay, _SPTranslation):
 
 
 @chia_command(
-    signer_cmd,
-    "gather_signing_info",
-    "gather signer information",
-    "Gather the information from a transaction that a signer needs in order to create a signature",
+    group=signer_cmd,
+    name="gather_signing_info",
+    short_help="gather signer information",
+    help="Gather the information from a transaction that a signer needs in order to create a signature",
 )
 class GatherSigningInfoCMD:
     sp_out: SPOut
@@ -233,7 +232,12 @@ class GatherSigningInfoCMD:
             self.sp_out.handle_clvm_output([signing_instructions])
 
 
-@chia_command(signer_cmd, "apply_signatures", "apply signatures", "Apply a signer's signatures to a transaction bundle")
+@chia_command(
+    group=signer_cmd,
+    name="apply_signatures",
+    short_help="apply signatures",
+    help="Apply a signer's signatures to a transaction bundle",
+)
 class ApplySignaturesCMD:
     txs_out: TransactionsOut
     sp_in: SPIn
@@ -272,10 +276,10 @@ class ApplySignaturesCMD:
 
 
 @chia_command(
-    signer_cmd,
-    "execute_signing_instructions",
-    "execute signing instructions",
-    "Given some signing instructions, return signing responses",
+    group=signer_cmd,
+    name="execute_signing_instructions",
+    short_help="execute signing instructions",
+    help="Given some signing instructions, return signing responses",
 )
 class ExecuteSigningInstructionsCMD:
     sp_out: SPOut
@@ -299,10 +303,9 @@ class ExecuteSigningInstructionsCMD:
 
 
 @chia_command(
-    wallet_cmd,
-    "push_transactions",
-    "push transaction bundle",
-    "Push a transaction bundle to the wallet to send to the network",
+    name="push_transactions",
+    short_help="push transaction bundle",
+    help="Push a transaction bundle to the wallet to send to the network",
 )
 class PushTransactionsCMD:
     txs_in: TransactionsIn

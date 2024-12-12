@@ -227,7 +227,8 @@ def _convert_class_to_function(cls: type[ChiaCommand]) -> SyncCmd:
 
 @dataclass_transform()
 def chia_command(
-    cmd: click.Group,
+    *,
+    group: Optional[click.Group] = None,
     name: str,
     short_help: str,
     help: str,
@@ -246,10 +247,37 @@ def chia_command(
                 kw_only=True,
             )(cls)
 
-        cmd.command(name, short_help=short_help, help=help)(_convert_class_to_function(wrapped_cls))
+        metadata = Metadata(
+            command=click.command(
+                name=name,
+                short_help=short_help,
+                help=help,
+            )(_convert_class_to_function(wrapped_cls))
+        )
+
+        setattr(wrapped_cls, _chia_command_metadata_attribute, metadata)
+        if group is not None:
+            group.add_command(metadata.command)
+
         return wrapped_cls
 
     return _chia_command
+
+
+_chia_command_metadata_attribute = f"_{__name__.replace('.', '_')}_{chia_command.__qualname__}_metadata"
+
+
+@dataclass(frozen=True, slots=True)
+class Metadata:
+    command: click.Command
+
+
+def get_chia_command_metadata(cls: type[ChiaCommand]) -> Metadata:
+    metadata: Optional[Metadata] = getattr(cls, _chia_command_metadata_attribute, None)
+    if metadata is None:
+        raise Exception(f"Class is not a chia command: {cls}")
+
+    return metadata
 
 
 @dataclass_transform()
