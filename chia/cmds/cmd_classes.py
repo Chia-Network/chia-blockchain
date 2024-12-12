@@ -419,7 +419,9 @@ def transaction_endpoint_runner(
     return wrapped_func
 
 
-_TRANSACTION_ENDPOINT_DECORATOR_APPLIED = f"_{__name__.replace('.', '_')}_{transaction_endpoint_runner.__qualname__}_applied"
+_TRANSACTION_ENDPOINT_DECORATOR_APPLIED = (
+    f"_{__name__.replace('.', '_')}_{transaction_endpoint_runner.__qualname__}_applied"
+)
 
 
 @dataclass(frozen=True)
