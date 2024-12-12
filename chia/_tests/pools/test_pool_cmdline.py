@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from io import StringIO
-from typing import Optional, Union, cast
+from typing import Optional, cast
 
 import pytest
 from chia_rs import G1Element
@@ -14,7 +14,12 @@ from pytest_mock import MockerFixture
 from chia._tests.cmds.cmd_test_utils import TestWalletRpcClient
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
+from chia._tests.pools.test_pool_rpc import (
+    LOCK_HEIGHT,
+    create_new_plotnft,
+    manage_temporary_pool_plot,
+    verify_pool_state,
+)
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.param_types import CliAddress
@@ -36,15 +41,13 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 # limit to plain consensus mode for all tests
 pytestmark = [pytest.mark.limit_consensus_modes(reason="irrelevant")]
-
-LOCK_HEIGHT = uint32(5)
 
 
 @dataclass
@@ -54,90 +57,6 @@ class StateUrlCase:
     pool_url: Optional[str]
     expected_error: Optional[str] = None
     marks: Marks = ()
-
-
-async def verify_pool_state(wallet_rpc: WalletRpcClient, w_id: int, expected_state: PoolSingletonState) -> bool:
-    pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(w_id))[0]
-    return pw_status.current.state == expected_state.value
-
-
-async def process_plotnft_create(
-    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState, second_nft: bool = False
-) -> int:
-    wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
-
-    pre_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
-        1: {
-            "confirmed_wallet_balance": 0,
-            "unconfirmed_wallet_balance": -1,
-            "<=#spendable_balance": 1,
-            "<=#max_send_amount": 1,
-            ">=#pending_change": 1,  # any amount increase
-            "pending_coin_removal_count": 1,
-        }
-    }
-
-    post_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
-        1: {
-            "confirmed_wallet_balance": -1,
-            "unconfirmed_wallet_balance": 0,
-            ">=#spendable_balance": 1,
-            ">=#max_send_amount": 1,
-            "<=#pending_change": 1,  # any amount decrease
-            "<=#pending_coin_removal_count": 1,
-        },
-    }
-
-    if second_nft:
-        post_block = post_block_balance_updates | {
-            2: {
-                "set_remainder": True,  # TODO: sometimes this fails with pending_coin_removal_count
-            },
-            3: {"init": True, "unspent_coin_count": 1},
-        }
-    else:
-        post_block = post_block_balance_updates | {2: {"init": True, "unspent_coin_count": 1}}
-
-    await wallet_test_framework.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates=pre_block_balance_updates,
-                post_block_balance_updates=post_block,
-            )
-        ]
-    )
-
-    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == 2 if second_nft else 1
-    wallet_id: int = summaries_response[-1]["id"]
-
-    await verify_pool_state(wallet_rpc, wallet_id, expected_state=expected_state)
-    return wallet_id
-
-
-async def create_new_plotnft(
-    wallet_test_framework: WalletTestFramework, self_pool: bool = False, second_nft: bool = False
-) -> int:
-    wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
-    wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
-
-    our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
-
-    await wallet_rpc.create_new_pool_wallet(
-        target_puzzlehash=our_ph,
-        backup_host="",
-        mode="new",
-        relative_lock_height=uint32(0) if self_pool else LOCK_HEIGHT,
-        state="SELF_POOLING" if self_pool else "FARMING_TO_POOL",
-        pool_url="" if self_pool else "http://pool.example.com",
-        fee=uint64(0),
-    )
-
-    return await process_plotnft_create(
-        wallet_test_framework=wallet_test_framework,
-        expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
-        second_nft=second_nft,
-    )
 
 
 @pytest.mark.parametrize(

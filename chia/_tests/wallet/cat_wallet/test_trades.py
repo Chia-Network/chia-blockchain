@@ -14,9 +14,11 @@ from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
+from chia.rpc.wallet_request_types import VCAddProofs, VCGetList, VCGetProofsForRoot, VCMint, VCSpend
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -237,12 +239,22 @@ async def test_cat_trades(
         # Mint some VCs that can spend the CR-CATs
         vc_record_maker = (
             await client_maker.vc_mint(
-                did_id_maker, wallet_environments.tx_config, target_address=await wallet_maker.get_new_puzzlehash()
+                VCMint(
+                    did_id=encode_puzzle_hash(did_id_maker, "did"),
+                    target_address=encode_puzzle_hash(await wallet_maker.get_new_puzzlehash(), "txch"),
+                    push=True,
+                ),
+                wallet_environments.tx_config,
             )
         ).vc_record
         vc_record_taker = (
             await client_taker.vc_mint(
-                did_id_taker, wallet_environments.tx_config, target_address=await wallet_taker.get_new_puzzlehash()
+                VCMint(
+                    did_id=encode_puzzle_hash(did_id_taker, "did"),
+                    target_address=encode_puzzle_hash(await wallet_taker.get_new_puzzlehash(), "txch"),
+                    push=True,
+                ),
+                wallet_environments.tx_config,
             )
         ).vc_record
         await wallet_environments.process_pending_states(
@@ -274,17 +286,23 @@ async def test_cat_trades(
         proofs_maker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
         proof_root_maker: bytes32 = proofs_maker.root()
         await client_maker.vc_spend(
-            vc_record_maker.vc.launcher_id,
+            VCSpend(
+                vc_id=vc_record_maker.vc.launcher_id,
+                new_proof_hash=proof_root_maker,
+                push=True,
+            ),
             wallet_environments.tx_config,
-            new_proof_hash=proof_root_maker,
         )
 
         proofs_taker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
         proof_root_taker: bytes32 = proofs_taker.root()
         await client_taker.vc_spend(
-            vc_record_taker.vc.launcher_id,
+            VCSpend(
+                vc_id=vc_record_taker.vc.launcher_id,
+                new_proof_hash=proof_root_taker,
+                push=True,
+            ),
             wallet_environments.tx_config,
-            new_proof_hash=proof_root_taker,
         )
         await wallet_environments.process_pending_states(
             [
@@ -374,17 +392,21 @@ async def test_cat_trades(
         )
 
     if credential_restricted:
-        await client_maker.vc_add_proofs(proofs_maker.key_value_pairs)
-        assert await client_maker.vc_get_proofs_for_root(proof_root_maker) == proofs_maker.key_value_pairs
-        vc_records, fetched_proofs = await client_maker.vc_get_list()
-        assert len(vc_records) == 1
-        assert fetched_proofs[proof_root_maker.hex()] == proofs_maker.key_value_pairs
+        await client_maker.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs_maker))
+        assert (
+            await client_maker.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root_maker))
+        ).to_vc_proofs().key_value_pairs == proofs_maker.key_value_pairs
+        get_list_reponse = await client_maker.vc_get_list(VCGetList())
+        assert len(get_list_reponse.vc_records) == 1
+        assert get_list_reponse.proof_dict[proof_root_maker] == proofs_maker.key_value_pairs
 
-        await client_taker.vc_add_proofs(proofs_taker.key_value_pairs)
-        assert await client_taker.vc_get_proofs_for_root(proof_root_taker) == proofs_taker.key_value_pairs
-        vc_records, fetched_proofs = await client_taker.vc_get_list()
-        assert len(vc_records) == 1
-        assert fetched_proofs[proof_root_taker.hex()] == proofs_taker.key_value_pairs
+        await client_taker.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs_taker))
+        assert (
+            await client_taker.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root_taker))
+        ).to_vc_proofs().key_value_pairs == proofs_taker.key_value_pairs
+        get_list_reponse = await client_taker.vc_get_list(VCGetList())
+        assert len(get_list_reponse.vc_records) == 1
+        assert get_list_reponse.proof_dict[proof_root_taker] == proofs_taker.key_value_pairs
 
     # Add the taker's CAT to the maker's wallet
     if credential_restricted:
