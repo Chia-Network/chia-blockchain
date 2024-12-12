@@ -21,11 +21,11 @@ non_fetch_client_methods = {
     RpcClient.await_closed,
 }
 
-client_fetch_methods = {
+client_fetch_methods = [
     attribute
     for name, attribute in vars(RpcClient).items()
     if callable(attribute) and attribute not in non_fetch_client_methods and not name.startswith("__")
-}
+]
 
 
 @dataclass
