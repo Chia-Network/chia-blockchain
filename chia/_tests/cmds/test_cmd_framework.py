@@ -13,7 +13,7 @@ from click.testing import CliRunner
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
 from chia.cmds.cmd_classes import (
-    _DECORATOR_APPLIED,
+    _TRANSACTION_ENDPOINT_DECORATOR_APPLIED,
     ChiaCommand,
     Context,
     NeedsCoinSelectionConfig,
@@ -55,7 +55,7 @@ def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None)
         dict_compare_with_ignore_context(asdict(cmd), asdict(self))  # type: ignore[call-overload]
 
     # We hack this in because more robust solutions are harder and probably not worth it
-    setattr(new_run, _DECORATOR_APPLIED, True)
+    setattr(new_run, _TRANSACTION_ENDPOINT_DECORATOR_APPLIED, True)
 
     setattr(mock_type, "run", new_run)
     chia_command(_cmd, "_", "", "")(mock_type)

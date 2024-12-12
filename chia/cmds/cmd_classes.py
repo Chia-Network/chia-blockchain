@@ -408,9 +408,6 @@ class NeedsTXConfig(NeedsCoinSelectionConfig):
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
 
-_DECORATOR_APPLIED = "_DECORATOR_APPLIED"
-
-
 def transaction_endpoint_runner(
     func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, list[TransactionRecord]]],
 ) -> Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, None]]:
@@ -418,8 +415,11 @@ def transaction_endpoint_runner(
         txs = await func(self)
         self.transaction_writer.handle_transaction_output(txs)
 
-    setattr(wrapped_func, _DECORATOR_APPLIED, True)
+    setattr(wrapped_func, _TRANSACTION_ENDPOINT_DECORATOR_APPLIED, True)
     return wrapped_func
+
+
+_TRANSACTION_ENDPOINT_DECORATOR_APPLIED = f"_{__name__.split('.')}_{transaction_endpoint_runner.__qualname__}_applied"
 
 
 @dataclass(frozen=True)
@@ -457,7 +457,7 @@ class TransactionEndpoint:
     )
 
     def __post_init__(self) -> None:
-        if not hasattr(self.run, "_DECORATOR_APPLIED"):
+        if not hasattr(self.run, _TRANSACTION_ENDPOINT_DECORATOR_APPLIED):
             raise TypeError("TransactionEndpoints must utilize @transaction_endpoint_runner on their `run` method")
 
     def load_condition_valid_times(self) -> ConditionValidTimes:
