@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
@@ -103,3 +104,7 @@ def main(root_path: pathlib.Path, args: Optional[list[str]] = None) -> int:
         if not service_config.get("use_chia_loop_policy", True):
             target_peer_count = None
         return async_run(coro=async_main(service_config, root_path=root_path), connection_limit=target_peer_count)
+
+
+if __name__ == "__main__":
+    sys.exit("module no longer directly callable, see the new command group `chia services`")
