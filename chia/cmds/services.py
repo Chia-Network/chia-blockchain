@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import click
 
-from chia.cmds.cmd_classes import Context, argument, chia_command
-
 
 @click.group(
     name="services",
@@ -17,33 +15,6 @@ def services_group() -> None:
     pass  # pragma: no cover
 
 
-@chia_command(
-    group=services_group,
-    name="full-node",
-    short_help="Start a full node",
-    # presently unused
-    help="Start a full node",
-    add_help_option=False,
-    ignore_unknown_options=True,
-)
-class FullNode:
-    context: Context
-    args: list[str] = argument(type=click.UNPROCESSED, multiple=True)
-
-    def run(self) -> None:
-        import sys
-
-        from chia.server.start_full_node import main
-
-        click_context = click.get_current_context()
-        sys.argv = [click_context.command_path, *self.args]
-        main(root_path=self.context["root_path"])
-
-
-# full_node_command = get_chia_command_metadata(FullNode).command
-
-
-# TODO: or instead of all other chia command changes, just add this and skip it
 @services_group.command("full-node", add_help_option=False, context_settings={"ignore_unknown_options": True})
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
