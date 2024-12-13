@@ -7,6 +7,7 @@ from typing import final
 import pytest
 
 from chia.util.action_scope import ActionScope, StateInterface
+from chia.util.db_wrapper import DBWrapper2
 
 
 @final
@@ -44,9 +45,11 @@ def test_set_callback() -> None:
 
 @pytest.fixture(name="action_scope")
 async def action_scope_fixture() -> AsyncIterator[ActionScope[TestSideEffects, TestConfig]]:
-    async with ActionScope.new_scope(TestSideEffects, TestConfig()) as scope:
-        assert scope.config == TestConfig(test_foo="test_foo")
-        yield scope
+    # DBWrapper2 is likely the most common kind of lock to use
+    async with DBWrapper2.managed(":memory:", reader_count=0) as db:
+        async with ActionScope.new_scope(db.writer, TestSideEffects(), TestConfig()) as scope:
+            assert scope.config == TestConfig(test_foo="test_foo")
+            yield scope
 
 
 @pytest.mark.anyio
@@ -83,75 +86,74 @@ async def test_transactionality(action_scope: ActionScope[TestSideEffects, TestC
 
 @pytest.mark.anyio
 async def test_callbacks() -> None:
-    async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
-        async with action_scope.use() as interface:
+    async with DBWrapper2.managed(":memory:", reader_count=0) as db:
+        async with ActionScope.new_scope(db.writer, TestSideEffects(), TestConfig()) as action_scope:
+            async with action_scope.use() as interface:
 
-            async def callback(interface: StateInterface[TestSideEffects]) -> None:
-                interface.side_effects.buf = b"bar"
+                async def callback(interface: StateInterface[TestSideEffects]) -> None:
+                    interface.side_effects.buf = b"bar"
 
-            interface.set_callback(callback)
+                interface.set_callback(callback)
 
-        async with action_scope.use():
-            pass  # Testing that callback stays put even through another .use()
+            async with action_scope.use():
+                pass  # Testing that callback stays put even through another .use()
 
-    assert action_scope.side_effects.buf == b"bar"
+        assert action_scope.side_effects.buf == b"bar"
 
 
 @pytest.mark.anyio
 async def test_callback_in_callback_error() -> None:
     with pytest.raises(RuntimeError, match="Callback"):
-        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
-            async with action_scope.use() as interface:
+        async with DBWrapper2.managed(":memory:", reader_count=0) as db:
+            async with ActionScope.new_scope(db.writer, TestSideEffects(), TestConfig()) as action_scope:
+                async with action_scope.use() as interface:
 
-                async def callback(interface: StateInterface[TestSideEffects]) -> None:
-                    interface.set_callback(default_async_callback)
+                    async def callback(interface: StateInterface[TestSideEffects]) -> None:
+                        interface.set_callback(default_async_callback)
 
-                interface.set_callback(callback)
+                    interface.set_callback(callback)
 
 
 @pytest.mark.anyio
 async def test_no_callbacks_if_error() -> None:
-    with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
-        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
-            async with action_scope.use() as interface:
+    async with DBWrapper2.managed(":memory:", reader_count=0) as db:
+        with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
+            async with ActionScope.new_scope(db.writer, TestSideEffects(), TestConfig()) as action_scope:
+                async with action_scope.use() as interface:
 
-                async def callback(interface: StateInterface[TestSideEffects]) -> None:
-                    raise NotImplementedError("Should not get here")  # pragma: no cover
+                    async def callback(interface: StateInterface[TestSideEffects]) -> None:
+                        raise NotImplementedError("Should not get here")  # pragma: no cover
 
-                interface.set_callback(callback)
+                    interface.set_callback(callback)
 
-            async with action_scope.use() as interface:
+                async with action_scope.use() as interface:
+                    raise RuntimeError("This should prevent the callbacks from being called")
+
+        with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
+            async with ActionScope.new_scope(db.writer, TestSideEffects(), TestConfig()) as action_scope:
+                async with action_scope.use() as interface:
+
+                    async def callback2(interface: StateInterface[TestSideEffects]) -> None:
+                        raise NotImplementedError("Should not get here")  # pragma: no cover
+
+                    interface.set_callback(callback2)
+
                 raise RuntimeError("This should prevent the callbacks from being called")
-
-    with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
-        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
-            async with action_scope.use() as interface:
-
-                async def callback2(interface: StateInterface[TestSideEffects]) -> None:
-                    raise NotImplementedError("Should not get here")  # pragma: no cover
-
-                interface.set_callback(callback2)
-
-            raise RuntimeError("This should prevent the callbacks from being called")
 
 
 @pytest.mark.anyio
 async def test_nested_use(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
     async with action_scope.use() as interface:
-        with pytest.raises(RuntimeError, match="Must pass `current_interface` when doing nested transactions"):
-            async with action_scope.use():
-                raise NotImplementedError("Should not get here")  # pragma: no cover
-
         assert interface.side_effects.buf == b""
         interface.side_effects.buf = b"qat"
-        async with action_scope.use(interface) as nested_interface:
+        async with action_scope.use() as nested_interface:
             assert nested_interface.side_effects.buf == b"qat"
             nested_interface.side_effects.buf = b"foo"
 
         assert interface.side_effects.buf == b"foo"
 
         with pytest.raises(RuntimeError, match="deliberate raise"):
-            async with action_scope.use(interface) as nested_interface:
+            async with action_scope.use() as nested_interface:
                 nested_interface.side_effects.buf = b"bar"
                 raise RuntimeError("deliberate raise")
 
