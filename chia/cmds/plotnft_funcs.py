@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional
 
 import aiohttp
 
-from chia.cmds.cmd_classes import WalletClientInfo
+from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import (
     cli_confirm,
     get_any_service_client,

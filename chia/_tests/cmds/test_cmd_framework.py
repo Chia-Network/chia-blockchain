@@ -12,7 +12,8 @@ from click.testing import CliRunner
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
-from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
+from chia.cmds.cmd_classes import ChiaCommand, Context, chia_command, option
+from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 

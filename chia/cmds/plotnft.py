@@ -5,7 +5,8 @@ from typing import Any, Optional
 
 import click
 
-from chia.cmds.cmd_classes import NeedsWalletRPC, chia_command, option
+from chia.cmds.cmd_classes import chia_command, option
+from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.cmds.param_types import (
     AddressParamType,
     Bytes32ParamType,
