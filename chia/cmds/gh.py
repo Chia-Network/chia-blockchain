@@ -1,15 +1,34 @@
 from __future__ import annotations
 
+import contextlib
+import functools
 import json
 import os
+import re
 import shlex
 import urllib
 import uuid
 import webbrowser
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, ClassVar, Literal, Optional, Sequence, Union, overload
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    ClassVar,
+    Collection,
+    Generic,
+    Literal,
+    Optional,
+    Protocol,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import anyio
+import anyio.streams.memory
 import click
 import yaml
 
@@ -25,6 +44,10 @@ Method = Union[Literal["GET"], Literal["POST"]]
 Per = Union[Literal["directory"], Literal["file"]]
 
 all_oses: Sequence[Oses] = ("linux", "macos-arm", "macos-intel", "windows")
+
+
+T_co = TypeVar("T_co", covariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
 def report(*args: str) -> None:
@@ -54,6 +77,7 @@ async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout
     command = [
         "gh",
         "api",
+        # "--paginate",
         f"--method={method}",
         "-H=Accept: application/vnd.github+json",
         "-H=X-GitHub-Api-Version: 2022-11-28",
@@ -272,3 +296,282 @@ class TestCMD:
         username = response["login"]
         assert isinstance(username, str), f"expected username to be a string, got: {username!r}"
         return username
+
+
+T = TypeVar("T")
+U = TypeVar("U")
+U_co = TypeVar("U_co", covariant=True)
+V = TypeVar("V")
+
+
+class PoolHandler(Protocol[T_contra, U_co]):
+    async def __call__(self, job: T_contra) -> list[U_co]: ...
+
+
+async def pool_worker(
+    handler: PoolHandler[T_contra, U_co],
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
+    results: anyio.streams.memory.MemoryObjectSendStream[U_co],
+) -> None:
+    unwrapped_handler = handler
+    while isinstance(unwrapped_handler, functools.partial):
+        unwrapped_handler = unwrapped_handler.func
+
+    # TODO: oof
+    handler_name = getattr(unwrapped_handler, "__name__")
+
+    async with jobs, results:
+        async for job in jobs:
+            try:
+                local_results = await handler(job=job)
+            except Exception as e:
+                report(f"worker failed: {e}\n    {handler_name}()\n    {job!r}")
+                continue
+            for result in local_results:
+                await results.send(result)
+
+
+async def pool(
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
+    results: anyio.streams.memory.MemoryObjectSendStream[U_co],
+    handler: PoolHandler[T_contra, U_co],
+    capacity: int,
+) -> None:
+    async with anyio.create_task_group() as task_group:
+        async with jobs, results:
+            for i in range(capacity):
+                task_group.start_soon(pool_worker, handler, jobs.clone(), results.clone())
+
+
+@dataclass
+class RunInfo:
+    workflow_id: int
+    run_number: int
+    id: int
+    status: str
+    conclusion: str
+    name: str
+    attempts: int
+    url: str
+
+
+class Stage(Protocol[T_contra, T_co]):
+    async def __call__(
+        self,
+        jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
+        results: anyio.streams.memory.MemoryObjectSendStream[T_co],
+    ) -> None: ...
+
+
+@dataclass
+class Pipeline(Generic[T, U]):
+    stages: list[Stage]  # type: ignore[type-arg]
+
+    @classmethod
+    def create(cls, stage: Stage[U, V]) -> Pipeline[U, V]:
+        return cls(stages=[stage])  # type: ignore[return-value]
+
+    def add(self: Pipeline[T, U], stage: Stage[U, V]) -> Pipeline[T, V]:
+        self.stages.append(stage)
+        return self  # type: ignore[return-value]
+
+    @contextlib.asynccontextmanager
+    async def setup(
+        self,
+        jobs: Collection[T],
+    ) -> AsyncIterator[anyio.streams.memory.MemoryObjectReceiveStream[U]]:
+        results: anyio.streams.memory.MemoryObjectReceiveStream[U]
+
+        # TODO: yep yuck, no more Any
+        send_stream, receive_stream = anyio.create_memory_object_stream[Any](max_buffer_size=len(jobs))
+        async with send_stream:
+            for job in jobs:
+                send_stream.send_nowait(job)
+
+        async with contextlib.AsyncExitStack() as exit_stack:
+            task_group = await exit_stack.enter_async_context(anyio.create_task_group())
+
+            for stage in self.stages:
+                # TODO: yep yuck, no more Any
+                send_stream, new_receive_stream = anyio.create_memory_object_stream[Any]()
+                task_group.start_soon(stage, receive_stream, send_stream)
+                receive_stream = new_receive_stream
+
+            results = receive_stream
+            yield results
+
+
+@dataclass
+class PoolStage(Generic[T_contra, U_co]):
+    handler: PoolHandler[T_contra, U_co]
+    capacity: int = 10
+
+    async def __call__(
+        self,
+        jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
+        results: anyio.streams.memory.MemoryObjectSendStream[U_co],
+    ) -> None:
+        await pool(jobs, results, self.handler, self.capacity)
+
+
+@chia_command(
+    gh_group,
+    name="rerun",
+    # TODO: helpy helper
+    short_help="",
+    help="""""",
+)
+class RerunCMD:
+    owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
+    repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
+    author: str = option("--author", help="Author to search for PRs from", type=str, required=True)
+    max_attempts: int = option("--max-attempts", help="Maximum number of attempts", type=int, default=3)
+    dry_run: bool = option("--dry-run/--wet_run", help="Dry run")
+
+    async def run(self) -> None:
+        pipeline = (
+            Pipeline.create(PoolStage(handler=self.get_authors_pull_requests))
+            .add(PoolStage(handler=self.get_pull_request_head_sha))
+            .add(PoolStage(handler=self.get_check_suite_ids_for_sha))
+            .add(PoolStage(handler=self.get_run_ids_for_check_suite_id))
+            .add(PoolStage(handler=self.get_run_info))
+            .add(PoolStage(handler=self.maybe_rerun_job))
+        )
+
+        async with pipeline.setup(jobs=[self.author]) as results:
+            async with results:
+                async for result in results:
+                    print(f" >---< {result!r}")
+
+    async def get_authors_pull_requests(self, job: str) -> list[int]:
+        author = job
+        # https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
+        stdout = await run_gh_api(
+            method="GET",
+            args=[
+                "/search/issues",
+                f"-f=q=state:open author:{author} repo:{self.owner}/{self.repository} type:pr draft:no",
+            ],
+            error="Failed to get pull requests for author",
+            capture_stdout=True,
+        )
+        response = json.loads(stdout)
+        results = [item["number"] for item in response["items"]]
+        return results
+
+    async def get_pull_request_head_sha(self, job: int) -> list[bytes]:
+        pr = job
+        # https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
+        stdout = await run_gh_api(
+            method="GET",
+            args=[
+                f"/repos/{self.owner}/{self.repository}/pulls/{pr}",
+            ],
+            error="Failed to get pull request",
+            capture_stdout=True,
+        )
+        response = json.loads(stdout)
+        result = bytes.fromhex(response["head"]["sha"])
+        return [result]
+
+    async def get_check_suite_ids_for_sha(self, job: bytes) -> list[int]:
+        sha = job
+        # https://docs.github.com/en/rest/checks/suites?apiVersion=2022-11-28#list-check-suites-for-a-git-reference
+        stdout = await run_gh_api(
+            method="GET",
+            args=[
+                "--paginate",
+                # "-f=per_page=100",
+                f"/repos/{self.owner}/{self.repository}/commits/{sha.hex()}/check-suites",
+            ],
+            error="Failed to get check suites",
+            capture_stdout=True,
+        )
+        response = json.loads(stdout)
+        check_suite_ids = {
+            check_suite["id"]
+            for check_suite in response["check_suites"]
+            if check_suite["app"]["slug"] == "github-actions"
+        }
+        print(response["total_count"], len(check_suite_ids), check_suite_ids)
+        # assert len(check_suite_ids) == response["total_count"]
+        return list(check_suite_ids)
+
+    async def get_run_ids_for_check_suite_id(self, job: int) -> list[int]:
+        check_suite_id = job
+        run_ids = []
+        response = await self.get_check_runs(suite_id=check_suite_id)
+        for check_run in response["check_runs"]:
+            if check_run["app"]["slug"] != "github-actions":
+                continue
+
+            match = re.match(r"^.*/runs/(.*)/job/.*$", check_run["html_url"])
+            assert match is not None
+            value = int(match[1])
+            run_ids.append(value)
+            break
+        else:
+            report(f"no run found for suite: {response['id']}")
+
+        return run_ids
+
+    async def get_check_runs(self, suite_id: int) -> dict[str, Any]:
+        # https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-in-a-check-suite
+        stdout = await run_gh_api(
+            method="GET",
+            args=[
+                f"/repos/{self.owner}/{self.repository}/check-suites/{suite_id}/check-runs",
+            ],
+            error="Failed to get check runs",
+            capture_stdout=True,
+        )
+        result = json.loads(stdout)
+        assert isinstance(result, dict)
+        return result
+
+    async def get_run_info(self, job: int) -> list[RunInfo]:
+        run_id = job
+        # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#get-a-workflow-run
+        stdout = await run_gh_api(
+            method="GET",
+            args=[
+                f"/repos/{self.owner}/{self.repository}/actions/runs/{run_id}",
+            ],
+            error="Failed to get run",
+            capture_stdout=True,
+        )
+        response = json.loads(stdout)
+
+        return [
+            RunInfo(
+                id=response["id"],
+                name=response["name"],
+                status=response["status"],
+                conclusion=response["conclusion"],
+                workflow_id=response["workflow_id"],
+                run_number=response["run_number"],
+                attempts=response["run_attempt"],
+                url=response["html_url"],
+            )
+        ]
+
+    async def maybe_rerun_job(self, job: RunInfo) -> list[None]:
+        run = job
+        if run.conclusion in {"failure", "cancelled"} and "check pr labels" not in run.name.lower():
+            if run.attempts >= self.max_attempts:
+                print("    ---- giving up on", run.url)
+            else:
+                if self.dry_run:
+                    print("    ++++ would retrigger", run.url)
+                else:
+                    # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#re-run-failed-jobs-from-a-workflow-run
+                    await run_gh_api(
+                        method="POST",
+                        args=[
+                            f"/repos/{self.owner}/{self.repository}/actions/runs/{run.id}/rerun-failed-jobs",
+                        ],
+                        error="Failed to rerun failed jobs",
+                    )
+                    print("    ++++ rerun triggered for", run.url)
+
+        return []
