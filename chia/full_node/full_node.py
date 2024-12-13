@@ -317,15 +317,18 @@ class FullNode:
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
-                assert len(pending_tx.items) == 0  # no pending transactions when starting up
+                    assert len(pending_tx.items) == 0  # no pending transactions when starting up
 
-                full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
-                assert full_peak is not None
-                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
-                ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                    full_peak, state_change_summary, None
-                )
-                await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
+                    full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
+                    assert full_peak is not None
+                    state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
+
+                    # Must be called under priority_mutex
+                    ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                        full_peak, state_change_summary, None
+                    )
+                    # Optional under priority_mutex but we are just starting here so no big deal
+                    await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
             if self.config["send_uncompact_interval"] != 0:
                 sanitize_weight_proof_only = False
                 if "sanitize_weight_proof_only" in self.config:
@@ -626,6 +629,7 @@ class FullNode:
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
+
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
                     prev_b = None
@@ -637,9 +641,13 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    success, state_change_summary = await self.add_block_batch(
-                        response.blocks, peer_info, fork_info, vs
-                    )
+
+                    # Wrap add_block_batch with writer to ensure all writes and reads are on same connection.
+                    # add_block_batch should only be called under priority_mutex so this will not deadlock.
+                    async with self.block_store.db_wrapper.writer() as conn:
+                        success, state_change_summary = await self.add_block_batch(
+                            response.blocks, peer_info, fork_info, vs
+                        )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -651,7 +659,6 @@ class FullNode:
                                 state_change_summary,
                                 peer,
                             )
-                            await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
                         except Exception:
                             # Still do post processing after cancel (or exception)
                             peak_fb = await self.blockchain.get_full_peak()
@@ -660,6 +667,9 @@ class FullNode:
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
+                if state_change_summary is not None and peak_fb is not None:
+                    # Call outside of priority_mutex to encourage concurrency
+                    await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
         finally:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
@@ -1352,16 +1362,20 @@ class FullNode:
                     block_rate_height = start_height
 
                 pre_validation_results = list(await asyncio.gather(*futures))
-                # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
-                # call will update it
-                state_change_summary, err = await self.add_prevalidated_blocks(
-                    blockchain,
-                    blocks,
-                    pre_validation_results,
-                    fork_info,
-                    peer.peer_info,
-                    vs,
-                )
+
+                # Wrap add_prevalidated_blocks with writer to ensure all writes and reads are on same connection.
+                # add_prevalidated_blocks should only be called under priority_mutex so this will not deadlock.
+                async with self.block_store.db_wrapper.writer() as conn:
+                    # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
+                    # call will update it
+                    state_change_summary, err = await self.add_prevalidated_blocks(
+                        blockchain,
+                        blocks,
+                        pre_validation_results,
+                        fork_info,
+                        peer.peer_info,
+                        vs,
+                    )
                 if err is not None:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
@@ -1731,7 +1745,10 @@ class FullNode:
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                     peak_fb, state_change_summary, None
                 )
-                await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
+
+        if peak_fb is not None:
+            # Call outside of priority_mutex to encourage concurrency
+            await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
@@ -2083,6 +2100,9 @@ class FullNode:
         ppp_result: Optional[PeakPostProcessingResult] = None
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
+            # Wrap with writer to ensure all writes and reads are on same connection.
+            # add_prevalidated_blocks should only be called under priority_mutex so this will not deadlock.
+            self.block_store.db_wrapper.writer(),
             enable_profiler(self.profile_block_validation) as pr,
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
