@@ -327,9 +327,8 @@ class NeedsWalletRPC:
         if self.client_info is not None:
             yield self.client_info
         else:
-            if "root_path" not in kwargs:
-                kwargs["root_path"] = self.context["root_path"]
-            async with get_wallet_client(self.wallet_rpc_port, self.fingerprint, **kwargs) as (
+            root_path = kwargs.get("root_path", self.context["root_path"])
+            async with get_wallet_client(root_path, self.wallet_rpc_port, self.fingerprint, **kwargs) as (
                 wallet_client,
                 fp,
                 config,
