@@ -31,7 +31,7 @@ from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.payment import Payment
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
@@ -300,14 +300,14 @@ class FullNodeSimulator(FullNodeAPI):
             guarantee_transaction_block=True,
             seed=seed,
         )
-        await add_blocks_in_batches(more_blocks, self.full_node, current_blocks[old_index].header_hash)
+        await add_blocks_in_batches(more_blocks[old_index + 1 :], self.full_node)
 
     async def farm_blocks_to_puzzlehash(
         self,
         count: int,
         farm_to: bytes32 = bytes32.zeros,
         guarantee_transaction_blocks: bool = False,
-        timeout: Union[None, _Default, float] = default,
+        timeout: Union[_Default, float, None] = default,
         _wait_for_synced: bool = True,
     ) -> int:
         """Process the requested number of blocks including farming to the passed puzzle
@@ -351,7 +351,7 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         count: int,
         wallet: Wallet,
-        timeout: Union[None, _Default, float] = default,
+        timeout: Union[_Default, float, None] = default,
         _wait_for_synced: bool = True,
     ) -> int:
         """Farm the requested number of blocks to the passed wallet. This will
@@ -423,7 +423,7 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         amount: int,
         wallet: Wallet,
-        timeout: Union[None, _Default, float] = default,
+        timeout: Union[_Default, float, None] = default,
     ) -> int:
         """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
@@ -463,8 +463,8 @@ class FullNodeSimulator(FullNodeAPI):
 
     async def wait_transaction_records_entered_mempool(
         self,
-        records: Collection[TransactionRecord],
-        timeout: Union[None, float] = 5,
+        records: Collection[Union[TransactionRecord, LightTransactionRecord]],
+        timeout: Union[float, None] = 5,
     ) -> None:
         """Wait until the transaction records have entered the mempool.  Transaction
         records with no spend bundle are ignored.
@@ -496,7 +496,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def wait_bundle_ids_in_mempool(
         self,
         bundle_ids: Collection[bytes32],
-        timeout: Union[None, float] = 5,
+        timeout: Union[float, None] = 5,
     ) -> None:
         """Wait until the ids of specific spend bundles have entered the mempool.
 
@@ -523,7 +523,7 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         record_ids: Collection[bytes32],
         wallet_node: WalletNode,
-        timeout: Union[None, float] = 10,
+        timeout: Union[float, None] = 10,
     ) -> None:
         """Wait until the transaction records have been marked that they have made it into the mempool.  Transaction
         records with no spend bundle are ignored.
@@ -550,7 +550,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def process_transaction_records(
         self,
         records: Collection[TransactionRecord],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
+        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
@@ -575,7 +575,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def process_spend_bundles(
         self,
         bundles: Collection[SpendBundle],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
+        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified spend bundles and wait until they have been included
         in a block.
@@ -591,7 +591,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def process_coin_spends(
         self,
         coins: Collection[Coin],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
+        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified coin names and wait until they have been created in a
         block.
@@ -643,7 +643,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def check_transactions_confirmed(
         self,
         wallet_state_manager: WalletStateManager,
-        transactions: list[TransactionRecord],
+        transactions: Union[list[TransactionRecord], list[LightTransactionRecord]],
         timeout: Optional[float] = 5,
     ) -> None:
         transactions_left: set[bytes32] = {tx.name for tx in transactions}
@@ -661,7 +661,7 @@ class FullNodeSimulator(FullNodeAPI):
         amounts: list[uint64],
         wallet: Wallet,
         per_transaction_record_group: int = 50,
-        timeout: Union[None, float] = 15,
+        timeout: Union[float, None] = 15,
     ) -> set[Coin]:
         """Create coins with the requested amount.  This is useful when you need a
         bunch of coins for a test and don't need to farm that many.

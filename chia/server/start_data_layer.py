@@ -20,7 +20,7 @@ from chia.ssl.create_ssl import create_all_ssl
 from chia.types.aliases import DataLayerService, WalletService
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 from chia.util.ints import uint16
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
@@ -91,26 +91,26 @@ def create_data_layer_service(
     )
 
 
-async def async_main() -> int:
+async def async_main(root_path: pathlib.Path) -> int:
     # TODO: refactor to avoid the double load
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME, fill_missing_services=True)
+    config = load_config(root_path, "config.yaml", fill_missing_services=True)
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
     config[SERVICE_NAME] = service_config
     initialize_logging(
         service_name=SERVICE_NAME,
         logging_config=service_config["logging"],
-        root_path=DEFAULT_ROOT_PATH,
+        root_path=root_path,
     )
 
     create_all_ssl(
-        root_path=DEFAULT_ROOT_PATH,
+        root_path=root_path,
         private_node_names=["data_layer"],
         public_node_names=["data_layer"],
         overwrite=False,
     )
 
     plugins_config = config["data_layer"].get("plugins", {})
-    service_dir = DEFAULT_ROOT_PATH / SERVICE_NAME
+    service_dir = root_path / SERVICE_NAME
 
     old_uploaders = config["data_layer"].get("uploaders", [])
     new_uploaders = plugins_config.get("uploaders", [])
@@ -130,7 +130,7 @@ async def async_main() -> int:
         *conf_file_uploaders,
     ]
 
-    service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
+    service = create_data_layer_service(root_path, config, downloaders, uploaders)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()
@@ -139,10 +139,12 @@ async def async_main() -> int:
 
 
 def main() -> int:
+    root_path = resolve_root_path(override=None)
+
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        return async_run(coro=async_main())
+        return async_run(coro=async_main(root_path=root_path))
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Optional
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
@@ -21,6 +22,7 @@ from chia.wallet.util.wallet_types import WalletType
 
 async def async_list(
     *,
+    root_path: Path,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
@@ -31,7 +33,7 @@ async def async_list(
     show_unconfirmed: bool,
     paginate: Optional[bool],
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, _, config):
         addr_prefix = selected_network_address_prefix(config)
         if paginate is None:
             paginate = sys.stdout.isatty()
@@ -114,6 +116,7 @@ def print_coins(
 
 async def async_combine(
     *,
+    root_path: Path,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
@@ -131,7 +134,7 @@ async def async_combine(
     condition_valid_times: ConditionValidTimes,
     override: bool,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(wallet_type)
@@ -194,6 +197,7 @@ async def async_combine(
 
 async def async_split(
     *,
+    root_path: Path,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
@@ -209,7 +213,7 @@ async def async_split(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(wallet_type)

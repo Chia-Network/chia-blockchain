@@ -7,6 +7,7 @@ import pytest
 from chia_rs import G1Element
 from clvm_tools import binutils
 
+from chia._tests.core.make_block_generator import make_block_generator
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
@@ -22,8 +23,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-
-from .make_block_generator import make_block_generator
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 SMALL_BLOCK_GENERATOR = make_block_generator(1)

@@ -226,6 +226,9 @@ class BlockStore:
         return None
 
     async def get_full_blocks_at(self, heights: list[uint32]) -> list[FullBlock]:
+        """
+        Returns all blocks at the given heights, including orphans.
+        """
         if len(heights) == 0:
             return []
 
@@ -439,13 +442,15 @@ class BlockStore:
     ) -> dict[bytes32, BlockRecord]:
         """
         Returns a dictionary with all blocks in range between start and stop
-        if present.
+        if present. Only blocks part of the main chain/current peak are returned.
+        i.e. No orphan blocks
         """
 
         ret: dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash,block_record FROM full_blocks WHERE height >= ? AND height <= ?",
+                "SELECT header_hash,block_record FROM full_blocks "
+                "WHERE height >= ? AND height <= ? AND in_main_chain=1",
                 (start, stop),
             ) as cursor:
                 for row in await cursor.fetchall():
@@ -462,13 +467,14 @@ class BlockStore:
     ) -> list[bytes]:
         """
         Returns a list with all full blocks in range between start and stop
-        if present.
+        if present. Only includes blocks in the main chain, in the current peak.
+        No orphan blocks.
         """
 
         assert self.db_wrapper.db_version == 2
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
+                "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? AND in_main_chain=1",
                 (start, stop),
             ) as cursor:
                 rows: list[sqlite3.Row] = list(await cursor.fetchall())
@@ -494,7 +500,7 @@ class BlockStore:
     ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
-        peak header hash.
+        peak header hash. Only blocks that are part of the main chain/current peak are included.
         """
 
         peak = await self.get_peak()
@@ -504,7 +510,7 @@ class BlockStore:
         ret: dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash, block_record FROM full_blocks WHERE height >= ?",
+                "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND in_main_chain=1",
                 (peak[1] - blocks_n,),
             ) as cursor:
                 for row in await cursor.fetchall():

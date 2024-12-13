@@ -184,7 +184,7 @@ class DAOWallet:
                 fee_for_cat=fee_for_cat,
             )
         except Exception as e_info:  # pragma: no cover
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.id())
             self.log.exception(f"Failed to create dao wallet: {e_info}")
             raise
 

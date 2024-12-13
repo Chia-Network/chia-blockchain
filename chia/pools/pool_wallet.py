@@ -239,7 +239,15 @@ class PoolWallet:
         payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
 
         if len(payout_instructions) == 0:
-            payout_instructions = (await self.standard_wallet.get_new_puzzlehash()).hex()
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.root_pubkey.get_fingerprint()), False
+                )
+
+            payout_instructions = (await self.standard_wallet.get_puzzle_hash(new=not reuse_puzhash)).hex()
             self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
 
         new_config: PoolWalletConfig = PoolWalletConfig(
@@ -402,7 +410,9 @@ class PoolWallet:
         standard_wallet = main_wallet
 
         if p2_singleton_delayed_ph is None:
-            p2_singleton_delayed_ph = await main_wallet.get_new_puzzlehash()
+            p2_singleton_delayed_ph = await main_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         if p2_singleton_delay_time is None:
             p2_singleton_delay_time = uint64(604800)
 

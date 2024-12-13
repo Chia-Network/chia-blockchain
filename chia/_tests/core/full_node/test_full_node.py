@@ -6,11 +6,18 @@ import dataclasses
 import logging
 import random
 import time
-from collections.abc import Coroutine
-from typing import Awaitable, Optional
+from collections.abc import Awaitable, Coroutine
+from typing import Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey, SpendBundleConditions
+from chia_rs import (
+    AugSchemeMPL,
+    G2Element,
+    PrivateKey,
+    SpendBundleConditions,
+    additions_and_removals,
+    get_flags_for_height_and_constants,
+)
 from clvm.casts import int_to_bytes
 from packaging.version import Version
 
@@ -26,6 +33,7 @@ from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_cu
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
@@ -40,11 +48,18 @@ from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
+from chia.simulator.block_tools import (
+    BlockTools,
+    create_block_tools_async,
+    get_signage_point,
+    make_unfinished_block,
+    test_constants,
+)
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program
@@ -53,6 +68,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfi
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -533,8 +549,9 @@ class TestFullNodeProtocol:
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for block in bt.get_consecutive_blocks(30):
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.add_block(block, peer, fork_info=fork_info)
 
         assert full_node_1.full_node.blockchain.get_peak().height == 29
 
@@ -1002,7 +1019,7 @@ class TestFullNodeProtocol:
             block_list_input=blocks[:-1],
             guarantee_transaction_block=True,
         )
-        await add_blocks_in_batches(blocks[-2:], full_node_1.full_node, blocks[-2].prev_header_hash)
+        await add_blocks_in_batches(blocks[-2:], full_node_1.full_node)
         # Can now resubmit a transaction after the reorg
         status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
@@ -2268,6 +2285,70 @@ async def test_wallet_sync_task_failure(
     assert not full_node.wallet_sync_task.done()
 
 
+def print_coin_records(records: dict[bytes32, CoinRecord]) -> None:  # pragma: no cover
+    print("found unexpected coins in database")
+    for rec in records.values():
+        print(f"{rec}")
+
+
+async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> None:
+    prev_height = blocks[0].height - 1
+    prev_hash = blocks[0].prev_header_hash
+    for block in blocks:
+        assert block.height == prev_height + 1
+        assert block.prev_header_hash == prev_hash
+        prev_height = int(block.height)
+        prev_hash = block.header_hash
+        rewards = block.get_included_reward_coins()
+        records = {rec.coin.name(): rec for rec in await coin_store.get_coins_added_at_height(block.height)}
+
+        # validate reward coins
+        for reward in rewards:
+            rec = records.pop(reward.name())
+            assert rec is not None
+            assert rec.confirmed_block_index == block.height
+            assert rec.coin == reward
+            assert rec.coinbase
+
+        if block.transactions_generator is None:
+            if len(records) > 0:  # pragma: no cover
+                print(f"height: {block.height} unexpected coins in the DB: {records} TX: No")
+                print_coin_records(records)
+            assert records == {}
+            continue
+
+        if len(block.transactions_generator_ref_list) > 0:  # pragma: no cover
+            # TODO: Support block references
+            assert False
+
+        flags = get_flags_for_height_and_constants(block.height, test_constants)
+        additions, removals = additions_and_removals(bytes(block.transactions_generator), [], flags, test_constants)
+
+        for add, hint in additions:
+            rec = records.pop(add.name())
+            assert rec is not None
+            assert rec.confirmed_block_index == block.height
+            assert rec.coin == add
+            assert not rec.coinbase
+
+        if len(records) > 0:  # pragma: no cover
+            print(f"height: {block.height} unexpected coins in the DB: {records} TX: Yes")
+            print_coin_records(records)
+        assert records == {}
+
+        records = {rec.coin.name(): rec for rec in await coin_store.get_coins_removed_at_height(block.height)}
+        for rem in removals:
+            rec = records.pop(rem.name())
+            assert rec is not None
+            assert rec.spent_block_index == block.height
+            assert rec.coin == rem
+
+        if len(records) > 0:  # pragma: no cover
+            print(f"height: {block.height} unexpected removals: {records} TX: Yes")
+            print_coin_records(records)
+        assert records == {}
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 async def test_long_reorg(
@@ -2299,6 +2380,8 @@ async def test_long_reorg(
     assert reorg_blocks[fork_point] == default_10000_blocks[fork_point]
     assert reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
 
+    await validate_coin_set(node.full_node._coin_store, blocks)
+
     # one aspect of this test is to make sure we can reorg blocks that are
     # not in the cache. We need to explicitly prune the cache to get that
     # effect.
@@ -2310,6 +2393,8 @@ async def test_long_reorg(
     assert peak.weight > chain_1_weight
     chain_2_weight = peak.weight
     chain_2_peak = peak.header_hash
+
+    await validate_coin_set(node.full_node._coin_store, reorg_blocks)
 
     # if the reorg chain has lighter blocks, once we've re-orged onto it, we
     # have a greater block height. If the reorg chain has heavier blocks, we
@@ -2332,6 +2417,8 @@ async def test_long_reorg(
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_2_peak
     assert peak.weight > chain_2_weight
+
+    await validate_coin_set(node.full_node._coin_store, blocks)
 
 
 @pytest.mark.anyio
@@ -2405,6 +2492,9 @@ async def test_long_reorg_nodes(
     assert p1.header_hash == reorg_blocks[-1].header_hash
     assert p2.header_hash == reorg_blocks[-1].header_hash
 
+    await validate_coin_set(full_node_1.full_node._coin_store, reorg_blocks)
+    await validate_coin_set(full_node_2.full_node._coin_store, reorg_blocks)
+
     blocks = default_10000_blocks[:reorg_height]
 
     # this is a pre-requisite for a reorg to happen
@@ -2439,3 +2529,155 @@ async def test_long_reorg_nodes(
 
     print(f"reorg1 timing: {reorg1_timing:0.2f}s")
     print(f"reorg2 timing: {reorg2_timing:0.2f}s")
+
+    await validate_coin_set(full_node_1.full_node._coin_store, blocks)
+    await validate_coin_set(full_node_2.full_node._coin_store, blocks)
+    await validate_coin_set(full_node_3.full_node._coin_store, blocks)
+
+
+@pytest.mark.anyio
+async def test_shallow_reorg_nodes(
+    three_nodes,
+    self_hostname: str,
+    bt: BlockTools,
+):
+    full_node_1, full_node_2, _ = three_nodes
+
+    # node 1 has chan A, then we replace the top block and ensure
+    # node 2 follows along correctly
+
+    await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
+
+    wallet_a = WalletTool(bt.constants)
+    WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(2)]
+    coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+    chain = bt.get_consecutive_blocks(
+        10,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+    await add_blocks_in_batches(chain, full_node_1.full_node)
+
+    all_coins = []
+    for spend_block in chain:
+        for coin in spend_block.get_included_reward_coins():
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+
+    def check_nodes_in_sync():
+        p1 = full_node_2.full_node.blockchain.get_peak()
+        p2 = full_node_1.full_node.blockchain.get_peak()
+        return p1 == p2
+
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain)
+
+    # we spend a coin in the next block
+    spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
+
+    # make a non transaction block with fewer iterations than a, which should
+    # replace it
+    chain_b = bt.get_consecutive_blocks(
+        1,
+        chain,
+        guarantee_transaction_block=False,
+        seed=b"{seed}",
+    )
+
+    chain_a = bt.get_consecutive_blocks(
+        1,
+        chain,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+        min_signage_point=chain_b[-1].reward_chain_block.signage_point_index,
+    )
+
+    print(f"chain A: {chain_a[-1].header_hash.hex()}")
+    print(f"chain B: {chain_b[-1].header_hash.hex()}")
+
+    assert chain_b[-1].total_iters < chain_a[-1].total_iters
+
+    await add_blocks_in_batches(chain_a[-1:], full_node_1.full_node)
+
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_a)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_a)
+
+    await add_blocks_in_batches(chain_b[-1:], full_node_1.full_node)
+
+    # make sure node 1 reorged onto chain B
+    assert full_node_1.full_node.blockchain.get_peak().header_hash == chain_b[-1].header_hash
+
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_b)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_b)
+
+    # now continue building the chain on top of B
+    # since spend_bundle was supposed to have been reorged-out, we should be
+    # able to include it in another block, howerver, since we replaced a TX
+    # block with a non-TX block, it won't be available immediately at height 11
+
+    # add a TX block, this will make spend_bundle valid in the next block
+    chain = bt.get_consecutive_blocks(
+        1,
+        chain,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+    for coin in chain[-1].get_included_reward_coins():
+        if coin.puzzle_hash == coinbase_puzzlehash:
+            all_coins.append(coin)
+
+    for i in range(3):
+        chain = bt.get_consecutive_blocks(
+            1,
+            chain,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+            transaction_data=spend_bundle,
+            guarantee_transaction_block=True,
+        )
+        for coin in chain[-1].get_included_reward_coins():
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
+
+    await add_blocks_in_batches(chain[-4:], full_node_1.full_node)
+    await time_out_assert(10, check_nodes_in_sync)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools]) -> None:
+    """
+    This test covers the case where adding a block to the blockchain evicts
+    all its pk msg pairs from the BLS cache.
+    """
+    full_node_1, _, bt = one_node_one_block
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
+    wt = bt.get_pool_wallet_tool()
+    reward_coins = blocks[-1].get_included_reward_coins()
+    # Setup a test block with two pk msg pairs
+    tx1 = wt.generate_signed_transaction(uint64(42), wt.get_new_puzzlehash(), reward_coins[0])
+    tx2 = wt.generate_signed_transaction(uint64(1337), wt.get_new_puzzlehash(), reward_coins[1])
+    tx = SpendBundle.aggregate([tx1, tx2])
+    await full_node_1.full_node.add_transaction(tx, tx.name(), None, test=True)
+    assert len(full_node_1.full_node._bls_cache.items()) == 2
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    # Farming a block with this tx evicts those pk msg pairs from the BLS cache
+    await full_node_1.full_node.add_block(blocks[-1], None, full_node_1.full_node._bls_cache)
+    assert len(full_node_1.full_node._bls_cache.items()) == 0

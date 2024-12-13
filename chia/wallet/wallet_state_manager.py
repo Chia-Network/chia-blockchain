@@ -108,7 +108,7 @@ from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
@@ -519,7 +519,7 @@ class WalletStateManager:
         derivation_paths: list[DerivationRecord] = []
         target_wallet = self.wallets[wallet_id]
         last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
-        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path_for_wallet(wallet_id)
         if unused is None:
             # This handles the case where the database has entries but they have all been used
             unused = await self.puzzle_store.get_last_derivation_path()
@@ -926,22 +926,6 @@ class WalletStateManager:
                             clawback_coins[coin.coin] = metadata
                             if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
                                 await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
-                                async with action_scope.use() as interface:
-                                    # TODO: editing this is not ideal, action scopes should know what coins are spent
-                                    action_scope._config = dataclasses.replace(
-                                        action_scope._config,
-                                        tx_config=dataclasses.replace(
-                                            action_scope._config.tx_config,
-                                            excluded_coin_ids=[
-                                                *action_scope.config.tx_config.excluded_coin_ids,
-                                                *(
-                                                    c.name()
-                                                    for tx in interface.side_effects.transactions
-                                                    for c in tx.removals
-                                                ),
-                                            ],
-                                        ),
-                                    )
                                 clawback_coins = {}
                 except Exception as e:
                     self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
@@ -1268,7 +1252,7 @@ class WalletStateManager:
                     and launch_id == wallet.did_info.origin_coin.name()
                     and not wallet.did_info.sent_recovery_transaction
                 ):
-                    await self.user_store.delete_wallet(wallet.id())
+                    await self.delete_wallet(wallet.id())
                     removed_wallet_ids.append(wallet.id())
             for remove_id in removed_wallet_ids:
                 self.wallets.pop(remove_id)
@@ -1543,7 +1527,7 @@ class WalletStateManager:
                             break
                     if is_empty and nft_wallet.did_id is not None and not has_did:
                         self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
-                        await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
+                        await self.delete_wallet(nft_wallet.wallet_info.id)
                         self.wallets.pop(nft_wallet.wallet_info.id)
             if nft_wallet.nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 self.log.info(
@@ -1714,7 +1698,7 @@ class WalletStateManager:
             curr_h = last_change_height
 
         trade_removals = await self.trade_manager.get_coins_of_interest()
-        all_unconfirmed: list[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
+        all_unconfirmed: list[LightTransactionRecord] = await self.tx_store.get_all_unconfirmed()
         used_up_to = -1
         ph_to_index_cache: LRUCache[bytes32, uint32] = LRUCache(100)
 
@@ -1769,14 +1753,16 @@ class WalletStateManager:
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
                         if coin_state.created_height is not None and coin_state.spent_height is not None:
                             all_unconfirmed = await self.tx_store.get_all_unconfirmed()
-                            tx_records_to_confirm: list[TransactionRecord] = []
+                            tx_records_to_confirm: list[LightTransactionRecord] = []
                             for out_tx_record in all_unconfirmed:
                                 if coin_state.coin in out_tx_record.removals:
                                     tx_records_to_confirm.append(out_tx_record)
 
                             if len(tx_records_to_confirm) > 0:
-                                for tx_record in tx_records_to_confirm:
-                                    await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
+                                for light_tx_record in tx_records_to_confirm:
+                                    await self.tx_store.set_confirmed(
+                                        light_tx_record.name, uint32(coin_state.spent_height)
+                                    )
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
@@ -1918,16 +1904,16 @@ class WalletStateManager:
 
                                 # Reorg rollback adds reorged transactions so it's possible there is tx_record already
                                 # Even though we are just adding coin record to the db (after reorg)
-                                tx_records: list[TransactionRecord] = []
+                                tx_records: list[LightTransactionRecord] = []
                                 for out_tx_record in all_unconfirmed:
                                     for rem_coin in out_tx_record.removals:
                                         if rem_coin == coin_state.coin:
                                             tx_records.append(out_tx_record)
 
                                 if len(tx_records) > 0:
-                                    for tx_record in tx_records:
+                                    for light_record in tx_records:
                                         await self.tx_store.set_confirmed(
-                                            tx_record.name, uint32(coin_state.spent_height)
+                                            light_record.name, uint32(coin_state.spent_height)
                                         )
                                 else:
                                     tx_name = bytes(coin_state.coin.name())
@@ -1961,20 +1947,20 @@ class WalletStateManager:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
                             if record.coin_type == CoinType.CLAWBACK:
                                 await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
-                            confirmed_tx_records: list[TransactionRecord] = []
+                            confirmed_tx_records: list[LightTransactionRecord] = []
 
-                            for tx_record in all_unconfirmed:
-                                if tx_record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
-                                    for add_coin in tx_record.additions:
+                            for light_record in all_unconfirmed:
+                                if light_record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                                    for add_coin in light_record.additions:
                                         if add_coin == coin_state.coin:
-                                            confirmed_tx_records.append(tx_record)
+                                            confirmed_tx_records.append(light_record)
                                 else:
-                                    for rem_coin in tx_record.removals:
+                                    for rem_coin in light_record.removals:
                                         if rem_coin == coin_state.coin:
-                                            confirmed_tx_records.append(tx_record)
+                                            confirmed_tx_records.append(light_record)
 
-                            for tx_record in confirmed_tx_records:
-                                await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
+                            for light_record in confirmed_tx_records:
+                                await self.tx_store.set_confirmed(light_record.name, uint32(coin_state.spent_height))
                         for unconfirmed_record in all_unconfirmed:
                             for rem_coin in unconfirmed_record.removals:
                                 if rem_coin == coin_state.coin:
@@ -2217,7 +2203,7 @@ class WalletStateManager:
         self,
         coin: Coin,
         height: uint32,
-        all_unconfirmed_transaction_records: list[TransactionRecord],
+        all_unconfirmed_transaction_records: list[LightTransactionRecord],
         wallet_id: uint32,
         wallet_type: WalletType,
         peer: WSChiaConnection,
@@ -2247,7 +2233,7 @@ class WalletStateManager:
         coin_confirmed_transaction = False
         if not coinbase:
             for record in all_unconfirmed_transaction_records:
-                if coin in record.additions and not record.confirmed:
+                if coin in record.additions:
                     await self.tx_store.set_confirmed(record.name, height)
                     coin_confirmed_transaction = True
                     break
@@ -2485,7 +2471,7 @@ class WalletStateManager:
                 if remove:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
-            await self.user_store.delete_wallet(wallet_id)
+            await self.delete_wallet(wallet_id)
             self.state_changed("wallet_removed", wallet_id)
 
         return remove_ids
@@ -2817,3 +2803,7 @@ class WalletStateManager:
             extra_spends=extra_spends,
         ) as action_scope:
             yield action_scope
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        await self.user_store.delete_wallet(wallet_id)
+        await self.puzzle_store.delete_wallet(wallet_id)
