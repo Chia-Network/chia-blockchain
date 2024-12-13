@@ -7,7 +7,7 @@ from typing import Optional
 
 import click
 
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
 
 

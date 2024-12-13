@@ -19,7 +19,7 @@ from chia.cmds.beta_funcs import (
     validate_beta_path,
     validate_metrics_log_interval,
 )
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.beta_metrics import metrics_log_interval_default
 from chia.util.config import lock_and_load_config, save_config
 

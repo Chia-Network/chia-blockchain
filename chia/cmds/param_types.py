@@ -6,8 +6,8 @@ from typing import Any, Callable, Optional, Union
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.units import units
-from chia.cmds.util import ChiaCliContext
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix

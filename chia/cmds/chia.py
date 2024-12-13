@@ -7,6 +7,7 @@ import click
 
 from chia import __version__
 from chia.cmds.beta import beta_cmd
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
 from chia.cmds.dao import dao_cmd
@@ -26,7 +27,6 @@ from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
-from chia.cmds.util import ChiaCliContext
 from chia.cmds.wallet import wallet_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, resolve_root_path
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid

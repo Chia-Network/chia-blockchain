@@ -7,8 +7,8 @@ from typing import Any, Optional
 import click
 
 from chia.cmds import options
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.sim_funcs import async_config_wizard, farm_blocks, print_status, revert_block_height, set_auto_farm
-from chia.cmds.util import ChiaCliContext
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 
 

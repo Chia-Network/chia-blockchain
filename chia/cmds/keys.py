@@ -6,7 +6,7 @@ import click
 from chia_rs import PrivateKey
 
 from chia.cmds import options
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext
 
 
 @click.group("keys", help="Manage your keys")

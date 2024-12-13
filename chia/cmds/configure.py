@@ -6,7 +6,7 @@ from typing import Optional
 import click
 import yaml
 
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.server.outbound_message import NodeType
 from chia.util.config import (
     initial_config_file,

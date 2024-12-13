@@ -2,21 +2,23 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import dataclasses
 import inspect
+import pathlib
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any, Callable, Optional, Protocol, Union, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Optional, Protocol, Union, cast, final, get_args, get_origin, get_type_hints
 
 import click
 from typing_extensions import dataclass_transform
 
 from chia.cmds.cmds_util import get_wallet_client
-from chia.cmds.util import ChiaCliContext
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.streamable import is_type_SpecificOptional
 
 SyncCmd = Callable[..., None]
@@ -51,6 +53,30 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
         ),
         default=kwargs.get("default", default_default),
     )
+
+
+@final
+@dataclasses.dataclass
+class ChiaCliContext:
+    context_dict_key: ClassVar[str] = "_chia_cli_context"
+
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH
+    expected_prefix: Optional[str] = None
+    rpc_port: Optional[int] = None
+
+    @classmethod
+    def from_click(cls, ctx: click.Context) -> ChiaCliContext:
+        if ctx.obj is None:
+            return cls()
+
+        existing = cast(Optional[ChiaCliContext], ctx.obj.get(cls.context_dict_key))
+        if existing is None:
+            return cls()
+
+        return existing
+
+    def to_click(self) -> dict[str, object]:
+        return {self.context_dict_key: self}
 
 
 class HexString(click.ParamType):
@@ -119,7 +145,7 @@ class _CommandParsingStage:
 
             def strip_click_context(func: SyncCmd) -> SyncCmd:
                 def _inner(ctx: click.Context, **kwargs: Any) -> None:
-                    context: Context = ChiaCliContext.from_click(ctx)
+                    context = ChiaCliContext.from_click(ctx)
                     func(context=context, **kwargs)
 
                 return _inner
@@ -155,7 +181,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
         if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
             members[field_name] = _generate_command_parser(hints[field_name])
         elif field_name == "context":
-            if hints[field_name] != Context:
+            if hints[field_name] != ChiaCliContext:
                 raise ValueError("only Context can be the hint for variables named 'context'")
             else:
                 needs_context = True
@@ -291,9 +317,6 @@ def command_helper(cls: type[Any]) -> type[Any]:
     return new_cls
 
 
-Context = ChiaCliContext
-
-
 @dataclass(frozen=True)
 class WalletClientInfo:
     client: WalletRpcClient
@@ -303,7 +326,7 @@ class WalletClientInfo:
 
 @command_helper
 class NeedsWalletRPC:
-    context: Context = field(default_factory=ChiaCliContext)
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     client_info: Optional[WalletClientInfo] = None
     wallet_rpc_port: Optional[int] = option(
         "-wp",

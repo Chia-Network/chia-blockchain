@@ -13,8 +13,7 @@ from click.testing import CliRunner
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
-from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext, ChiaCommand, NeedsWalletRPC, chia_command, option
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
@@ -150,7 +149,7 @@ def test_context_requirement() -> None:
 
     @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD:
-        context: Context
+        context: ChiaCliContext
 
         def run(self) -> None:
             assert self.context.root_path == pathlib.Path("foo", "bar")

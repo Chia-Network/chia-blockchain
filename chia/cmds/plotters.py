@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import click
 
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.plotters.plotters import call_plotters
 
 

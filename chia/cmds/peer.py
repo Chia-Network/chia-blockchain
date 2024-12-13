@@ -4,9 +4,9 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmds_util import NODE_TYPES
 from chia.cmds.peer_funcs import peer_async
-from chia.cmds.util import ChiaCliContext
 
 
 @click.command("peer", help="Show, or modify peering connections", no_args_is_help=True)

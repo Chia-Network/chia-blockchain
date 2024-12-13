@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import click
 
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
 from chia.util.service_groups import all_groups
 

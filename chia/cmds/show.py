@@ -4,8 +4,8 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.show_funcs import show_async
-from chia.cmds.util import ChiaCliContext
 
 
 @click.command("show", help="Show node information", no_args_is_help=True)

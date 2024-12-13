@@ -22,7 +22,7 @@ from chia.wallet.util.address_type import AddressType
 def test_plotnft_command_default_parsing() -> None:
     launcher_id = bytes32([1] * 32)
     check_click_parsing(
-        GetLoginLinkCMD(context=dict(), launcher_id=launcher_id),
+        GetLoginLinkCMD(launcher_id=launcher_id),
         "--launcher_id",
         launcher_id.hex(),
     )
@@ -120,9 +120,7 @@ def test_plotnft_command_default_parsing() -> None:
     )
 
     check_click_parsing(
-        ShowPlotNFTCMD(
-            context=dict(), rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5
-        ),
+        ShowPlotNFTCMD(rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5),
         "--id",
         "5",
     )

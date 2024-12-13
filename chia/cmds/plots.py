@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from chia.cmds.util import ChiaCliContext
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.plotting.util import add_plot_directory, validate_plot_size
 
 log = logging.getLogger(__name__)

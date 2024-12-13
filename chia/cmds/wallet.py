@@ -9,7 +9,7 @@ import click
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
-from chia.cmds.cmd_classes import get_chia_command_metadata
+from chia.cmds.cmd_classes import ChiaCliContext, get_chia_command_metadata
 from chia.cmds.cmds_util import timelock_args, tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
@@ -21,7 +21,6 @@ from chia.cmds.param_types import (
     cli_amount_none,
 )
 from chia.cmds.signer import PushTransactionsCMD, signer_cmd
-from chia.cmds.util import ChiaCliContext
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes

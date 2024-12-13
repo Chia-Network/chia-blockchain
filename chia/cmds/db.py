@@ -5,10 +5,10 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.db_backup_func import db_backup_func
 from chia.cmds.db_upgrade_func import db_upgrade_func
 from chia.cmds.db_validate_func import db_validate_func
-from chia.cmds.util import ChiaCliContext
 
 
 @click.group("db", help="Manage the blockchain database")

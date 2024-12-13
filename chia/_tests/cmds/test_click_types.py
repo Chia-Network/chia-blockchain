@@ -8,6 +8,7 @@ from typing import Any, cast
 import pytest
 from click import BadParameter, Context
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.param_types import (
     AddressParamType,
     AmountParamType,
@@ -18,7 +19,6 @@ from chia.cmds.param_types import (
     Uint64ParamType,
 )
 from chia.cmds.units import units
-from chia.cmds.util import ChiaCliContext
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
