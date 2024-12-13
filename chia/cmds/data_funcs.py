@@ -10,6 +10,7 @@ from chia.cmds.cmds_util import get_any_service_client
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.default_root import resolve_root_path
 from chia.util.ints import uint64
 
 
@@ -17,6 +18,8 @@ from chia.util.ints import uint64
 async def get_client(
     rpc_port: Optional[int], fingerprint: Optional[int] = None, root_path: Optional[Path] = None
 ) -> AsyncIterator[tuple[DataLayerRpcClient, dict[str, Any]]]:
+    root_path = resolve_root_path(override=root_path)
+
     async with get_any_service_client(
         client_type=DataLayerRpcClient,
         rpc_port=rpc_port,
