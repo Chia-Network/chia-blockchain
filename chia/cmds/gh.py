@@ -6,8 +6,9 @@ import shlex
 import urllib
 import uuid
 import webbrowser
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Callable, ClassVar, Literal, Optional, Sequence, Union, overload
+from typing import Callable, ClassVar, Literal, Optional, Union, overload
 
 import anyio
 import click
