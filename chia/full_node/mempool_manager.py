@@ -162,12 +162,11 @@ class MempoolManager:
         # spends.
         self.nonzero_fee_minimum_fpc = 5
 
-        BLOCK_SIZE_LIMIT_FACTOR = 0.7
         # We need to deduct the block overhead, which consists of the wrapping
         # quote opcode's bytes cost as well as its execution cost.
         BLOCK_OVERHEAD = QUOTE_BYTES * self.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
 
-        self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR - BLOCK_OVERHEAD)
+        self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM - BLOCK_OVERHEAD)
         self.max_tx_clvm_cost = (
             max_tx_clvm_cost if max_tx_clvm_cost is not None else uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
         )
@@ -450,7 +449,7 @@ class MempoolManager:
             )
 
         if removal_names != removal_names_from_coin_spends:
-            # If you reach here it's probably because your puzzle reveal doesn't match the coin's puzzle hash
+            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
@@ -801,13 +800,8 @@ def can_replace(
         # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
-        conflicting_removals = {c.name(): c for c in item.removals}
-        for coin in conflicting_removals.values():
-            coin_name = coin.name()
-            # if the parent of this coin is one of the spends in this
-            # transaction, it means it's an ephemeral coin spend. Such spends
-            # are not considered by the superset rule
-            if coin_name not in removal_names and coin.parent_coin_info not in conflicting_removals:
+        for coin in item.removals:
+            if coin.name() not in removal_names:
                 log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
                 return False
 

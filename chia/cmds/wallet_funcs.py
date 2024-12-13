@@ -21,7 +21,18 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse
+from chia.rpc.wallet_request_types import (
+    CATSpendResponse,
+    GetNotifications,
+    SendTransactionResponse,
+    VCAddProofs,
+    VCGet,
+    VCGetList,
+    VCGetProofsForRoot,
+    VCMint,
+    VCRevoke,
+    VCSpend,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -1582,11 +1593,13 @@ async def mint_vc(
 ) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.vc_mint(
-            did.validate_address_type_get_ph(AddressType.DID),
+            VCMint(
+                did_id=did.validate_address_type(AddressType.DID),
+                target_address=target_address.validate_address_type(AddressType.XCH) if target_address else None,
+                fee=fee,
+                push=push,
+            ),
             CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-            target_address.validate_address_type_get_ph(AddressType.XCH) if target_address else None,
-            fee,
-            push=push,
             timelock_info=condition_valid_times,
         )
 
@@ -1607,14 +1620,14 @@ async def mint_vc(
 
 async def get_vcs(wallet_rpc_port: Optional[int], fp: Optional[int], start: int, count: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, config):
-        vc_records, proofs = await wallet_client.vc_get_list(start, count)
+        get_list_response = await wallet_client.vc_get_list(VCGetList(uint32(start), uint32(count)))
         print("Proofs:")
-        for hash, proof_dict in proofs.items():
+        for hash, proof_dict in get_list_response.proof_dict.items():
             if proof_dict is not None:
                 print(f"- {hash}")
                 for proof in proof_dict:
                     print(f"  - {proof}")
-        for record in vc_records:
+        for record in get_list_response.vc_records:
             print("")
             print(f"Launcher ID: {record.vc.launcher_id.hex()}")
             print(f"Coin ID: {record.vc.coin.name().hex()}")
@@ -1643,14 +1656,16 @@ async def spend_vc(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         txs = (
             await wallet_client.vc_spend(
-                vc_id,
-                new_puzhash=new_puzhash,
-                new_proof_hash=bytes32.from_hexstr(new_proof_hash),
-                fee=fee,
+                VCSpend(
+                    vc_id=vc_id,
+                    new_puzhash=new_puzhash,
+                    new_proof_hash=bytes32.from_hexstr(new_proof_hash),
+                    fee=fee,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
         ).transactions
@@ -1683,14 +1698,18 @@ async def add_proof_reveal(
             print(f"Proof Hash: {VCProofs(proof_dict).root()}")
             return
         else:
-            await wallet_client.vc_add_proofs(proof_dict)
+            await wallet_client.vc_add_proofs(VCAddProofs.from_json_dict({"proofs": proof_dict}))
             print("Proofs added to DB successfully!")
             return
 
 
 async def get_proofs_for_root(wallet_rpc_port: Optional[int], fp: Optional[int], proof_hash: str) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        proof_dict: dict[str, str] = await wallet_client.vc_get_proofs_for_root(bytes32.from_hexstr(proof_hash))
+        proof_dict: dict[str, str] = (
+            (await wallet_client.vc_get_proofs_for_root(VCGetProofsForRoot(bytes32.from_hexstr(proof_hash))))
+            .to_vc_proofs()
+            .key_value_pairs
+        )
         print("Proofs:")
         for proof in proof_dict:
             print(f" - {proof}")
@@ -1711,7 +1730,7 @@ async def revoke_vc(
             if vc_id is None:
                 print("Must specify either --parent-coin-id or --vc-id")
                 return []
-            record = await wallet_client.vc_get(vc_id)
+            record = (await wallet_client.vc_get(VCGet(vc_id))).vc_record
             if record is None:
                 print(f"Cannot find a VC with ID {vc_id.hex()}")
                 return []
@@ -1720,12 +1739,14 @@ async def revoke_vc(
             parent_id = parent_coin_id
         txs = (
             await wallet_client.vc_revoke(
-                parent_id,
-                fee=fee,
+                VCRevoke(
+                    vc_parent_id=parent_id,
+                    fee=fee,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
         ).transactions

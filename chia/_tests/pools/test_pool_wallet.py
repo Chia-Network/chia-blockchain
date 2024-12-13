@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, cast
 from unittest.mock import MagicMock
@@ -20,10 +20,14 @@ class MockStandardWallet:
     async def get_new_puzzlehash(self) -> bytes32:
         return self.canned_puzzlehash
 
+    async def get_puzzle_hash(self, new: bool) -> bytes32:
+        return self.canned_puzzlehash
+
 
 @dataclass
 class MockWalletStateManager:
     root_path: Optional[Path] = None
+    config: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

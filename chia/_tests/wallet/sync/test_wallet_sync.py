@@ -46,7 +46,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -189,7 +188,7 @@ async def test_basic_sync_wallet(
     blocks_reorg = bt.get_consecutive_blocks(num_blocks - 1, block_list_input=default_400_blocks[:-5])
     blocks_reorg = bt.get_consecutive_blocks(1, blocks_reorg, guarantee_transaction_block=True, current_time=True)
 
-    await add_blocks_in_batches(blocks_reorg[1:], full_node, blocks_reorg[0].header_hash)
+    await add_blocks_in_batches(blocks_reorg[1:], full_node)
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(
@@ -246,9 +245,7 @@ async def test_almost_recent(
         blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
     )
 
-    await add_blocks_in_batches(
-        new_blocks[base_num_blocks + 20 :], full_node, new_blocks[base_num_blocks + 19].header_hash
-    )
+    await add_blocks_in_batches(new_blocks[base_num_blocks + 20 :], full_node)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -361,7 +358,6 @@ async def test_long_sync_wallet(
     )
     fork_height = blocks_reorg[-num_blocks - 10].height - 1
     await full_node.add_block_batch(
-        AugmentedBlockchain(full_node.blockchain),
         blocks_reorg[-num_blocks - 10 : -1],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(fork_height, fork_height, blocks_reorg[-num_blocks - 10].prev_header_hash),
@@ -436,7 +432,7 @@ async def test_wallet_reorg_sync(
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
-    await add_blocks_in_batches(blocks_reorg[-30:], full_node, blocks_reorg[-30].prev_header_hash)
+    await add_blocks_in_batches(blocks_reorg[-30:], full_node)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -490,7 +486,6 @@ async def test_wallet_reorg_get_coinbase(
         full_node.constants, True, block_record, full_node.blockchain
     )
     await full_node.add_block_batch(
-        AugmentedBlockchain(full_node.blockchain),
         blocks_reorg_2[-44:],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(blocks_reorg_2[-45].height, blocks_reorg_2[-45].height, blocks_reorg_2[-45].header_hash),

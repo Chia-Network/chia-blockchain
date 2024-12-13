@@ -16,7 +16,7 @@ from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_com
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-def check_click_parsing(cmd: ChiaCommand, *args: str) -> None:
+def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None) -> None:
     @click.group()
     def _cmd() -> None:
         pass
@@ -40,7 +40,7 @@ def check_click_parsing(cmd: ChiaCommand, *args: str) -> None:
     chia_command(_cmd, "_", "", "")(mock_type)
 
     runner = CliRunner()
-    result = runner.invoke(_cmd, ["_", *args], catch_exceptions=False)
+    result = runner.invoke(_cmd, ["_", *args], catch_exceptions=False, obj=obj)
     assert result.output == ""
 
 

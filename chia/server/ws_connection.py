@@ -22,6 +22,7 @@ from chia.protocols.protocol_timing import (
     API_EXCEPTION_BAN_SECONDS,
     CONSENSUS_ERROR_BAN_SECONDS,
     INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
+    RATE_LIMITER_BAN_SECONDS,
 )
 from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
@@ -713,7 +714,7 @@ class WSChiaConnection:
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
                     # TODO: stop dropping tasks on the floor
-                    asyncio.create_task(self.close(300))  # noqa: RUF006
+                    asyncio.create_task(self.close(RATE_LIMITER_BAN_SECONDS))  # noqa: RUF006
                     await asyncio.sleep(3)
                     return None
                 else:
@@ -727,7 +728,7 @@ class WSChiaConnection:
             self.log.error(f"WebSocket Error: {message}")
             if isinstance(message.data, WebSocketError) and message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
                 # TODO: stop dropping tasks on the floor
-                asyncio.create_task(self.close(300))  # noqa: RUF006
+                asyncio.create_task(self.close(RATE_LIMITER_BAN_SECONDS))  # noqa: RUF006
             else:
                 # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.close())  # noqa: RUF006

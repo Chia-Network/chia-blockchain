@@ -25,7 +25,7 @@ async def create_blockchain(
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
         coin_store = await CoinStore.create(wrapper)
         store = await BlockStore.create(wrapper)
-        bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2, single_threaded=True)
+        bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2, single_threaded=True, log_coins=True)
         try:
             assert bc1.get_peak() is None
             yield bc1, wrapper
