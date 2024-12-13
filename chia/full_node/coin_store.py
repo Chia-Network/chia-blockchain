@@ -157,8 +157,9 @@ class CoinStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             if conn!=self.db_wrapper._write_connection:
+                task=asyncio.current_task()
                 log.info(
-                    f"get_coin_records not using _current_writer {asyncio.current_task().get_name()} {conn}"
+                    f"get_coin_records not using _current_writer {task.get_name()} {conn}"
                 )
                 frame = inspect.currentframe().f_back
                 log.info(f"  Trace 1 {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
