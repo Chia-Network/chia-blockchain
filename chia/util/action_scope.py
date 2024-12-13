@@ -4,7 +4,7 @@ import contextlib
 import copy
 from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, field
-from typing import Any, AsyncContextManager, Callable, Generic, Optional, Protocol, TypeVar, final
+from typing import Any, Callable, Generic, Optional, Protocol, TypeVar, final
 
 
 class SideEffects(Protocol):
@@ -30,7 +30,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     from interfering with each other.
     """
 
-    _lock: Callable[..., AsyncContextManager[Any]]
+    _lock: Callable[..., contextlib.AbstractAsyncContextManager[Any]]
     _active_interface: StateInterface[_T_SideEffects]
     _config: _T_Config  # An object not intended to be mutated during the lifetime of the scope
     _final_side_effects: Optional[_T_SideEffects] = field(init=False, default=None)
@@ -53,7 +53,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     @contextlib.asynccontextmanager
     async def new_scope(
         cls,
-        lock: Callable[..., AsyncContextManager[Any]],
+        lock: Callable[..., contextlib.AbstractAsyncContextManager[Any]],
         initial_side_effects: _T_SideEffects,
         # I want a default here in case a use case doesn't want to take advantage of the config but no default seems to
         # satisfy the type hint _T_Config so we'll just ignore this.
