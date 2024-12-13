@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import pathlib
-import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
@@ -18,7 +17,6 @@ from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.aliases import FullNodeService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
-from chia.util.default_root import resolve_root_path
 from chia.util.ints import uint16
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
@@ -90,14 +88,13 @@ async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) ->
     return 0
 
 
-def main() -> int:
+def main(root_path: pathlib.Path, args: Optional[list[str]] = None) -> int:
     freeze_support()
-    root_path = resolve_root_path(override=None)
 
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+        service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, args=args)
         target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
             "target_outbound_peer_count", 8
         )
@@ -106,7 +103,3 @@ def main() -> int:
         if not service_config.get("use_chia_loop_policy", True):
             target_peer_count = None
         return async_run(coro=async_main(service_config, root_path=root_path), connection_limit=target_peer_count)
-
-
-if __name__ == "__main__":
-    sys.exit(main())

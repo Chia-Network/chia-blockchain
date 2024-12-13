@@ -43,6 +43,26 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
 
     return field(
         metadata=dict(
+            click_call=click.option,
+            option_args=dict(
+                param_decls=tuple(param_decls),
+                **kwargs,
+            ),
+        ),
+        default=kwargs.get("default", default_default),
+    )
+
+
+def argument(*param_decls: str, **kwargs: Any) -> Any:
+    if sys.version_info < (3, 10):  # versions < 3.10 don't know about kw_only and they complain about lacks of defaults
+        # Can't get coverage on this because we only test on one version
+        default_default = None  # pragma: no cover
+    else:
+        default_default = MISSING
+
+    return field(
+        metadata=dict(
+            click_call=click.argument,
             option_args=dict(
                 param_decls=tuple(param_decls),
                 **kwargs,
@@ -160,6 +180,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
                 needs_context = True
                 kwarg_names.append(field_name)
         elif "option_args" in _field.metadata:
+            click_call = _field.metadata["click_call"]
             option_args: dict[str, Any] = {"multiple": False, "required": False}
             option_args.update(_field.metadata["option_args"])
 
@@ -201,8 +222,12 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
                 type_arg = option_args["type"]
 
             kwarg_names.append(field_name)
+            if click_call is click.argument:
+                is_multiple = option_args.pop("multiple")
+                if is_multiple:
+                    option_args["nargs"] = -1
             option_decorators.append(
-                click.option(
+                click_call(
                     *option_args["param_decls"],
                     field_name,
                     type=type_arg,
@@ -232,6 +257,8 @@ def chia_command(
     name: str,
     short_help: str,
     help: str,
+    add_help_option: bool = True,
+    ignore_unknown_options: bool = False,
 ) -> Callable[[type[ChiaCommand]], type[ChiaCommand]]:
     def _chia_command(cls: type[ChiaCommand]) -> type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
@@ -252,6 +279,8 @@ def chia_command(
                 name=name,
                 short_help=short_help,
                 help=help,
+                add_help_option=add_help_option,
+                context_settings={"ignore_unknown_options": ignore_unknown_options},
             )(_convert_class_to_function(wrapped_cls))
         )
 
