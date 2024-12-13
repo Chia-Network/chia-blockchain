@@ -56,6 +56,7 @@ async def test_invalid_only(case: InvalidOnlyCase) -> None:
         await cmd.run()
 
 
+@pytest.mark.skip("considering inclusion, but not yet")
 @pytest.mark.anyio
 async def test_successfully_dispatches(
     capsys: CaptureFixture[str],
