@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-DEFAULT_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/mainnet"))).resolve()
+DEFAULT_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/epchrismain2wjb"))).resolve()
 
 DEFAULT_KEYS_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_KEYS_ROOT", "~/.chia_keys"))).resolve()
 
@@ -17,7 +17,7 @@ def resolve_root_path(*, override: Optional[Path]) -> Path:
     candidates = [
         override,
         os.environ.get("CHIA_ROOT"),
-        "~/.chia/mainnet",
+        "~/.chia/epchrismain2wjb",
     ]
 
     for candidate in candidates:
