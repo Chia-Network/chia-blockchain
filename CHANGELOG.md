@@ -1686,8 +1686,8 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 
 ### Known Issues
 
-- When you are adding plots and you choose the option to “create a Plot NFT”, you will get an error message “Initial_target_state” and the plots will not get created.
-  - Workaround: Create the Plot NFT first in the “Pool” tab, and then add your plots and choose the created plot NFT in the drop down.
+- When you are adding plots and you choose the option to "create a Plot NFT", you will get an error message "Initial_target_state" and the plots will not get created.
+  - Workaround: Create the Plot NFT first in the "Pool" tab, and then add your plots and choose the created plot NFT in the drop down.
 - When you close the Chia app, regardless if you are in farmer mode or wallet, the content on the exit dialog isn’t correct.
 - If you start with wallet mode and then switch to farmer mode and back to wallet mode, the full node will continue to sync in the background. To get the full node to stop syncing after switching to wallet mode, you will need to close the Chia and relaunch the Chia app.
 - Wallets with large number of transactions or large number of coins will take longer to sync (more than a few minutes), but should take less time than a full node sync. It could fail in some cases.
@@ -3536,7 +3536,7 @@ Batch process weight proof epochs in groups of 900 to fit below May 2020 sqlite 
 
 ### Fixed
 
-- FullNode: A long running or low ulimit situation could cause an “out of files” issue which would stop new connection creation. Removed the underlying socket leak.
+- FullNode: A long running or low ulimit situation could cause an "out of files" issue which would stop new connection creation. Removed the underlying socket leak.
 - FullNode: Multiple SSH UI bugs fixed.
 - Harvester: Farming a plot of k = 30 or greater could lead to a segfault in the harvester.
 - Updated blspy requirement to address an issue in the underlying bls-signatures library.
