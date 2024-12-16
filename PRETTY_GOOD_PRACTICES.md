@@ -619,6 +619,9 @@ class SomeWallet:
   pytest does not.
   Our tests are fully dependent on pytest so there's no use in retaining `unittest` compatibility for this single point.
   Making a few tests `unittest` compatible is not useful compared with the cost of inconsistency.
+- Avoid monkey-patching (assigning to a method on a class object or instance) as much as possible.
+  If necessary, opt for it in an explicit and scoped manner using the `monkeypatch: pytest.MonkeyPatch` fixture with a context manager, instead of silencing mypy using `# type: ignore[assignment]`.
+  While in both cases we're signaling to the reader that something smelly/shady is going on, and type safety is lost, the monkeypatch approach with a context manager allows us to make the scope of the change controlled consistently.
 
 ## CLI
 
