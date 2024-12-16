@@ -337,6 +337,21 @@ class Blockchain:
 
         header_hash: bytes32 = block.header_hash
 
+        # passing in correct fork_info is critical for performing reorgs
+        # correctly, so we perform some validation of it here
+        assert block.height - 1 == fork_info.peak_height
+        assert len(fork_info.block_hashes) == fork_info.peak_height - fork_info.fork_height
+        if fork_info.peak_height == fork_info.fork_height:
+            # if fork_info is saying we're not on a fork, the previous block better
+            # be part of the main chain
+            assert block.prev_header_hash == fork_info.peak_hash
+            if fork_info.fork_height == -1:
+                assert fork_info.peak_hash == self.constants.GENESIS_CHALLENGE
+            else:
+                assert self.height_to_hash(uint32(fork_info.fork_height)) == block.prev_header_hash
+        else:
+            assert fork_info.peak_hash == block.prev_header_hash
+
         if extending_main_chain:
             fork_info.reset(block.height - 1, block.prev_header_hash)
 

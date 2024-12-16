@@ -188,7 +188,7 @@ async def test_basic_sync_wallet(
     blocks_reorg = bt.get_consecutive_blocks(num_blocks - 1, block_list_input=default_400_blocks[:-5])
     blocks_reorg = bt.get_consecutive_blocks(1, blocks_reorg, guarantee_transaction_block=True, current_time=True)
 
-    await add_blocks_in_batches(blocks_reorg[1:], full_node, blocks_reorg[0].header_hash)
+    await add_blocks_in_batches(blocks_reorg[1:], full_node)
 
     for wallet_node, wallet_server in wallets:
         await time_out_assert(
@@ -245,9 +245,7 @@ async def test_almost_recent(
         blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
     )
 
-    await add_blocks_in_batches(
-        new_blocks[base_num_blocks + 20 :], full_node, new_blocks[base_num_blocks + 19].header_hash
-    )
+    await add_blocks_in_batches(new_blocks[base_num_blocks + 20 :], full_node)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -434,7 +432,7 @@ async def test_wallet_reorg_sync(
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
-    await add_blocks_in_batches(blocks_reorg[-30:], full_node, blocks_reorg[-30].prev_header_hash)
+    await add_blocks_in_batches(blocks_reorg[-30:], full_node)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet

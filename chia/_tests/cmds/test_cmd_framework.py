@@ -58,7 +58,7 @@ def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None)
     setattr(new_run, _TRANSACTION_ENDPOINT_DECORATOR_APPLIED, True)
 
     setattr(mock_type, "run", new_run)
-    chia_command(_cmd, "_", "", "")(mock_type)
+    chia_command(group=_cmd, name="_", short_help="", help="")(mock_type)
 
     runner = CliRunner()
     result = runner.invoke(_cmd, ["_", *args], catch_exceptions=False, obj=obj)
@@ -70,12 +70,12 @@ def test_cmd_bases() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD:
         def run(self) -> None:
             print("syncronous")
 
-    @chia_command(cmd, "temp_cmd_async", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd_async", short_help="blah", help="n/a")
     class TempCMDAsync:
         async def run(self) -> None:
             print("asyncronous")
@@ -117,7 +117,7 @@ def test_option_loading() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD:
         some_option: int = option("-o", "--some-option", required=True, type=int)
         choices: list[str] = option("--choice", multiple=True, type=str)
@@ -125,7 +125,7 @@ def test_option_loading() -> None:
         def run(self) -> None:
             print(self.some_option)
 
-    @chia_command(cmd, "temp_cmd_2", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd_2", short_help="blah", help="n/a")
     class TempCMD2:
         some_option: int = option("-o", "--some-option", required=True, type=int, default=13)
 
@@ -167,7 +167,7 @@ def test_context_requirement() -> None:
     def cmd(ctx: click.Context) -> None:
         ctx.obj = {"foo": "bar"}
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD:
         context: Context
 
@@ -185,7 +185,7 @@ def test_context_requirement() -> None:
     # Test that other variables named context are disallowed
     with pytest.raises(ValueError, match="context"):
 
-        @chia_command(cmd, "shouldnt_work", "blah", help="n/a")
+        @chia_command(group=cmd, name="shouldnt_work", short_help="blah", help="n/a")
         class BadCMD:
             context: int
 
@@ -197,7 +197,7 @@ def test_typing() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD:
         integer: int = option("--integer", default=1, required=False)
         text: str = option("--text", default="1", required=False)
@@ -229,7 +229,7 @@ def test_typing() -> None:
     )
 
     # Test optional
-    @chia_command(cmd, "temp_cmd_optional", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd_optional", short_help="blah", help="n/a")
     class TempCMDOptional:
         optional: Optional[int] = option("--optional", required=False)
 
@@ -241,7 +241,7 @@ def test_typing() -> None:
     # Test optional failure
     with pytest.raises(TypeError):
 
-        @chia_command(cmd, "temp_cmd_optional_bad", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_optional_bad", short_help="blah", help="n/a")
         class TempCMDOptionalBad2:
             optional: Optional[int] = option("--optional", required=True)
 
@@ -249,20 +249,20 @@ def test_typing() -> None:
 
     with pytest.raises(TypeError):
 
-        @chia_command(cmd, "temp_cmd_optional_bad", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_optional_bad", short_help="blah", help="n/a")
         class TempCMDOptionalBad3:
             optional: Optional[int] = option("--optional", default="string", required=False)
 
             def run(self) -> None: ...
 
-    @chia_command(cmd, "temp_cmd_optional_fine", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd_optional_fine", short_help="blah", help="n/a")
     class TempCMDOptionalBad4:
         optional: Optional[int] = option("--optional", default=None, required=False)
 
         def run(self) -> None: ...
 
     # Test multiple
-    @chia_command(cmd, "temp_cmd_sequence", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd_sequence", short_help="blah", help="n/a")
     class TempCMDSequence:
         sequence: Sequence[int] = option("--sequence", multiple=True)
 
@@ -274,7 +274,7 @@ def test_typing() -> None:
     # Test sequence failure
     with pytest.raises(TypeError):
 
-        @chia_command(cmd, "temp_cmd_sequence_bad", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_sequence_bad", short_help="blah", help="n/a")
         class TempCMDSequenceBad:
             sequence: Sequence[int] = option("--sequence")
 
@@ -282,7 +282,7 @@ def test_typing() -> None:
 
     with pytest.raises(TypeError):
 
-        @chia_command(cmd, "temp_cmd_sequence_bad", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_sequence_bad", short_help="blah", help="n/a")
         class TempCMDSequenceBad2:
             sequence: int = option("--sequence", multiple=True)
 
@@ -290,7 +290,7 @@ def test_typing() -> None:
 
     with pytest.raises(ValueError):
 
-        @chia_command(cmd, "temp_cmd_sequence_bad", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_sequence_bad", short_help="blah", help="n/a")
         class TempCMDSequenceBad3:
             sequence: Sequence[int] = option("--sequence", default=[1, 2, 3], multiple=True)
 
@@ -298,7 +298,7 @@ def test_typing() -> None:
 
     with pytest.raises(TypeError):
 
-        @chia_command(cmd, "temp_cmd_sequence_bad", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_sequence_bad", short_help="blah", help="n/a")
         class TempCMDSequenceBad4:
             sequence: Sequence[int] = option("--sequence", default=(1, 2, "3"), multiple=True)
 
@@ -307,7 +307,7 @@ def test_typing() -> None:
     # Test invalid type
     with pytest.raises(TypeError):
 
-        @chia_command(cmd, "temp_cmd_bad_type", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_bad_type", short_help="blah", help="n/a")
         class TempCMDBadType:
             sequence: list[int] = option("--sequence")
 
@@ -316,20 +316,20 @@ def test_typing() -> None:
     # Test invalid default
     with pytest.raises(TypeError):
 
-        @chia_command(cmd, "temp_cmd_bad_default", "blah", help="n/a")
+        @chia_command(group=cmd, name="temp_cmd_bad_default", short_help="blah", help="n/a")
         class TempCMDBadDefault:
             integer: int = option("--int", default="string")
 
             def run(self) -> None: ...
 
     # Test bytes parsing
-    @chia_command(cmd, "temp_cmd_bad_bytes", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd_bad_bytes", short_help="blah", help="n/a")
     class TempCMDBadBytes:
         blob: bytes = option("--blob", required=True)
 
         def run(self) -> None: ...
 
-    @chia_command(cmd, "temp_cmd_bad_bytes32", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd_bad_bytes32", short_help="blah", help="n/a")
     class TempCMDBadBytes32:
         blob32: bytes32 = option("--blob32", required=True)
 
@@ -375,7 +375,7 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD:
         rpc_info: NeedsWalletRPC
 
@@ -428,7 +428,7 @@ def test_tx_config_helper() -> None:
     def cmd() -> None:
         pass  # pragma: no cover
 
-    @chia_command(cmd, "cs_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="cs_cmd", short_help="blah", help="blah")
     class CsCMD:
         coin_selection_loader: NeedsCoinSelectionConfig
 
@@ -465,7 +465,7 @@ def test_tx_config_helper() -> None:
         excluded_coin_ids=[bytes32([0] * 32)],
     )
 
-    @chia_command(cmd, "tx_config_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="tx_config_cmd", short_help="blah", help="blah")
     class TXConfigCMD:
         tx_config_loader: NeedsTXConfig
 
@@ -512,7 +512,7 @@ async def test_transaction_endpoint_mixin() -> None:
     def cmd() -> None:
         pass  # pragma: no cover
 
-    @chia_command(cmd, "bad_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="bad_cmd", short_help="blah", help="blah")
     class BadCMD(TransactionEndpoint):
         def run(self) -> None:  # type: ignore[override]
             pass  # pragma: no cover
@@ -520,7 +520,7 @@ async def test_transaction_endpoint_mixin() -> None:
     with pytest.raises(TypeError, match="transaction_endpoint_runner"):
         BadCMD(**STANDARD_TX_ENDPOINT_ARGS)
 
-    @chia_command(cmd, "cs_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="cs_cmd", short_help="blah", help="blah")
     class TxCMD(TransactionEndpoint):
         @transaction_endpoint_runner
         async def run(self) -> list[TransactionRecord]:
@@ -565,27 +565,27 @@ def test_old_decorator_support() -> None:
     def cmd() -> None:
         pass  # pragma: no cover
 
-    @chia_command(cmd, "cs_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="cs_cmd", short_help="blah", help="blah")
     class CsCMD:
         coin_selection_loader: NeedsCoinSelectionConfig
 
         def run(self) -> None:
             pass  # pragma: no cover
 
-    @chia_command(cmd, "tx_config_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="tx_config_cmd", short_help="blah", help="blah")
     class TXConfigCMD:
         tx_config_loader: NeedsTXConfig
 
         def run(self) -> None:
             pass  # pragma: no cover
 
-    @chia_command(cmd, "tx_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="tx_cmd", short_help="blah", help="blah")
     class TxCMD(TransactionEndpoint):
         @transaction_endpoint_runner
         async def run(self) -> list[TransactionRecord]:
             return []  # pragma: no cover
 
-    @chia_command(cmd, "tx_w_tl_cmd", "blah", "blah")
+    @chia_command(group=cmd, name="tx_w_tl_cmd", short_help="blah", help="blah")
     class TxWTlCMD(TransactionEndpointWithTimelocks):
         @transaction_endpoint_runner
         async def run(self) -> list[TransactionRecord]:

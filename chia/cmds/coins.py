@@ -25,9 +25,9 @@ def coins_cmd(ctx: click.Context) -> None:
 
 
 @chia_command(
-    coins_cmd,
-    "list",
-    "List all coins",
+    group=coins_cmd,
+    name="list",
+    short_help="List all coins",
     help="List all coins",
 )
 class ListCMD:
@@ -62,9 +62,9 @@ class ListCMD:
 
 
 @chia_command(
-    coins_cmd,
-    "combine",
-    "Combine dust coins",
+    group=coins_cmd,
+    name="combine",
+    short_help="Combine dust coins",
     help="Combine dust coins",
 )
 class CombineCMD(TransactionEndpoint):
@@ -127,9 +127,9 @@ class CombineCMD(TransactionEndpoint):
 
 
 @chia_command(
-    coins_cmd,
-    "split",
-    "Split up larger coins",
+    group=coins_cmd,
+    name="split",
+    short_help="Split up larger coins",
     help="Split up larger coins",
 )
 class SplitCMD(TransactionEndpoint):
