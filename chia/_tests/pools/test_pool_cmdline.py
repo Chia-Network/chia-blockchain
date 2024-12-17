@@ -21,7 +21,7 @@ from chia._tests.pools.test_pool_rpc import (
     verify_pool_state,
 )
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
-from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
+from chia.cmds.cmd_helpers import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
     ChangePayoutInstructionsPlotNFTCMD,

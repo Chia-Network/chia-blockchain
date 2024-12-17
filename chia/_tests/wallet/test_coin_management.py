@@ -11,7 +11,7 @@ import pytest
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletStateTransition, WalletTestFramework
-from chia.cmds.cmd_classes import NeedsCoinSelectionConfig, NeedsWalletRPC, WalletClientInfo
+from chia.cmds.cmd_helpers import NeedsCoinSelectionConfig, NeedsWalletRPC, WalletClientInfo
 from chia.cmds.coins import CombineCMD, ListCMD, SplitCMD
 from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.wallet_request_types import GetSyncStatusResponse

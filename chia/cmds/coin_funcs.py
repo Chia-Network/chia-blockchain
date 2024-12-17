@@ -5,7 +5,7 @@ import sys
 from collections.abc import Sequence
 from typing import Optional
 
-from chia.cmds.cmd_classes import WalletClientInfo
+from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm
 from chia.cmds.param_types import CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance

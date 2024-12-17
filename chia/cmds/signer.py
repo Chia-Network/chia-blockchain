@@ -14,7 +14,8 @@ from chia_rs import AugSchemeMPL, G2Element
 from hsms.util.byte_chunks import create_chunks_for_blob, optimal_chunk_size_for_max_chunk_size
 from segno import QRCode, make_qr
 
-from chia.cmds.cmd_classes import NeedsWalletRPC, TransactionsIn, TransactionsOut, chia_command, command_helper, option
+from chia.cmds.cmd_classes import chia_command, command_helper, option
+from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionsIn, TransactionsOut
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
