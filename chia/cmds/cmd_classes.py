@@ -71,10 +71,14 @@ class ChiaCliContext:
     root_path: pathlib.Path = DEFAULT_ROOT_PATH
     expected_prefix: Optional[str] = None
     rpc_port: Optional[int] = None
+    keys_fingerprint: Optional[int] = None
+    keys_filename: Optional[str] = None
+    expected_currency_prefix: Optional[str] = None
 
     @classmethod
     def from_click(cls, ctx: click.Context) -> ChiaCliContext:
         if ctx.obj is None:
+            # TODO: should we set it up on the ctx here?
             return cls()
 
         existing = cast(Optional[ChiaCliContext], ctx.obj.get(cls.context_dict_key))

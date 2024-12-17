@@ -281,8 +281,9 @@ def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, js
 )
 @click.pass_context
 def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]) -> None:
-    ctx.obj["fingerprint"] = fingerprint
-    ctx.obj["filename"] = filename
+    context = ChiaCliContext.from_click(ctx)
+    context.keys_fingerprint = fingerprint
+    context.keys_filename = filename
 
 
 @derive_cmd.command("search", help="Search the keyring for one or more matching derived keys or wallet addresses")
@@ -338,8 +339,9 @@ def search_cmd(
 
     from chia.cmds.keys_funcs import resolve_derivation_master_key, search_derive
 
-    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
-    filename: Optional[str] = ctx.obj.get("filename", None)
+    context = ChiaCliContext.from_click(ctx)
+    fingerprint: Optional[int] = context.keys_fingerprint
+    filename: Optional[str] = context.keys_filename
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
     resolved_sk = None
@@ -349,7 +351,7 @@ def search_cmd(
             print("Could not resolve private key from fingerprint/mnemonic file")
 
     found: bool = search_derive(
-        ChiaCliContext.from_click(ctx).root_path,
+        context.root_path,
         fingerprint,
         search_terms,
         limit,
@@ -416,8 +418,9 @@ def wallet_address_cmd(
 ) -> None:
     from chia.cmds.keys_funcs import derive_wallet_address
 
-    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
-    filename: Optional[str] = ctx.obj.get("filename", None)
+    context = ChiaCliContext.from_click(ctx)
+    fingerprint = context.keys_fingerprint
+    filename = context.keys_filename
 
     try:
         fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
@@ -501,8 +504,9 @@ def child_key_cmd(
     if key_type is None and derive_from_hd_path is None:
         ctx.fail("--type or --derive-from-hd-path is required")
 
-    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
-    filename: Optional[str] = ctx.obj.get("filename", None)
+    context = ChiaCliContext.from_click(ctx)
+    fingerprint = context.keys_fingerprint
+    filename = context.keys_filename
 
     try:
         fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)

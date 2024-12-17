@@ -7,6 +7,7 @@ from typing import Optional
 import click
 
 from chia.cmds import options
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmds_util import CMDTXConfigLoader, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, TransactionFeeParamType, Uint64ParamType
 from chia.cmds.units import units
@@ -62,7 +63,11 @@ def dao_add_cmd(
 ) -> None:
     from chia.cmds.dao_funcs import add_dao_wallet
 
-    asyncio.run(add_dao_wallet(ctx.obj["root_path"], wallet_rpc_port, fingerprint, name, treasury_id, filter_amount))
+    asyncio.run(
+        add_dao_wallet(
+            ChiaCliContext.from_click(ctx).root_path, wallet_rpc_port, fingerprint, name, treasury_id, filter_amount
+        )
+    )
 
 
 # ----------------------------------------------------------------------------------------
@@ -184,7 +189,7 @@ def dao_create_cmd(
 
     return asyncio.run(
         create_dao_wallet(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             fee,
@@ -235,7 +240,7 @@ def dao_get_id_cmd(
 ) -> None:
     from chia.cmds.dao_funcs import get_treasury_id
 
-    asyncio.run(get_treasury_id(ctx.obj["root_path"], wallet_rpc_port, fingerprint, wallet_id))
+    asyncio.run(get_treasury_id(ChiaCliContext.from_click(ctx).root_path, wallet_rpc_port, fingerprint, wallet_id))
 
 
 @dao_cmd.command("add_funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)
@@ -286,7 +291,7 @@ def dao_add_funds_cmd(
 
     return asyncio.run(
         add_funds_to_treasury(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -325,7 +330,7 @@ def dao_get_balance_cmd(
 ) -> None:
     from chia.cmds.dao_funcs import get_treasury_balance
 
-    asyncio.run(get_treasury_balance(ctx.obj["root_path"], wallet_rpc_port, fingerprint, wallet_id))
+    asyncio.run(get_treasury_balance(ChiaCliContext.from_click(ctx).root_path, wallet_rpc_port, fingerprint, wallet_id))
 
 
 @dao_cmd.command("rules", short_help="Get the current rules governing the DAO", no_args_is_help=True)
@@ -347,7 +352,7 @@ def dao_rules_cmd(
 ) -> None:
     from chia.cmds.dao_funcs import get_rules
 
-    asyncio.run(get_rules(ctx.obj["root_path"], wallet_rpc_port, fingerprint, wallet_id))
+    asyncio.run(get_rules(ChiaCliContext.from_click(ctx).root_path, wallet_rpc_port, fingerprint, wallet_id))
 
 
 # ----------------------------------------------------------------------------------------
@@ -383,7 +388,11 @@ def dao_list_proposals_cmd(
     if not include_closed:
         include_closed = False
 
-    asyncio.run(list_proposals(ctx.obj["root_path"], wallet_rpc_port, fingerprint, wallet_id, include_closed))
+    asyncio.run(
+        list_proposals(
+            ChiaCliContext.from_click(ctx).root_path, wallet_rpc_port, fingerprint, wallet_id, include_closed
+        )
+    )
 
 
 @dao_cmd.command("show_proposal", short_help="Show the details of a specific proposal", no_args_is_help=True)
@@ -413,7 +422,9 @@ def dao_show_proposal_cmd(
 ) -> None:
     from chia.cmds.dao_funcs import show_proposal
 
-    asyncio.run(show_proposal(ctx.obj["root_path"], wallet_rpc_port, fingerprint, wallet_id, proposal_id))
+    asyncio.run(
+        show_proposal(ChiaCliContext.from_click(ctx).root_path, wallet_rpc_port, fingerprint, wallet_id, proposal_id)
+    )
 
 
 # ----------------------------------------------------------------------------------------
@@ -477,7 +488,7 @@ def dao_vote_cmd(
 
     return asyncio.run(
         vote_on_proposal(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -550,7 +561,7 @@ def dao_close_proposal_cmd(
 
     return asyncio.run(
         close_proposal(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -614,7 +625,7 @@ def dao_lockup_coins_cmd(
 
     return asyncio.run(
         lockup_coins(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -665,7 +676,7 @@ def dao_release_coins_cmd(
 
     return asyncio.run(
         release_coins(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -715,7 +726,7 @@ def dao_exit_lockup_cmd(
 
     return asyncio.run(
         exit_lockup(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -819,7 +830,7 @@ def dao_create_spend_proposal_cmd(
 
     return asyncio.run(
         create_spend_proposal(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -931,7 +942,7 @@ def dao_create_update_proposal_cmd(
 
     return asyncio.run(
         create_update_proposal(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,
@@ -1014,7 +1025,7 @@ def dao_create_mint_proposal_cmd(
 
     return asyncio.run(
         create_mint_proposal(
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             wallet_id,

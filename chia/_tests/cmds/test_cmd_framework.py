@@ -32,7 +32,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
-def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None) -> None:
+def check_click_parsing(cmd: ChiaCommand, *args: str, context: Optional[ChiaCliContext] = None) -> None:
     @click.group()
     def _cmd() -> None:
         pass
@@ -58,8 +58,11 @@ def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None)
     setattr(mock_type, "run", new_run)
     chia_command(group=_cmd, name="_", short_help="", help="")(mock_type)
 
+    if context is None:
+        context = ChiaCliContext()
+
     runner = CliRunner()
-    result = runner.invoke(_cmd, ["_", *args], catch_exceptions=False, obj=obj)
+    result = runner.invoke(_cmd, ["_", *args], catch_exceptions=False, obj=context.to_click())
     assert result.output == ""
 
 

@@ -36,6 +36,7 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
 @click.pass_context
 def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulator_name: str) -> None:
     ctx.ensure_object(dict)
+    # TODO: maybe update instead of replacing?
     ctx.obj.update(
         ChiaCliContext(
             root_path=Path(root_path) / simulator_name,

@@ -879,6 +879,7 @@ async def test_plotnft_cli_change_payout(
     # This tests what happens when using None for root_path
     mocker.patch("chia.cmds.plotnft_funcs.DEFAULT_ROOT_PATH", root_path)
     await ChangePayoutInstructionsPlotNFTCMD(
+        context=ChiaCliContext(root_path=wallet_environments.environments[0].node.root_path),
         launcher_id=bytes32(32 * b"0"),
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
     ).run()

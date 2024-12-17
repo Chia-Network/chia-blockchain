@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
@@ -37,7 +38,8 @@ def test_plotnft_command_default_parsing() -> None:
         launcher_id.hex(),
         "--address",
         burn_address,
-        obj={"expected_prefix": "xch"},  # Needed for AddressParamType to work correctly without config
+        # Needed for AddressParamType to work correctly without config
+        context=ChiaCliContext(expected_prefix="xch"),
     )
 
     check_click_parsing(
