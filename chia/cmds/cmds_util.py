@@ -359,18 +359,18 @@ def tx_out_cmd(
 ) -> Callable[[Callable[..., list[TransactionRecord]]], Callable[..., None]]:
     def _tx_out_cmd(func: Callable[..., list[TransactionRecord]]) -> Callable[..., None]:
         @timelock_args(enable=enable_timelock_args)
-        def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
+        def original_cmd(transaction_file_out: Optional[str] = None, **kwargs: Any) -> None:
             txs: list[TransactionRecord] = func(**kwargs)
-            if transaction_file is not None:
-                print(f"Writing transactions to file {transaction_file}:")
-                with open(Path(transaction_file), "wb") as file:
+            if transaction_file_out is not None:
+                print(f"Writing transactions to file {transaction_file_out}:")
+                with open(Path(transaction_file_out), "wb") as file:
                     file.write(bytes(TransactionBundle(txs)))
 
         return click.option(
             "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
         )(
             click.option(
-                "--transaction-file",
+                "--transaction-file-out",
                 help="A file to write relevant transactions to",
                 type=str,
                 required=False,

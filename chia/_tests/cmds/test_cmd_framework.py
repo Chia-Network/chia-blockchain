@@ -3,17 +3,35 @@ from __future__ import annotations
 import textwrap
 from collections.abc import Sequence
 from dataclasses import asdict
+from decimal import Decimal
 from typing import Any, Optional
 
 import click
 import pytest
 from click.testing import CliRunner
 
-from chia._tests.conftest import ConsensusMode
-from chia._tests.environments.wallet import WalletTestFramework
+from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
-from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
+from chia.cmds.cmd_classes import (
+    _TRANSACTION_ENDPOINT_DECORATOR_APPLIED,
+    ChiaCommand,
+    Context,
+    NeedsCoinSelectionConfig,
+    NeedsTXConfig,
+    NeedsWalletRPC,
+    TransactionEndpoint,
+    TransactionEndpointWithTimelocks,
+    chia_command,
+    option,
+    transaction_endpoint_runner,
+)
+from chia.cmds.cmds_util import coin_selection_args, tx_config_args, tx_out_cmd
+from chia.cmds.param_types import CliAmount
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
 def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None) -> None:
@@ -35,6 +53,9 @@ def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None)
     def new_run(self: Any) -> None:
         # cmd is appropriately not recognized as a dataclass but I'm not sure how to hint that something is a dataclass
         dict_compare_with_ignore_context(asdict(cmd), asdict(self))  # type: ignore[call-overload]
+
+    # We hack this in because more robust solutions are harder and probably not worth it
+    setattr(new_run, _TRANSACTION_ENDPOINT_DECORATOR_APPLIED, True)
 
     setattr(mock_type, "run", new_run)
     chia_command(group=_cmd, name="_", short_help="", help="")(mock_type)
@@ -330,7 +351,7 @@ def test_typing() -> None:
     assert "not a valid 32-byte hex string" in result.output
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="doesn't matter")
+@pytest.mark.limit_consensus_modes(reason="doesn't matter")
 @pytest.mark.parametrize(
     "wallet_environments",
     [
@@ -400,3 +421,199 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
     test_present_client_info = TempCMD(rpc_info=NeedsWalletRPC(client_info="hello world"))  # type: ignore[arg-type]
     async with test_present_client_info.rpc_info.wallet_rpc(consume_errors=False) as client_info:
         assert client_info == "hello world"  # type: ignore[comparison-overlap]
+
+
+def test_tx_config_helper() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass  # pragma: no cover
+
+    @chia_command(group=cmd, name="cs_cmd", short_help="blah", help="blah")
+    class CsCMD:
+        coin_selection_loader: NeedsCoinSelectionConfig
+
+        def run(self) -> None:
+            # ignoring the `None` return here for convenient testing sake
+            return self.coin_selection_loader.load_coin_selection_config(100)  # type: ignore[return-value]
+
+    example_cs_cmd = CsCMD(
+        coin_selection_loader=NeedsCoinSelectionConfig(
+            min_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
+            coins_to_exclude=(bytes32([0] * 32),),
+        )
+    )
+
+    check_click_parsing(
+        example_cs_cmd,
+        "--min-coin-amount",
+        "0.01",
+        "--max-coin-amount",
+        "0.01",
+        "--exclude-amount",
+        "0.01",
+        "--exclude-coin",
+        bytes32([0] * 32).hex(),
+    )
+
+    # again, convenience for testing sake
+    assert example_cs_cmd.run() == CoinSelectionConfig(  # type: ignore[func-returns-value]
+        min_coin_amount=uint64(1),
+        max_coin_amount=uint64(1),
+        excluded_coin_amounts=[uint64(1)],
+        excluded_coin_ids=[bytes32([0] * 32)],
+    )
+
+    @chia_command(group=cmd, name="tx_config_cmd", short_help="blah", help="blah")
+    class TXConfigCMD:
+        tx_config_loader: NeedsTXConfig
+
+        def run(self) -> None:
+            # ignoring the `None` return here for convenient testing sake
+            return self.tx_config_loader.load_tx_config(100, {}, 0)  # type: ignore[return-value]
+
+    example_tx_config_cmd = TXConfigCMD(
+        tx_config_loader=NeedsTXConfig(
+            min_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
+            coins_to_exclude=(bytes32([0] * 32),),
+            reuse=False,
+        )
+    )
+
+    check_click_parsing(
+        example_tx_config_cmd,
+        "--min-coin-amount",
+        "0.01",
+        "--max-coin-amount",
+        "0.01",
+        "--exclude-amount",
+        "0.01",
+        "--exclude-coin",
+        bytes32([0] * 32).hex(),
+        "--new-address",
+    )
+
+    # again, convenience for testing sake
+    assert example_tx_config_cmd.run() == TXConfig(  # type: ignore[func-returns-value]
+        min_coin_amount=uint64(1),
+        max_coin_amount=uint64(1),
+        excluded_coin_amounts=[uint64(1)],
+        excluded_coin_ids=[bytes32([0] * 32)],
+        reuse_puzhash=False,
+    )
+
+
+@pytest.mark.anyio
+async def test_transaction_endpoint_mixin() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass  # pragma: no cover
+
+    @chia_command(group=cmd, name="bad_cmd", short_help="blah", help="blah")
+    class BadCMD(TransactionEndpoint):
+        def run(self) -> None:  # type: ignore[override]
+            pass  # pragma: no cover
+
+    with pytest.raises(TypeError, match="transaction_endpoint_runner"):
+        BadCMD(**STANDARD_TX_ENDPOINT_ARGS)
+
+    @chia_command(group=cmd, name="cs_cmd", short_help="blah", help="blah")
+    class TxCMD(TransactionEndpoint):
+        @transaction_endpoint_runner
+        async def run(self) -> list[TransactionRecord]:
+            assert self.load_condition_valid_times() == ConditionValidTimes(
+                min_time=uint64(10),
+                max_time=uint64(20),
+            )
+            return []
+
+    # Check that our default object lines up with the default options
+    check_click_parsing(TxCMD(**STANDARD_TX_ENDPOINT_ARGS))
+
+    example_tx_cmd = TxCMD(
+        **{
+            **STANDARD_TX_ENDPOINT_ARGS,
+            **dict(
+                fee=uint64(1_000_000_000_000 / 100),
+                push=False,
+                valid_at=10,
+                expires_at=20,
+            ),
+        }
+    )
+    check_click_parsing(
+        example_tx_cmd,
+        "--fee",
+        "0.01",
+        "--no-push",
+        "--valid-at",
+        "10",
+        "--expires-at",
+        "20",
+    )
+
+    await example_tx_cmd.run()  # trigger inner assert
+
+
+# While we sit in between two paradigms, this test is in place to ensure they remain in sync.
+# Delete this if the old decorators are deleted.
+def test_old_decorator_support() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass  # pragma: no cover
+
+    @chia_command(group=cmd, name="cs_cmd", short_help="blah", help="blah")
+    class CsCMD:
+        coin_selection_loader: NeedsCoinSelectionConfig
+
+        def run(self) -> None:
+            pass  # pragma: no cover
+
+    @chia_command(group=cmd, name="tx_config_cmd", short_help="blah", help="blah")
+    class TXConfigCMD:
+        tx_config_loader: NeedsTXConfig
+
+        def run(self) -> None:
+            pass  # pragma: no cover
+
+    @chia_command(group=cmd, name="tx_cmd", short_help="blah", help="blah")
+    class TxCMD(TransactionEndpoint):
+        @transaction_endpoint_runner
+        async def run(self) -> list[TransactionRecord]:
+            return []  # pragma: no cover
+
+    @chia_command(group=cmd, name="tx_w_tl_cmd", short_help="blah", help="blah")
+    class TxWTlCMD(TransactionEndpointWithTimelocks):
+        @transaction_endpoint_runner
+        async def run(self) -> list[TransactionRecord]:
+            return []  # pragma: no cover
+
+    @cmd.command("cs_cmd_dec")
+    @coin_selection_args
+    def cs_cmd(**kwargs: Any) -> None:
+        pass  # pragma: no cover
+
+    @cmd.command("tx_config_cmd_dec")
+    @tx_config_args
+    def tx_config_cmd(**kwargs: Any) -> None:
+        pass  # pragma: no cover
+
+    @cmd.command("tx_cmd_dec")  # type: ignore[arg-type]
+    @tx_out_cmd(enable_timelock_args=False)
+    def tx_cmd(**kwargs: Any) -> None:
+        pass  # pragma: no cover
+
+    @cmd.command("tx_w_tl_cmd_dec")  # type: ignore[arg-type]
+    @tx_out_cmd(enable_timelock_args=True)
+    def tx_w_tl_cmd(**kwargs: Any) -> None:
+        pass  # pragma: no cover
+
+    for command_name, command in cmd.commands.items():
+        if "_dec" in command_name:
+            continue
+        params = [param.to_info_dict() for param in cmd.commands[command_name].params]
+        for param in cmd.commands[f"{command_name}_dec"].params:
+            assert param.to_info_dict() in params
