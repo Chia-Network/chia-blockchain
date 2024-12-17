@@ -216,9 +216,8 @@ async def test_plotnft_cli_show(
     )
 
     await ShowPlotNFTCMD(
-        context=ChiaCliContext(
-            root_path=root_path
-        ),  # we need this for the farmer rpc client which is used in the commend
+        # we need this for the farmer rpc client which is used in the comment
+        context=ChiaCliContext(root_path=root_path),
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),

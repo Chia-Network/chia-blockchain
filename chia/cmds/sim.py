@@ -40,7 +40,7 @@ def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulat
         ChiaCliContext(
             root_path=Path(root_path) / simulator_name,
             rpc_port=rpc_port,
-        )
+        ).to_click()
     )
 
 

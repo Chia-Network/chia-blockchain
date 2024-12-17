@@ -174,9 +174,8 @@ class AddressParamType(click.ParamType):
             hrp, _b32data = bech32_decode(value)
             if hrp in {"xch", "txch"}:  # I hate having to load the config here
                 addr_type: AddressType = AddressType.XCH
-                expected_prefix = (
-                    ChiaCliContext.from_click(ctx).expected_prefix if ctx else None
-                )  # attempt to get cached prefix
+                # attempt to get cached prefix
+                expected_prefix = ChiaCliContext.from_click(ctx).expected_prefix if ctx else None
                 if expected_prefix is None:
                     root_path = ChiaCliContext.from_click(ctx).root_path if ctx is not None else DEFAULT_ROOT_PATH
                     config = load_config(root_path, "config.yaml")

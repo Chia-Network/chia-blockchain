@@ -115,9 +115,11 @@ def test_click_amount_type() -> None:
 
 
 def test_click_address_type() -> None:
+    # this makes us not have to use a config file
     context = cast(
-        Context, FakeContext(obj=ChiaCliContext(expected_prefix="xch").to_click())
-    )  # this makes us not have to use a config file
+        Context,
+        FakeContext(obj=ChiaCliContext(expected_prefix="xch").to_click()),
+    )
     std_cli_address = CliAddress(burn_ph, burn_address, AddressType.XCH)
     nft_cli_address = CliAddress(burn_ph, burn_nft_addr, AddressType.DID)
     # Test CliAddress (Generally is not used)

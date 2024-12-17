@@ -417,4 +417,4 @@ async def scan(root_path: Path, db_path: Optional[str] = None, *, verbose: bool 
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(scan(Path(""), sys.argv[1]))
+    loop.run_until_complete(scan(Path(), sys.argv[1]))
