@@ -29,14 +29,15 @@ from chia.wallet.util.curry_and_treehash import (
     shatree_pair,
 )
 
-DID_INNERPUZ_MOD = load_clvm_maybe_recompile(
-    "did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles"
+from chia_puzzles_py.programs import (
+    DID_INNERPUZ,
+    NFT_INTERMEDIATE_LAUNCHER
 )
+
+DID_INNERPUZ_MOD = Program.from_bytes(DID_INNERPUZ)
 DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
 DID_INNERPUZ_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
-INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
-    "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
+INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
 
 
 def create_innerpuz(
