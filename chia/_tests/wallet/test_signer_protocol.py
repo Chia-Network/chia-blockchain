@@ -11,7 +11,8 @@ from click.testing import CliRunner
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.cmds.cmd_classes import NeedsWalletRPC, TransactionsIn, TransactionsOut, WalletClientInfo, chia_command
+from chia.cmds.cmd_classes import chia_command
+from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionsIn, TransactionsOut, WalletClientInfo
 from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.signer import (
     ApplySignaturesCMD,

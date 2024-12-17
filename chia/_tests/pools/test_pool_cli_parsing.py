@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
-from chia.cmds.cmd_classes import NeedsWalletRPC
+from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
     ChangePayoutInstructionsPlotNFTCMD,

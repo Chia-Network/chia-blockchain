@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
-from chia.cmds.cmd_classes import NeedsTXConfig, NeedsWalletRPC, TransactionEndpoint, TransactionsOut, WalletClientInfo
+from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionEndpoint, TransactionsOut, WalletClientInfo
 from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
