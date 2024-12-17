@@ -23,36 +23,27 @@ from chia.wallet.dao_wallet.dao_utils import curry_singleton, get_p2_singleton_p
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_singleton_puzzle_hash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
-SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
-SINGLETON_MOD_HASH: bytes32 = SINGLETON_MOD.get_tree_hash()
-SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
-SINGLETON_LAUNCHER_HASH: bytes32 = SINGLETON_LAUNCHER.get_tree_hash()
-DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clsp")
-DAO_LOCKUP_MOD_HASH: bytes32 = DAO_LOCKUP_MOD.get_tree_hash()
-DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clsp")
-DAO_PROPOSAL_TIMER_MOD_HASH: bytes32 = DAO_PROPOSAL_TIMER_MOD.get_tree_hash()
-DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clsp")
-DAO_PROPOSAL_MOD_HASH: bytes32 = DAO_PROPOSAL_MOD.get_tree_hash()
-DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clsp")
-DAO_PROPOSAL_VALIDATOR_MOD_HASH: bytes32 = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
-DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clsp")
-DAO_TREASURY_MOD_HASH: bytes32 = DAO_TREASURY_MOD.get_tree_hash()
-SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clsp")
-SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
-DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clsp")
-DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
-DAO_CAT_TAIL: Program = load_clvm(
-    "genesis_by_coin_id_or_singleton.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
+from chia.wallet.dao_wallet.dao_utils import (
+    CAT_MOD_HASH,
+    SINGLETON_MOD,
+    SINGLETON_MOD_HASH,
+    SINGLETON_LAUNCHER,
+    SINGLETON_LAUNCHER_HASH,
+    DAO_LOCKUP_MOD,
+    DAO_PROPOSAL_TIMER_MOD,
+    DAO_PROPOSAL_TIMER_MOD_HASH,
+    DAO_PROPOSAL_MOD,
+    DAO_PROPOSAL_VALIDATOR_MOD,
+    DAO_PROPOSAL_VALIDATOR_MOD_HASH,
+    DAO_TREASURY_MOD,
+    DAO_TREASURY_MOD_HASH,
+    SPEND_P2_SINGLETON_MOD,
+    DAO_FINISHED_STATE,
+    DAO_FINISHED_STATE_HASH,
+    P2_SINGLETON_MOD,
+    P2_SINGLETON_AGGREGATOR_MOD,
+    DAO_UPDATE_PROPOSAL_MOD as DAO_UPDATE_MOD,
 )
-DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
-P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
-P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
-P2_SINGLETON_AGGREGATOR_MOD_HASH: bytes32 = P2_SINGLETON_AGGREGATOR_MOD.get_tree_hash()
-DAO_UPDATE_MOD: Program = load_clvm("dao_update_proposal.clsp")
-DAO_UPDATE_MOD_HASH: bytes32 = DAO_UPDATE_MOD.get_tree_hash()
 
 
 def test_finished_state() -> None:
