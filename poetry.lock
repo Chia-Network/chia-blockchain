@@ -751,6 +751,23 @@ clvm_rs = "0.2.5"
 dev = ["black (>=23.1.0)", "pytest (>=7.2.1)", "ruff (>=0.0.252)"]
 
 [[package]]
+name = "chia-puzzles-py"
+version = "0.18.2"
+description = "A collection of the currently deployed ChiaLisp puzzles."
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "chia_puzzles_py-0.18.2-py3-none-any.whl", hash = "sha256:14db0dcb1de4df0064477b779d78e2545ef2182b788a1c7a2c8cdae0ab55300f"},
+    {file = "chia_puzzles_py-0.18.2.tar.gz", hash = "sha256:4a02990744ec023a4eb8f3308d69e91637643d95b4135da6d9d266362bd1a1f6"},
+]
+
+[package.dependencies]
+clvm-rs = ">=0.2.3,<0.3.0"
+clvm-tools-rs = ">=0.1.45,<0.2.0"
+pathlib = ">=1.0.1,<2.0.0"
+pytest = ">=8.3.3,<9.0.0"
+
+[[package]]
 name = "chia-rs"
 version = "0.18.0"
 description = "Code useful for implementing chia consensus."
@@ -1447,7 +1464,7 @@ type = ["pytest-mypy"]
 name = "iniconfig"
 version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "iniconfig-2.0.0-py3-none-any.whl", hash = "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374"},
@@ -2107,6 +2124,17 @@ files = [
 ]
 
 [[package]]
+name = "pathlib"
+version = "1.0.1"
+description = "Object-oriented filesystem paths"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pathlib-1.0.1-py3-none-any.whl", hash = "sha256:f35f95ab8b0f59e6d354090350b44a80a80635d22efdedfa84c7ad1cf0a74147"},
+    {file = "pathlib-1.0.1.tar.gz", hash = "sha256:6940718dfc3eff4258203ad5021090933e5c04707d5ca8cc9e73c94a7894ea9f"},
+]
+
+[[package]]
 name = "pefile"
 version = "2023.2.7"
 description = "Python PE parsing module"
@@ -2147,7 +2175,7 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4)", "pytest-co
 name = "pluggy"
 version = "1.5.0"
 description = "plugin and hook calling mechanisms for python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669"},
@@ -2465,7 +2493,7 @@ tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 name = "pytest"
 version = "8.3.4"
 description = "pytest: simple powerful testing with Python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "pytest-8.3.4-py3-none-any.whl", hash = "sha256:50e16d954148559c9a74109af1eaf0c945ba2d8f30f0a3d3335edde19788b6f6"},
@@ -2911,7 +2939,7 @@ files = [
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
