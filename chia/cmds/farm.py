@@ -81,9 +81,10 @@ def summary_cmd(
     default=20,
     show_default=True,
 )
-def challenges_cmd(farmer_rpc_port: Optional[int], limit: int) -> None:
+@click.pass_context
+def challenges_cmd(ctx: click.Context, farmer_rpc_port: Optional[int], limit: int) -> None:
     import asyncio
 
     from chia.cmds.farm_funcs import challenges
 
-    asyncio.run(challenges(farmer_rpc_port, limit))
+    asyncio.run(challenges(ctx.obj["root_path"], farmer_rpc_port, limit))
