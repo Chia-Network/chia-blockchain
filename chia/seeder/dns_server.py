@@ -440,8 +440,9 @@ class DNSServer:
                                 result = await self.resolver.resolve(qname=static_peer, rdtype=rdtype, lifetime=30)
                                 for ip in result:
                                     try:
-                                        ip_address(ip)
-                                        new_reliable_peers.append(ip)
+                                        ip_as_string = ip.to_text()
+                                        ip_address(ip_as_string)
+                                        new_reliable_peers.append(ip_as_string)
                                     except ValueError:
                                         pass
 

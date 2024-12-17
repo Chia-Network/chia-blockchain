@@ -26,7 +26,6 @@ from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcCl
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import KeyData
@@ -95,8 +94,8 @@ async def validate_client_connection(
 @asynccontextmanager
 async def get_any_service_client(
     client_type: type[_T_RpcClient],
+    root_path: Path,
     rpc_port: Optional[int] = None,
-    root_path: Optional[Path] = None,
     consume_errors: bool = True,
     use_ssl: bool = True,
 ) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
@@ -105,9 +104,6 @@ async def get_any_service_client(
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
     the RpcClient.
     """
-
-    if root_path is None:
-        root_path = DEFAULT_ROOT_PATH
 
     node_type = node_config_section_names.get(client_type)
     if node_type is None:
@@ -253,7 +249,7 @@ async def get_wallet_client(
     fingerprint: Optional[int] = None,
     consume_errors: bool = True,
 ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path, consume_errors) as (
+    async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port, consume_errors) as (
         wallet_client,
         config,
     ):
@@ -363,18 +359,18 @@ def tx_out_cmd(
 ) -> Callable[[Callable[..., list[TransactionRecord]]], Callable[..., None]]:
     def _tx_out_cmd(func: Callable[..., list[TransactionRecord]]) -> Callable[..., None]:
         @timelock_args(enable=enable_timelock_args)
-        def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
+        def original_cmd(transaction_file_out: Optional[str] = None, **kwargs: Any) -> None:
             txs: list[TransactionRecord] = func(**kwargs)
-            if transaction_file is not None:
-                print(f"Writing transactions to file {transaction_file}:")
-                with open(Path(transaction_file), "wb") as file:
+            if transaction_file_out is not None:
+                print(f"Writing transactions to file {transaction_file_out}:")
+                with open(Path(transaction_file_out), "wb") as file:
                     file.write(bytes(TransactionBundle(txs)))
 
         return click.option(
             "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
         )(
             click.option(
-                "--transaction-file",
+                "--transaction-file-out",
                 help="A file to write relevant transactions to",
                 type=str,
                 required=False,
