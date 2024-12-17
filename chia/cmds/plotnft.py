@@ -42,7 +42,7 @@ class ShowPlotNFTCMD:
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await show(
                 wallet_info=wallet_info,
-                root_path=self.context.get("root_path"),
+                root_path=self.context["root_path"],
                 wallet_id_passed_in=self.id,
             )
 
@@ -62,7 +62,7 @@ class GetLoginLinkCMD:
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import get_login_link
 
-        await get_login_link(self.launcher_id, root_path=self.context.get("root_path"))
+        await get_login_link(self.launcher_id, root_path=self.context["root_path"])
 
 
 # Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support
