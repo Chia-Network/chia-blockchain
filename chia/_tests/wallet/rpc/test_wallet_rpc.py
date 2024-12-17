@@ -498,12 +498,13 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=uint64(fee_amount)
+    ) as action_scope:
         await wallet.generate_signed_transaction(
             amount=uint64(5),
             puzzle_hash=bytes32.zeros,
             action_scope=action_scope,
-            fee=uint64(fee_amount),
         )
 
     our_ph = await wallet.get_new_puzzlehash()

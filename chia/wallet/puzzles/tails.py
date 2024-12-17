@@ -90,33 +90,36 @@ class GenesisById(LimitationsProgram):
         _: dict,
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
     ) -> WalletSpendBundle:
-        coins = await wallet.standard_wallet.select_coins(amount + fee, action_scope)
-
-        origin = coins.copy().pop()
-        origin_id = origin.name()
-
-        cat_inner: Program = await wallet.standard_wallet.get_puzzle(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
-        tail: Program = cls.construct([Program.to(origin_id)])
-
-        wallet.lineage_store = await CATLineageStore.create(
-            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
-        )
-        await wallet.add_lineage(origin_id, LineageProof())
-
-        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
-
-        async with wallet.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
-        ) as inner_action_scope:
-            await wallet.standard_wallet.generate_signed_transaction(
-                amount, minted_cat_puzzle_hash, inner_action_scope, fee, coins, origin_id=origin_id
+        async with action_scope.use() as interface:
+            coins = await wallet.standard_wallet.select_coins(
+                amount + interface.side_effects.fee_left_to_pay, action_scope
             )
 
-        async with action_scope.use() as interface:
+            origin = coins.copy().pop()
+            origin_id = origin.name()
+
+            cat_inner: Program = await wallet.standard_wallet.get_puzzle(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
+            tail: Program = cls.construct([Program.to(origin_id)])
+
+            wallet.lineage_store = await CATLineageStore.create(
+                wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
+            )
+            await wallet.add_lineage(origin_id, LineageProof())
+
+            minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(
+                CAT_MOD, tail.get_tree_hash(), cat_inner
+            ).get_tree_hash()
+
+            async with wallet.wallet_state_manager.new_action_scope(
+                action_scope.config.tx_config, push=False
+            ) as inner_action_scope:
+                await wallet.standard_wallet.generate_signed_transaction(
+                    amount, minted_cat_puzzle_hash, inner_action_scope, coins, origin_id=origin_id
+                )
+
             interface.side_effects.transactions = inner_action_scope.side_effects.transactions
 
         inner_tree_hash = cat_inner.get_tree_hash()
@@ -256,49 +259,51 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         tail_info: dict,
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
     ) -> WalletSpendBundle:
-        if "coins" in tail_info:
-            coins: list[Coin] = tail_info["coins"]
-            origin_id = coins.copy().pop().name()
-        else:  # pragma: no cover
-            coins = await wallet.standard_wallet.select_coins(amount + fee, action_scope)
-            origin = coins.copy().pop()
-            origin_id = origin.name()
+        async with action_scope.use() as interface:
+            if "coins" in tail_info:
+                coins: list[Coin] = tail_info["coins"]
+                origin_id = coins.copy().pop().name()
+            else:  # pragma: no cover
+                coins = await wallet.standard_wallet.select_coins(
+                    amount + interface.side_effects.fee_left_to_pay, action_scope
+                )
+                origin = coins.copy().pop()
+                origin_id = origin.name()
 
-        cat_inner: Program = await wallet.standard_wallet.get_puzzle(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
-        # GENESIS_ID
-        # TREASURY_SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
-        launcher_puzhash = create_cat_launcher_for_singleton_id(tail_info["treasury_id"]).get_tree_hash()
-        tail: Program = cls.construct(
-            [
-                Program.to(origin_id),
-                Program.to(launcher_puzhash),
-            ]
-        )
-
-        wallet.lineage_store = await CATLineageStore.create(
-            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
-        )
-        await wallet.add_lineage(origin_id, LineageProof())
-
-        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
-
-        async with wallet.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
-        ) as inner_action_scope:
-            await wallet.standard_wallet.generate_signed_transaction(
-                amount,
-                minted_cat_puzzle_hash,
-                inner_action_scope,
-                fee,
-                coins=set(coins),
-                origin_id=origin_id,
+            cat_inner: Program = await wallet.standard_wallet.get_puzzle(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
+            # GENESIS_ID
+            # TREASURY_SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
+            launcher_puzhash = create_cat_launcher_for_singleton_id(tail_info["treasury_id"]).get_tree_hash()
+            tail: Program = cls.construct(
+                [
+                    Program.to(origin_id),
+                    Program.to(launcher_puzhash),
+                ]
             )
 
-        async with action_scope.use() as interface:
+            wallet.lineage_store = await CATLineageStore.create(
+                wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
+            )
+            await wallet.add_lineage(origin_id, LineageProof())
+
+            minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(
+                CAT_MOD, tail.get_tree_hash(), cat_inner
+            ).get_tree_hash()
+
+            async with wallet.wallet_state_manager.new_action_scope(
+                action_scope.config.tx_config, push=False
+            ) as inner_action_scope:
+                await wallet.standard_wallet.generate_signed_transaction(
+                    amount,
+                    minted_cat_puzzle_hash,
+                    inner_action_scope,
+                    coins=set(coins),
+                    origin_id=origin_id,
+                )
+
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
         tx_record: TransactionRecord = inner_action_scope.side_effects.transactions[0]
         assert tx_record.spend_bundle is not None

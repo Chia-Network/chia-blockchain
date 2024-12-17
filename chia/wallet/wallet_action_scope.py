@@ -5,6 +5,8 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional, cast, final
 
+from chia_rs.sized_ints import uint64
+
 from chia.types.blockchain_format.coin import Coin
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
@@ -25,6 +27,7 @@ class _StreamableWalletSideEffects(Streamable):
     signing_responses: list[SigningResponse]
     extra_spends: list[WalletSpendBundle]
     selected_coins: list[Coin]
+    fee_left_to_pay: uint64
 
 
 @dataclass
@@ -33,6 +36,7 @@ class WalletSideEffects:
     signing_responses: list[SigningResponse] = field(default_factory=list)
     extra_spends: list[WalletSpendBundle] = field(default_factory=list)
     selected_coins: list[Coin] = field(default_factory=list)
+    fee_left_to_pay: uint64 = uint64(0)
 
     def __bytes__(self) -> bytes:
         return bytes(_StreamableWalletSideEffects(**self.__dict__))
@@ -51,6 +55,7 @@ class WalletActionConfig:
     additional_signing_responses: list[SigningResponse]
     extra_spends: list[WalletSpendBundle]
     tx_config: TXConfig
+    total_fee: uint64
 
     def adjust_for_side_effects(self, side_effects: WalletSideEffects) -> WalletActionConfig:
         return replace(
@@ -74,16 +79,18 @@ async def new_wallet_action_scope(
     sign: Optional[bool] = None,
     additional_signing_responses: list[SigningResponse] = [],
     extra_spends: list[WalletSpendBundle] = [],
+    fee: uint64 = uint64(0),
 ) -> AsyncIterator[WalletActionScope]:
     async with ActionScope.new_scope(
         wallet_state_manager.db_wrapper.writer,
         WalletSideEffects(),
-        WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config),
+        WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config, fee),
     ) as self:
         self = cast(WalletActionScope, self)
         async with self.use() as interface:
             interface.side_effects.signing_responses = additional_signing_responses.copy()
             interface.side_effects.extra_spends = extra_spends.copy()
+            interface.side_effects.fee_left_to_pay = fee
 
         yield self
 

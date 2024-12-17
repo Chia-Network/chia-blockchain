@@ -260,7 +260,6 @@ class Wallet:
         amount: uint64,
         newpuzzlehash: bytes32,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
         coins: Optional[set[Coin]] = None,
         primaries_input: Optional[list[Payment]] = None,
@@ -281,83 +280,89 @@ class Wallet:
         if primaries_input is not None:
             primaries.extend(primaries_input)
 
-        total_amount = amount + sum(primary.amount for primary in primaries) + fee
-        total_balance = await self.get_spendable_balance()
-        if coins is None:
-            if total_amount > total_balance:
-                raise ValueError(
-                    f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {total_amount} mojos"
-                )
-            coins = await self.select_coins(
-                uint64(total_amount),
-                action_scope,
+        async with action_scope.use() as interface:
+            total_amount = (
+                amount + sum(primary.amount for primary in primaries) + interface.side_effects.fee_left_to_pay
             )
-
-        assert len(coins) > 0
-        self.log.info(f"coins is not None {coins}")
-        spend_value = sum(coin.amount for coin in coins)
-        self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
-        change = spend_value - total_amount
-        if negative_change_allowed:
-            change = max(0, change)
-
-        assert change >= 0
-
-        spends: list[CoinSpend] = []
-        primary_announcement: Optional[AssertCoinAnnouncement] = None
-
-        # Check for duplicates
-        all_primaries_list = [(p.puzzle_hash, p.amount) for p in primaries]
-        if len(set(all_primaries_list)) != len(all_primaries_list):
-            raise ValueError("Cannot create two identical coins")
-        for coin in coins:
-            # Only one coin creates outputs
-            if origin_id in {None, coin.name()}:
-                origin_id = coin.name()
-                inner_puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
-                    inner_puzzle, newpuzzlehash
-                )
-                target_primary: list[Payment] = []
-                if memos is None:
-                    memos = []
-                memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
-                if (primaries_input is None and amount > 0) or primaries_input is not None:
-                    primaries.append(Payment(decorated_target_puzzle_hash, amount, memos))
-                    target_primary.append(Payment(newpuzzlehash, amount, memos))
-
-                if change > 0:
-                    if action_scope.config.tx_config.reuse_puzhash:
-                        change_puzzle_hash: bytes32 = coin.puzzle_hash
-                        for primary in primaries:
-                            if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
-                                # We cannot create two coins has same id, create a new puzhash for the change:
-                                change_puzzle_hash = await self.get_new_puzzlehash()
-                                break
-                    else:
-                        change_puzzle_hash = await self.get_new_puzzlehash()
-                    primaries.append(Payment(change_puzzle_hash, uint64(change)))
-                message_list: list[bytes32] = [c.name() for c in coins]
-                for primary in primaries:
-                    message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
-                message: bytes32 = std_hash(b"".join(message_list))
-                puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                solution: Program = self.make_solution(
-                    primaries=primaries,
-                    fee=fee,
-                    conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
-                )
-                solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
-                primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
-
-                spends.append(
-                    make_spend(
-                        coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
+            total_balance = await self.get_spendable_balance()
+            if coins is None:
+                if total_amount > total_balance:
+                    raise ValueError(
+                        f"Can't spend more than wallet balance: {total_balance} mojos, "
+                        f"tried to spend: {total_amount} mojos"
                     )
+                coins = await self.select_coins(
+                    uint64(total_amount),
+                    action_scope,
                 )
-                break
-        else:
-            raise ValueError("origin_id is not in the set of selected coins")
+
+            assert len(coins) > 0
+            self.log.info(f"coins is not None {coins}")
+            spend_value = sum(coin.amount for coin in coins)
+            self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
+            change = spend_value - total_amount
+            if negative_change_allowed:
+                change = max(0, change)
+
+            assert change >= 0
+
+            spends: list[CoinSpend] = []
+            primary_announcement: Optional[AssertCoinAnnouncement] = None
+
+            # Check for duplicates
+            all_primaries_list = [(p.puzzle_hash, p.amount) for p in primaries]
+            if len(set(all_primaries_list)) != len(all_primaries_list):
+                raise ValueError("Cannot create two identical coins")
+            for coin in coins:
+                # Only one coin creates outputs
+                if origin_id in {None, coin.name()}:
+                    origin_id = coin.name()
+                    inner_puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+                    decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
+                        inner_puzzle, newpuzzlehash
+                    )
+                    target_primary: list[Payment] = []
+                    if memos is None:
+                        memos = []
+                    memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
+                    if (primaries_input is None and amount > 0) or primaries_input is not None:
+                        primaries.append(Payment(decorated_target_puzzle_hash, amount, memos))
+                        target_primary.append(Payment(newpuzzlehash, amount, memos))
+
+                    if change > 0:
+                        if action_scope.config.tx_config.reuse_puzhash:
+                            change_puzzle_hash: bytes32 = coin.puzzle_hash
+                            for primary in primaries:
+                                if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
+                                    # We cannot create two coins has same id, create a new puzhash for the change:
+                                    change_puzzle_hash = await self.get_new_puzzlehash()
+                                    break
+                        else:
+                            change_puzzle_hash = await self.get_new_puzzlehash()
+                        primaries.append(Payment(change_puzzle_hash, uint64(change)))
+                    message_list: list[bytes32] = [c.name() for c in coins]
+                    for primary in primaries:
+                        message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
+                    message: bytes32 = std_hash(b"".join(message_list))
+                    puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+                    solution: Program = self.make_solution(
+                        primaries=primaries,
+                        fee=interface.side_effects.fee_left_to_pay,
+                        conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
+                    )
+                    solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
+                    primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
+
+                    spends.append(
+                        make_spend(
+                            coin,
+                            SerializedProgram.from_bytes(bytes(puzzle)),
+                            SerializedProgram.from_bytes(bytes(solution)),
+                        )
+                    )
+                    break
+            else:
+                raise ValueError("origin_id is not in the set of selected coins")
 
         # Process the non-origin coins now that we have the primary announcement hash
         for coin in coins:
@@ -396,7 +401,6 @@ class Wallet:
         amount: uint64,
         puzzle_hash: bytes32,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         coins: Optional[set[Coin]] = None,
         primaries: Optional[list[Payment]] = None,
         memos: Optional[list[bytes]] = None,
@@ -421,7 +425,6 @@ class Wallet:
             amount,
             puzzle_hash,
             action_scope,
-            fee,
             origin_id,
             coins,
             primaries,
@@ -437,21 +440,21 @@ class Wallet:
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
 
-        output_amount = sum(a.amount for a in add_list) + fee
-        input_amount = sum(r.amount for r in rem_list)
-        if negative_change_allowed:
-            assert output_amount >= input_amount
-        else:
-            assert output_amount == input_amount
-
         async with action_scope.use() as interface:
+            output_amount = sum(a.amount for a in add_list) + interface.side_effects.fee_left_to_pay
+            input_amount = sum(r.amount for r in rem_list)
+            if negative_change_allowed:
+                assert output_amount >= input_amount
+            else:
+                assert output_amount == input_amount
+
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=puzzle_hash,
                     amount=uint64(non_change_amount),
-                    fee_amount=uint64(fee),
+                    fee_amount=action_scope.config.total_fee,
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=spend_bundle,
@@ -466,22 +469,22 @@ class Wallet:
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
+            interface.side_effects.fee_left_to_pay = uint64(0)
 
     async def create_tandem_xch_tx(
         self,
-        fee: uint64,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
-        chia_coins = await self.select_coins(fee, action_scope)
-        await self.generate_signed_transaction(
-            uint64(0),
-            (await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
-            action_scope,
-            fee=fee,
-            coins=chia_coins,
-            extra_conditions=extra_conditions,
-        )
+        async with action_scope.use() as interface:
+            chia_coins = await self.select_coins(interface.side_effects.fee_left_to_pay, action_scope)
+            await self.generate_signed_transaction(
+                uint64(0),
+                (await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                action_scope,
+                coins=chia_coins,
+                extra_conditions=extra_conditions,
+            )
 
     async def get_coins_to_offer(
         self,

@@ -1719,13 +1719,12 @@ async def test_identical_spend_aggregation_e2e(
     e_announcement = AssertCoinAnnouncement(asserted_id=e_coin_id, asserted_msg=message)
     # Create transactions D and F that consume an announcement created by E
     async with wallet.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
+        DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True, fee=uint64(0)
     ) as action_scope:
         await wallet.generate_signed_transaction(
             uint64(100),
             ph,
             action_scope,
-            fee=uint64(0),
             coins={coins[4].coin},
             extra_conditions=(e_announcement,),
         )
@@ -1733,7 +1732,6 @@ async def test_identical_spend_aggregation_e2e(
             uint64(150),
             ph,
             action_scope,
-            fee=uint64(0),
             coins={coins[5].coin},
             extra_conditions=(e_announcement,),
         )

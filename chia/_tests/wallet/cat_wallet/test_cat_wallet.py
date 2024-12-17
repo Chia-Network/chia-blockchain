@@ -66,14 +66,15 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
     }
     test_amount = 100
     test_fee = 10
-    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True, fee=uint64(test_fee)
+    ) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wsm,
             wallet,
             {"identifier": "genesis_by_id"},
             uint64(test_amount),
             action_scope,
-            fee=uint64(test_fee),
         )
         # The next 2 lines are basically a noop, it just adds test coverage
         cat_wallet = await CATWallet.create(wsm, wallet, cat_wallet.wallet_info)
@@ -324,8 +325,10 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     cat_2_hash = await cat_wallet_2.standard_wallet.get_puzzle_hash(new=False)
-    async with cat_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope, fee=uint64(1))
+    async with cat_wallet.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=uint64(1)
+    ) as action_scope:
+        await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope)
     tx_id = None
     for tx_record in action_scope.side_effects.transactions:
         if tx_record.wallet_id == cat_wallet.id():
@@ -617,9 +620,9 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
 
     cat_2_hash = await cat_wallet_2.standard_wallet.get_puzzle_hash(new=False)
     async with cat_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config, push=True, fee=uint64(1)
     ) as action_scope:
-        await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope, fee=uint64(1))
+        await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope)
 
     await wallet_environments.process_pending_states(
         [

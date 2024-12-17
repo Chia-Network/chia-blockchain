@@ -915,7 +915,7 @@ class WalletStateManager:
                 stop=tx_config.coin_selection_config.max_coin_amount,
             ),
         )
-        async with self.new_action_scope(tx_config, push=True) as action_scope:
+        async with self.new_action_scope(tx_config, push=True, fee=tx_fee) as action_scope:
             for coin in unspent_coins.records:
                 try:
                     metadata: MetadataTypes = coin.parsed_metadata()
@@ -925,17 +925,16 @@ class WalletStateManager:
                         if current_timestamp - coin_timestamp >= metadata.time_lock:
                             clawback_coins[coin.coin] = metadata
                             if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
+                                await self.spend_clawback_coins(clawback_coins, action_scope)
                                 clawback_coins = {}
                 except Exception as e:
                     self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
             if len(clawback_coins) > 0:
-                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
+                await self.spend_clawback_coins(clawback_coins, action_scope)
 
     async def spend_clawback_coins(
         self,
         clawback_coins: dict[Coin, ClawbackMetadata],
-        fee: uint64,
         action_scope: WalletActionScope,
         force: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -946,100 +945,103 @@ class WalletStateManager:
         now: uint64 = uint64(int(time.time()))
         derivation_record: Optional[DerivationRecord] = None
         amount: uint64 = uint64(0)
-        for coin, metadata in clawback_coins.items():
-            try:
-                self.log.info(f"Claiming clawback coin {coin.name().hex()}")
-                # Get incoming tx
-                incoming_tx = await self.tx_store.get_transaction_record(coin.name())
-                assert incoming_tx is not None, f"Cannot find incoming tx for clawback coin {coin.name().hex()}"
-                if incoming_tx.sent > 0 and not force:
-                    self.log.error(
-                        f"Clawback coin {coin.name().hex()} is already in a pending spend bundle. {incoming_tx}"
-                    )
-                    continue
-
-                recipient_puzhash: bytes32 = metadata.recipient_puzzle_hash
-                sender_puzhash: bytes32 = metadata.sender_puzzle_hash
-                is_recipient: bool = await metadata.is_recipient(self.puzzle_store)
-                if is_recipient:
-                    derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
-                else:
-                    derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
-                assert derivation_record is not None
-                amount = uint64(amount + coin.amount)
-                # Remove the clawback hint since it is unnecessary for the XCH coin
-                memos: list[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
-                inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
-                inner_solution: Program = self.main_wallet.make_solution(
-                    primaries=[
-                        Payment(
-                            derivation_record.puzzle_hash,
-                            uint64(coin.amount),
-                            memos,  # Forward memo of the first coin
+        async with action_scope.use() as interface:
+            for coin, metadata in clawback_coins.items():
+                try:
+                    self.log.info(f"Claiming clawback coin {coin.name().hex()}")
+                    # Get incoming tx
+                    incoming_tx = await self.tx_store.get_transaction_record(coin.name())
+                    assert incoming_tx is not None, f"Cannot find incoming tx for clawback coin {coin.name().hex()}"
+                    if incoming_tx.sent > 0 and not force:
+                        self.log.error(
+                            f"Clawback coin {coin.name().hex()} is already in a pending spend bundle. {incoming_tx}"
                         )
-                    ],
-                    conditions=(
-                        extra_conditions
-                        if len(coin_spends) > 0 or fee == 0
-                        else (*extra_conditions, CreateCoinAnnouncement(message))
-                    ),
-                )
-                coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
-                coin_spends.append(coin_spend)
-                # Update incoming tx to prevent double spend and mark it is pending
-                await self.tx_store.increment_sent(incoming_tx.name, "", MempoolInclusionStatus.PENDING, None)
-            except Exception as e:
-                self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
-        if len(coin_spends) == 0:
-            return
-        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
-        if fee > 0:
-            async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
-                await self.main_wallet.create_tandem_xch_tx(
-                    fee,
-                    inner_action_scope,
-                    extra_conditions=(
-                        AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
-                    ),
-                )
-            async with action_scope.use() as interface:
+                        continue
+
+                    recipient_puzhash: bytes32 = metadata.recipient_puzzle_hash
+                    sender_puzhash: bytes32 = metadata.sender_puzzle_hash
+                    is_recipient: bool = await metadata.is_recipient(self.puzzle_store)
+                    if is_recipient:
+                        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                            recipient_puzhash
+                        )
+                    else:
+                        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                            sender_puzhash
+                        )
+                    assert derivation_record is not None
+                    amount = uint64(amount + coin.amount)
+                    # Remove the clawback hint since it is unnecessary for the XCH coin
+                    memos: list[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
+                    inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+                    inner_solution: Program = self.main_wallet.make_solution(
+                        primaries=[
+                            Payment(
+                                derivation_record.puzzle_hash,
+                                uint64(coin.amount),
+                                memos,  # Forward memo of the first coin
+                            )
+                        ],
+                        conditions=(
+                            extra_conditions
+                            if len(coin_spends) > 0 or interface.side_effects.fee_left_to_pay == 0
+                            else (*extra_conditions, CreateCoinAnnouncement(message))
+                        ),
+                    )
+                    coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
+                    coin_spends.append(coin_spend)
+                    # Update incoming tx to prevent double spend and mark it is pending
+                    await self.tx_store.increment_sent(incoming_tx.name, "", MempoolInclusionStatus.PENDING, None)
+                except Exception as e:
+                    self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
+            if len(coin_spends) == 0:
+                return
+            spend_bundle = WalletSpendBundle(coin_spends, G2Element())
+            if interface.side_effects.fee_left_to_pay > 0:
+                async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
+                    await self.main_wallet.create_tandem_xch_tx(
+                        inner_action_scope,
+                        extra_conditions=(
+                            AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
+                        ),
+                    )
                 # This should not be looked to for best practice. Ideally, the two spend bundles can exist separately on
                 # each tx record until they are pushed. This is not very supported behavior at the moment so to avoid
                 # any potential backwards compatibility issues, we're moving the spend bundle from this TX to the main
                 interface.side_effects.transactions.extend(
                     [dataclasses.replace(tx, spend_bundle=None) for tx in inner_action_scope.side_effects.transactions]
                 )
-            spend_bundle = WalletSpendBundle.aggregate(
-                [
-                    spend_bundle,
-                    *(
-                        tx.spend_bundle
-                        for tx in inner_action_scope.side_effects.transactions
-                        if tx.spend_bundle is not None
-                    ),
-                ]
+                spend_bundle = WalletSpendBundle.aggregate(
+                    [
+                        spend_bundle,
+                        *(
+                            tx.spend_bundle
+                            for tx in inner_action_scope.side_effects.transactions
+                            if tx.spend_bundle is not None
+                        ),
+                    ]
+                )
+            assert derivation_record is not None
+            tx_record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=now,
+                to_puzzle_hash=derivation_record.puzzle_hash,
+                amount=amount,
+                fee_amount=action_scope.config.total_fee,
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=uint32(1),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_CLAWBACK),
+                name=spend_bundle.name(),
+                memos=list(compute_memos(spend_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             )
-        assert derivation_record is not None
-        tx_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=now,
-            to_puzzle_hash=derivation_record.puzzle_hash,
-            amount=amount,
-            fee_amount=uint64(fee),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=uint32(1),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_CLAWBACK),
-            name=spend_bundle.name(),
-            memos=list(compute_memos(spend_bundle).items()),
-            valid_times=parse_timelock_info(extra_conditions),
-        )
-        async with action_scope.use() as interface:
+
             interface.side_effects.transactions.append(tx_record)
 
     async def filter_spam(self, new_coin_state: list[CoinState]) -> list[CoinState]:
@@ -2790,6 +2792,7 @@ class WalletStateManager:
         sign: Optional[bool] = None,
         additional_signing_responses: list[SigningResponse] = [],
         extra_spends: list[WalletSpendBundle] = [],
+        fee: uint64 = uint64(0),
     ) -> AsyncIterator[WalletActionScope]:
         async with new_wallet_action_scope(
             self,
@@ -2799,6 +2802,7 @@ class WalletStateManager:
             sign=sign,
             additional_signing_responses=additional_signing_responses,
             extra_spends=extra_spends,
+            fee=fee,
         ) as action_scope:
             yield action_scope
 
