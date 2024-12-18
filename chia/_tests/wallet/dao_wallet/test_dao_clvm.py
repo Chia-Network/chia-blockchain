@@ -17,10 +17,9 @@ from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import (
-    CAT_MOD_HASH,
     DAO_FINISHED_STATE,
     DAO_FINISHED_STATE_HASH,
     DAO_LOCKUP_MOD,
@@ -33,9 +32,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_TREASURY_MOD_HASH,
     P2_SINGLETON_AGGREGATOR_MOD,
     P2_SINGLETON_MOD,
-    SINGLETON_LAUNCHER_HASH,
-    SINGLETON_MOD,
-    SINGLETON_MOD_HASH,
     SPEND_P2_SINGLETON_MOD,
     curry_singleton,
     get_p2_singleton_puzhash,
@@ -44,6 +40,9 @@ from chia.wallet.dao_wallet.dao_utils import (
 from chia.wallet.dao_wallet.dao_utils import (
     DAO_UPDATE_PROPOSAL_MOD as DAO_UPDATE_MOD,
 )
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH
+from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD as SINGLETON_MOD
+from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD_HASH as SINGLETON_MOD_HASH
 from chia.wallet.singleton import create_singleton_puzzle_hash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -56,7 +55,7 @@ def test_finished_state() -> None:
     the lockup puzzle.
     """
     proposal_id = Program.to("proposal_id").get_tree_hash()
-    singleton_struct: Program = Program.to((SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER_HASH)))
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     finished_inner_puz = DAO_FINISHED_STATE.curry(singleton_struct, DAO_FINISHED_STATE_HASH)
     finished_full_puz = SINGLETON_MOD.curry(singleton_struct, finished_inner_puz)
     inner_sol = Program.to([1])
@@ -84,7 +83,7 @@ def test_proposal() -> None:
     CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
     treasury_id = Program.to("treasury").get_tree_hash()
     singleton_id = Program.to("singleton_id").get_tree_hash()
-    singleton_struct: Program = Program.to((SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER_HASH)))
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     self_destruct_time = 1000  # number of blocks
     oracle_spend_delay = 10
     active_votes_list = [0xFADEDDAB]  # are the ids of previously voted on proposals?
@@ -376,7 +375,7 @@ def test_proposal_timer() -> None:
     CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
     treasury_id = Program.to("treasury").get_tree_hash()
     singleton_id = Program.to("singleton_id").get_tree_hash()
-    singleton_struct: Program = Program.to((SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER_HASH)))
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     dao_lockup_self = DAO_LOCKUP_MOD.curry(
         SINGLETON_MOD_HASH,
         SINGLETON_LAUNCHER_HASH,
@@ -469,7 +468,7 @@ def test_validator() -> None:
 
     # Setup the proposal
     proposal_id = Program.to("proposal_id").get_tree_hash()
-    proposal_struct: Program = Program.to((SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER_HASH)))
+    proposal_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     CAT_TAIL_HASH = Program.to("tail").get_tree_hash()
     acs: Program = Program.to(1)
     acs_ph: bytes32 = acs.get_tree_hash()
