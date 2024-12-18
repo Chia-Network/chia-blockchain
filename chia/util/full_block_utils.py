@@ -319,3 +319,27 @@ def header_block_from_block(
         header_block += bytes(transactions_info)
 
     return header_block
+
+
+def get_height_and_tx_status_from_block(buf: memoryview) -> tuple[uint32, bool]:
+    """
+    Returns the height of the block and whether it's a transaction block or not.
+    We're considering the block as a transaction block if transactions_info is not None.
+    """
+    reward_chain_block_buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
+    # Get the block height from reward_chain_block_buf
+    height_buf = skip_uint128(reward_chain_block_buf)  # weight
+    height = uint32.from_bytes(height_buf[:4])
+    # Let's continue down to transactions_info
+    buf = skip_reward_chain_block(reward_chain_block_buf)  # reward_chain_block
+    buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # reward_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_ip_proof
+    buf = skip_foliage(buf)  # foliage
+    buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
+    # We're at the transactions_info optional.
+    # If it's not None, consider this a transaction block.
+    is_tx_block = buf[0] != 0
+    return height, is_tx_block
