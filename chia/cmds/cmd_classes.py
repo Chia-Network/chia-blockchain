@@ -4,16 +4,12 @@ import asyncio
 import collections
 import inspect
 import sys
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Callable, Optional, Protocol, Union, get_args, get_origin, get_type_hints
 
 import click
 from typing_extensions import dataclass_transform
 
-from chia.cmds.cmds_util import get_wallet_client
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import is_type_SpecificOptional
@@ -225,9 +221,10 @@ def _convert_class_to_function(cls: type[ChiaCommand]) -> SyncCmd:
     return command_parser.apply_decorators(command_parser)
 
 
-@dataclass_transform()
+@dataclass_transform(frozen_default=True)
 def chia_command(
-    cmd: click.Group,
+    *,
+    group: Optional[click.Group] = None,
     name: str,
     short_help: str,
     help: str,
@@ -246,13 +243,40 @@ def chia_command(
                 kw_only=True,
             )(cls)
 
-        cmd.command(name, short_help=short_help, help=help)(_convert_class_to_function(wrapped_cls))
+        metadata = Metadata(
+            command=click.command(
+                name=name,
+                short_help=short_help,
+                help=help,
+            )(_convert_class_to_function(wrapped_cls))
+        )
+
+        setattr(wrapped_cls, _chia_command_metadata_attribute, metadata)
+        if group is not None:
+            group.add_command(metadata.command)
+
         return wrapped_cls
 
     return _chia_command
 
 
-@dataclass_transform()
+_chia_command_metadata_attribute = f"_{__name__.replace('.', '_')}_{chia_command.__qualname__}_metadata"
+
+
+@dataclass(frozen=True)
+class Metadata:
+    command: click.Command
+
+
+def get_chia_command_metadata(cls: type[ChiaCommand]) -> Metadata:
+    metadata: Optional[Metadata] = getattr(cls, _chia_command_metadata_attribute, None)
+    if metadata is None:
+        raise Exception(f"Class is not a chia command: {cls}")
+
+    return metadata
+
+
+@dataclass_transform(frozen_default=True)
 def command_helper(cls: type[Any]) -> type[Any]:
     if sys.version_info < (3, 10):  # stuff below 3.10 doesn't support kw_only
         new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
@@ -263,47 +287,3 @@ def command_helper(cls: type[Any]) -> type[Any]:
 
 
 Context = dict[str, Any]
-
-
-@dataclass(frozen=True)
-class WalletClientInfo:
-    client: WalletRpcClient
-    fingerprint: int
-    config: dict[str, Any]
-
-
-@command_helper
-class NeedsWalletRPC:
-    context: Context = field(default_factory=dict)
-    client_info: Optional[WalletClientInfo] = None
-    wallet_rpc_port: Optional[int] = option(
-        "-wp",
-        "--wallet-rpc_port",
-        help=(
-            "Set the port where the Wallet is hosting the RPC interface."
-            "See the rpc_port under wallet in config.yaml."
-        ),
-        type=int,
-        default=None,
-    )
-    fingerprint: Optional[int] = option(
-        "-f",
-        "--fingerprint",
-        help="Fingerprint of the wallet to use",
-        type=int,
-        default=None,
-    )
-
-    @asynccontextmanager
-    async def wallet_rpc(self, **kwargs: Any) -> AsyncIterator[WalletClientInfo]:
-        if self.client_info is not None:
-            yield self.client_info
-        else:
-            if "root_path" not in kwargs:
-                kwargs["root_path"] = self.context["root_path"]
-            async with get_wallet_client(self.wallet_rpc_port, self.fingerprint, **kwargs) as (
-                wallet_client,
-                fp,
-                config,
-            ):
-                yield WalletClientInfo(wallet_client, fp, config)

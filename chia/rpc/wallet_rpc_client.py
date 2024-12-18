@@ -85,8 +85,18 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
+    VCAddProofs,
+    VCGet,
+    VCGetList,
+    VCGetListResponse,
+    VCGetProofsForRoot,
+    VCGetProofsForRootResponse,
+    VCGetResponse,
+    VCMint,
     VCMintResponse,
+    VCRevoke,
     VCRevokeResponse,
+    VCSpend,
     VCSpendResponse,
     VerifySignature,
     VerifySignatureResponse,
@@ -95,7 +105,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
@@ -107,7 +116,6 @@ from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamab
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 
 
@@ -1662,94 +1670,56 @@ class WalletRpcClient(RpcClient):
 
     async def vc_mint(
         self,
-        did_id: bytes32,
+        request: VCMint,
         tx_config: TXConfig,
-        target_address: Optional[bytes32] = None,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> VCMintResponse:
-        response = await self.fetch(
-            "vc_mint",
-            {
-                "did_id": encode_puzzle_hash(did_id, "rpc"),
-                "target_address": encode_puzzle_hash(target_address, "rpc") if target_address is not None else None,
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return VCMintResponse.from_json_dict(
+            await self.fetch(
+                "vc_mint", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return json_deserialize_with_clvm_streamable(response, VCMintResponse)
 
-    async def vc_get(self, vc_id: bytes32) -> Optional[VCRecord]:
-        response = await self.fetch("vc_get", {"vc_id": vc_id.hex()})
-        return None if response["vc_record"] is None else VCRecord.from_json_dict(response["vc_record"])
+    async def vc_get(self, request: VCGet) -> VCGetResponse:
+        return VCGetResponse.from_json_dict(await self.fetch("vc_get", request.to_json_dict()))
 
-    async def vc_get_list(self, start: int = 0, count: int = 50) -> tuple[list[VCRecord], dict[str, Any]]:
-        response = await self.fetch("vc_get_list", {"start": start, "count": count})
-        return [VCRecord.from_json_dict(rec) for rec in response["vc_records"]], response["proofs"]
+    async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
+        return VCGetListResponse.from_json_dict(await self.fetch("vc_get_list", request.to_json_dict()))
 
     async def vc_spend(
         self,
-        vc_id: bytes32,
+        request: VCSpend,
         tx_config: TXConfig,
-        new_puzhash: Optional[bytes32] = None,
-        new_proof_hash: Optional[bytes32] = None,
-        provider_inner_puzhash: Optional[bytes32] = None,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> VCSpendResponse:
-        response = await self.fetch(
-            "vc_spend",
-            {
-                "vc_id": vc_id.hex(),
-                "new_puzhash": new_puzhash.hex() if new_puzhash is not None else new_puzhash,
-                "new_proof_hash": new_proof_hash.hex() if new_proof_hash is not None else new_proof_hash,
-                "provider_inner_puzhash": (
-                    provider_inner_puzhash.hex() if provider_inner_puzhash is not None else provider_inner_puzhash
-                ),
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return VCSpendResponse.from_json_dict(
+            await self.fetch(
+                "vc_spend", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return json_deserialize_with_clvm_streamable(response, VCSpendResponse)
 
-    async def vc_add_proofs(self, proofs: dict[str, Any]) -> None:
-        await self.fetch("vc_add_proofs", {"proofs": proofs})
+    async def vc_add_proofs(self, request: VCAddProofs) -> None:
+        await self.fetch("vc_add_proofs", request.to_json_dict())
 
-    async def vc_get_proofs_for_root(self, root: bytes32) -> dict[str, Any]:
-        response = await self.fetch("vc_get_proofs_for_root", {"root": root.hex()})
-        return cast(dict[str, Any], response["proofs"])
+    async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
+        return VCGetProofsForRootResponse.from_json_dict(
+            await self.fetch("vc_get_proofs_for_root", request.to_json_dict())
+        )
 
     async def vc_revoke(
         self,
-        vc_parent_id: bytes32,
+        request: VCRevoke,
         tx_config: TXConfig,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> VCRevokeResponse:
-        response = await self.fetch(
-            "vc_revoke",
-            {
-                "vc_parent_id": vc_parent_id.hex(),
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return VCRevokeResponse.from_json_dict(
+            await self.fetch(
+                "vc_revoke", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return json_deserialize_with_clvm_streamable(response, VCRevokeResponse)
 
     async def crcat_approve_pending(
         self,

@@ -23,6 +23,13 @@ repos:
         types_or: [python, pyi]
   - repo: local
     hooks:
+      - id: ruff
+        name: Ruff
+        entry: ./activated.py ruff check --fix
+        language: system
+        types: [python]
+  - repo: local
+    hooks:
       - id: poetry
         name: poetry
         entry: ./activated.py --poetry poetry check
@@ -71,13 +78,6 @@ repos:
         entry: ./activated.py python chia/util/virtual_project_analysis.py print_cycles --directory chia --config virtual_project.yaml
         language: system
         pass_filenames: false
-  - repo: local
-    hooks:
-      - id: ruff
-        name: Ruff
-        entry: ./activated.py ruff check --fix
-        language: system
-        types: [python]
   - repo: local
     hooks:
       - id: build mypy.ini
