@@ -616,51 +616,51 @@ class TradeManager:
                     wallet = self.wallet_state_manager.wallets.get(uint32(id))
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
-                async with self.wallet_state_manager.new_action_scope(
-                    action_scope.config.tx_config, push=False
-                ) as inner_action_scope:
-                    # This should probably not switch on whether or not we're spending XCH but it has to for now
-                    assert wallet is not None
-                    if wallet.type() == WalletType.STANDARD_WALLET:
-                        assert isinstance(wallet, Wallet)
-                        await wallet.generate_signed_transaction(
-                            uint64(abs(offer_dict[id])),
-                            Offer.ph(),
-                            inner_action_scope,
-                            coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
-                        )
-                    elif wallet.type() == WalletType.NFT:
-                        assert isinstance(wallet, NFTWallet)
-                        # This is to generate the tx for specific nft assets, i.e. not using
-                        # wallet_id as the selector which would select any coins from nft_wallet
-                        amounts = [coin.amount for coin in selected_coins]
-                        await wallet.generate_signed_transaction(
-                            # [abs(offer_dict[id])],
-                            amounts,
-                            [Offer.ph()],
-                            inner_action_scope,
-                            coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
-                        )
-                    else:
-                        # ATTENTION: new_wallets
-                        assert isinstance(wallet, (CATWallet, DataLayerWallet))
-                        await wallet.generate_signed_transaction(
-                            [uint64(abs(offer_dict[id]))],
-                            [Offer.ph()],
-                            inner_action_scope,
-                            coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
-                            add_authorizations_to_cr_cats=False,
-                        )
+                async with action_scope.use() as interface:
+                    async with self.wallet_state_manager.new_action_scope(
+                        action_scope.config.tx_config, push=False, fee=interface.side_effects.fee_left_to_pay
+                    ) as inner_action_scope:
+                        # This should probably not switch on whether or not we're spending XCH but it has to for now
+                        assert wallet is not None
+                        if wallet.type() == WalletType.STANDARD_WALLET:
+                            assert isinstance(wallet, Wallet)
+                            await wallet.generate_signed_transaction(
+                                uint64(abs(offer_dict[id])),
+                                Offer.ph(),
+                                inner_action_scope,
+                                coins=selected_coins,
+                                extra_conditions=(*extra_conditions, *announcements_to_assert),
+                            )
+                        elif wallet.type() == WalletType.NFT:
+                            assert isinstance(wallet, NFTWallet)
+                            # This is to generate the tx for specific nft assets, i.e. not using
+                            # wallet_id as the selector which would select any coins from nft_wallet
+                            amounts = [coin.amount for coin in selected_coins]
+                            await wallet.generate_signed_transaction(
+                                # [abs(offer_dict[id])],
+                                amounts,
+                                [Offer.ph()],
+                                inner_action_scope,
+                                coins=selected_coins,
+                                extra_conditions=(*extra_conditions, *announcements_to_assert),
+                            )
+                        else:
+                            # ATTENTION: new_wallets
+                            assert isinstance(wallet, (CATWallet, DataLayerWallet))
+                            await wallet.generate_signed_transaction(
+                                [uint64(abs(offer_dict[id]))],
+                                [Offer.ph()],
+                                inner_action_scope,
+                                coins=selected_coins,
+                                extra_conditions=(*extra_conditions, *announcements_to_assert),
+                                add_authorizations_to_cr_cats=False,
+                            )
 
-                all_transactions.extend(inner_action_scope.side_effects.transactions)
+                    all_transactions.extend(inner_action_scope.side_effects.transactions)
 
-                extra_conditions = tuple()
+                    extra_conditions = tuple()
 
-            async with action_scope.use() as interface:
-                interface.side_effects.transactions.extend(all_transactions)
+                    interface.side_effects.transactions.extend(all_transactions)
 
             total_spend_bundle = WalletSpendBundle.aggregate(
                 [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
@@ -856,26 +856,28 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer, peer)
         if not valid:
             raise ValueError("This offer is no longer valid")
-        # We need to sandbox the transactions here because we're going to make our own
-        async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
-        ) as inner_action_scope:
-            result = await self._create_offer_for_ids(
-                take_offer_dict,
-                inner_action_scope,
-                offer.driver_dict,
-                solver,
-                extra_conditions=extra_conditions,
-                taking=True,
-            )
-            if not result[0] or result[1] is None:
-                raise ValueError(result[2])
+        async with action_scope.use() as interface:
+            # We need to sandbox the transactions here because we're going to make our own
+            async with self.wallet_state_manager.new_action_scope(
+                action_scope.config.tx_config, push=False, fee=interface.side_effects.fee_left_to_pay
+            ) as inner_action_scope:
+                result = await self._create_offer_for_ids(
+                    take_offer_dict,
+                    inner_action_scope,
+                    offer.driver_dict,
+                    solver,
+                    extra_conditions=extra_conditions,
+                    taking=True,
+                )
+                if not result[0] or result[1] is None:
+                    raise ValueError(result[2])
 
-            _success, take_offer, _error = result
+                _success, take_offer, _error = result
 
-            complete_offer, valid_spend_solver = await self.check_for_final_modifications(
-                Offer.aggregate([offer, take_offer]), solver, inner_action_scope
-            )
+                complete_offer, valid_spend_solver = await self.check_for_final_modifications(
+                    Offer.aggregate([offer, take_offer]), solver, inner_action_scope
+                )
+            interface.side_effects.fee_left_to_pay = inner_action_scope.side_effects.fee_left_to_pay
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(
