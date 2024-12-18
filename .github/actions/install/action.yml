@@ -39,6 +39,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Set up rust
+      uses: dtolnay/rust-toolchain@stable
+
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash

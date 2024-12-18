@@ -190,9 +190,6 @@ jobs:
           mkdir "${GITHUB_WORKSPACE}/.chia"
           mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
 
-      - name: Set up rust
-        uses: dtolnay/rust-toolchain@stable
-
       - uses: ./.github/actions/install
         with:
           python-version: ${{ matrix.python.install_sh }}
