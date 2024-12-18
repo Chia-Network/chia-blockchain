@@ -208,16 +208,16 @@ class MerkleBlob:
         self.blob[data_start:end] = pack_raw_node(new_node)
 
     def get_random_leaf_node(self, seed: bytes) -> RawLeafMerkleNode:
+        path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
         node = self.get_raw_node(TreeIndex(0))
-        for byte in seed:
-            for bit in range(8):
-                if isinstance(node, RawLeafMerkleNode):
-                    return node
-                assert isinstance(node, RawInternalMerkleNode)
-                if byte & (1 << bit):
-                    node = self.get_raw_node(node.left)
-                else:
-                    node = self.get_raw_node(node.right)
+        for bit in path:
+            if isinstance(node, RawLeafMerkleNode):
+                return node
+            assert isinstance(node, RawInternalMerkleNode)
+            if bit == "0":
+                node = self.get_raw_node(node.left)
+            else:
+                node = self.get_raw_node(node.right)
 
         raise Exception("Cannot find leaf from seed")
 
@@ -238,6 +238,22 @@ class MerkleBlob:
                 queue.append(node.right)
 
         return key_to_index
+
+    def get_hashes_indexes(self) -> dict[bytes32, TreeIndex]:
+        if len(self.blob) == 0:
+            return {}
+
+        hash_to_index: dict[bytes32, TreeIndex] = {}
+        queue: list[TreeIndex] = [TreeIndex(0)]
+        while len(queue) > 0:
+            node_index = queue.pop()
+            node = self.get_raw_node(node_index)
+            hash_to_index[bytes32(node.hash)] = node_index
+            if isinstance(node, RawInternalMerkleNode):
+                queue.append(node.left)
+                queue.append(node.right)
+
+        return hash_to_index
 
     def get_keys_values(self) -> dict[KVId, KVId]:
         if len(self.blob) == 0:
@@ -326,6 +342,9 @@ class MerkleBlob:
         if isinstance(new_node, RawLeafMerkleNode):
             self.key_to_index[new_node.key] = new_index
 
+    def key_exists(self, key: KVId) -> bool:
+        return key in self.key_to_index
+
     def insert(
         self,
         key: KVId,
@@ -359,7 +378,10 @@ class MerkleBlob:
 
         if len(self.key_to_index) == 1:
             self.blob.clear()
-            internal_node_hash = internal_hash(bytes32(old_leaf.hash), bytes32(hash))
+            if side == Side.LEFT:
+                internal_node_hash = internal_hash(bytes32(hash), bytes32(old_leaf.hash))
+            else:
+                internal_node_hash = internal_hash(bytes32(old_leaf.hash), bytes32(hash))
             self.blob.extend(
                 NodeMetadata(type=NodeType.internal, dirty=False).pack()
                 + pack_raw_node(
@@ -476,6 +498,7 @@ class MerkleBlob:
             return this
 
         assert isinstance(node, RawInternalMerkleNode)
+
         left_nodes = self.get_nodes_with_indexes(node.left)
         right_nodes = self.get_nodes_with_indexes(node.right)
 

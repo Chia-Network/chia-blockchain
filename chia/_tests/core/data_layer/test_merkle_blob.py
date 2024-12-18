@@ -385,6 +385,7 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
 
     with pytest.raises(InvalidIndexError):
         merkle_blob.get_raw_node(index)
+
     with pytest.raises(InvalidIndexError):
         merkle_blob.get_metadata(index)
 
