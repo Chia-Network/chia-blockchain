@@ -2,22 +2,21 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from chia_puzzles_py.programs import (
+    SINGLETON_LAUNCHER,
+    SINGLETON_TOP_LAYER_V1_1,
+)
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
     curry_and_treehash,
     shatree_atom,
     shatree_pair,
-)
-
-from chia_puzzles_py.programs import (
-    SINGLETON_TOP_LAYER_V1_1, 
-    SINGLETON_LAUNCHER,
 )
 
 SINGLETON_TOP_LAYER_MOD = Program.from_bytes(SINGLETON_TOP_LAYER_V1_1)
