@@ -1526,7 +1526,7 @@ class NFTWallet:
         for mint_number in range(mint_number_start, mint_number_end):
             # Create  the puzzle, solution and coin spend for the intermediate launcher
             intermediate_launcher_puz = nft_puzzles.INTERMEDIATE_LAUNCHER_MOD.curry(
-                nft_puzzles.LAUNCHER_PUZZLE_HASH, mint_number, mint_total
+                SINGLETON_LAUNCHER_PUZZLE_HASH, mint_number, mint_total
             )
             intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
             primaries.append(Payment(intermediate_launcher_ph, uint64(1), [intermediate_launcher_ph]))
@@ -1544,7 +1544,7 @@ class NFTWallet:
             coin_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
 
             # Create the launcher coin, and add its id to a list to be asserted in the XCH spend
-            launcher_coin = Coin(intermediate_launcher_coin.name(), nft_puzzles.LAUNCHER_PUZZLE_HASH, amount)
+            launcher_coin = Coin(intermediate_launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
 
             # Grab the metadata from metadata_list. The index for metadata_list
