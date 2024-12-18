@@ -8,31 +8,32 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzles import (
+    NFT_METADATA_UPDATER_HASH,
+    NFT_OWNERSHIP_LAYER,
+    NFT_STATE_LAYER_MOD,
+    NFT_STATE_LAYER_MOD_HASH,
+    NFT_TRANSFER_PROGRAM_DEFAULT,
     construct_ownership_layer,
     create_full_puzzle,
     create_nft_layer_puzzle_with_curry_params,
     recurry_nft_puzzle,
 )
 from chia.wallet.outer_puzzles import match_puzzle
-from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_STATE_LAYER_MOD,
-    NFT_OWNERSHIP_LAYER,
-    NFT_TRANSFER_PROGRAM_DEFAULT,
-    NFT_STATE_LAYER_MOD_HASH,
-    NFT_METADATA_UPDATER_HASH
-)
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH as LAUNCHER_PUZZLE_HASH,
-    SINGLETON_TOP_LAYER_MOD as SINGLETON_MOD,
-    SINGLETON_TOP_LAYER_MOD_HASH
 )
-
+from chia.wallet.singleton import (
+    SINGLETON_TOP_LAYER_MOD as SINGLETON_MOD,
+)
+from chia.wallet.singleton import (
+    SINGLETON_TOP_LAYER_MOD_HASH,
+)
 from chia.wallet.trading.offer import OFFER_MOD_HASH
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
+
 
 def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
     maker_pk = int_to_public_key(111)
@@ -162,7 +163,5 @@ def test_transfer_puzzle_builder() -> None:
     assert unft.inner_puzzle == ownership_puzzle
     assert unft.p2_puzzle == p2_puzzle
     ol_puzzle = recurry_nft_puzzle(unft, solution, sp2_puzzle)
-    nft_puzzle = create_nft_layer_puzzle_with_curry_params(
-        Program.to(metadata), NFT_METADATA_UPDATER_HASH, ol_puzzle
-    )
+    nft_puzzle = create_nft_layer_puzzle_with_curry_params(Program.to(metadata), NFT_METADATA_UPDATER_HASH, ol_puzzle)
     assert clvm_puzzle_hash == nft_puzzle.get_tree_hash()

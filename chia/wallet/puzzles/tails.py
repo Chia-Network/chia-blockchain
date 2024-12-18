@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from chia_puzzles_py.programs import (
+    DELEGATED_TAIL,
+    EVERYTHING_WITH_SIGNATURE,
+    GENESIS_BY_COIN_ID,
+    GENESIS_BY_COIN_ID_OR_SINGLETON,
+    GENESIS_BY_PUZZLE_HASH,
+)
 from chia_rs import Coin
 
 from chia.types.blockchain_format.program import Program
@@ -19,18 +26,9 @@ from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.dao_wallet.dao_utils import create_cat_launcher_for_singleton_id
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-from chia_puzzles_py.programs import (
-    GENESIS_BY_COIN_ID,
-    GENESIS_BY_COIN_ID_OR_SINGLETON,
-    GENESIS_BY_PUZZLE_HASH,
-    DELEGATED_TAIL,
-    EVERYTHING_WITH_SIGNATURE,
-)
 
 GENESIS_BY_ID_MOD = Program.from_bytes(GENESIS_BY_COIN_ID)
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Optional, Union
 
+from chia_puzzles_py.programs import DID_INNERPUZ, NFT_INTERMEDIATE_LAUNCHER
 from chia_rs import G1Element
 
 from chia.types.blockchain_format.coin import Coin
@@ -11,7 +12,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH,
@@ -27,11 +27,6 @@ from chia.wallet.util.curry_and_treehash import (
     shatree_atom_list,
     shatree_int,
     shatree_pair,
-)
-
-from chia_puzzles_py.programs import (
-    DID_INNERPUZ,
-    NFT_INTERMEDIATE_LAUNCHER
 )
 
 DID_INNERPUZ_MOD = Program.from_bytes(DID_INNERPUZ)

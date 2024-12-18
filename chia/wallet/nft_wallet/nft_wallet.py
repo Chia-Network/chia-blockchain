@@ -11,7 +11,6 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Unpack
 
-import chia.server.api_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -46,11 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_secret_key,
     puzzle_for_pk,
 )
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE_HASH,
-    SINGLETON_LAUNCHER_PUZZLE,
-    create_singleton_puzzle
-)
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, create_singleton_puzzle
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -1282,9 +1277,7 @@ class NFTWallet:
             did_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
 
             # Create the launcher coin, and add its id to a list to be asserted in the DID spend
-            launcher_coin = Coin(
-                intermediate_launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount
-            )
+            launcher_coin = Coin(intermediate_launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
 
             # Grab the metadata from metadata_list. The index for metadata_list
@@ -1309,9 +1302,7 @@ class NFTWallet:
 
             genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
 
-            launcher_cs = make_spend(
-                launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution
-            )
+            launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
             launcher_spends.append(launcher_cs)
 
             eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), uint64(amount))

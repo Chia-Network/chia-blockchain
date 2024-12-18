@@ -4,6 +4,7 @@ import dataclasses
 from collections.abc import Iterator
 from typing import Optional, Union
 
+from chia_puzzles_py.programs import CAT_PUZZLE
 from chia_rs import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -13,10 +14,8 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from chia_puzzles_py.programs import CAT_PUZZLE
 
 NULL_SIGNATURE = G2Element()
 

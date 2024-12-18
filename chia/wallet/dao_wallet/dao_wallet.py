@@ -61,11 +61,9 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     uncurry_treasury,
 )
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE
-)
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
     get_inner_puzzle_from_singleton,
     get_most_recent_singleton_coin_from_coin_spend,
     get_singleton_id_from_puzzle,

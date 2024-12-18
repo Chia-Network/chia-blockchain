@@ -3,6 +3,15 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal, Optional, Union
 
+from chia_puzzles_py.programs import (
+    NFT_INTERMEDIATE_LAUNCHER,
+    NFT_METADATA_UPDATER_DEFAULT,
+    NFT_OWNERSHIP_TRANSFER_PROGRAM_ONE_WAY_CLAIM_WITH_ROYALTIES,
+    NFT_STATE_LAYER,
+)
+from chia_puzzles_py.programs import (
+    NFT_OWNERSHIP_LAYER as NFT_OWNERSHIP_LAYER_BYTES,
+)
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
@@ -12,21 +21,13 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
-from chia.wallet.util.address_type import AddressType
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_TOP_LAYER_MOD,
     SINGLETON_TOP_LAYER_MOD_HASH,
 )
-from chia_puzzles_py.programs import (
-    NFT_STATE_LAYER,
-    NFT_METADATA_UPDATER_DEFAULT,
-    NFT_OWNERSHIP_LAYER as NFT_OWNERSHIP_LAYER_BYTES,
-    NFT_OWNERSHIP_TRANSFER_PROGRAM_ONE_WAY_CLAIM_WITH_ROYALTIES,
-    NFT_INTERMEDIATE_LAUNCHER
-)
+from chia.wallet.util.address_type import AddressType
 
 log = logging.getLogger(__name__)
 NFT_STATE_LAYER_MOD = Program.from_bytes(NFT_STATE_LAYER)
