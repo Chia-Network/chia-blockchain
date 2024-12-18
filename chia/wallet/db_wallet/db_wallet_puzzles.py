@@ -16,12 +16,11 @@ from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_TOP_LAYER_MOD,
 )
+from chia_puzzles_py.programs import GRAFTROOT_DL_OFFERS as GRAFTROOT_DL_OFFERS_BYTES
 
 ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
-GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile(
-    "graftroot_dl_offers.clsp", package_or_requirement="chia.data_layer.puzzles"
-)
+GRAFTROOT_DL_OFFERS = Program.from_bytes(GRAFTROOT_DL_OFFERS_BYTES)
 P2_PARENT = Program.from_bytes(P2_PARENT_BYTES)
 
 
