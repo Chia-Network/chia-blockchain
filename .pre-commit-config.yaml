@@ -40,6 +40,8 @@ repos:
     hooks:
       - id: prettier
         types_or: [ini, json, toml, yaml, markdown]
+        additional_dependencies:
+          - "@so1ve/prettier-plugin-toml@3.1.0"
   - repo: https://github.com/scop/pre-commit-shfmt
     rev: v3.8.0-1
     hooks:
