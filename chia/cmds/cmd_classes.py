@@ -72,7 +72,7 @@ class ChiaCliContext:
     rpc_port: Optional[int] = None
     keys_fingerprint: Optional[int] = None
     keys_filename: Optional[str] = None
-    expected_currency_prefix: Optional[str] = None
+    expected_address_prefix: Optional[str] = None
 
     @classmethod
     def set_default(cls, ctx: click.Context) -> ChiaCliContext:
