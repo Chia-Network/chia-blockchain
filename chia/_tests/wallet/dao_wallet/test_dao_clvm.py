@@ -27,7 +27,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     CAT_MOD_HASH,
     SINGLETON_MOD,
     SINGLETON_MOD_HASH,
-    SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
     DAO_LOCKUP_MOD,
     DAO_PROPOSAL_TIMER_MOD,
@@ -55,7 +54,7 @@ def test_finished_state() -> None:
     """
     proposal_id = Program.to("proposal_id").get_tree_hash()
     singleton_struct: Program = Program.to(
-        (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash()))
+        (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER_HASH))
     )
     finished_inner_puz = DAO_FINISHED_STATE.curry(singleton_struct, DAO_FINISHED_STATE_HASH)
     finished_full_puz = SINGLETON_MOD.curry(singleton_struct, finished_inner_puz)
@@ -85,7 +84,7 @@ def test_proposal() -> None:
     treasury_id = Program.to("treasury").get_tree_hash()
     singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
-        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER_HASH))
     )
     self_destruct_time = 1000  # number of blocks
     oracle_spend_delay = 10
@@ -379,7 +378,7 @@ def test_proposal_timer() -> None:
     treasury_id = Program.to("treasury").get_tree_hash()
     singleton_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
-        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER_HASH))
     )
     dao_lockup_self = DAO_LOCKUP_MOD.curry(
         SINGLETON_MOD_HASH,
