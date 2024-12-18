@@ -3936,7 +3936,7 @@ class WalletRpcApi:
             )
         nft_id_list = []
         for cs in sb.coin_spends:
-            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
+            if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                 nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
 
         return {
