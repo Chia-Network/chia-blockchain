@@ -23,6 +23,7 @@ from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plots import plots_cmd
 from chia.cmds.plotters import plotters_cmd
 from chia.cmds.rpc import rpc_cmd
+from chia.cmds.services import services_group
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
@@ -140,6 +141,7 @@ cli.add_command(beta_cmd)
 cli.add_command(completion)
 cli.add_command(dao_cmd)
 cli.add_command(dev_cmd)
+cli.add_command(services_group)
 
 
 def main() -> None:
