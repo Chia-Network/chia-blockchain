@@ -1511,18 +1511,6 @@ class WalletRpcApi:
                         request.get("force", False),
                         extra_conditions=extra_conditions,
                     )
-                    async with action_scope.use() as interface:
-                        # TODO: editing this is not ideal.  Action scopes should know what coins have been spent.
-                        action_scope._config = dataclasses.replace(
-                            action_scope._config,
-                            tx_config=dataclasses.replace(
-                                action_scope._config.tx_config,
-                                excluded_coin_ids=[
-                                    *action_scope._config.tx_config.excluded_coin_ids,
-                                    *(c.name() for tx in interface.side_effects.transactions for c in tx.removals),
-                                ],
-                            ),
-                        )
                     coins = {}
             except Exception as e:
                 log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
