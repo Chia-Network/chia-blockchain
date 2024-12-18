@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import zlib
+
 from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
+
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.nft_wallet.nft_puzzles import (
@@ -14,7 +16,6 @@ from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard
 from chia.wallet.singleton import (
     SINGLETON_TOP_LAYER_MOD,
 )
-from chia.wallet.trading.offer import OFFER_MOD
 
 # Need the legacy CAT mod for zlib backwards compatibility
 LEGACY_CAT_MOD = Program.fromhex(
