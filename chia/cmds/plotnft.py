@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Any, Optional
+from typing import Optional
 
 import click
 
-from chia.cmds.cmd_classes import chia_command, option
+from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
 from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.cmds.param_types import (
     AddressParamType,
@@ -31,8 +31,8 @@ def plotnft_cmd(ctx: click.Context) -> None:
     help="Show plotnft information",
 )
 class ShowPlotNFTCMD:
-    context: dict[str, Any]
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     id: Optional[int] = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
@@ -43,7 +43,7 @@ class ShowPlotNFTCMD:
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await show(
                 wallet_info=wallet_info,
-                root_path=self.context["root_path"],
+                root_path=self.context.root_path,
                 wallet_id_passed_in=self.id,
             )
 
@@ -55,7 +55,7 @@ class ShowPlotNFTCMD:
     help="Create a login link for a pool. The farmer must be running. Use 'plotnft show' to get the launcher id.",
 )
 class GetLoginLinkCMD:
-    context: dict[str, Any] = field(default_factory=dict)
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     launcher_id: bytes32 = option(
         "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
     )
@@ -63,7 +63,7 @@ class GetLoginLinkCMD:
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import get_login_link
 
-        await get_login_link(self.launcher_id, root_path=self.context["root_path"])
+        await get_login_link(self.launcher_id, root_path=self.context.root_path)
 
 
 # Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support
@@ -246,7 +246,7 @@ class ClaimPlotNFTCMD:
     help="Change the payout instructions for a pool. Use 'plotnft show' to get the launcher id.",
 )
 class ChangePayoutInstructionsPlotNFTCMD:
-    context: dict[str, Any] = field(default_factory=dict)
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     launcher_id: bytes32 = option(
         "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
     )
@@ -257,4 +257,4 @@ class ChangePayoutInstructionsPlotNFTCMD:
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import change_payout_instructions
 
-        await change_payout_instructions(self.launcher_id, self.address, root_path=self.context.get("root_path"))
+        await change_payout_instructions(self.launcher_id, self.address, root_path=self.context.root_path)
