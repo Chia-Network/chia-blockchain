@@ -42,8 +42,9 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
+OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 
 
