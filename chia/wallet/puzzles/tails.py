@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from chia_puzzles_py.programs import (
+    DELEGATED_TAIL,
+    EVERYTHING_WITH_SIGNATURE,
+    GENESIS_BY_COIN_ID,
+    GENESIS_BY_COIN_ID_OR_SINGLETON,
+    GENESIS_BY_PUZZLE_HASH,
+)
 from chia_rs import Coin
 
 from chia.types.blockchain_format.program import Program
@@ -19,26 +26,19 @@ from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.dao_wallet.dao_utils import create_cat_launcher_for_singleton_id
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-GENESIS_BY_ID_MOD = load_clvm_maybe_recompile(
-    "genesis_by_coin_id.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
-)
-GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile(
-    "genesis_by_puzzle_hash.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
-)
-EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile(
-    "everything_with_signature.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
-)
-DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile(
-    "delegated_tail.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
-)
-GENESIS_BY_ID_OR_SINGLETON_MOD = load_clvm_maybe_recompile(
-    "genesis_by_coin_id_or_singleton.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
-)
+GENESIS_BY_ID_MOD = Program.from_bytes(GENESIS_BY_COIN_ID)
+
+GENESIS_BY_PUZHASH_MOD = Program.from_bytes(GENESIS_BY_PUZZLE_HASH)
+
+EVERYTHING_WITH_SIG_MOD = Program.from_bytes(EVERYTHING_WITH_SIGNATURE)
+
+DELEGATED_LIMITATIONS_MOD = Program.from_bytes(DELEGATED_TAIL)
+
+GENESIS_BY_ID_OR_SINGLETON_MOD = Program.from_bytes(GENESIS_BY_COIN_ID_OR_SINGLETON)
 
 
 class LimitationsProgram:
