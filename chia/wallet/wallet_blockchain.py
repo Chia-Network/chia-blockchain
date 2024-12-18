@@ -157,7 +157,6 @@ class WalletBlockchain:
             return
         for h in range(max(0, height + 1), self._peak.height + 1):
             del self._height_to_hash[uint32(h)]
-
         await self._basic_store.remove_object("PEAK_BLOCK")
 
     async def set_peak_block(self, block: HeaderBlock, timestamp: Optional[uint64] = None) -> None:
@@ -197,6 +196,11 @@ class WalletBlockchain:
 
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
+
+    def get_peak_height(self) -> Optional[uint32]:
+        if self._peak is None:
+            return None
+        return self._peak.height
 
     def height_to_hash(self, height: uint32) -> bytes32:
         return self._height_to_hash[height]
