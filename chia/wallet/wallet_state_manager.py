@@ -998,7 +998,9 @@ class WalletStateManager:
                 return
             spend_bundle = WalletSpendBundle(coin_spends, G2Element())
             if interface.side_effects.fee_left_to_pay > 0:
-                async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
+                async with self.new_action_scope(
+                    action_scope.config.tx_config, push=False, fee=interface.side_effects.fee_left_to_pay
+                ) as inner_action_scope:
                     await self.main_wallet.create_tandem_xch_tx(
                         inner_action_scope,
                         extra_conditions=(
@@ -1011,6 +1013,7 @@ class WalletStateManager:
                 interface.side_effects.transactions.extend(
                     [dataclasses.replace(tx, spend_bundle=None) for tx in inner_action_scope.side_effects.transactions]
                 )
+                interface.side_effects.fee_left_to_pay = inner_action_scope.side_effects.fee_left_to_pay
                 spend_bundle = WalletSpendBundle.aggregate(
                     [
                         spend_bundle,

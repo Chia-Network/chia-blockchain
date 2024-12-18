@@ -114,13 +114,14 @@ class GenesisById(LimitationsProgram):
             ).get_tree_hash()
 
             async with wallet.wallet_state_manager.new_action_scope(
-                action_scope.config.tx_config, push=False
+                action_scope.config.tx_config, push=False, fee=interface.side_effects.fee_left_to_pay
             ) as inner_action_scope:
                 await wallet.standard_wallet.generate_signed_transaction(
                     amount, minted_cat_puzzle_hash, inner_action_scope, coins, origin_id=origin_id
                 )
 
             interface.side_effects.transactions = inner_action_scope.side_effects.transactions
+            interface.side_effects.fee_left_to_pay = inner_action_scope.side_effects.fee_left_to_pay
 
         inner_tree_hash = cat_inner.get_tree_hash()
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
