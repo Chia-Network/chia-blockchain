@@ -157,7 +157,7 @@ def test_click_address_type_config(root_path_populated_with_config: Path) -> Non
     context = cast(Context, FakeContext(obj=ChiaCliContext(root_path=root_path_populated_with_config).to_click()))
     # run test that should pass
     assert AddressParamType().convert(burn_address, None, context) == CliAddress(burn_ph, burn_address, AddressType.XCH)
-    assert context.obj["expected_prefix"] == "xch"  # validate that the prefix was set correctly
+    assert ChiaCliContext.from_click(context).expected_prefix == "xch"  # validate that the prefix was set correctly
     # use txch address
     with pytest.raises(AttributeError):  # attribute error because the context does not have a real error handler
         AddressParamType().convert(burn_address_txch, None, context)
