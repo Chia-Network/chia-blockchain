@@ -995,20 +995,29 @@ class WalletStateManager:
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         if fee > 0:
             async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
-                await self.main_wallet.create_tandem_xch_tx(
-                    fee,
-                    inner_action_scope,
-                    extra_conditions=(
-                        AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
-                    ),
-                )
-            async with action_scope.use() as interface:
-                # This should not be looked to for best practice. Ideally, the two spend bundles can exist separately on
-                # each tx record until they are pushed. This is not very supported behavior at the moment so to avoid
-                # any potential backwards compatibility issues, we're moving the spend bundle from this TX to the main
-                interface.side_effects.transactions.extend(
-                    [dataclasses.replace(tx, spend_bundle=None) for tx in inner_action_scope.side_effects.transactions]
-                )
+                async with action_scope.use() as interface:
+                    async with inner_action_scope.use() as inner_interface:
+                        inner_interface.side_effects.selected_coins = interface.side_effects.selected_coins
+                    await self.main_wallet.create_tandem_xch_tx(
+                        fee,
+                        inner_action_scope,
+                        extra_conditions=(
+                            AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
+                        ),
+                    )
+                    async with inner_action_scope.use() as inner_interface:
+                        # This should not be looked to for best practice.
+                        # Ideally, the two spend bundles can exist separately on each tx record until they are pushed.
+                        # This is not very supported behavior at the moment
+                        # so to avoid any potential backwards compatibility issues,
+                        # we're moving the spend bundle from this TX to the main
+                        interface.side_effects.transactions.extend(
+                            [
+                                dataclasses.replace(tx, spend_bundle=None)
+                                for tx in inner_interface.side_effects.transactions
+                            ]
+                        )
+                        interface.side_effects.selected_coins.extend(inner_interface.side_effects.selected_coins)
             spend_bundle = WalletSpendBundle.aggregate(
                 [
                     spend_bundle,
