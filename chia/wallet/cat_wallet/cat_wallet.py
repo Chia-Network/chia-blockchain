@@ -109,7 +109,6 @@ class CATWallet:
         cat_tail_info: dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         name: Optional[str] = None,
         push: bool = True,
     ) -> CATWallet:
@@ -140,7 +139,6 @@ class CATWallet:
                 cat_tail_info,
                 amount,
                 action_scope,
-                fee,
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
@@ -179,7 +177,7 @@ class CATWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=(await self.convert_puzzle_hash(cat_coin.puzzle_hash)),
             amount=uint64(cat_coin.amount),
-            fee_amount=fee,
+            fee_amount=action_scope.config.total_fee,
             confirmed=False,
             sent=uint32(10),
             spend_bundle=spend_bundle,
@@ -546,7 +544,6 @@ class CATWallet:
 
     async def create_tandem_xch_tx(
         self,
-        fee: uint64,
         amount_to_claim: uint64,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -557,40 +554,38 @@ class CATWallet:
         wallet_state_manager lock
         """
         announcement: Optional[AssertCoinAnnouncement] = None
-        async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
-        ) as inner_action_scope:
-            if fee > amount_to_claim:
+        async with action_scope.use() as interface:
+            async with self.wallet_state_manager.new_action_scope(
+                action_scope.config.tx_config, push=False, fee=interface.side_effects.fee_left_to_pay
+            ) as inner_action_scope:
                 chia_coins = await self.standard_wallet.select_coins(
-                    fee,
+                    interface.side_effects.fee_left_to_pay,
                     action_scope,
                 )
                 origin_id = next(iter(chia_coins)).name()
-                await self.standard_wallet.generate_signed_transaction(
-                    uint64(0),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
-                    inner_action_scope,
-                    fee=uint64(fee - amount_to_claim),
-                    coins=chia_coins,
-                    origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
-                    negative_change_allowed=False,
-                    extra_conditions=extra_conditions,
-                )
-            else:
-                chia_coins = await self.standard_wallet.select_coins(
-                    fee,
-                    action_scope,
-                )
-                origin_id = next(iter(chia_coins)).name()
-                selected_amount = sum(c.amount for c in chia_coins)
-                await self.standard_wallet.generate_signed_transaction(
-                    uint64(selected_amount + amount_to_claim - fee),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
-                    inner_action_scope,
-                    coins=chia_coins,
-                    negative_change_allowed=True,
-                    extra_conditions=extra_conditions,
-                )
+                if interface.side_effects.fee_left_to_pay > amount_to_claim:
+                    interface.side_effects.fee_left_to_pay = uint64(
+                        interface.side_effects.fee_left_to_pay - amount_to_claim
+                    )
+                    await self.standard_wallet.generate_signed_transaction(
+                        uint64(0),
+                        (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                        inner_action_scope,
+                        coins=chia_coins,
+                        origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
+                        negative_change_allowed=False,
+                        extra_conditions=extra_conditions,
+                    )
+                else:
+                    selected_amount = sum(c.amount for c in chia_coins)
+                    await self.standard_wallet.generate_signed_transaction(
+                        uint64(selected_amount + amount_to_claim - interface.side_effects.fee_left_to_pay),
+                        (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                        inner_action_scope,
+                        coins=chia_coins,
+                        negative_change_allowed=True,
+                        extra_conditions=extra_conditions,
+                    )
 
         message = None
         for tx in inner_action_scope.side_effects.transactions:
@@ -615,7 +610,6 @@ class CATWallet:
         self,
         payments: list[Payment],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[set[Coin]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -638,103 +632,108 @@ class CATWallet:
         assert selected_cat_amount >= starting_amount
 
         # Figure out if we need to absorb/melt some XCH as part of this
-        regular_chia_to_claim: int = 0
-        if payment_amount > starting_amount:
-            fee = uint64(fee + payment_amount - starting_amount)
-        elif payment_amount < starting_amount:
-            regular_chia_to_claim = payment_amount
-
-        need_chia_transaction = (fee > 0 or regular_chia_to_claim > 0) and (fee - regular_chia_to_claim != 0)
-
-        # Calculate standard puzzle solutions
-        change = selected_cat_amount - starting_amount
-        primaries = payments.copy()
-
-        if change > 0:
-            derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                next(iter(cat_coins)).puzzle_hash
-            )
-            if derivation_record is not None and action_scope.config.tx_config.reuse_puzhash:
-                change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
-                for payment in payments:
-                    if change_puzhash == payment.puzzle_hash and change == payment.amount:
-                        # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-                        break
-            else:
-                change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
-
-        # Loop through the coins we've selected and gather the information we need to spend them
-        spendable_cat_list = []
-        first = True
-        announcement: CreateCoinAnnouncement
-
-        for coin in cat_coins:
-            if cat_discrepancy is not None:
-                cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.to(None),
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+        async with action_scope.use() as interface:
+            regular_chia_to_claim: int = 0
+            if payment_amount > starting_amount:
+                interface.side_effects.fee_left_to_pay = uint64(
+                    interface.side_effects.fee_left_to_pay + payment_amount - starting_amount
                 )
+            elif payment_amount < starting_amount:
+                regular_chia_to_claim = payment_amount
+
+            need_chia_transaction = (interface.side_effects.fee_left_to_pay > 0 or regular_chia_to_claim > 0) and (
+                interface.side_effects.fee_left_to_pay - regular_chia_to_claim != 0
+            )
+
+            # Calculate standard puzzle solutions
+            change = selected_cat_amount - starting_amount
+            primaries = payments.copy()
+
+            if change > 0:
+                derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    next(iter(cat_coins)).puzzle_hash
+                )
+                if derivation_record is not None and action_scope.config.tx_config.reuse_puzhash:
+                    change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
+                    for payment in payments:
+                        if change_puzhash == payment.puzzle_hash and change == payment.amount:
+                            # We cannot create two coins has same id, create a new puzhash for the change
+                            change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+                            break
+                else:
+                    change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+                primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+
+            # Loop through the coins we've selected and gather the information we need to spend them
+            spendable_cat_list = []
+            first = True
+            announcement: CreateCoinAnnouncement
+
+            for coin in cat_coins:
+                if cat_discrepancy is not None:
+                    cat_condition = UnknownCondition(
+                        opcode=Program.to(51),
+                        args=[
+                            Program.to(None),
+                            Program.to(-113),
+                            tail_reveal,
+                            tail_solution,
+                        ],
+                    )
+                    if first:
+                        extra_conditions = (*extra_conditions, cat_condition)
                 if first:
-                    extra_conditions = (*extra_conditions, cat_condition)
-            if first:
-                first = False
-                announcement = CreateCoinAnnouncement(std_hash(b"".join([c.name() for c in cat_coins])), coin.name())
-                if need_chia_transaction:
-                    if fee > regular_chia_to_claim:
-                        await self.create_tandem_xch_tx(
-                            fee,
-                            uint64(regular_chia_to_claim),
-                            action_scope,
-                            extra_conditions=(announcement.corresponding_assertion(),),
-                        )
+                    first = False
+                    announcement = CreateCoinAnnouncement(
+                        std_hash(b"".join([c.name() for c in cat_coins])), coin.name()
+                    )
+                    if need_chia_transaction:
+                        if interface.side_effects.fee_left_to_pay > regular_chia_to_claim:
+                            await self.create_tandem_xch_tx(
+                                uint64(regular_chia_to_claim),
+                                action_scope,
+                                extra_conditions=(announcement.corresponding_assertion(),),
+                            )
+                            innersol = self.standard_wallet.make_solution(
+                                primaries=primaries,
+                                conditions=(*extra_conditions, announcement),
+                            )
+                        elif regular_chia_to_claim > interface.side_effects.fee_left_to_pay:  # pragma: no cover
+                            xch_announcement = await self.create_tandem_xch_tx(
+                                uint64(regular_chia_to_claim),
+                                action_scope,
+                            )
+                            assert xch_announcement is not None
+                            innersol = self.standard_wallet.make_solution(
+                                primaries=primaries,
+                                conditions=(*extra_conditions, xch_announcement, announcement),
+                            )
+                        else:
+                            # TODO: what about when they are equal?
+                            raise Exception("Equality not handled")
+                    else:
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
-                    elif regular_chia_to_claim > fee:  # pragma: no cover
-                        xch_announcement = await self.create_tandem_xch_tx(
-                            fee,
-                            uint64(regular_chia_to_claim),
-                            action_scope,
-                        )
-                        assert xch_announcement is not None
-                        innersol = self.standard_wallet.make_solution(
-                            primaries=primaries,
-                            conditions=(*extra_conditions, xch_announcement, announcement),
-                        )
-                    else:
-                        # TODO: what about when they are equal?
-                        raise Exception("Equality not handled")
                 else:
                     innersol = self.standard_wallet.make_solution(
-                        primaries=primaries,
-                        conditions=(*extra_conditions, announcement),
+                        primaries=[], conditions=(announcement.corresponding_assertion(),)
                     )
-            else:
-                innersol = self.standard_wallet.make_solution(
-                    primaries=[], conditions=(announcement.corresponding_assertion(),)
+                inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
+                lineage_proof = await self.get_lineage_proof_for_coin(coin)
+                assert lineage_proof is not None
+                new_spendable_cat = SpendableCAT(
+                    coin,
+                    self.cat_info.limitations_program_hash,
+                    inner_puzzle,
+                    innersol,
+                    limitations_solution=tail_solution,
+                    extra_delta=extra_delta,
+                    lineage_proof=lineage_proof,
+                    limitations_program_reveal=tail_reveal,
                 )
-            inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
-            lineage_proof = await self.get_lineage_proof_for_coin(coin)
-            assert lineage_proof is not None
-            new_spendable_cat = SpendableCAT(
-                coin,
-                self.cat_info.limitations_program_hash,
-                inner_puzzle,
-                innersol,
-                limitations_solution=tail_solution,
-                extra_delta=extra_delta,
-                lineage_proof=lineage_proof,
-                limitations_program_reveal=tail_reveal,
-            )
-            spendable_cat_list.append(new_spendable_cat)
+                spendable_cat_list.append(new_spendable_cat)
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
@@ -745,7 +744,6 @@ class CATWallet:
         amounts: list[uint64],
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         coins: Optional[set[Coin]] = None,
         memos: Optional[list[list[bytes]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -769,7 +767,6 @@ class CATWallet:
         spend_bundle = await self.generate_unsigned_spendbundle(
             payments,
             action_scope,
-            fee,
             cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,
             extra_conditions=extra_conditions,
@@ -788,7 +785,7 @@ class CATWallet:
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=puzzle_hashes[0],
                     amount=uint64(payment_sum),
-                    fee_amount=fee,
+                    fee_amount=action_scope.config.total_fee,
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=spend_bundle,
@@ -803,6 +800,7 @@ class CATWallet:
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
+            interface.side_effects.fee_left_to_pay = uint64(0)
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:
         """

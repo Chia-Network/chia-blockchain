@@ -164,7 +164,6 @@ class VCWallet:
         provider_did: bytes32,
         action_scope: WalletActionScope,
         inner_puzzle_hash: Optional[bytes32] = None,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> VCRecord:
         """
@@ -182,39 +181,42 @@ class VCWallet:
                     break
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")  # pragma: no cover
-        # Mint VC
-        coins = list(await self.standard_wallet.select_coins(uint64(1 + fee), action_scope))
-        if len(coins) == 0:
-            raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
-        if inner_puzzle_hash is None:  # pragma: no cover
-            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
-        dpuzs, coin_spends, vc = VerifiedCredential.launch(
-            coins,
-            provider_did,
-            inner_puzzle_hash,
-            [inner_puzzle_hash],
-            fee=fee,
-            extra_conditions=extra_conditions,
-        )
-        for dpuz, coin in zip(dpuzs, coins):
-            solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
-            puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            coin_spends.append(make_spend(coin, puzzle, solution))
-        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
-        now = uint64(int(time.time()))
-        add_list: list[Coin] = list(spend_bundle.additions())
-        rem_list: list[Coin] = list(spend_bundle.removals())
-        vc_record: VCRecord = VCRecord(vc, uint32(0))
         async with action_scope.use() as interface:
+            # Mint VC
+            coins = list(
+                await self.standard_wallet.select_coins(
+                    uint64(1 + interface.side_effects.fee_left_to_pay), action_scope
+                )
+            )
+            if len(coins) == 0:
+                raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
+            if inner_puzzle_hash is None:  # pragma: no cover
+                inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(
+                    new=not action_scope.config.tx_config.reuse_puzhash
+                )
+            dpuzs, coin_spends, vc = VerifiedCredential.launch(
+                coins,
+                provider_did,
+                inner_puzzle_hash,
+                [inner_puzzle_hash],
+                extra_conditions=extra_conditions,
+            )
+            for dpuz, coin in zip(dpuzs, coins):
+                solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
+                puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
+                coin_spends.append(make_spend(coin, puzzle, solution))
+            spend_bundle = WalletSpendBundle(coin_spends, G2Element())
+            now = uint64(int(time.time()))
+            add_list: list[Coin] = list(spend_bundle.additions())
+            rem_list: list[Coin] = list(spend_bundle.removals())
+            vc_record: VCRecord = VCRecord(vc, uint32(0))
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=inner_puzzle_hash,
                     amount=uint64(1),
-                    fee_amount=uint64(fee),
+                    fee_amount=action_scope.config.total_fee,
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=spend_bundle,
@@ -236,7 +238,6 @@ class VCWallet:
         self,
         vc_id: bytes32,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
@@ -267,67 +268,66 @@ class VCWallet:
 
         primaries: list[Payment] = [Payment(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])]
 
-        if fee > 0:
-            coin_name = vc_record.vc.coin.name()
-            await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee,
-                action_scope,
-                extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
-            )
-            extra_conditions += (CreateCoinAnnouncement(coin_name),)
+        async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:
+                coin_name = vc_record.vc.coin.name()
+                await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                    action_scope,
+                    extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
+                )
+                extra_conditions += (CreateCoinAnnouncement(coin_name),)
 
-        if new_proof_hash is not None:
-            if self_revoke:
-                raise ValueError("Cannot add new proofs and revoke at the same time")
-            if provider_inner_puzhash is None:
+            if new_proof_hash is not None:
+                if self_revoke:
+                    raise ValueError("Cannot add new proofs and revoke at the same time")
+                if provider_inner_puzhash is None:
+                    for _, wallet in self.wallet_state_manager.wallets.items():
+                        if wallet.type() == WalletType.DECENTRALIZED_ID:
+                            assert isinstance(wallet, DIDWallet)
+                            if wallet.did_info.current_inner is not None and wallet.did_info.origin_coin is not None:
+                                if vc_record.vc.proof_provider == wallet.did_info.origin_coin.name():
+                                    provider_inner_puzhash = wallet.did_info.current_inner.get_tree_hash()
+                                    break
+                                else:
+                                    continue  # pragma: no cover
+                    else:
+                        raise ValueError("VC could not be updated with specified DID info")  # pragma: no cover
+                magic_condition = vc_record.vc.magic_condition_for_new_proofs(new_proof_hash, provider_inner_puzhash)
+            elif self_revoke:
+                magic_condition = vc_record.vc.magic_condition_for_self_revoke()
+            else:
+                magic_condition = vc_record.vc.standard_magic_condition()
+            extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
+            innersol: Program = self.standard_wallet.make_solution(
+                primaries=primaries,
+                conditions=extra_conditions,
+            )
+            did_announcement, coin_spend, _vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
+            spend_bundle = WalletSpendBundle([coin_spend], G2Element())
+            if did_announcement is not None:
+                # Need to spend DID
                 for _, wallet in self.wallet_state_manager.wallets.items():
                     if wallet.type() == WalletType.DECENTRALIZED_ID:
                         assert isinstance(wallet, DIDWallet)
-                        if wallet.did_info.current_inner is not None and wallet.did_info.origin_coin is not None:
-                            if vc_record.vc.proof_provider == wallet.did_info.origin_coin.name():
-                                provider_inner_puzhash = wallet.did_info.current_inner.get_tree_hash()
-                                break
-                            else:
-                                continue  # pragma: no cover
+                        if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
+                            self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
+                            await wallet.create_message_spend(action_scope, extra_conditions=(did_announcement,))
+                            break
                 else:
-                    raise ValueError("VC could not be updated with specified DID info")  # pragma: no cover
-            magic_condition = vc_record.vc.magic_condition_for_new_proofs(new_proof_hash, provider_inner_puzhash)
-        elif self_revoke:
-            magic_condition = vc_record.vc.magic_condition_for_self_revoke()
-        else:
-            magic_condition = vc_record.vc.standard_magic_condition()
-        extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
-        innersol: Program = self.standard_wallet.make_solution(
-            primaries=primaries,
-            conditions=extra_conditions,
-        )
-        did_announcement, coin_spend, _vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
-        spend_bundle = WalletSpendBundle([coin_spend], G2Element())
-        if did_announcement is not None:
-            # Need to spend DID
-            for _, wallet in self.wallet_state_manager.wallets.items():
-                if wallet.type() == WalletType.DECENTRALIZED_ID:
-                    assert isinstance(wallet, DIDWallet)
-                    if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
-                        self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
-                        await wallet.create_message_spend(action_scope, extra_conditions=(did_announcement,))
-                        break
-            else:
-                raise ValueError(
-                    f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
-                )  # pragma: no cover
-        add_list: list[Coin] = list(spend_bundle.additions())
-        rem_list: list[Coin] = list(spend_bundle.removals())
-        now = uint64(int(time.time()))
+                    raise ValueError(
+                        f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
+                    )  # pragma: no cover
+            add_list: list[Coin] = list(spend_bundle.additions())
+            rem_list: list[Coin] = list(spend_bundle.removals())
+            now = uint64(int(time.time()))
 
-        async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=new_inner_puzhash,
                     amount=uint64(1),
-                    fee_amount=uint64(fee),
+                    fee_amount=action_scope.config.total_fee,
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=spend_bundle,
@@ -348,7 +348,6 @@ class VCWallet:
         parent_id: bytes32,
         peer: WSChiaConnection,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         vc_coin_states: list[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
@@ -372,7 +371,6 @@ class VCWallet:
             await self.generate_signed_transaction(
                 vc.launcher_id,
                 action_scope,
-                fee,
                 self_revoke=True,
             )
             return
@@ -385,25 +383,29 @@ class VCWallet:
         # Generate spend specific nonce
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
-        if fee > 0:
-            coins.update(await self.standard_wallet.select_coins(fee, action_scope))
-        sorted_coins: list[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: list[list[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
-        nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
-        vc_announcement: AssertCoinAnnouncement = AssertCoinAnnouncement(asserted_id=vc.coin.name(), asserted_msg=nonce)
-
-        if fee > 0:
-            await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, action_scope, extra_conditions=(vc_announcement,)
+        async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:
+                coins.update(
+                    await self.standard_wallet.select_coins(interface.side_effects.fee_left_to_pay, action_scope)
+                )
+            sorted_coins: list[Coin] = sorted(coins, key=Coin.name)
+            sorted_coin_list: list[list[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
+            nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
+            vc_announcement: AssertCoinAnnouncement = AssertCoinAnnouncement(
+                asserted_id=vc.coin.name(), asserted_msg=nonce
             )
 
-        # Assemble final bundle
-        expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
-        await did_wallet.create_message_spend(
-            action_scope,
-            extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
-        )
-        async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:
+                await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                    action_scope, extra_conditions=(vc_announcement,)
+                )
+
+            # Assemble final bundle
+            expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
+            await did_wallet.create_message_spend(
+                action_scope,
+                extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
+            )
             interface.side_effects.extra_spends.append(WalletSpendBundle([vc_spend], G2Element()))
 
     async def add_vc_authorization(

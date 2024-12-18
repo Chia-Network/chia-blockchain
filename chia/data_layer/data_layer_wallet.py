@@ -301,50 +301,50 @@ class DataLayerWallet:
         self,
         initial_root: bytes32,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> bytes32:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
 
-        coins: set[Coin] = await self.standard_wallet.select_coins(uint64(fee + 1), action_scope)
-        if coins is None:
-            raise ValueError("Not enough coins to create new data layer singleton")
-
-        launcher_parent: Coin = next(iter(coins))
-        launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))
-
-        inner_puzzle: Program = await self.standard_wallet.get_puzzle(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
-        full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
-
-        genesis_launcher_solution: Program = Program.to(
-            [full_puzzle.get_tree_hash(), 1, [initial_root, inner_puzzle.get_tree_hash()]]
-        )
-        announcement_message: bytes32 = genesis_launcher_solution.get_tree_hash()
-        announcement = AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message)
-
-        await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(1),
-            puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
-            action_scope=action_scope,
-            fee=fee,
-            origin_id=launcher_parent.name(),
-            coins=coins,
-            primaries=None,
-            extra_conditions=(*extra_conditions, announcement),
-        )
-
-        launcher_cs: CoinSpend = CoinSpend(
-            launcher_coin,
-            SerializedProgram.from_program(SINGLETON_LAUNCHER),
-            SerializedProgram.from_program(genesis_launcher_solution),
-        )
-        launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
-
         async with action_scope.use() as interface:
+            coins: set[Coin] = await self.standard_wallet.select_coins(
+                uint64(interface.side_effects.fee_left_to_pay + 1), action_scope
+            )
+            if coins is None:
+                raise ValueError("Not enough coins to create new data layer singleton")
+
+            launcher_parent: Coin = next(iter(coins))
+            launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))
+
+            inner_puzzle: Program = await self.standard_wallet.get_puzzle(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
+            full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
+
+            genesis_launcher_solution: Program = Program.to(
+                [full_puzzle.get_tree_hash(), 1, [initial_root, inner_puzzle.get_tree_hash()]]
+            )
+            announcement_message: bytes32 = genesis_launcher_solution.get_tree_hash()
+            announcement = AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message)
+
+            await self.standard_wallet.generate_signed_transaction(
+                amount=uint64(1),
+                puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
+                action_scope=action_scope,
+                origin_id=launcher_parent.name(),
+                coins=coins,
+                primaries=None,
+                extra_conditions=(*extra_conditions, announcement),
+            )
+
+            launcher_cs: CoinSpend = CoinSpend(
+                launcher_coin,
+                SerializedProgram.from_program(SINGLETON_LAUNCHER),
+                SerializedProgram.from_program(genesis_launcher_solution),
+            )
+            launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
+
             interface.side_effects.extra_spends.append(launcher_sb)
 
         singleton_record = SingletonRecord(
@@ -370,7 +370,6 @@ class DataLayerWallet:
 
     async def create_tandem_xch_tx(
         self,
-        fee: uint64,
         announcement_to_assert: AssertAnnouncement,
         action_scope: WalletActionScope,
     ) -> None:
@@ -378,7 +377,6 @@ class DataLayerWallet:
             amount=uint64(0),
             puzzle_hash=await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
             action_scope=action_scope,
-            fee=fee,
             negative_change_allowed=False,
             extra_conditions=(announcement_to_assert,),
         )
@@ -390,7 +388,6 @@ class DataLayerWallet:
         action_scope: WalletActionScope,
         new_puz_hash: Optional[bytes32] = None,
         new_amount: Optional[uint64] = None,
-        fee: uint64 = uint64(0),
         add_pending_singleton: bool = True,
         announce_new_state: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -540,68 +537,69 @@ class DataLayerWallet:
                     ],
                 ),
             )
-        inner_sol: Program = self.standard_wallet.make_solution(
-            primaries=primaries,
-            conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if fee > 0 else extra_conditions,
-        )
-        db_layer_sol = Program.to([inner_sol])
-        full_sol = Program.to(
-            [
-                parent_lineage.to_program(),
-                singleton_record.lineage_proof.amount,
-                db_layer_sol,
-            ]
-        )
-
-        # Create the spend
-        coin_spend = CoinSpend(
-            current_coin,
-            SerializedProgram.from_program(current_full_puz),
-            SerializedProgram.from_program(full_sol),
-        )
-
-        spend_bundle = WalletSpendBundle([coin_spend], G2Element())
-
-        if announce_new_state:
-            spend_bundle = WalletSpendBundle([coin_spend, second_coin_spend], spend_bundle.aggregated_signature)
-
-        dl_tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=new_puz_hash,
-            amount=uint64(singleton_record.lineage_proof.amount),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            memos=list(compute_memos(spend_bundle).items()),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=singleton_record.coin_id,
-            valid_times=parse_timelock_info(extra_conditions),
-        )
-        assert dl_tx.spend_bundle is not None
-        if fee > 0:
-            await self.create_tandem_xch_tx(
-                fee,
-                AssertAnnouncement(True, asserted_origin_id=current_coin.name(), asserted_msg=b"$"),
-                action_scope,
+        async with action_scope.use() as interface:
+            inner_sol: Program = self.standard_wallet.make_solution(
+                primaries=primaries,
+                conditions=(*extra_conditions, CreateCoinAnnouncement(b"$"))
+                if interface.side_effects.fee_left_to_pay > 0
+                else extra_conditions,
+            )
+            db_layer_sol = Program.to([inner_sol])
+            full_sol = Program.to(
+                [
+                    parent_lineage.to_program(),
+                    singleton_record.lineage_proof.amount,
+                    db_layer_sol,
+                ]
             )
 
-        if add_pending_singleton:
-            await self.wallet_state_manager.dl_store.add_singleton_record(
-                new_singleton_record,
+            # Create the spend
+            coin_spend = CoinSpend(
+                current_coin,
+                SerializedProgram.from_program(current_full_puz),
+                SerializedProgram.from_program(full_sol),
             )
+
+            spend_bundle = WalletSpendBundle([coin_spend], G2Element())
+
             if announce_new_state:
-                await self.wallet_state_manager.dl_store.add_singleton_record(
-                    second_singleton_record,
+                spend_bundle = WalletSpendBundle([coin_spend, second_coin_spend], spend_bundle.aggregated_signature)
+
+            dl_tx = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=new_puz_hash,
+                amount=uint64(singleton_record.lineage_proof.amount),
+                fee_amount=action_scope.config.total_fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                memos=list(compute_memos(spend_bundle).items()),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=singleton_record.coin_id,
+                valid_times=parse_timelock_info(extra_conditions),
+            )
+            assert dl_tx.spend_bundle is not None
+            if interface.side_effects.fee_left_to_pay > 0:
+                await self.create_tandem_xch_tx(
+                    AssertAnnouncement(True, asserted_origin_id=current_coin.name(), asserted_msg=b"$"),
+                    action_scope,
                 )
 
-        async with action_scope.use() as interface:
+            if add_pending_singleton:
+                await self.wallet_state_manager.dl_store.add_singleton_record(
+                    new_singleton_record,
+                )
+                if announce_new_state:
+                    await self.wallet_state_manager.dl_store.add_singleton_record(
+                        second_singleton_record,
+                    )
+
             interface.side_effects.transactions.append(dl_tx)
 
     async def generate_signed_transaction(
@@ -609,7 +607,6 @@ class DataLayerWallet:
         amounts: list[uint64],
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         coins: set[Coin] = set(),
         memos: Optional[list[list[bytes]]] = None,  # ignored
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -642,7 +639,6 @@ class DataLayerWallet:
             action_scope,
             puzzle_hashes[0],
             amounts[0],
-            fee,
             add_pending_singleton,
             announce_new_state,
             extra_conditions,
@@ -708,14 +704,12 @@ class DataLayerWallet:
         amount: uint64,
         urls: list[bytes],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
             amount=amount,
             puzzle_hash=create_mirror_puzzle().get_tree_hash(),
             action_scope=action_scope,
-            fee=fee,
             primaries=[],
             memos=[launcher_id, *(url for url in urls)],
             extra_conditions=extra_conditions,
@@ -726,7 +720,6 @@ class DataLayerWallet:
         mirror_id: bytes32,
         peer: WSChiaConnection,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         mirror: Mirror = await self.get_mirror(mirror_id)
@@ -746,56 +739,59 @@ class DataLayerWallet:
         new_puzhash: bytes32 = await self.standard_wallet.get_puzzle_hash(
             new=not action_scope.config.tx_config.reuse_puzhash
         )
-        excess_fee: int = fee - mirror_coin.amount
-        inner_sol: Program = self.standard_wallet.make_solution(
-            primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
-            conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if excess_fee > 0 else extra_conditions,
-        )
-        mirror_spend = CoinSpend(
-            mirror_coin,
-            SerializedProgram.from_program(create_mirror_puzzle()),
-            SerializedProgram.to(
-                [
-                    parent_coin.parent_coin_info,
-                    parent_inner_puzzle,
-                    parent_coin.amount,
-                    inner_sol,
-                ]
-            ),
-        )
-        mirror_bundle = WalletSpendBundle([mirror_spend], G2Element())
-
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=new_puzhash,
-                    amount=uint64(mirror_coin.amount),
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(10),
-                    spend_bundle=mirror_bundle,
-                    additions=mirror_bundle.additions(),
-                    removals=mirror_bundle.removals(),
-                    memos=list(compute_memos(mirror_bundle).items()),
-                    wallet_id=self.id(),  # This is being called before the wallet is created so we're using a ID of 0
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
-                    name=mirror_bundle.name(),
-                    valid_times=parse_timelock_info(extra_conditions),
-                )
+            excess_fee: int = interface.side_effects.fee_left_to_pay - mirror_coin.amount
+            inner_sol: Program = self.standard_wallet.make_solution(
+                primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - interface.side_effects.fee_left_to_pay))]
+                if excess_fee < 0
+                else [],
+                conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if excess_fee > 0 else extra_conditions,
             )
+            mirror_spend = CoinSpend(
+                mirror_coin,
+                SerializedProgram.from_program(create_mirror_puzzle()),
+                SerializedProgram.to(
+                    [
+                        parent_coin.parent_coin_info,
+                        parent_inner_puzzle,
+                        parent_coin.amount,
+                        inner_sol,
+                    ]
+                ),
+            )
+            mirror_bundle = WalletSpendBundle([mirror_spend], G2Element())
 
-        if excess_fee > 0:
-            await self.wallet_state_manager.main_wallet.generate_signed_transaction(
-                uint64(1),
-                new_puzhash,
-                action_scope,
-                fee=uint64(excess_fee),
-                extra_conditions=(AssertCoinAnnouncement(asserted_id=mirror_coin.name(), asserted_msg=b"$"),),
-            )
+            async with action_scope.use() as interface:
+                interface.side_effects.transactions.append(
+                    TransactionRecord(
+                        confirmed_at_height=uint32(0),
+                        created_at_time=uint64(int(time.time())),
+                        to_puzzle_hash=new_puzhash,
+                        amount=uint64(mirror_coin.amount),
+                        fee_amount=action_scope.config.total_fee,
+                        confirmed=False,
+                        sent=uint32(10),
+                        spend_bundle=mirror_bundle,
+                        additions=mirror_bundle.additions(),
+                        removals=mirror_bundle.removals(),
+                        memos=list(compute_memos(mirror_bundle).items()),
+                        wallet_id=self.id(),
+                        sent_to=[],
+                        trade_id=None,
+                        type=uint32(TransactionType.OUTGOING_TX.value),
+                        name=mirror_bundle.name(),
+                        valid_times=parse_timelock_info(extra_conditions),
+                    )
+                )
+
+            if excess_fee > 0:
+                interface.side_effects.fee_left_to_pay = uint64(excess_fee)
+                await self.wallet_state_manager.main_wallet.generate_signed_transaction(
+                    uint64(1),
+                    new_puzhash,
+                    action_scope,
+                    extra_conditions=(AssertCoinAnnouncement(asserted_id=mirror_coin.name(), asserted_msg=b"$"),),
+                )
 
     ###########
     # SYNCING #
@@ -1025,7 +1021,6 @@ class DataLayerWallet:
         driver_dict: dict[bytes32, PuzzleInfo],
         solver: Solver,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> Offer:
         dl_wallet = None
@@ -1037,7 +1032,6 @@ class DataLayerWallet:
             raise ValueError("DL Wallet is not initialized")
 
         offered_launchers: list[bytes32] = [k for k, v in offer_dict.items() if v < 0 and k is not None]
-        fee_left_to_pay: uint64 = fee
         all_transactions: list[TransactionRecord] = []
         for launcher in offered_launchers:
             try:
@@ -1055,14 +1049,12 @@ class DataLayerWallet:
                     [uint64(1)],
                     [new_ph],
                     inner_action_scope,
-                    fee=fee_left_to_pay,
                     launcher_id=launcher,
                     new_root_hash=new_root,
                     add_pending_singleton=False,
                     announce_new_state=True,
                     extra_conditions=extra_conditions,
                 )
-                fee_left_to_pay = uint64(0)
                 extra_conditions = tuple()
 
                 async with inner_action_scope.use() as interface:

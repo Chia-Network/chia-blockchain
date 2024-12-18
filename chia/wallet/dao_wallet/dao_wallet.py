@@ -126,7 +126,6 @@ class DAOWallet:
         action_scope: WalletActionScope,
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
-        fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
     ) -> DAOWallet:
         """
@@ -138,7 +137,6 @@ class DAOWallet:
         :param dao_rules: The rules which govern the DAO
         :param filter_amount: Min votes to see proposal (user defined)
         :param name: Wallet name
-        :param fee: transaction fee
         :param fee_for_cat: transaction fee for creating the CATs
         :return: DAO wallet
         """
@@ -180,7 +178,6 @@ class DAOWallet:
             await self.generate_new_dao(
                 amount_of_cats,
                 action_scope,
-                fee=fee,
                 fee_for_cat=fee_for_cat,
             )
         except Exception as e_info:  # pragma: no cover
@@ -611,7 +608,6 @@ class DAOWallet:
         amount_of_cats_to_create: Optional[uint64],
         action_scope: WalletActionScope,
         cat_tail_hash: Optional[bytes32] = None,
-        fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
@@ -636,176 +632,175 @@ class DAOWallet:
         if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:  # pragma: no cover
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
-        if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0:
-            coins = await self.standard_wallet.select_coins(
-                uint64(amount_of_cats_to_create + fee + 1),
-                action_scope,
-            )
-        else:  # pragma: no cover
-            coins = await self.standard_wallet.select_coins(uint64(fee + 1), action_scope)
-
-        if coins is None:  # pragma: no cover
-            return None
-        # origin is normal coin which creates launcher coin
-        origin = coins.copy().pop()
-
-        genesis_launcher_puz = SINGLETON_LAUNCHER
-        # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
-        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), uint64(1))
-
-        if cat_tail_hash is None:
-            assert amount_of_cats_to_create is not None
-            different_coins = await self.standard_wallet.select_coins(
-                uint64(amount_of_cats_to_create + fee_for_cat),
-                action_scope,
-            )
-            cat_origin = different_coins.copy().pop()
-            assert origin.name() != cat_origin.name()
-            cat_tail = generate_cat_tail(cat_origin.name(), launcher_coin.name())
-            cat_tail_hash = cat_tail.get_tree_hash()
-
-        assert cat_tail_hash is not None
-
-        dao_info: DAOInfo = DAOInfo(
-            launcher_coin.name(),
-            self.dao_info.cat_wallet_id,
-            self.dao_info.dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            None,
-            None,
-            uint32(0),
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
-        await self.save_info(dao_info)
-        new_cat_wallet = None
-        # This will also mint the coins
-        if amount_of_cats_to_create is not None and different_coins is not None:
-            cat_tail_info = {
-                "identifier": "genesis_by_id_or_singleton",
-                "treasury_id": launcher_coin.name(),
-                "coins": different_coins,
-            }
-            new_cat_wallet = await CATWallet.create_new_cat_wallet(
-                self.wallet_state_manager,
-                self.standard_wallet,
-                cat_tail_info,
-                amount_of_cats_to_create,
-                action_scope,
-                fee=fee_for_cat,
-                push=False,
-            )
-            assert new_cat_wallet is not None
-        else:  # pragma: no cover
-            for wallet in self.wallet_state_manager.wallets:
-                if self.wallet_state_manager.wallets[wallet].type() == WalletType.CAT:
-                    if self.wallet_state_manager.wallets[wallet].cat_info.limitations_program_hash == cat_tail_hash:
-                        new_cat_wallet = self.wallet_state_manager.wallets[wallet]
-
-        assert new_cat_wallet is not None
-        cat_wallet_id = new_cat_wallet.wallet_info.id
-
-        assert cat_tail_hash == new_cat_wallet.cat_info.limitations_program_hash
-        await new_cat_wallet.set_tail_program(bytes(cat_tail).hex())
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            cat_wallet_id,
-            self.dao_info.dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            None,
-            None,
-            uint32(0),
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
-
-        await self.save_info(dao_info)
-
-        dao_treasury_puzzle = get_treasury_puzzle(self.dao_rules, launcher_coin.name(), cat_tail_hash)
-        full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
-        full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
-
-        announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
-
-        await self.standard_wallet.generate_signed_transaction(
-            uint64(1),
-            genesis_launcher_puz.get_tree_hash(),
-            action_scope,
-            fee,
-            origin_id=origin.name(),
-            coins=set(coins),
-            memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
-            extra_conditions=(
-                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
-            ),
-        )
-
-        genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
-
-        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
-        launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
-
-        launcher_proof = LineageProof(
-            bytes32(launcher_coin.parent_coin_info),
-            None,
-            uint64(launcher_coin.amount),
-        )
-        await self.add_parent(launcher_coin.name(), launcher_proof)
-
-        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
-        dao_info = DAOInfo(
-            launcher_coin.name(),
-            cat_wallet_id,
-            self.dao_info.dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            eve_coin,
-            dao_treasury_puzzle,
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
-        await self.save_info(dao_info)
-        eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin)
-        new_spend = WalletSpendBundle.aggregate([launcher_sb, eve_spend])
-
-        treasury_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(),
-            amount=uint64(1),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=new_spend,
-            additions=new_spend.additions(),
-            removals=new_spend.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=eve_coin.name(),
-            memos=[],
-            valid_times=parse_timelock_info(extra_conditions),
-        )
-
-        funding_inner_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([funding_inner_puzhash], [self.id()])
-        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.id()])
-        await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
-
-        await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
         async with action_scope.use() as interface:
+            if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0:
+                coins = await self.standard_wallet.select_coins(
+                    uint64(amount_of_cats_to_create + interface.side_effects.fee_left_to_pay + 1),
+                    action_scope,
+                )
+            else:  # pragma: no cover
+                coins = await self.standard_wallet.select_coins(
+                    uint64(interface.side_effects.fee_left_to_pay + 1), action_scope
+                )
+
+            if coins is None:  # pragma: no cover
+                return None
+            # origin is normal coin which creates launcher coin
+            origin = coins.copy().pop()
+
+            genesis_launcher_puz = SINGLETON_LAUNCHER
+            # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
+            launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), uint64(1))
+
+            if cat_tail_hash is None:
+                assert amount_of_cats_to_create is not None
+                different_coins = await self.standard_wallet.select_coins(
+                    uint64(amount_of_cats_to_create + fee_for_cat),
+                    action_scope,
+                )
+                cat_origin = different_coins.copy().pop()
+                assert origin.name() != cat_origin.name()
+                cat_tail = generate_cat_tail(cat_origin.name(), launcher_coin.name())
+                cat_tail_hash = cat_tail.get_tree_hash()
+
+            assert cat_tail_hash is not None
+
+            dao_info: DAOInfo = DAOInfo(
+                launcher_coin.name(),
+                self.dao_info.cat_wallet_id,
+                self.dao_info.dao_cat_wallet_id,
+                self.dao_info.proposals_list,
+                self.dao_info.parent_info,
+                None,
+                None,
+                uint32(0),
+                self.dao_info.filter_below_vote_amount,
+                self.dao_info.assets,
+                self.dao_info.current_height,
+            )
+            await self.save_info(dao_info)
+            new_cat_wallet = None
+            # This will also mint the coins
+            if amount_of_cats_to_create is not None and different_coins is not None:
+                cat_tail_info = {
+                    "identifier": "genesis_by_id_or_singleton",
+                    "treasury_id": launcher_coin.name(),
+                    "coins": different_coins,
+                }
+                new_cat_wallet = await CATWallet.create_new_cat_wallet(
+                    self.wallet_state_manager,
+                    self.standard_wallet,
+                    cat_tail_info,
+                    amount_of_cats_to_create,
+                    action_scope,
+                    push=False,
+                )
+                assert new_cat_wallet is not None
+            else:  # pragma: no cover
+                for wallet in self.wallet_state_manager.wallets:
+                    if self.wallet_state_manager.wallets[wallet].type() == WalletType.CAT:
+                        if self.wallet_state_manager.wallets[wallet].cat_info.limitations_program_hash == cat_tail_hash:
+                            new_cat_wallet = self.wallet_state_manager.wallets[wallet]
+
+            assert new_cat_wallet is not None
+            cat_wallet_id = new_cat_wallet.wallet_info.id
+
+            assert cat_tail_hash == new_cat_wallet.cat_info.limitations_program_hash
+            await new_cat_wallet.set_tail_program(bytes(cat_tail).hex())
+            dao_info = DAOInfo(
+                self.dao_info.treasury_id,
+                cat_wallet_id,
+                self.dao_info.dao_cat_wallet_id,
+                self.dao_info.proposals_list,
+                self.dao_info.parent_info,
+                None,
+                None,
+                uint32(0),
+                self.dao_info.filter_below_vote_amount,
+                self.dao_info.assets,
+                self.dao_info.current_height,
+            )
+
+            await self.save_info(dao_info)
+
+            dao_treasury_puzzle = get_treasury_puzzle(self.dao_rules, launcher_coin.name(), cat_tail_hash)
+            full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
+            full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
+
+            announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
+
+            await self.standard_wallet.generate_signed_transaction(
+                uint64(1),
+                genesis_launcher_puz.get_tree_hash(),
+                action_scope,
+                origin_id=origin.name(),
+                coins=set(coins),
+                memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
+                extra_conditions=(
+                    AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+                ),
+            )
+
+            genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
+
+            launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+            launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+
+            launcher_proof = LineageProof(
+                bytes32(launcher_coin.parent_coin_info),
+                None,
+                uint64(launcher_coin.amount),
+            )
+            await self.add_parent(launcher_coin.name(), launcher_proof)
+
+            eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
+            dao_info = DAOInfo(
+                launcher_coin.name(),
+                cat_wallet_id,
+                self.dao_info.dao_cat_wallet_id,
+                self.dao_info.proposals_list,
+                self.dao_info.parent_info,
+                eve_coin,
+                dao_treasury_puzzle,
+                self.dao_info.singleton_block_height,
+                self.dao_info.filter_below_vote_amount,
+                self.dao_info.assets,
+                self.dao_info.current_height,
+            )
+            await self.save_info(dao_info)
+            eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin)
+            new_spend = WalletSpendBundle.aggregate([launcher_sb, eve_spend])
+
+            treasury_record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=action_scope.config.total_fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=new_spend,
+                additions=new_spend.additions(),
+                removals=new_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=eve_coin.name(),
+                memos=[],
+                valid_times=parse_timelock_info(extra_conditions),
+            )
+
+            funding_inner_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
+            await self.wallet_state_manager.add_interested_puzzle_hashes([funding_inner_puzhash], [self.id()])
+            await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.id()])
+            await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
+
+            await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
+
             interface.side_effects.transactions.append(treasury_record)
 
-    async def generate_treasury_eve_spend(
-        self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)
-    ) -> WalletSpendBundle:
+    async def generate_treasury_eve_spend(self, inner_puz: Program, eve_coin: Coin) -> WalletSpendBundle:
         """
         Create the eve spend of the treasury
         This can only be completed after a number of blocks > oracle_spend_delay have been farmed
@@ -845,115 +840,115 @@ class DAOWallet:
         proposed_puzzle: Program,
         action_scope: WalletActionScope,
         vote_amount: Optional[uint64] = None,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
-        coins = await self.standard_wallet.select_coins(
-            uint64(fee + dao_rules.proposal_minimum_amount),
-            action_scope,
-        )
-        if coins is None:  # pragma: no cover
-            return None
-        # origin is normal coin which creates launcher coin
-        origin = coins.copy().pop()
-        genesis_launcher_puz = SINGLETON_LAUNCHER
-        # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
-        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), dao_rules.proposal_minimum_amount)
-
-        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-
-        if vote_amount is None:  # pragma: no cover
-            dao_cat_wallet = self.wallet_state_manager.get_wallet(
-                id=self.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
-            )
-            vote_amount = await dao_cat_wallet.get_votable_balance(include_free_cats=False)
-        assert vote_amount is not None
-        cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-        assert cat_tail_hash
-        dao_proposal_puzzle = get_proposal_puzzle(
-            proposal_id=launcher_coin.name(),
-            cat_tail_hash=cat_tail_hash,
-            treasury_id=self.dao_info.treasury_id,
-            votes_sum=uint64(0),
-            total_votes=uint64(0),
-            proposed_puzzle_hash=proposed_puzzle.get_tree_hash(),
-        )
-
-        full_proposal_puzzle = curry_singleton(launcher_coin.name(), dao_proposal_puzzle)
-        full_proposal_puzzle_hash = full_proposal_puzzle.get_tree_hash()
-
-        announcement_message = Program.to(
-            [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
-        ).get_tree_hash()
-
-        await self.standard_wallet.generate_signed_transaction(
-            uint64(dao_rules.proposal_minimum_amount),
-            genesis_launcher_puz.get_tree_hash(),
-            action_scope,
-            fee,
-            origin_id=origin.name(),
-            coins=coins,
-            extra_conditions=(
-                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
-            ),
-        )
-
-        genesis_launcher_solution = Program.to(
-            [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
-        )
-
-        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
-        launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
-        eve_coin = Coin(launcher_coin.name(), full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount)
-
-        future_parent = LineageProof(
-            eve_coin.parent_coin_info,
-            dao_proposal_puzzle.get_tree_hash(),
-            uint64(eve_coin.amount),
-        )
-        eve_parent = LineageProof(
-            bytes32(launcher_coin.parent_coin_info),
-            bytes32(launcher_coin.puzzle_hash),
-            uint64(launcher_coin.amount),
-        )
-
-        await self.add_parent(bytes32(eve_coin.parent_coin_info), eve_parent)
-        await self.add_parent(eve_coin.name(), future_parent)
-
-        eve_spend = await self.generate_proposal_eve_spend(
-            eve_coin=eve_coin,
-            full_proposal_puzzle=full_proposal_puzzle,
-            dao_proposal_puzzle=dao_proposal_puzzle,
-            proposed_puzzle_reveal=proposed_puzzle,
-            launcher_coin=launcher_coin,
-            vote_amount=vote_amount,
-        )
-
-        full_spend = WalletSpendBundle.aggregate([eve_spend, launcher_sb])
 
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
-                    amount=uint64(dao_rules.proposal_minimum_amount),
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(10),
-                    spend_bundle=full_spend,
-                    additions=full_spend.additions(),
-                    removals=full_spend.removals(),
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.INCOMING_TX.value),
-                    name=full_spend.name(),
-                    memos=[],
-                    valid_times=parse_timelock_info(extra_conditions),
-                )
+            coins = await self.standard_wallet.select_coins(
+                uint64(interface.side_effects.fee_left_to_pay + dao_rules.proposal_minimum_amount),
+                action_scope,
             )
+            if coins is None:  # pragma: no cover
+                return None
+            # origin is normal coin which creates launcher coin
+            origin = coins.copy().pop()
+            genesis_launcher_puz = SINGLETON_LAUNCHER
+            # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
+            launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), dao_rules.proposal_minimum_amount)
+
+            cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+
+            if vote_amount is None:  # pragma: no cover
+                dao_cat_wallet = self.wallet_state_manager.get_wallet(
+                    id=self.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
+                )
+                vote_amount = await dao_cat_wallet.get_votable_balance(include_free_cats=False)
+            assert vote_amount is not None
+            cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+            assert cat_tail_hash
+            dao_proposal_puzzle = get_proposal_puzzle(
+                proposal_id=launcher_coin.name(),
+                cat_tail_hash=cat_tail_hash,
+                treasury_id=self.dao_info.treasury_id,
+                votes_sum=uint64(0),
+                total_votes=uint64(0),
+                proposed_puzzle_hash=proposed_puzzle.get_tree_hash(),
+            )
+
+            full_proposal_puzzle = curry_singleton(launcher_coin.name(), dao_proposal_puzzle)
+            full_proposal_puzzle_hash = full_proposal_puzzle.get_tree_hash()
+
+            announcement_message = Program.to(
+                [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
+            ).get_tree_hash()
+
+            await self.standard_wallet.generate_signed_transaction(
+                uint64(dao_rules.proposal_minimum_amount),
+                genesis_launcher_puz.get_tree_hash(),
+                action_scope,
+                origin_id=origin.name(),
+                coins=coins,
+                extra_conditions=(
+                    AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+                ),
+            )
+
+            genesis_launcher_solution = Program.to(
+                [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
+            )
+
+            launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+            launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+            eve_coin = Coin(launcher_coin.name(), full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount)
+
+            future_parent = LineageProof(
+                eve_coin.parent_coin_info,
+                dao_proposal_puzzle.get_tree_hash(),
+                uint64(eve_coin.amount),
+            )
+            eve_parent = LineageProof(
+                bytes32(launcher_coin.parent_coin_info),
+                bytes32(launcher_coin.puzzle_hash),
+                uint64(launcher_coin.amount),
+            )
+
+            await self.add_parent(bytes32(eve_coin.parent_coin_info), eve_parent)
+            await self.add_parent(eve_coin.name(), future_parent)
+
+            eve_spend = await self.generate_proposal_eve_spend(
+                eve_coin=eve_coin,
+                full_proposal_puzzle=full_proposal_puzzle,
+                dao_proposal_puzzle=dao_proposal_puzzle,
+                proposed_puzzle_reveal=proposed_puzzle,
+                launcher_coin=launcher_coin,
+                vote_amount=vote_amount,
+            )
+
+            full_spend = WalletSpendBundle.aggregate([eve_spend, launcher_sb])
+
+            async with action_scope.use() as interface:
+                interface.side_effects.transactions.append(
+                    TransactionRecord(
+                        confirmed_at_height=uint32(0),
+                        created_at_time=uint64(int(time.time())),
+                        to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
+                        amount=uint64(dao_rules.proposal_minimum_amount),
+                        fee_amount=action_scope.config.total_fee,
+                        confirmed=False,
+                        sent=uint32(10),
+                        spend_bundle=full_spend,
+                        additions=full_spend.additions(),
+                        removals=full_spend.removals(),
+                        wallet_id=self.id(),
+                        sent_to=[],
+                        trade_id=None,
+                        type=uint32(TransactionType.INCOMING_TX.value),
+                        name=full_spend.name(),
+                        memos=[],
+                        valid_times=parse_timelock_info(extra_conditions),
+                    )
+                )
 
     async def generate_proposal_eve_spend(
         self,
@@ -1026,7 +1021,6 @@ class DAOWallet:
         vote_amount: Optional[uint64],
         is_yes_vote: bool,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
@@ -1110,32 +1104,31 @@ class DAOWallet:
             *dao_cat_spend.coin_spends,
         ]
         spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
-        if fee > 0:
-            await self.standard_wallet.create_tandem_xch_tx(
-                fee,
-                action_scope,
-            )
-
-        record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
-            amount=uint64(1),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=spend_bundle.name(),
-            memos=[],
-            valid_times=parse_timelock_info(extra_conditions),
-        )
         async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:
+                await self.standard_wallet.create_tandem_xch_tx(
+                    action_scope,
+                )
+
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=action_scope.config.total_fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=spend_bundle.name(),
+                memos=[],
+                valid_times=parse_timelock_info(extra_conditions),
+            )
             interface.side_effects.transactions.append(record)
 
     async def create_proposal_close_spend(
@@ -1143,7 +1136,6 @@ class DAOWallet:
         proposal_id: bytes32,
         action_scope: WalletActionScope,
         genesis_id: Optional[bytes32] = None,
-        fee: uint64 = uint64(0),
         self_destruct: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
@@ -1474,34 +1466,35 @@ class DAOWallet:
         else:
             # TODO: maybe we can refactor this to provide clarity around timer_cs having been defined
             spend_bundle = WalletSpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
-        if fee > 0:
-            await self.standard_wallet.create_tandem_xch_tx(fee, action_scope)
-        full_spend = spend_bundle
-        if cat_spend_bundle is not None:
-            full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
-        if delegated_puzzle_sb is not None:
-            full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
 
-        record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=get_finished_state_puzzle(proposal_info.proposal_id).get_tree_hash(),
-            amount=uint64(1),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=full_spend,
-            additions=full_spend.additions(),
-            removals=full_spend.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=full_spend.name(),
-            memos=[],
-            valid_times=parse_timelock_info(extra_conditions),
-        )
         async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:
+                await self.standard_wallet.create_tandem_xch_tx(action_scope)
+            full_spend = spend_bundle
+            if cat_spend_bundle is not None:
+                full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
+            if delegated_puzzle_sb is not None:
+                full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
+
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=get_finished_state_puzzle(proposal_info.proposal_id).get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=action_scope.config.total_fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=full_spend.name(),
+                memos=[],
+                valid_times=parse_timelock_info(extra_conditions),
+            )
             interface.side_effects.transactions.append(record)
 
     async def fetch_proposed_puzzle_reveal(self, proposal_id: bytes32) -> Program:
@@ -1534,7 +1527,6 @@ class DAOWallet:
         funding_wallet: WalletProtocol[Any],
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
@@ -1544,7 +1536,6 @@ class DAOWallet:
                 amount,
                 p2_singleton_puzhash,
                 action_scope,
-                fee=fee,
                 memos=[p2_singleton_puzhash],
             )
         elif funding_wallet.type() == WalletType.CAT.value:
@@ -1556,7 +1547,6 @@ class DAOWallet:
                 [amount],
                 [p2_singleton_puzhash],
                 action_scope,
-                fee=fee,
                 extra_conditions=extra_conditions,
             )
         else:  # pragma: no cover
@@ -1566,14 +1556,13 @@ class DAOWallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         funding_wallet_id: uint32 = uint32(1),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         # set up the p2_singleton
         funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
         await self._create_treasury_fund_transaction(
-            funding_wallet, amount, action_scope, fee, extra_conditions=extra_conditions
+            funding_wallet, amount, action_scope, extra_conditions=extra_conditions
         )
 
     async def fetch_singleton_lineage_proof(self, coin: Coin) -> LineageProof:
@@ -1592,7 +1581,6 @@ class DAOWallet:
     async def free_coins_from_finished_proposals(
         self,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
@@ -1621,30 +1609,30 @@ class DAOWallet:
             raise ValueError("No proposals are available for release")
 
         full_spend = WalletSpendBundle.aggregate(spends)
-        if fee > 0:
-            await self.standard_wallet.create_tandem_xch_tx(fee, action_scope)
-
-        assert isinstance(finished_puz, Program)
-        record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=finished_puz.get_tree_hash(),
-            amount=uint64(1),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=full_spend,
-            additions=full_spend.additions(),
-            removals=full_spend.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=full_spend.name(),
-            memos=[],
-            valid_times=parse_timelock_info(extra_conditions),
-        )
         async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:
+                await self.standard_wallet.create_tandem_xch_tx(action_scope)
+
+            assert isinstance(finished_puz, Program)
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=finished_puz.get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=action_scope.config.total_fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=full_spend.name(),
+                memos=[],
+                valid_times=parse_timelock_info(extra_conditions),
+            )
             interface.side_effects.transactions.append(record)
 
     async def parse_proposal(self, proposal_id: bytes32) -> dict[str, Any]:

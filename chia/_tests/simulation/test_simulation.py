@@ -217,7 +217,6 @@ class TestSimulation:
                 uint64(10),
                 await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
                 action_scope,
-                uint64(0),
             )
         [tx] = await wallet.wallet_state_manager.add_pending_transactions(action_scope.side_effects.transactions)
         # wait till out of mempool

@@ -479,11 +479,9 @@ async def test_cat_trades(
     # Execute all of the trades
     # chia_for_cat
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config, push=False, fee=uint64(1)
     ) as action_scope:
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            chia_for_cat, action_scope, fee=uint64(1)
-        )
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, action_scope)
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -493,13 +491,12 @@ async def test_cat_trades(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response, fee=uint64(1)
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             maker_offer,
             peer,
             action_scope,
-            fee=uint64(1),
         )
 
     if test_aggregation:
@@ -711,13 +708,12 @@ async def test_cat_trades(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response, fee=uint64(1)
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
             peer,
             action_scope,
-            fee=uint64(1),
         )
 
     # Testing a precious display bug real quick
@@ -1732,9 +1728,9 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     fee = uint64(2_000_000_000_000)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config, push=True, fee=fee
     ) as action_scope:
-        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=fee, secure=True)
+        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, secure=True)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
 
     await wallet_environments.process_pending_states(
@@ -1815,9 +1811,9 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config, push=True, fee=uint64(0)
     ) as action_scope:
-        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=uint64(0), secure=True)
+        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, secure=True)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
 
     await wallet_environments.process_pending_states(
@@ -1868,9 +1864,9 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     assert trade_make is not None
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config, push=True, fee=uint64(0)
     ) as action_scope:
-        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=uint64(0), secure=True)
+        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, secure=True)
 
     # Check an announcement ring has been created
     total_spend = SpendBundle.aggregate(
@@ -2014,9 +2010,9 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     offer = Offer.from_bytes(trade_make.offer)
     [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response, fee=fee
     ) as action_scope:
-        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
+        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope)
 
     await wallet_environments.full_node.wait_transaction_records_entered_mempool(
         records=action_scope.side_effects.transactions
@@ -2025,16 +2021,16 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     # we shouldn't be able to respond to a duplicate offer
     with pytest.raises(ValueError):
         async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config, push=False, fee=fee
         ) as action_scope:
-            await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
+            await trade_manager_taker.respond_to_offer(offer, peer, action_scope)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
     # pushing into mempool while already in it should fail
     [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
     async with trade_manager_trader.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response, fee=fee
     ) as action_scope:
-        tr2 = await trade_manager_trader.respond_to_offer(offer, peer, action_scope, fee=fee)
+        tr2 = await trade_manager_trader.respond_to_offer(offer, peer, action_scope)
     assert await trade_manager_trader.get_coins_of_interest()
     await wallet_environments.process_pending_states(
         [
@@ -2206,9 +2202,9 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
     offer = dataclasses.replace(offer, _bundle=bundle)
     fee = uint64(10)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, sign=False
+        wallet_environments.tx_config, push=True, sign=False, fee=fee
     ) as action_scope:
-        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
+        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope)
     env_taker.node.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
 
     def check_wallet_cache_empty() -> bool:
@@ -2326,9 +2322,9 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([Offer.from_bytes(trade_make.offer)])
     fee = uint64(1_000_000_000_000)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response, fee=fee
     ) as action_scope:
-        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
+        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope)
 
     await wallet_environments.process_pending_states(
         [
