@@ -15,31 +15,28 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_TOP_LAYER_MOD,
+    SINGLETON_TOP_LAYER_MOD_HASH,
+)
+from chia_puzzles_py.programs import (
+    NFT_STATE_LAYER,
+    NFT_METADATA_UPDATER_DEFAULT,
+    NFT_OWNERSHIP_LAYER as NFT_OWNERSHIP_LAYER_BYTES,
+    NFT_OWNERSHIP_TRANSFER_PROGRAM_ONE_WAY_CLAIM_WITH_ROYALTIES,
+    NFT_INTERMEDIATE_LAUNCHER
+)
 
 log = logging.getLogger(__name__)
-SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
-NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile(
-    "nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
-LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
-SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
+NFT_STATE_LAYER_MOD = Program.from_bytes(NFT_STATE_LAYER)
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
-NFT_METADATA_UPDATER = load_clvm_maybe_recompile(
-    "nft_metadata_updater_default.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
-    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
+NFT_METADATA_UPDATER = Program.from_bytes(NFT_METADATA_UPDATER_DEFAULT)
+NFT_METADATA_UPDATER_HASH = NFT_METADATA_UPDATER.get_tree_hash()
+NFT_OWNERSHIP_LAYER = Program.from_bytes(NFT_OWNERSHIP_LAYER_BYTES)
 NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
-NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm_maybe_recompile(
-    "nft_ownership_transfer_program_one_way_claim_with_royalties.clsp",
-    package_or_requirement="chia.wallet.nft_wallet.puzzles",
-)
-STANDARD_PUZZLE_MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
-INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
-    "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
+NFT_TRANSFER_PROGRAM_DEFAULT = Program.from_bytes(NFT_OWNERSHIP_TRANSFER_PROGRAM_ONE_WAY_CLAIM_WITH_ROYALTIES)
+INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
 
 
 def create_nft_layer_puzzle_with_curry_params(
@@ -58,7 +55,7 @@ def create_nft_layer_puzzle_with_curry_params(
 def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Program) -> Program:
     if log.isEnabledFor(logging.DEBUG):
         log.debug("Creating full NFT puzzle with inner puzzle: \n%r\n%r", singleton_id, inner_puzzle.get_tree_hash())
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
 
     full_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, inner_puzzle)
     if log.isEnabledFor(logging.DEBUG):
@@ -77,7 +74,7 @@ def create_full_puzzle(
             metadata_updater_puzhash,
             inner_puzzle.get_tree_hash(),
         )
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
     singleton_inner_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, metadata_updater_puzhash, inner_puzzle)
 
     full_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, singleton_inner_puzzle)
@@ -210,7 +207,7 @@ def create_ownership_layer_puzzle(
         percentage,
         p2_puzzle,
     )
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (nft_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
     if not royalty_puzzle_hash:
         royalty_puzzle_hash = p2_puzzle.get_tree_hash()
     transfer_program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(singleton_struct, royalty_puzzle_hash, percentage)
