@@ -75,8 +75,7 @@ ignore = [
 ban-relative-imports = "all"
 
 [lint.flake8-tidy-imports.banned-api]
-# for use with another pr
-# "asyncio.create_task".msg = "Use `from chia.util.pit import pit` and `pit.create_task()`"
+ "asyncio.create_task".msg = "Use `from chia.util.task_referencer import create_referenced_task` and `create_referenced_task()`"
 
 [lint.isort]
 required-imports = ["from __future__ import annotations"]

@@ -6,6 +6,7 @@ from typing import Optional
 import pytest
 
 from chia.util.limited_semaphore import LimitedSemaphore, LimitedSemaphoreFullError
+from chia.util.task_referencer import create_referenced_task
 
 
 @pytest.mark.anyio
@@ -27,8 +28,8 @@ async def test_stuff() -> None:
     waiting_events = [asyncio.Event() for _ in range(waiting_limit)]
     failed_events = [asyncio.Event() for _ in range(beyond_limit)]
 
-    entered_tasks = [asyncio.create_task(acquire(entered_event=event)) for event in entered_events]
-    waiting_tasks = [asyncio.create_task(acquire(entered_event=event)) for event in waiting_events]
+    entered_tasks = [create_referenced_task(acquire(entered_event=event)) for event in entered_events]
+    waiting_tasks = [create_referenced_task(acquire(entered_event=event)) for event in waiting_events]
 
     await asyncio.gather(*(event.wait() for event in entered_events))
     assert all(event.is_set() for event in entered_events)
@@ -36,7 +37,7 @@ async def test_stuff() -> None:
 
     assert semaphore._available_count == 0
 
-    failure_tasks = [asyncio.create_task(acquire()) for _ in range(beyond_limit)]
+    failure_tasks = [create_referenced_task(acquire()) for _ in range(beyond_limit)]
 
     failure_results = await asyncio.gather(*failure_tasks, return_exceptions=True)
     assert [str(error) for error in failure_results] == [str(LimitedSemaphoreFullError())] * beyond_limit
