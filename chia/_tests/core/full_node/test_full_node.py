@@ -1263,9 +1263,9 @@ class TestFullNodeProtocol:
         await full_node_1.full_node.add_block(blocks[-2])
         await full_node_1.full_node.add_unfinished_block(unf, None)
 
-        msg = peer.outgoing_queue.get_nowait()
+        msg, _ = peer.outgoing_queue.get_nowait()
         assert msg.type == ProtocolMessageTypes.new_peak.value
-        msg = peer.outgoing_queue.get_nowait()
+        msg, _ = peer.outgoing_queue.get_nowait()
         if peer_version == "0.0.35":
             assert msg.type == ProtocolMessageTypes.new_unfinished_block.value
             assert msg.data == bytes(fnp.NewUnfinishedBlock(unf.partial_hash))
