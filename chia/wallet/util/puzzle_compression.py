@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import zlib
-
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.nft_wallet.nft_puzzles import (
@@ -36,7 +36,7 @@ ZDICT = [
     + bytes(NFT_METADATA_UPDATER)
     + bytes(NFT_TRANSFER_PROGRAM_DEFAULT),
     bytes(CAT_MOD),
-    bytes(OFFER_MOD),
+    SETTLEMENT_PAYMENT,
     b"",  # purposefully break compatibility with older versions
     # more dictionaries go here
 ]
