@@ -180,7 +180,7 @@ class AddressParamType(click.ParamType):
                 root_path = DEFAULT_ROOT_PATH
 
                 if ctx is not None:
-                    context = ChiaCliContext.from_click(ctx)
+                    context = ChiaCliContext.set_default(ctx)
                     root_path = context.root_path
                     expected_prefix = context.expected_prefix
 

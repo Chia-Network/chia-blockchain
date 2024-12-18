@@ -18,7 +18,7 @@ def start_cmd(ctx: click.Context, restart: bool, skip_keyring: bool, group: tupl
     from chia.cmds.beta_funcs import warn_if_beta_enabled
     from chia.cmds.start_funcs import async_start
 
-    root_path = ChiaCliContext.from_click(ctx).root_path
+    root_path = ChiaCliContext.set_default(ctx).root_path
     config = load_config(root_path, "config.yaml")
     warn_if_beta_enabled(config)
     asyncio.run(async_start(root_path, config, group, restart, skip_keyring=skip_keyring))

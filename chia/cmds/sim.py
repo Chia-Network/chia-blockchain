@@ -35,14 +35,9 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
 )
 @click.pass_context
 def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulator_name: str) -> None:
-    ctx.ensure_object(dict)
-    # TODO: maybe update instead of replacing?
-    ctx.obj.update(
-        ChiaCliContext(
-            root_path=Path(root_path) / simulator_name,
-            rpc_port=rpc_port,
-        ).to_click()
-    )
+    context = ChiaCliContext.set_default(ctx)
+    context.root_path = Path(root_path) / simulator_name
+    context.rpc_port = rpc_port
 
 
 @sim_cmd.command("create", help="Guides you through the process of setting up a Chia Simulator")
@@ -78,7 +73,7 @@ def create_simulator_config(
     docker_mode: bool,
     no_bitfield: bool,
 ) -> None:
-    root_path = ChiaCliContext.from_click(ctx).root_path
+    root_path = ChiaCliContext.set_default(ctx).root_path
     print(f"Using this Directory: {root_path}\n")
     if fingerprint and mnemonic:
         print("You can't use both a fingerprint and a mnemonic. Please choose one.")
@@ -138,7 +133,7 @@ def status_cmd(
     include_rewards: bool,
     show_addresses: bool,
 ) -> None:
-    context = ChiaCliContext.from_click(ctx)
+    context = ChiaCliContext.set_default(ctx)
 
     asyncio.run(
         print_status(
@@ -183,7 +178,7 @@ def revert_cmd(
         print("\nBlocks, '-b' must not be set if all blocks are selected by reset, '-r'. Exiting.\n")
         return
 
-    context = ChiaCliContext.from_click(ctx)
+    context = ChiaCliContext.set_default(ctx)
 
     asyncio.run(
         revert_block_height(
@@ -203,7 +198,7 @@ def revert_cmd(
 @click.option("-a", "--target-address", type=str, default="", help="Block reward address")
 @click.pass_context
 def farm_cmd(ctx: click.Context, blocks: int, non_transaction: bool, target_address: str) -> None:
-    context = ChiaCliContext.from_click(ctx)
+    context = ChiaCliContext.set_default(ctx)
     asyncio.run(
         farm_blocks(
             context.rpc_port,
@@ -220,7 +215,7 @@ def farm_cmd(ctx: click.Context, blocks: int, non_transaction: bool, target_addr
 @click.pass_context
 def autofarm_cmd(ctx: click.Context, set_autofarm: str) -> None:
     autofarm = bool(set_autofarm == "on")
-    context = ChiaCliContext.from_click(ctx)
+    context = ChiaCliContext.set_default(ctx)
     asyncio.run(
         set_auto_farm(
             context.rpc_port,

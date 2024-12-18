@@ -69,7 +69,7 @@ def summary_cmd(
             wallet_rpc_port,
             harvester_rpc_port,
             farmer_rpc_port,
-            root_path=ChiaCliContext.from_click(ctx).root_path,
+            root_path=ChiaCliContext.set_default(ctx).root_path,
         )
     )
 
@@ -97,4 +97,4 @@ def challenges_cmd(ctx: click.Context, farmer_rpc_port: Optional[int], limit: in
 
     from chia.cmds.farm_funcs import challenges
 
-    asyncio.run(challenges(ChiaCliContext.from_click(ctx).root_path, farmer_rpc_port, limit))
+    asyncio.run(challenges(ChiaCliContext.set_default(ctx).root_path, farmer_rpc_port, limit))

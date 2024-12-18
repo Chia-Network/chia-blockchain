@@ -314,7 +314,7 @@ def configure_cmd(
     seeder_nameserver: str,
 ) -> None:
     configure(
-        ChiaCliContext.from_click(ctx).root_path,
+        ChiaCliContext.set_default(ctx).root_path,
         set_farmer_peer,
         set_node_introducer,
         set_fullnode_port,

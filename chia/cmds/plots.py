@@ -34,7 +34,7 @@ def plots_cmd(ctx: click.Context) -> None:
     """Create, add, remove and check your plots"""
     from chia.util.chia_logging import initialize_logging
 
-    root_path = ChiaCliContext.from_click(ctx).root_path
+    root_path = ChiaCliContext.set_default(ctx).root_path
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
     initialize_logging("", {"log_level": "INFO", "log_stdout": True}, root_path)
@@ -133,7 +133,7 @@ def create_cmd(
         nobitfield=nobitfield,
     )
 
-    root_path = ChiaCliContext.from_click(ctx).root_path
+    root_path = ChiaCliContext.set_default(ctx).root_path
     try:
         validate_plot_size(root_path, size, override_k)
     except ValueError as e:
@@ -179,7 +179,7 @@ def check_cmd(
     from chia.plotting.check_plots import check_plots
 
     check_plots(
-        ChiaCliContext.from_click(ctx).root_path,
+        ChiaCliContext.set_default(ctx).root_path,
         num,
         challenge_start,
         grep_string,
@@ -202,7 +202,7 @@ def add_cmd(ctx: click.Context, final_dir: str) -> None:
     from chia.plotting.util import add_plot_directory
 
     try:
-        add_plot_directory(ChiaCliContext.from_click(ctx).root_path, final_dir)
+        add_plot_directory(ChiaCliContext.set_default(ctx).root_path, final_dir)
         print(f"Successfully added: {final_dir}")
     except ValueError as e:
         print(e)
@@ -221,10 +221,10 @@ def add_cmd(ctx: click.Context, final_dir: str) -> None:
 def remove_cmd(ctx: click.Context, final_dir: str) -> None:
     from chia.plotting.util import remove_plot_directory
 
-    remove_plot_directory(ChiaCliContext.from_click(ctx).root_path, final_dir)
+    remove_plot_directory(ChiaCliContext.set_default(ctx).root_path, final_dir)
 
 
 @plots_cmd.command("show", help="Shows the directory of current plots")
 @click.pass_context
 def show_cmd(ctx: click.Context) -> None:
-    show_plots(ChiaCliContext.from_click(ctx).root_path)
+    show_plots(ChiaCliContext.set_default(ctx).root_path)

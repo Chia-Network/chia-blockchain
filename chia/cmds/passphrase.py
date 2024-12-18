@@ -71,7 +71,7 @@ def set_cmd(
 
     if success:
         # Attempt to update the daemon's passphrase cache
-        root_path = ChiaCliContext.from_click(ctx).root_path
+        root_path = ChiaCliContext.set_default(ctx).root_path
         config = load_config(root_path, "config.yaml")
         sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
@@ -99,7 +99,7 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
 
     if remove_passphrase(current_passphrase):
         # Attempt to update the daemon's passphrase cache
-        root_path = ChiaCliContext.from_click(ctx).root_path
+        root_path = ChiaCliContext.set_default(ctx).root_path
         config = load_config(root_path, "config.yaml")
         sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 

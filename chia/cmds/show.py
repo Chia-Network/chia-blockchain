@@ -63,7 +63,7 @@ def show_cmd(
     asyncio.run(
         show_async(
             rpc_port,
-            ChiaCliContext.from_click(ctx).root_path,
+            ChiaCliContext.set_default(ctx).root_path,
             fee,
             state,
             block_header_hash_by_height,

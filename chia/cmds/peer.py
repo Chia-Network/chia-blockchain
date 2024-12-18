@@ -43,7 +43,7 @@ def peer_cmd(
         peer_async(
             node_type,
             rpc_port,
-            ChiaCliContext.from_click(ctx).root_path,
+            ChiaCliContext.set_default(ctx).root_path,
             connections,
             add_connection,
             remove_connection,

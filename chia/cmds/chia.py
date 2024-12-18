@@ -64,8 +64,8 @@ def cli(
 ) -> None:
     from pathlib import Path
 
-    ctx.ensure_object(dict)
-    ctx.obj.update(ChiaCliContext(root_path=Path(root_path)).to_click())
+    context = ChiaCliContext.set_default(ctx=ctx)
+    context.root_path = Path(root_path)
 
     # keys_root_path and passphrase_file will be None if the passphrase options have been
     # scrubbed from the CLI options
@@ -117,7 +117,7 @@ def run_daemon_cmd(ctx: click.Context, wait_for_unlock: bool) -> None:
 
     wait_for_unlock = wait_for_unlock and Keychain.is_keyring_locked()
 
-    asyncio.run(async_run_daemon(ChiaCliContext.from_click(ctx).root_path, wait_for_unlock=wait_for_unlock))
+    asyncio.run(async_run_daemon(ChiaCliContext.set_default(ctx).root_path, wait_for_unlock=wait_for_unlock))
 
 
 cli.add_command(keys_cmd)

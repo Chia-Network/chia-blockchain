@@ -14,7 +14,6 @@ from typing import (
     Optional,
     Protocol,
     Union,
-    cast,
     final,
     get_args,
     get_origin,
@@ -76,16 +75,11 @@ class ChiaCliContext:
     expected_currency_prefix: Optional[str] = None
 
     @classmethod
-    def from_click(cls, ctx: click.Context) -> ChiaCliContext:
-        if ctx.obj is None:
-            # TODO: should we set it up on the ctx here?
-            return cls()
-
-        existing = cast(Optional[ChiaCliContext], ctx.obj.get(cls.context_dict_key))
-        if existing is None:
-            return cls()
-
-        return existing
+    def set_default(cls, ctx: click.Context) -> ChiaCliContext:
+        ctx.ensure_object(dict)
+        self = ctx.obj.setdefault(cls.context_dict_key, cls())
+        assert isinstance(self, cls)
+        return self
 
     def to_click(self) -> dict[str, object]:
         return {self.context_dict_key: self}
@@ -157,7 +151,7 @@ class _CommandParsingStage:
 
             def strip_click_context(func: SyncCmd) -> SyncCmd:
                 def _inner(ctx: click.Context, **kwargs: Any) -> None:
-                    context = ChiaCliContext.from_click(ctx)
+                    context = ChiaCliContext.set_default(ctx)
                     func(context=context, **kwargs)
 
                 return _inner
