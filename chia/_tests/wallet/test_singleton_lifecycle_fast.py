@@ -211,7 +211,7 @@ def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: list[Program],
     claim_p2_nft = p2_singleton_spend_type == "claim-p2-nft"
     if claim_p2_nft:
         singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash", bytes32)
-        p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name", bytes)
+        p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name", bytes32)
         solution = Program.to([singleton_inner_puzzle_hash, p2_singleton_coin_name])
         return solution
     raise ValueError("can't solve `delayed-spend` yet")
