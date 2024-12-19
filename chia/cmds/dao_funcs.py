@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import pathlib
 import time
 from decimal import Decimal
 from typing import Optional
@@ -21,12 +22,17 @@ from chia.wallet.util.wallet_types import WalletType
 
 
 async def add_dao_wallet(
-    wallet_rpc_port: Optional[int], fp: int, name: Optional[str], treasury_id: bytes32, filter_amount: uint64
+    root_path: pathlib.Path,
+    wallet_rpc_port: Optional[int],
+    fp: int,
+    name: Optional[str],
+    treasury_id: bytes32,
+    filter_amount: uint64,
 ) -> None:
     print(f"Adding wallet for DAO: {treasury_id}")
     print("This may take awhile.")
 
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.create_new_dao_wallet(
             mode="existing",
             tx_config=CMDTXConfigLoader(reuse_puzhash=True).to_tx_config(units["chia"], config, fingerprint),
@@ -45,6 +51,7 @@ async def add_dao_wallet(
 
 
 async def create_dao_wallet(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     fee: uint64,
@@ -77,7 +84,7 @@ async def create_dao_wallet(
         "proposal_minimum_amount": proposal_minimum,
     }
 
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         conf_coins, _, _ = await wallet_client.get_spendable_coins(
             wallet_id=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
         )
@@ -106,15 +113,15 @@ async def create_dao_wallet(
         return res.transactions
 
 
-async def get_treasury_id(wallet_rpc_port: Optional[int], fp: int, wallet_id: int) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
+async def get_treasury_id(root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: int, wallet_id: int) -> None:
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.dao_get_treasury_id(wallet_id=wallet_id)
         treasury_id = res["treasury_id"]
         print(f"Treasury ID: {treasury_id}")
 
 
-async def get_rules(wallet_rpc_port: Optional[int], fp: int, wallet_id: int) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
+async def get_rules(root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: int, wallet_id: int) -> None:
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.dao_get_rules(wallet_id=wallet_id)
         rules = res["rules"]
         for rule, val in rules.items():
@@ -122,6 +129,7 @@ async def get_rules(wallet_rpc_port: Optional[int], fp: int, wallet_id: int) -> 
 
 
 async def add_funds_to_treasury(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -132,7 +140,7 @@ async def add_funds_to_treasury(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(typ)
@@ -165,8 +173,10 @@ async def add_funds_to_treasury(
         return res.transactions
 
 
-async def get_treasury_balance(wallet_rpc_port: Optional[int], fp: int, wallet_id: int) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
+async def get_treasury_balance(
+    root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: int, wallet_id: int
+) -> None:
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.dao_get_treasury_balance(wallet_id=wallet_id)
         balances = res["balances"]
 
@@ -183,8 +193,10 @@ async def get_treasury_balance(wallet_rpc_port: Optional[int], fp: int, wallet_i
                 print(f"{asset_id}: {balance / cat_mojos}")
 
 
-async def list_proposals(wallet_rpc_port: Optional[int], fp: int, wallet_id: int, include_closed: bool) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
+async def list_proposals(
+    root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: int, wallet_id: int, include_closed: bool
+) -> None:
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.dao_get_proposals(wallet_id=wallet_id, include_closed=include_closed)
         proposals = res["proposals"]
         soft_close_length = res["soft_close_length"]
@@ -201,8 +213,10 @@ async def list_proposals(wallet_rpc_port: Optional[int], fp: int, wallet_id: int
         print("############################")
 
 
-async def show_proposal(wallet_rpc_port: Optional[int], fp: int, wallet_id: int, proposal_id: str) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, config):
+async def show_proposal(
+    root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: int, wallet_id: int, proposal_id: str
+) -> None:
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, config):
         res = await wallet_client.dao_parse_proposal(wallet_id, proposal_id)
         pd = res["proposal_dictionary"]
         blocks_needed = pd["state"]["blocks_needed"]
@@ -275,6 +289,7 @@ async def show_proposal(wallet_rpc_port: Optional[int], fp: int, wallet_id: int,
 
 
 async def vote_on_proposal(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -286,7 +301,7 @@ async def vote_on_proposal(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_vote_on_proposal(
             wallet_id=wallet_id,
             proposal_id=proposal_id,
@@ -313,6 +328,7 @@ async def vote_on_proposal(
 
 
 async def close_proposal(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -323,7 +339,7 @@ async def close_proposal(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_close_proposal(
             wallet_id=wallet_id,
             proposal_id=proposal_id,
@@ -350,6 +366,7 @@ async def close_proposal(
 
 
 async def lockup_coins(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -360,7 +377,7 @@ async def lockup_coins(
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     final_amount: uint64 = amount.convert_amount(units["cat"])
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_send_to_lockup(
             wallet_id=wallet_id,
             amount=final_amount,
@@ -386,6 +403,7 @@ async def lockup_coins(
 
 
 async def release_coins(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -394,7 +412,7 @@ async def release_coins(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_free_coins_from_finished_proposals(
             wallet_id=wallet_id,
             fee=fee,
@@ -418,6 +436,7 @@ async def release_coins(
 
 
 async def exit_lockup(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -426,7 +445,7 @@ async def exit_lockup(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_exit_lockup(
             wallet_id=wallet_id,
             coins=[],
@@ -452,6 +471,7 @@ async def exit_lockup(
 
 
 async def create_spend_proposal(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -477,7 +497,7 @@ async def create_spend_proposal(
             additions.append(addition)
     else:
         additions = None
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
         final_amount: Optional[uint64] = uint64(int(Decimal(amount) * mojo_per_unit)) if amount else None
@@ -504,6 +524,7 @@ async def create_spend_proposal(
 
 
 async def create_update_proposal(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -527,7 +548,7 @@ async def create_update_proposal(
         "self_destruct_length": self_destruct_length,
         "oracle_spend_delay": oracle_spend_delay,
     }
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,
             proposal_type="update",
@@ -546,6 +567,7 @@ async def create_update_proposal(
 
 
 async def create_mint_proposal(
+    root_path: pathlib.Path,
     wallet_rpc_port: Optional[int],
     fp: int,
     wallet_id: int,
@@ -557,7 +579,7 @@ async def create_mint_proposal(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,
             proposal_type="mint",

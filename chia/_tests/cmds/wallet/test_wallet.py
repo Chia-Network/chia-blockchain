@@ -409,10 +409,10 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
     ]
     with CliRunner().isolated_filesystem():
         run_cli_command_and_assert(
-            capsys, root_dir, [*command_args, FINGERPRINT_ARG, "--transaction-file=temp"], assert_list
+            capsys, root_dir, [*command_args, FINGERPRINT_ARG, "--transaction-file-out=temp"], assert_list
         )
         run_cli_command_and_assert(
-            capsys, root_dir, [*command_args, CAT_FINGERPRINT_ARG, "--transaction-file=temp2"], cat_assert_list
+            capsys, root_dir, [*command_args, CAT_FINGERPRINT_ARG, "--transaction-file-out=temp2"], cat_assert_list
         )
 
         with open("temp", "rb") as file:

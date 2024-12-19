@@ -11,7 +11,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
-from chia_rs import confirm_not_included_already_hashed
+from chia_rs import G2Element, confirm_not_included_already_hashed
+from chiabip158 import PyBIP158
 from colorlog import getLogger
 
 from chia._tests.connection_utils import connect_and_get_peer, disconnect_all, disconnect_all_and_reconnect
@@ -34,17 +35,25 @@ from chia.protocols.wallet_protocol import (
     CoinState,
     RequestAdditions,
     RespondAdditions,
+    RespondBlockHeader,
     RespondBlockHeaders,
     SendTransaction,
 )
 from chia.server.outbound_message import Message, make_msg
+from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import make_spend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
@@ -103,6 +112,71 @@ async def test_request_block_headers(
     res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
     bh = res_block_headers.header_blocks
     assert len(bh) == 6
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_request_block_headers_transactions_filter(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """
+    Tests that `request_block_headers` returns a transactions filter that
+        correctly reflects the blocks transactions.
+    For completeness, we're also comparing the outcome of
+        `request_block_headers` in this regard, to `request_header_blocks` as
+        well as `request_block_header`.
+    """
+    full_node_api, _, bt = one_node_one_block
+    ph = SerializedProgram.to(1).get_tree_hash()
+    for _ in range(2):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    # Generate a block with our test spend
+    coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+    [parent_coin] = [c.coin for c in coins if c.coin.amount == 250_000_000_000]
+    sb = SpendBundle(
+        [
+            make_spend(
+                parent_coin, SerializedProgram.to(1), SerializedProgram.to([[ConditionOpcode.CREATE_COIN, ph, 42]])
+            )
+        ],
+        G2Element(),
+    )
+    blocks = await full_node_api.get_all_full_blocks()
+    blocks = bt.get_consecutive_blocks(1, blocks, guarantee_transaction_block=True, transaction_data=sb)
+    new_block = blocks[-1]
+    await full_node_api.full_node.add_block(new_block)
+    # Compute the expected transactions filter
+    [test_spend] = sb.additions()
+    byte_array_tx = (
+        [bytearray(test_spend.puzzle_hash)]
+        + [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
+        + [bytearray(parent_coin.name())]
+    )
+    expected_transactions_filter = bytes(PyBIP158(byte_array_tx).GetEncoded())
+    # Perform the request and check the transactions filter
+    msg = await full_node_api.request_block_headers(
+        wallet_protocol.RequestBlockHeaders(uint32(new_block.height), uint32(new_block.height), True)
+    )
+    assert msg is not None
+    res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
+    block_headers = res_block_headers.header_blocks
+    assert len(block_headers) == 1
+    block_header = block_headers[0]
+    assert block_header.transactions_filter == expected_transactions_filter
+    # Go further and compare this to the outcome of request_header_blocks
+    msg = await full_node_api.request_header_blocks(
+        wallet_protocol.RequestHeaderBlocks(uint32(new_block.height), uint32(new_block.height))
+    )
+    assert msg is not None
+    block_headers_res = RespondBlockHeaders.from_bytes(msg.data)
+    assert block_headers_res.header_blocks == block_headers
+    assert block_headers_res.header_blocks[0].transactions_filter == expected_transactions_filter
+    # Go even further and compare this to the outcome of request_block_header
+    msg = await full_node_api.request_block_header(wallet_protocol.RequestBlockHeader(uint32(new_block.height)))
+    assert msg is not None
+    block_header_res = RespondBlockHeader.from_bytes(msg.data)
+    assert block_header_res.header_block == block_header
+    assert block_header_res.header_block.transactions_filter == expected_transactions_filter
 
 
 # @pytest.mark.parametrize(

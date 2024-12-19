@@ -11,7 +11,8 @@ from click.testing import CliRunner
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo, chia_command
+from chia.cmds.cmd_classes import chia_command
+from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionsIn, TransactionsOut, WalletClientInfo
 from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.signer import (
     ApplySignaturesCMD,
@@ -21,8 +22,6 @@ from chia.cmds.signer import (
     QrCodeDisplay,
     SPIn,
     SPOut,
-    TransactionsIn,
-    TransactionsOut,
 )
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import (
@@ -698,7 +697,7 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
@@ -729,9 +728,9 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_out=TransactionsOut(transaction_file_out="out"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
-        "-o",
+        "--transaction-file-out",
         "out",
         "-p",
         "sp-in",
@@ -742,7 +741,7 @@ def test_signer_command_default_parsing() -> None:
             rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
@@ -752,7 +751,7 @@ def test_transactions_in() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(TransactionsIn):
         def run(self) -> None:
             assert self.transaction_bundle == TransactionBundle([STD_TX])
@@ -771,7 +770,7 @@ def test_transactions_out() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(TransactionsOut):
         def run(self) -> None:
             self.handle_transaction_output([STD_TX])
@@ -824,7 +823,7 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
 
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(13))
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(SPIn):
         def run(self) -> None:
             assert self.read_sp_input(Coin) == [coin, coin]
@@ -881,7 +880,7 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
     coin_bytes = byte_serialize_clvm_streamable(coin)
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(SPOut):
         def run(self) -> None:
             self.handle_clvm_output([coin, coin])
@@ -930,7 +929,7 @@ def test_qr_code_display() -> None:
 
     bytes_to_encode = b"foo bar qat qux bam bat"
 
-    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(QrCodeDisplay):
         def run(self) -> None:
             self.display_qr_codes([bytes_to_encode, bytes_to_encode])

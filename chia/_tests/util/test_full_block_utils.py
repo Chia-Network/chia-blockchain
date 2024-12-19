@@ -24,7 +24,12 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.util.full_block_utils import block_info_from_block, generator_from_block, header_block_from_block
+from chia.util.full_block_utils import (
+    block_info_from_block,
+    generator_from_block,
+    get_height_and_tx_status_from_block,
+    header_block_from_block,
+)
 from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -245,7 +250,6 @@ def get_full_blocks() -> Iterator[FullBlock]:
 
 
 @pytest.mark.anyio
-@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_parser():
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure
@@ -253,6 +257,9 @@ async def test_parser():
     # correctly
     for block in get_full_blocks():
         block_bytes = bytes(block)
+        height, is_tx_block = get_height_and_tx_status_from_block(block_bytes)
+        assert height == block.height
+        assert is_tx_block == (block.transactions_info is not None)
         gen = generator_from_block(block_bytes)
         assert gen == bytes(block.transactions_generator)
         bi = block_info_from_block(block_bytes)
