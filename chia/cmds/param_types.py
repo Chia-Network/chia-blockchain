@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional, Union
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.units import units
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash
@@ -173,14 +174,23 @@ class AddressParamType(click.ParamType):
             hrp, _b32data = bech32_decode(value)
             if hrp in {"xch", "txch"}:  # I hate having to load the config here
                 addr_type: AddressType = AddressType.XCH
-                expected_prefix = ctx.obj.get("expected_prefix") if ctx else None  # attempt to get cached prefix
+
+                # attempt to get cached prefix
+                expected_prefix: Optional[str] = None
+                root_path = DEFAULT_ROOT_PATH
+
+                if ctx is not None:
+                    context = ChiaCliContext.set_default(ctx)
+                    root_path = context.root_path
+                    expected_prefix = context.expected_prefix
+
                 if expected_prefix is None:
-                    root_path = ctx.obj["root_path"] if ctx is not None else DEFAULT_ROOT_PATH
                     config = load_config(root_path, "config.yaml")
                     expected_prefix = selected_network_address_prefix(config)
 
-                    if ctx is not None:
-                        ctx.obj["expected_prefix"] = expected_prefix  # cache prefix
+                if ctx is not None:
+                    context.expected_prefix = expected_prefix  # cache prefix
+
                 # now that we have the expected prefix, we can validate the address is for the right network
                 if hrp != expected_prefix:
                     self.fail(f"Unexpected Address Prefix: {hrp}, are you sure its for the right network?", param, ctx)
