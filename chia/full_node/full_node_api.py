@@ -1237,7 +1237,7 @@ class FullNodeAPI:
             tx_additions = [add[0] for add in additions]
             tx_removals = [rem.name() for rem in removals]
 
-        header_block = get_block_header(block, tx_additions, tx_removals)
+        header_block = get_block_header(block, (tx_additions, tx_removals))
         msg = make_msg(
             ProtocolMessageTypes.respond_block_header,
             wallet_protocol.RespondBlockHeader(header_block),
@@ -1529,7 +1529,7 @@ class FullNodeAPI:
             )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
-            header_block = get_block_header(block, added_coins, removal_names)
+            header_block = get_block_header(block, (added_coins, removal_names))
             header_blocks.append(header_block)
 
         msg = make_msg(

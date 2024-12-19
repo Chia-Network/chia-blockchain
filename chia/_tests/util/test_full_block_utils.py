@@ -274,6 +274,6 @@ async def test_parser():
 @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_header_block():
     for block in get_full_blocks():
-        hb: HeaderBlock = get_block_header(block, [], [])
+        hb: HeaderBlock = get_block_header(block)
         hb_bytes = header_block_from_block(memoryview(bytes(block)))
         assert HeaderBlock.from_bytes(hb_bytes) == hb
