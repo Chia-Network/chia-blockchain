@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, get_type_hints
 
 import aiohttp
 from chia_rs import AugSchemeMPL
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
@@ -164,6 +165,7 @@ def tx_endpoint(
                 push=request.get("push", push),
                 merge_spends=request.get("merge_spends", merge_spends),
                 sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
+                fee=uint64(request.get("fee", 0)),
             ) as action_scope:
                 response: EndpointResult = await func(
                     self,

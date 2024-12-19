@@ -141,9 +141,9 @@ async def test_notifications(
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
         async with notification_manager_1.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=True
+            DEFAULT_TX_CONFIG, push=True, fee=FEE
         ) as action_scope:
-            await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, action_scope, fee=FEE)
+            await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, action_scope)
         [tx] = action_scope.side_effects.transactions
         await time_out_assert_not_none(
             5,

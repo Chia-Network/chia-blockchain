@@ -162,9 +162,11 @@ async def test_nft_offer_sell_nft(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=maker_fee
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch, action_scope, {}
         )
     assert success is True
     assert error is None
@@ -178,11 +180,9 @@ async def test_nft_offer_sell_nft(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response, fee=uint64(taker_fee)
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
@@ -303,9 +303,11 @@ async def test_nft_offer_request_nft(
 
     offer_dict = {nft_to_request_asset_id: 1, wallet_maker.id(): -xch_offered}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=maker_fee
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_dict, action_scope, driver_dict, fee=maker_fee
+            offer_dict, action_scope, driver_dict
         )
     assert success is True
     assert error is None
@@ -318,11 +320,9 @@ async def test_nft_offer_request_nft(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response, fee=uint64(taker_fee)
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
 
@@ -448,9 +448,11 @@ async def test_nft_offer_sell_did_to_did(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=maker_fee
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch, action_scope, {}
         )
     assert success is True
     assert error is None
@@ -463,11 +465,9 @@ async def test_nft_offer_sell_did_to_did(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response, fee=uint64(taker_fee)
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
@@ -631,9 +631,11 @@ async def test_nft_offer_sell_nft_for_cat(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, cat_wallet_maker.id(): cats_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=maker_fee
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch, action_scope, {}
         )
 
     assert success is True
@@ -647,11 +649,9 @@ async def test_nft_offer_sell_nft_for_cat(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response, fee=uint64(taker_fee)
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
 
@@ -821,9 +821,11 @@ async def test_nft_offer_request_nft_for_cat(
 
     offer_dict = {nft_to_request_asset_id: 1, cat_wallet_maker.id(): -cats_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=maker_fee
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_dict, action_scope, driver_dict, fee=maker_fee
+            offer_dict, action_scope, driver_dict
         )
     assert success is True
     assert error is None
@@ -836,11 +838,9 @@ async def test_nft_offer_request_nft_for_cat(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response, fee=uint64(taker_fee)
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
 
@@ -954,14 +954,18 @@ async def test_nft_offer_sell_cancel(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=maker_fee
+    ) as action_scope:
         _success, trade_make, _error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch, action_scope, {}
         )
 
     FEE = uint64(2000000000000)
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=FEE, secure=True)
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=FEE
+    ) as action_scope:
+        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, secure=True)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
@@ -1067,14 +1071,18 @@ async def test_nft_offer_sell_cancel_in_batch(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=maker_fee
+    ) as action_scope:
         _success, trade_make, _error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch, action_scope, {}
         )
 
     FEE = uint64(2000000000000)
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=FEE, secure=True)
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=FEE
+    ) as action_scope:
+        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, secure=True)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
@@ -1319,9 +1327,11 @@ async def test_complex_nft_offer(
         ),
     }
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=FEE
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            complex_nft_offer, action_scope, driver_dict=driver_dict, fee=FEE
+            complex_nft_offer, action_scope, driver_dict=driver_dict
         )
     assert error is None
     assert success
@@ -1333,25 +1343,23 @@ async def test_complex_nft_offer(
     if royalty_basis_pts_maker == 10000:
         with pytest.raises(ValueError):
             async with trade_manager_taker.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+                DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response, fee=FEE
             ) as action_scope:
                 trade_take = await trade_manager_taker.respond_to_offer(
                     Offer.from_bytes(trade_make.offer),
                     wallet_node_taker.get_full_node_peer(),
                     action_scope,
-                    fee=FEE,
                 )
         # all done for this test
         return
     else:
         async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+            DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response, fee=FEE
         ) as action_scope:
             trade_take = await trade_manager_taker.respond_to_offer(
                 maker_offer,
                 wallet_node_taker.get_full_node_peer(),
                 action_scope,
-                fee=FEE,
             )
     assert trade_take is not None
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
@@ -1440,9 +1448,11 @@ async def test_complex_nft_offer(
         ),
     }
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=False, fee=uint64(0)
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            complex_nft_offer, action_scope, driver_dict=driver_dict, fee=uint64(0)
+            complex_nft_offer, action_scope, driver_dict=driver_dict
         )
     assert error is None
     assert success
