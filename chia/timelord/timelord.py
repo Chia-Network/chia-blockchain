@@ -217,8 +217,7 @@ class Timelord:
 
     async def _stop_chain(self, chain: Chain) -> None:
         try:
-            _, _, stop_writer = self.chain_type_to_stream[chain]
-            del self.chain_type_to_stream[chain]
+            _, _, stop_writer = self.chain_type_to_stream.pop(chain)
             if chain not in self.unspawned_chains:
                 self.unspawned_chains.append(chain)
             if chain in self.allows_iters:
