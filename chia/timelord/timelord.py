@@ -1092,9 +1092,8 @@ class Timelord:
 
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")
-        except Exception as e:
-            tb = traceback.format_exc()
-            log.warning(f"{type(e)} {e} {tb}")
+        except Exception:
+            log.exception("VDF client communication terminated abruptly")
 
     async def _manage_discriminant_queue_sanitizer(self) -> None:
         while not self._shut_down:
