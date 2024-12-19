@@ -1471,12 +1471,17 @@ class WalletRpcApi:
         batch_size = request.get(
             "batch_size", self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
         )
+        # We pay the fee for every batch. Should this be the case without some additional information to the user?
+        async with action_scope.use() as interface:
+            fee_per_batch = interface.side_effects.fee_left_to_pay
         for coin_id, coin_record in coin_records.coin_id_to_record.items():
             try:
                 metadata = coin_record.parsed_metadata()
                 assert isinstance(metadata, ClawbackMetadata)
                 coins[coin_record.coin] = metadata
                 if len(coins) >= batch_size:
+                    async with action_scope.use() as interface:
+                        interface.side_effects.fee_left_to_pay = fee_per_batch
                     await self.service.wallet_state_manager.spend_clawback_coins(
                         coins,
                         action_scope,
@@ -1499,6 +1504,8 @@ class WalletRpcApi:
             except Exception as e:
                 log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
         if len(coins) > 0:
+            async with action_scope.use() as interface:
+                interface.side_effects.fee_left_to_pay = fee_per_batch
             await self.service.wallet_state_manager.spend_clawback_coins(
                 coins,
                 action_scope,

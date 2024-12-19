@@ -945,7 +945,9 @@ class DIDWallet:
             did_record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(action_scope.config.tx_config.reuse_puzhash),
+                to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(
+                    not action_scope.config.tx_config.reuse_puzhash
+                ),
                 amount=uint64(coin.amount),
                 fee_amount=action_scope.config.total_fee,
                 confirmed=False,

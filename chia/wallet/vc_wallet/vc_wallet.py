@@ -199,6 +199,7 @@ class VCWallet:
                 provider_did,
                 inner_puzzle_hash,
                 [inner_puzzle_hash],
+                fee=interface.side_effects.fee_left_to_pay,
                 extra_conditions=extra_conditions,
             )
             for dpuz, coin in zip(dpuzs, coins):
@@ -231,6 +232,7 @@ class VCWallet:
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
+            interface.side_effects.fee_left_to_pay = uint64(0)
 
         return vc_record
 

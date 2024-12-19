@@ -603,6 +603,7 @@ class CATWallet:
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+            interface.side_effects.fee_left_to_pay = inner_action_scope.side_effects.fee_left_to_pay
 
         return announcement
 
