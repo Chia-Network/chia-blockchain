@@ -240,6 +240,13 @@ class Timelord:
         else:
             return uint32(self.last_state.get_height() + 1)
 
+    def _get_rc_cache_index(self, block: timelord_protocol.NewUnfinishedBlockTimelord) -> Optional[int]:
+        for index, (rc, _) in enumerate(self.last_state.reward_challenge_cache):
+            if rc == block.rc_prev:
+                return index
+
+        return None
+
     def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedBlockTimelord) -> Optional[uint64]:
         assert self.last_state is not None
         sub_slot_iters = self.last_state.get_sub_slot_iters()
@@ -260,12 +267,9 @@ class Timelord:
         block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
         if is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
             block_sp_total_iters -= self.last_state.get_sub_slot_iters()
-        found_index = -1
-        for index, (rc, total_iters) in enumerate(self.last_state.reward_challenge_cache):
-            if rc == block.rc_prev:
-                found_index = index
-                break
-        if found_index == -1:
+
+        found_index = self._get_rc_cache_index(block)
+        if found_index is None:
             log.warning(f"Will not infuse {block.rc_prev} because its reward chain challenge is not in the chain")
             return None
         if ip_iters > block_ip_iters:
@@ -337,6 +341,8 @@ class Timelord:
                     self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
+        # Remove old overflow blocks that we didn't infuse.
+        self.overflow_blocks = [block for block in self.overflow_blocks if self._get_rc_cache_index(block) is not None]
         # Signage points.
         if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0
