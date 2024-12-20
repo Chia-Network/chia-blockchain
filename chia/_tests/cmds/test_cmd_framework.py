@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 import textwrap
 from collections.abc import Sequence
 from dataclasses import asdict
@@ -12,7 +13,7 @@ from click.testing import CliRunner
 
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
-from chia.cmds.cmd_classes import ChiaCommand, Context, chia_command, option
+from chia.cmds.cmd_classes import ChiaCliContext, ChiaCommand, chia_command, option
 from chia.cmds.cmd_helpers import (
     _TRANSACTION_ENDPOINT_DECORATOR_APPLIED,
     NeedsCoinSelectionConfig,
@@ -31,7 +32,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
-def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None) -> None:
+def check_click_parsing(cmd: ChiaCommand, *args: str, context: Optional[ChiaCliContext] = None) -> None:
     @click.group()
     def _cmd() -> None:
         pass
@@ -57,8 +58,11 @@ def check_click_parsing(cmd: ChiaCommand, *args: str, obj: Optional[Any] = None)
     setattr(mock_type, "run", new_run)
     chia_command(group=_cmd, name="_", short_help="", help="")(mock_type)
 
+    if context is None:
+        context = ChiaCliContext()
+
     runner = CliRunner()
-    result = runner.invoke(_cmd, ["_", *args], catch_exceptions=False, obj=obj)
+    result = runner.invoke(_cmd, ["_", *args], catch_exceptions=False, obj=context.to_click())
     assert result.output == ""
 
 
@@ -162,14 +166,14 @@ def test_context_requirement() -> None:
     @click.group()
     @click.pass_context
     def cmd(ctx: click.Context) -> None:
-        ctx.obj = {"foo": "bar"}
+        ctx.obj = ChiaCliContext(root_path=pathlib.Path("foo", "bar")).to_click()
 
     @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD:
-        context: Context
+        context: ChiaCliContext
 
         def run(self) -> None:
-            assert self.context["foo"] == "bar"
+            assert self.context.root_path == pathlib.Path("foo", "bar")
 
     runner = CliRunner()
     result = runner.invoke(
@@ -404,7 +408,7 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
 
     expected_command = TempCMD(
         rpc_info=NeedsWalletRPC(
-            context={"root_path": wallet_environments.environments[0].node.root_path},
+            context=ChiaCliContext(root_path=wallet_environments.environments[0].node.root_path),
             wallet_rpc_port=port,
             fingerprint=fingerprint,
         ),

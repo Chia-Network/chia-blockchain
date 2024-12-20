@@ -897,11 +897,11 @@ class Blockchain:
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
             if tx_filter is False:
-                header = get_block_header(block, [], [])
+                header = get_block_header(block)
             elif block.transactions_generator is None:
                 # There is no point in getting additions and removals for
                 # blocks that do not have transactions.
-                header = get_block_header(block, [], [])
+                header = get_block_header(block)
             else:
                 added_coins_records, removed_coins_records = await asyncio.gather(
                     self.coin_store.get_coins_added_at_height(block.height),
@@ -909,7 +909,7 @@ class Blockchain:
                 )
                 tx_additions = [cr.coin for cr in added_coins_records if not cr.coinbase]
                 removed = [cr.coin.name() for cr in removed_coins_records]
-                header = get_block_header(block, tx_additions, removed)
+                header = get_block_header(block, (tx_additions, removed))
             header_blocks[header.header_hash] = header
 
         return header_blocks

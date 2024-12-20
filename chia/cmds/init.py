@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
+
 
 @click.command("init", help="Create or migrate the configuration")
 @click.option(
@@ -54,7 +56,7 @@ def init_cmd(
 
     init(
         Path(create_certs) if create_certs is not None else None,
-        ctx.obj["root_path"],
+        ChiaCliContext.set_default(ctx).root_path,
         fix_ssl_permissions,
         testnet,
         v1_db,
