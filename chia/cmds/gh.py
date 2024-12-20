@@ -94,7 +94,7 @@ def gh_group() -> None:
 
 
 @chia_command(
-    gh_group,
+    group=gh_group,
     name="test",
     short_help="launch a test run in CI from HEAD or existing remote ref",
     help="""Allows easy triggering and viewing of test workflow runs in CI including
