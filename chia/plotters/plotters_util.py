@@ -14,6 +14,7 @@ from typing import Optional, TextIO
 
 from chia.util.chia_version import chia_short_version
 from chia.util.config import lock_and_load_config
+from chia.util.task_referencer import create_referenced_task
 
 
 @contextlib.contextmanager
@@ -83,13 +84,13 @@ async def run_plotter(root_path, plotter, args, progress_dict):
         try:
             await asyncio.wait(
                 [
-                    asyncio.create_task(
+                    create_referenced_task(
                         _read_stream(
                             process.stdout,
                             process_stdout_line,
                         )
                     ),
-                    asyncio.create_task(
+                    create_referenced_task(
                         _read_stream(
                             process.stderr,
                             process_stderr_line,

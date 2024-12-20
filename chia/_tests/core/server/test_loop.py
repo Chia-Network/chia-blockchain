@@ -18,6 +18,7 @@ import pytest
 from chia._tests.core.server import serve
 from chia._tests.util.misc import create_logger
 from chia.server import chia_policy
+from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout
 
 here = pathlib.Path(__file__).parent
@@ -123,7 +124,7 @@ class ServeInThread:
             asyncio.set_event_loop_policy(original_event_loop_policy)
 
     async def main(self) -> None:
-        self.server_task = asyncio.create_task(
+        self.server_task = create_referenced_task(
             serve.async_main(
                 out_path=self.out_path,
                 ip=self.ip,
