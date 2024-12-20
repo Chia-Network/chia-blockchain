@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Optional
 
@@ -33,11 +35,19 @@ def test_back_and_forth_serialization() -> None:
     ) == WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR], [MOCK_SB, MOCK_SB], [MOCK_COIN, MOCK_COIN])
 
 
+@dataclass(frozen=True)
+class MockDBWrapper:
+    @asynccontextmanager
+    async def writer(self) -> AsyncIterator[None]:
+        yield
+
+
 @dataclass
 class MockWalletStateManager:
     most_recent_call: Optional[
         tuple[list[TransactionRecord], bool, bool, bool, list[SigningResponse], list[WalletSpendBundle]]
     ] = None
+    db_wrapper: object = MockDBWrapper()
 
     async def add_pending_transactions(
         self,
