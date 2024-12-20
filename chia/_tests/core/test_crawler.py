@@ -59,7 +59,7 @@ async def test_unknown_messages(
 
     with caplog.at_level(logging.ERROR):
         msg = make_msg(ProtocolMessageTypes.request_children, RequestChildren(bytes32.zeros))
-        assert await connection.send_message(msg)
+        assert await connection.send_message(msg, None)
         await time_out_assert(10, receiving_failed)
 
 
@@ -85,7 +85,7 @@ async def test_valid_message(
         ProtocolMessageTypes.new_peak,
         NewPeak(bytes32.zeros, uint32(2), uint128(1), uint32(1), bytes32(b"\1" * 32)),
     )
-    assert await connection.send_message(msg)
+    assert await connection.send_message(msg, None)
     await time_out_assert(10, peer_added)
 
 
