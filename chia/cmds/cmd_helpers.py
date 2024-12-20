@@ -7,7 +7,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar
 
-from chia.cmds.cmd_classes import Context, command_helper, option
+from chia.cmds.cmd_classes import ChiaCliContext, command_helper, option
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, TransactionBundle, get_wallet_client
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, TransactionFeeParamType, cli_amount_none
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -27,7 +27,7 @@ class WalletClientInfo:
 
 @command_helper
 class NeedsWalletRPC:
-    context: Context = field(default_factory=dict)
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     client_info: Optional[WalletClientInfo] = None
     wallet_rpc_port: Optional[int] = option(
         "-wp",
@@ -52,7 +52,7 @@ class NeedsWalletRPC:
         if self.client_info is not None:
             yield self.client_info
         else:
-            root_path = kwargs.get("root_path", self.context["root_path"])
+            root_path = kwargs.get("root_path", self.context.root_path)
             async with get_wallet_client(root_path, self.wallet_rpc_port, self.fingerprint, **kwargs) as (
                 wallet_client,
                 fp,

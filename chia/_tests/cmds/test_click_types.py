@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, cast
 
+import click
 import pytest
-from click import BadParameter, Context
+from click import BadParameter
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.param_types import (
     AddressParamType,
     AmountParamType,
@@ -38,9 +38,9 @@ overflow_decimal_str = "18446744.073709551616"
 overflow_decimal = Decimal(overflow_decimal_str)
 
 
-@dataclass
-class FakeContext:
-    obj: dict[Any, Any] = field(default_factory=dict)
+@click.command()
+def a_command_for_testing() -> None:
+    pass  # pragma: no cover
 
 
 def test_click_tx_fee_type() -> None:
@@ -114,7 +114,11 @@ def test_click_amount_type() -> None:
 
 
 def test_click_address_type() -> None:
-    context = cast(Context, FakeContext(obj={"expected_prefix": "xch"}))  # this makes us not have to use a config file
+    context = click.Context(command=a_command_for_testing)
+    chia_context = ChiaCliContext.set_default(context)
+    # this makes us not have to use a config file
+    chia_context.expected_prefix = "xch"
+
     std_cli_address = CliAddress(burn_ph, burn_address, AddressType.XCH)
     nft_cli_address = CliAddress(burn_ph, burn_nft_addr, AddressType.DID)
     # Test CliAddress (Generally is not used)
@@ -132,7 +136,7 @@ def test_click_address_type() -> None:
     # check error handling
     with pytest.raises(BadParameter):
         AddressParamType().convert("test", None, None)
-    with pytest.raises(AttributeError):  # attribute error because the context does not have a real error handler
+    with pytest.raises(click.BadParameter):
         AddressParamType().convert(burn_address_txch, None, context)
     with pytest.raises(BadParameter):
         AddressParamType().convert(burn_bad_prefix, None, None)
@@ -148,13 +152,15 @@ def test_click_address_type() -> None:
 
 
 def test_click_address_type_config(root_path_populated_with_config: Path) -> None:
+    context = click.Context(command=a_command_for_testing)
+    chia_context = ChiaCliContext.set_default(context)
     # set a root path in context.
-    context = cast(Context, FakeContext(obj={"root_path": root_path_populated_with_config}))
+    chia_context.root_path = root_path_populated_with_config
     # run test that should pass
     assert AddressParamType().convert(burn_address, None, context) == CliAddress(burn_ph, burn_address, AddressType.XCH)
-    assert context.obj["expected_prefix"] == "xch"  # validate that the prefix was set correctly
+    assert ChiaCliContext.set_default(context).expected_prefix == "xch"  # validate that the prefix was set correctly
     # use txch address
-    with pytest.raises(AttributeError):  # attribute error because the context does not have a real error handler
+    with pytest.raises(click.BadParameter):
         AddressParamType().convert(burn_address_txch, None, context)
 
 

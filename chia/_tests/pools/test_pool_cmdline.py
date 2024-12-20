@@ -21,6 +21,7 @@ from chia._tests.pools.test_pool_rpc import (
     verify_pool_state,
 )
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmd_helpers import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
@@ -216,7 +217,8 @@ async def test_plotnft_cli_show(
     )
 
     await ShowPlotNFTCMD(
-        context={"root_path": root_path},  # we need this for the farmer rpc client which is used in the commend
+        # we need this for the farmer rpc client which is used in the comment
+        context=ChiaCliContext(root_path=root_path),
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
@@ -227,7 +229,7 @@ async def test_plotnft_cli_show(
 
     with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
         await ShowPlotNFTCMD(
-            context={"root_path": root_path},
+            context=ChiaCliContext(root_path=root_path),
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
             ),
@@ -238,7 +240,7 @@ async def test_plotnft_cli_show(
 
     # need to capture the output and verify
     await ShowPlotNFTCMD(
-        context={"root_path": root_path},
+        context=ChiaCliContext(root_path=root_path),
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
@@ -253,7 +255,7 @@ async def test_plotnft_cli_show(
     # Passing in None when there are multiple pool wallets
     # Should show the state of all pool wallets
     await ShowPlotNFTCMD(
-        context={"root_path": root_path},
+        context=ChiaCliContext(root_path=root_path),
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
@@ -309,7 +311,7 @@ async def test_plotnft_cli_show_with_farmer(
             save_config(root_path, "config.yaml", config)
 
         await ShowPlotNFTCMD(
-            context={"root_path": root_path},
+            context=ChiaCliContext(root_path=root_path),
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
             ),
@@ -323,7 +325,7 @@ async def test_plotnft_cli_show_with_farmer(
         pw_info, _ = await wallet_rpc.pw_status(wallet_id)
 
         await ShowPlotNFTCMD(
-            context={"root_path": root_path},
+            context=ChiaCliContext(root_path=root_path),
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
             ),
@@ -877,7 +879,7 @@ async def test_plotnft_cli_change_payout(
     # This tests what happens when using None for root_path
     mocker.patch("chia.cmds.plotnft_funcs.DEFAULT_ROOT_PATH", root_path)
     await ChangePayoutInstructionsPlotNFTCMD(
-        context=dict(),
+        context=ChiaCliContext(root_path=wallet_environments.environments[0].node.root_path),
         launcher_id=bytes32(32 * b"0"),
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
     ).run()
@@ -900,7 +902,7 @@ async def test_plotnft_cli_change_payout(
     assert wanted_config.payout_instructions == zero_address
 
     await ChangePayoutInstructionsPlotNFTCMD(
-        context={"root_path": root_path},
+        context=ChiaCliContext(root_path=root_path),
         launcher_id=pw_info.launcher_id,
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
     ).run()
@@ -952,7 +954,7 @@ async def test_plotnft_cli_get_login_link(
             save_config(root_path, "config.yaml", config)
         with pytest.raises(CliRpcConnectionError, match="Was not able to get login link"):
             await GetLoginLinkCMD(
-                context={"root_path": root_path},
+                context=ChiaCliContext(root_path=root_path),
                 launcher_id=bytes32(32 * b"0"),
             ).run()
 

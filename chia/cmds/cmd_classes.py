@@ -2,16 +2,30 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import dataclasses
 import inspect
+import pathlib
 import sys
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any, Callable, Optional, Protocol, Union, get_args, get_origin, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Optional,
+    Protocol,
+    Union,
+    final,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 import click
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.streamable import is_type_SpecificOptional
 
 SyncCmd = Callable[..., None]
@@ -46,6 +60,29 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
         ),
         default=kwargs.get("default", default_default),
     )
+
+
+@final
+@dataclasses.dataclass
+class ChiaCliContext:
+    context_dict_key: ClassVar[str] = "_chia_cli_context"
+
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH
+    expected_prefix: Optional[str] = None
+    rpc_port: Optional[int] = None
+    keys_fingerprint: Optional[int] = None
+    keys_filename: Optional[str] = None
+    expected_address_prefix: Optional[str] = None
+
+    @classmethod
+    def set_default(cls, ctx: click.Context) -> ChiaCliContext:
+        ctx.ensure_object(dict)
+        self = ctx.obj.setdefault(cls.context_dict_key, cls())
+        assert isinstance(self, cls)
+        return self
+
+    def to_click(self) -> dict[str, object]:
+        return {self.context_dict_key: self}
 
 
 class HexString(click.ParamType):
@@ -114,7 +151,7 @@ class _CommandParsingStage:
 
             def strip_click_context(func: SyncCmd) -> SyncCmd:
                 def _inner(ctx: click.Context, **kwargs: Any) -> None:
-                    context: dict[str, Any] = ctx.obj if ctx.obj is not None else {}
+                    context = ChiaCliContext.set_default(ctx)
                     func(context=context, **kwargs)
 
                 return _inner
@@ -150,7 +187,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
         if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
             members[field_name] = _generate_command_parser(hints[field_name])
         elif field_name == "context":
-            if hints[field_name] != Context:
+            if hints[field_name] != ChiaCliContext:
                 raise ValueError("only Context can be the hint for variables named 'context'")
             else:
                 needs_context = True
@@ -284,6 +321,3 @@ def command_helper(cls: type[Any]) -> type[Any]:
         new_cls = dataclass(frozen=True, kw_only=True)(cls)
     setattr(new_cls, COMMAND_HELPER_ATTRIBUTE_NAME, True)
     return new_cls
-
-
-Context = dict[str, Any]

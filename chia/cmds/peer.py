@@ -4,6 +4,7 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmds_util import NODE_TYPES
 from chia.cmds.peer_funcs import peer_async
 
@@ -42,7 +43,7 @@ def peer_cmd(
         peer_async(
             node_type,
             rpc_port,
-            ctx.obj["root_path"],
+            ChiaCliContext.set_default(ctx).root_path,
             connections,
             add_connection,
             remove_connection,

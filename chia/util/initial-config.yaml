@@ -410,6 +410,10 @@ full_node:
 
   enable_memory_profiler: False
 
+  # this is a debug/auditing facility that saves all spend bundles added to the
+  # mempool, organized by peak height at the time
+  log_mempool: false
+
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/sql.log).
   log_sqlite_cmds: False
