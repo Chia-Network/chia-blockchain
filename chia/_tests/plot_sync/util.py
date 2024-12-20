@@ -4,7 +4,7 @@ import contextlib
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
@@ -25,7 +25,7 @@ class WSChiaConnectionDummy:
     peer_info: PeerInfo = PeerInfo("127.0.0.1", uint16(0))
     last_sent_message: Optional[Message] = None
 
-    async def send_message(self, message: Message) -> None:
+    async def send_message(self, message: Message, _response: Optional[Any]) -> None:
         self.last_sent_message = message
 
     def get_peer_logging(self) -> PeerInfo:
