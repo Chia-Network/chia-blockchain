@@ -76,7 +76,8 @@ async def new_wallet_action_scope(
     extra_spends: list[WalletSpendBundle] = [],
 ) -> AsyncIterator[WalletActionScope]:
     async with ActionScope.new_scope(
-        WalletSideEffects,
+        wallet_state_manager.db_wrapper.writer,
+        WalletSideEffects(),
         WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config),
     ) as self:
         self = cast(WalletActionScope, self)
