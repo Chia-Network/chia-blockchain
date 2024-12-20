@@ -35,7 +35,6 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
     GRAFTROOT_DL_OFFERS,
-    SINGLETON_LAUNCHER,
     create_graftroot_offer_puz,
     create_host_fullpuz,
     create_host_layer_puzzle,
@@ -50,7 +49,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
@@ -182,7 +181,7 @@ class DataLayerWallet:
     @staticmethod
     async def match_dl_launcher(launcher_spend: CoinSpend) -> tuple[bool, Optional[bytes32]]:
         # Sanity check it's a launcher
-        if launcher_spend.puzzle_reveal.to_program() != SINGLETON_LAUNCHER:
+        if launcher_spend.puzzle_reveal.to_program() != SINGLETON_LAUNCHER_PUZZLE:
             return False, None
 
         # Let's make sure the solution looks how we expect it to
@@ -210,7 +209,7 @@ class DataLayerWallet:
 
         if len(coin_states) == 0:
             raise LauncherCoinNotFoundError(f"Launcher ID {launcher_id} is not a valid coin")
-        if coin_states[0].coin.puzzle_hash != SINGLETON_LAUNCHER.get_tree_hash():
+        if coin_states[0].coin.puzzle_hash != SINGLETON_LAUNCHER_PUZZLE_HASH:
             raise ValueError(f"Coin with ID {launcher_id} is not a singleton launcher")
         if coin_states[0].created_height is None:
             raise ValueError(f"Launcher with ID {launcher_id} has not been created (maybe reorged)")
@@ -313,7 +312,7 @@ class DataLayerWallet:
             raise ValueError("Not enough coins to create new data layer singleton")
 
         launcher_parent: Coin = next(iter(coins))
-        launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))
+        launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
 
         inner_puzzle: Program = await self.standard_wallet.get_puzzle(
             new=not action_scope.config.tx_config.reuse_puzhash
@@ -328,7 +327,7 @@ class DataLayerWallet:
 
         await self.standard_wallet.generate_signed_transaction(
             amount=uint64(1),
-            puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
+            puzzle_hash=SINGLETON_LAUNCHER_PUZZLE_HASH,
             action_scope=action_scope,
             fee=fee,
             origin_id=launcher_parent.name(),
@@ -339,7 +338,7 @@ class DataLayerWallet:
 
         launcher_cs: CoinSpend = CoinSpend(
             launcher_coin,
-            SerializedProgram.from_program(SINGLETON_LAUNCHER),
+            SerializedProgram.from_program(SINGLETON_LAUNCHER_PUZZLE),
             SerializedProgram.from_program(genesis_launcher_solution),
         )
         launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
@@ -998,7 +997,7 @@ class DataLayerWallet:
             {
                 "type": AssetType.SINGLETON.value,
                 "launcher_id": "0x" + launcher_id.hex(),
-                "launcher_ph": "0x" + SINGLETON_LAUNCHER_HASH.hex(),
+                "launcher_ph": "0x" + SINGLETON_LAUNCHER_PUZZLE_HASH.hex(),
                 "also": {
                     "type": AssetType.METADATA.value,
                     "metadata": f"(0x{record.root} . ())",

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Optional, Union
 
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
 from chia_rs import G2Element
 from clvm_tools.binutils import disassemble
 
@@ -33,7 +34,6 @@ from chia.wallet.outer_puzzles import (
 )
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
@@ -43,7 +43,7 @@ from chia.wallet.util.puzzle_compression import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
+OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 
 
