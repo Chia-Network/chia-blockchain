@@ -397,9 +397,9 @@ class WalletDBReader:
         return len(errors)
 
 
-async def scan(root_path: str, db_path: Optional[str] = None, *, verbose: bool = False) -> None:
+async def scan(root_path: Path, db_path: Optional[str] = None, *, verbose: bool = False) -> None:
     if db_path is None:
-        wallet_db_path = Path(root_path) / "wallet" / "db"
+        wallet_db_path = root_path / "wallet" / "db"
         wallet_db_paths = list(wallet_db_path.glob("blockchain_wallet_*.sqlite"))
     else:
         wallet_db_paths = [Path(db_path)]
@@ -417,4 +417,4 @@ async def scan(root_path: str, db_path: Optional[str] = None, *, verbose: bool =
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(scan("", sys.argv[1]))
+    loop.run_until_complete(scan(Path(), sys.argv[1]))

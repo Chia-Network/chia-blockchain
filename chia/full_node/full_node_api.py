@@ -34,6 +34,7 @@ from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     CoinState,
@@ -67,7 +68,7 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.full_block_utils import header_block_from_block
+from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -402,17 +403,32 @@ class FullNodeAPI:
 
         return msg
 
-    @metadata.request()
-    async def reject_block(self, request: full_node_protocol.RejectBlock) -> None:
-        self.log.debug(f"reject_block {request.height}")
+    @metadata.request(peer_required=True)
+    async def reject_block(
+        self,
+        request: full_node_protocol.RejectBlock,
+        peer: WSChiaConnection,
+    ) -> None:
+        self.log.warning(f"unsolicited reject_block {request.height}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
-    @metadata.request()
-    async def reject_blocks(self, request: full_node_protocol.RejectBlocks) -> None:
-        self.log.debug(f"reject_blocks {request.start_height} {request.end_height}")
+    @metadata.request(peer_required=True)
+    async def reject_blocks(
+        self,
+        request: full_node_protocol.RejectBlocks,
+        peer: WSChiaConnection,
+    ) -> None:
+        self.log.warning(f"reject_blocks {request.start_height} {request.end_height}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
-    @metadata.request()
-    async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
+    @metadata.request(peer_required=True)
+    async def respond_blocks(
+        self,
+        request: full_node_protocol.RespondBlocks,
+        peer: WSChiaConnection,
+    ) -> None:
         self.log.warning("Received unsolicited/late blocks")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
     @metadata.request(peer_required=True)
     async def respond_block(
@@ -420,11 +436,8 @@ class FullNodeAPI:
         respond_block: full_node_protocol.RespondBlock,
         peer: WSChiaConnection,
     ) -> Optional[Message]:
-        """
-        Receive a full block from a peer full node (or ourselves).
-        """
-
         self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_logging()}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
         return None
 
     @metadata.request()
@@ -1224,7 +1237,7 @@ class FullNodeAPI:
             tx_additions = [add[0] for add in additions]
             tx_removals = [rem.name() for rem in removals]
 
-        header_block = get_block_header(block, tx_additions, tx_removals)
+        header_block = get_block_header(block, (tx_additions, tx_removals))
         msg = make_msg(
             ProtocolMessageTypes.respond_block_header,
             wallet_protocol.RespondBlockHeader(header_block),
@@ -1455,7 +1468,24 @@ class FullNodeAPI:
         if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         return_filter = request.return_filter
-        header_blocks_bytes: list[bytes] = [header_block_from_block(memoryview(b), return_filter) for b in blocks_bytes]
+        header_blocks_bytes: list[bytes] = []
+        for b in blocks_bytes:
+            b_mem_view = memoryview(b)
+            height, is_tx_block = get_height_and_tx_status_from_block(b_mem_view)
+            if not is_tx_block:
+                tx_addition_coins = []
+                removal_names = []
+            else:
+                added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(height)
+                removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(height)
+                added_coins_records, removed_coins_records = await asyncio.gather(
+                    added_coins_records_coroutine, removed_coins_records_coroutine
+                )
+                tx_addition_coins = [record.coin for record in added_coins_records if not record.coinbase]
+                removal_names = [record.coin.name() for record in removed_coins_records]
+            header_blocks_bytes.append(
+                header_block_from_block(b_mem_view, return_filter, tx_addition_coins, removal_names)
+            )
 
         # we're building the RespondHeaderBlocks manually to avoid cost of
         # dynamic serialization
@@ -1499,7 +1529,7 @@ class FullNodeAPI:
             )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
-            header_block = get_block_header(block, added_coins, removal_names)
+            header_block = get_block_header(block, (added_coins, removal_names))
             header_blocks.append(header_block)
 
         msg = make_msg(

@@ -18,17 +18,17 @@ SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
 async def get_harvesters_summary(farmer_rpc_port: Optional[int], root_path: Path) -> Optional[dict[str, Any]]:
-    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port, root_path) as (farmer_client, _):
+    async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
         return await farmer_client.get_harvesters_summary()
 
 
 async def get_blockchain_state(rpc_port: Optional[int], root_path: Path) -> Optional[dict[str, Any]]:
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (client, _):
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (client, _):
         return await client.get_blockchain_state()
 
 
 async def get_average_block_time(rpc_port: Optional[int], root_path: Path) -> float:
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (client, _):
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (client, _):
         blocks_to_compare = 500
         blockchain_state = await client.get_blockchain_state()
         curr: Optional[BlockRecord] = blockchain_state["peak"]
@@ -49,17 +49,17 @@ async def get_average_block_time(rpc_port: Optional[int], root_path: Path) -> fl
 
 
 async def get_wallets_stats(wallet_rpc_port: Optional[int], root_path: Path) -> Optional[dict[str, Any]]:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, _):
+    async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, _):
         return await wallet_client.get_farmed_amount()
 
 
-async def get_challenges(farmer_rpc_port: Optional[int]) -> Optional[list[dict[str, Any]]]:
-    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
+async def get_challenges(root_path: Path, farmer_rpc_port: Optional[int]) -> Optional[list[dict[str, Any]]]:
+    async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
         return await farmer_client.get_signage_points()
 
 
-async def challenges(farmer_rpc_port: Optional[int], limit: int) -> None:
-    signage_points = await get_challenges(farmer_rpc_port)
+async def challenges(root_path: Path, farmer_rpc_port: Optional[int], limit: int) -> None:
+    signage_points = await get_challenges(root_path, farmer_rpc_port)
     if signage_points is None:
         return None
 
