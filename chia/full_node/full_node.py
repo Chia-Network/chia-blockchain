@@ -2743,6 +2743,15 @@ class FullNode:
                 self.mempool_manager.remove_seen(spend_name)
                 raise
 
+            if self.config.get("log_mempool", False):  # pragma: no cover
+                try:
+                    mempool_dir = path_from_root(self.root_path, "mempool-log") / f"{self.blockchain.get_peak_height()}"
+                    mempool_dir.mkdir(parents=True, exist_ok=True)
+                    with open(mempool_dir / f"{spend_name}.bundle", "wb+") as f:
+                        f.write(bytes(transaction))
+                except Exception:
+                    self.log.exception(f"Failed to log mempool item: {spend_name}")
+
             async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)

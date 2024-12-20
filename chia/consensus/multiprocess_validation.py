@@ -121,7 +121,7 @@ def _pre_validate_block(
             removals, tx_additions = tx_removals_and_additions(conds)
 
         assert conds is None or conds.validated_signature is True
-        header_block = get_block_header(block, tx_additions, removals)
+        header_block = get_block_header(block, (tx_additions, removals))
         required_iters, error = validate_finished_header_block(
             constants,
             blockchain,
