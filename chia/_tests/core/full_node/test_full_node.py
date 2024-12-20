@@ -84,6 +84,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
+from chia.util.task_referencer import create_referenced_task
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -807,13 +808,13 @@ class TestFullNodeProtocol:
                 uint32(0),
                 block.reward_chain_block.get_unfinished().get_hash(),
             )
-            task_1 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_1 = create_referenced_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
             task_1.cancel()
 
             await full_node_1.full_node.add_block(block, peer)
             # Ignores, already have
-            task_2 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_2 = create_referenced_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
             task_2.cancel()
 
@@ -829,8 +830,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-2].reward_chain_block.get_unfinished().get_hash(),
         )
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
+        create_referenced_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
 
         # Does not ignore equal weight
@@ -841,8 +841,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-1].reward_chain_block.get_unfinished().get_hash(),
         )
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
+        create_referenced_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.anyio
@@ -1568,7 +1567,7 @@ class TestFullNodeProtocol:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fbh_sig)
         block_2 = recursive_replace(block_2, "transactions_generator", None)
 
-        rb_task = asyncio.create_task(full_node_2.full_node.add_block(block_2, dummy_peer))
+        rb_task = create_referenced_task(full_node_2.full_node.add_block(block_2, dummy_peer))
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
         rb_task.cancel()

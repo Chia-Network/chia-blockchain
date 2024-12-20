@@ -31,6 +31,7 @@ from chia.util.errors import (
     KeychainProxyConnectionTimeout,
 )
 from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage
 
 
@@ -99,7 +100,7 @@ class KeychainProxy(DaemonProxy):
             raise KeychainProxyConnectionTimeout()
 
     async def start(self, wait_for_start: bool = False) -> None:
-        self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
+        self.keychain_connection_task = create_referenced_task(self.connect_to_keychain())
         await self.connection_established.wait()  # wait until connection is established.
 
     async def connect_to_keychain(self) -> None:

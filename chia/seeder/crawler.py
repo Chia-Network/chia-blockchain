@@ -29,6 +29,7 @@ from chia.util.chia_version import chia_short_version
 from chia.util.ints import uint32, uint64
 from chia.util.network import resolve
 from chia.util.path import path_from_root
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class Crawler:
         if self.start_crawler_loop:
             # Bootstrap the initial peers
             await self.load_bootstrap_peers()
-            self.crawl_task = asyncio.create_task(self.crawl())
+            self.crawl_task = create_referenced_task(self.crawl())
         try:
             yield
         finally:
@@ -219,7 +220,7 @@ class Crawler:
                         total_nodes += 1
                         if peer.ip_address not in tried_nodes:
                             tried_nodes.add(peer.ip_address)
-                        task = asyncio.create_task(self.connect_task(peer))
+                        task = create_referenced_task(self.connect_task(peer))
                         tasks.add(task)
                         if len(tasks) >= 250:
                             await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
