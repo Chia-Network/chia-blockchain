@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import sys
-from io import StringIO
-
+import pytest
 from chia_rs import AugSchemeMPL, PrivateKey
 
 from chia.types.blockchain_format.coin import Coin
@@ -16,7 +14,7 @@ from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
-def test_debug_spend_bundle() -> None:
+def test_debug_spend_bundle(capsys: pytest.CaptureFixture[str]) -> None:
     sk = PrivateKey.from_bytes(bytes([1] * 32))
     pk = sk.get_g1()
     msg = bytes(32)
@@ -44,8 +42,7 @@ def test_debug_spend_bundle() -> None:
         ]
     )
 
-    result = StringIO()
-    sys.stdout = result
+    capsys.readouterr()
 
     debug_spend_bundle(
         WalletSpendBundle(
@@ -70,8 +67,10 @@ def test_debug_spend_bundle() -> None:
         )
     )
 
+    stdout, _ = capsys.readouterr()
+
     assert (
-        result.getvalue()
+        stdout
         == """================================================================================
 consuming coin (0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 ())
   with id f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b
