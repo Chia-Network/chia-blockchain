@@ -22,6 +22,7 @@ class NullBlockchain:
 
     added_blocks: set[bytes32] = field(default_factory=set)
     heights: dict[uint32, bytes32] = field(default_factory=dict)
+    _peak_height: Optional[uint32] = None
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -51,6 +52,9 @@ class NullBlockchain:
 
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
+
+    def get_peak_height(self) -> Optional[uint32]:
+        return self._peak_height
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
