@@ -211,15 +211,6 @@ class WebSocketServer:
                 "ECDHE-RSA-AES128-SHA256"
             )
 
-        if self.ssl_context.minimum_version is not ssl.TLSVersion.TLSv1_3:
-            self.log.warning(
-                (
-                    "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
-                    "A future version of Chia will require TLS1.3."
-                ),
-                ssl.OPENSSL_VERSION,
-            )
-
         self.state_changed_task = asyncio.create_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
