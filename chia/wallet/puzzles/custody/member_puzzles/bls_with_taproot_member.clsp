@@ -1,0 +1,39 @@
+; this puzzle follows the Managed Inner Puzzle Spec MIPS01 as a Member Puzzle
+; this code offers a secure approval of a delegated puzzle passed in as a Truth to be run elsewhere
+
+; Delegated_Puzzle_Hash is added to the solution in the above layer
+; original_public_key, hidden_puzzle and solution are only for use in the taproot case
+; set original_public_key to 0 for non-taproot case
+(mod (SYNTHETIC_PUBLIC_KEY Delegated_Puzzle_Hash original_public_key hidden_puzzle)
+  (include condition_codes.clib)
+
+  (defmacro assert items
+    (if (r items)
+        (list if (f items) (c assert (r items)) (q . (x)))
+        (f items)
+    )
+  )
+
+  ; "is_hidden_puzzle_correct" returns true iff the hidden puzzle is correctly encoded
+
+  (defun-inline is_hidden_puzzle_correct (SYNTHETIC_PUBLIC_KEY original_public_key hidden_puzzle_hash)
+    (=
+      SYNTHETIC_PUBLIC_KEY
+      (point_add
+        original_public_key
+        (pubkey_for_exp (sha256 original_public_key hidden_puzzle_hash))
+      )
+    )
+  )
+
+  ; "possibly_prepend_aggsig" is the main entry point
+
+  (if original_public_key
+      (assert
+        (is_hidden_puzzle_correct SYNTHETIC_PUBLIC_KEY original_public_key Delegated_Puzzle_Hash)
+        ()
+      )
+      (list (list AGG_SIG_ME SYNTHETIC_PUBLIC_KEY Delegated_Puzzle_Hash))
+  )
+)
+
