@@ -11,8 +11,6 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Unpack
 
-import chia.server.api_protocol
-import chia.wallet.singleton
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -47,6 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_secret_key,
     puzzle_for_pk,
 )
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, create_singleton_puzzle
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -353,9 +352,9 @@ class NFTWallet:
         if coins is None:
             return None
         origin = coins.copy().pop()
-        genesis_launcher_puz = nft_puzzles.LAUNCHER_PUZZLE
+        genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         # nft_id == singleton_id == launcher_id == launcher_coin.name()
-        launcher_coin = Coin(origin.name(), nft_puzzles.LAUNCHER_PUZZLE_HASH, uint64(amount))
+        launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(amount))
         self.log.debug("Generating NFT with launcher coin %s and metadata: %s", launcher_coin, metadata)
 
         p2_inner_puzzle = await self.standard_wallet.get_puzzle(new=not action_scope.config.tx_config.reuse_puzhash)
@@ -389,7 +388,7 @@ class NFTWallet:
         # store the launcher transaction in the wallet state
         await self.standard_wallet.generate_signed_transaction(
             uint64(amount),
-            nft_puzzles.LAUNCHER_PUZZLE_HASH,
+            SINGLETON_LAUNCHER_PUZZLE_HASH,
             action_scope,
             fee,
             coins,
@@ -1260,7 +1259,7 @@ class NFTWallet:
         for mint_number in range(mint_number_start, mint_number_end):
             # Create  the puzzle, solution and coin spend for the intermediate launcher
             intermediate_launcher_puz = did_wallet_puzzles.INTERMEDIATE_LAUNCHER_MOD.curry(
-                chia.wallet.singleton.SINGLETON_LAUNCHER_PUZZLE_HASH, mint_number, mint_total
+                SINGLETON_LAUNCHER_PUZZLE_HASH, mint_number, mint_total
             )
             intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
             primaries.append(Payment(intermediate_launcher_ph, uint64(0), [intermediate_launcher_ph]))
@@ -1278,9 +1277,7 @@ class NFTWallet:
             did_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
 
             # Create the launcher coin, and add its id to a list to be asserted in the DID spend
-            launcher_coin = Coin(
-                intermediate_launcher_coin.name(), chia.wallet.singleton.SINGLETON_LAUNCHER_PUZZLE_HASH, amount
-            )
+            launcher_coin = Coin(intermediate_launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
 
             # Grab the metadata from metadata_list. The index for metadata_list
@@ -1305,9 +1302,7 @@ class NFTWallet:
 
             genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
 
-            launcher_cs = make_spend(
-                launcher_coin, chia.wallet.singleton.SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution
-            )
+            launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
             launcher_spends.append(launcher_cs)
 
             eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), uint64(amount))
@@ -1409,7 +1404,7 @@ class NFTWallet:
             ),
         )
         did_inner_sol: Program = Program.to([1, did_p2_solution])
-        did_full_puzzle: Program = chia.wallet.singleton.create_singleton_puzzle(
+        did_full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             did_wallet.did_info.origin_coin.name(),
         )
@@ -1522,7 +1517,7 @@ class NFTWallet:
         for mint_number in range(mint_number_start, mint_number_end):
             # Create  the puzzle, solution and coin spend for the intermediate launcher
             intermediate_launcher_puz = nft_puzzles.INTERMEDIATE_LAUNCHER_MOD.curry(
-                nft_puzzles.LAUNCHER_PUZZLE_HASH, mint_number, mint_total
+                SINGLETON_LAUNCHER_PUZZLE_HASH, mint_number, mint_total
             )
             intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
             primaries.append(Payment(intermediate_launcher_ph, uint64(1), [intermediate_launcher_ph]))
@@ -1540,7 +1535,7 @@ class NFTWallet:
             coin_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
 
             # Create the launcher coin, and add its id to a list to be asserted in the XCH spend
-            launcher_coin = Coin(intermediate_launcher_coin.name(), nft_puzzles.LAUNCHER_PUZZLE_HASH, amount)
+            launcher_coin = Coin(intermediate_launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
 
             # Grab the metadata from metadata_list. The index for metadata_list
@@ -1566,7 +1561,7 @@ class NFTWallet:
 
             genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
 
-            launcher_cs = make_spend(launcher_coin, nft_puzzles.LAUNCHER_PUZZLE, genesis_launcher_solution)
+            launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
             launcher_spends.append(launcher_cs)
 
             eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), uint64(amount))
