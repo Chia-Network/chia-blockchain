@@ -37,7 +37,7 @@ priority = "supplemental"
 "Changelog" = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9, <3.13"
+python = ">=3.9, <4"
 aiofiles = ">=24.1.0"  # Async IO for files
 aiohttp = ">=3.10.4"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
@@ -84,7 +84,7 @@ diff-cover = { version = ">=9.2.0", optional = true }
 mypy = { version = ">=1.11.1", optional = true }
 pre-commit = { version = ">=3.7.1", optional = true }
 py3createtorrent = { version = ">=1.2.1", optional = true }
-pyinstaller = { version = ">=6.9.0", optional = true }
+pyinstaller = { version = ">=6.9.0", python = "<3.13", optional = true }
 pytest = { version = ">=8.3.3", optional = true }
 pytest-cov = { version = ">=5.0.0", optional = true }
 pytest-mock = { version = ">=3.14.0", optional = true }
@@ -145,4 +145,4 @@ build-backend = "poetry_dynamic_versioning.backend"
 # duplicating until poetry v2, then revisit https://github.com/Chia-Network/chia-blockchain/pull/18797
 name = "chia-blockchain"
 # This has to match the poetry python entry above
-requires-python = ">=3.9, <3.13"
+requires-python = ">=3.9, <4"
