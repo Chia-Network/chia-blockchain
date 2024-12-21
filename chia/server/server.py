@@ -8,6 +8,7 @@ import traceback
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
+from os import environ as os_environ
 from pathlib import Path
 from typing import Any, Callable, Optional, Union, cast
 
@@ -73,6 +74,9 @@ def ssl_context_for_server(
     )
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
+    keylog_filename = os_environ.get("CHIA_SSLKEYLOGFILENAME_SERVER")
+    if keylog_filename:
+        ssl_context.keylog_filename = keylog_filename
     return ssl_context
 
 
@@ -83,6 +87,9 @@ def ssl_context_for_root(
         verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
 
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
+    keylog_filename = os_environ.get("CHIA_SSLKEYLOGFILENAME_ROOT")
+    if keylog_filename:
+        ssl_context.keylog_filename = keylog_filename
     return ssl_context
 
 
@@ -102,6 +109,9 @@ def ssl_context_for_client(
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
+    keylog_filename = os_environ.get("CHIA_SSLKEYLOGFILENAME_CLIENT")
+    if keylog_filename:
+        ssl_context.keylog_filename = keylog_filename
     return ssl_context
 
 
