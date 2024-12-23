@@ -9,8 +9,8 @@ from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.pools.pool_puzzles import (
-    SINGLETON_LAUNCHER,
     create_absorb_spend,
     create_full_puzzle,
     create_pooling_inner_puzzle,
