@@ -54,8 +54,6 @@ if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
-
 
 class TradeManager:
     """
