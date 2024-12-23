@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from chia_puzzles_py.programs import P2_SINGLETON_OR_DELAYED_PUZHASH, POOL_MEMBER_INNERPUZ, POOL_WAITINGROOM_INNERPUZ
 from chia_rs import G1Element
 from clvm.casts import int_to_bytes
 
@@ -15,12 +16,8 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint32, uint64
-from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER, SINGLETON_MOD, puzzle_for_singleton
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
-
-from chia_puzzles_py.programs import POOL_MEMBER_INNERPUZ, POOL_WAITINGROOM_INNERPUZ, P2_SINGLETON_OR_DELAYED_PUZHASH
-
-from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD, SINGLETON_LAUNCHER
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in

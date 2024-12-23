@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia_puzzles_py.programs import (
     NFT_INTERMEDIATE_LAUNCHER,
     NFT_METADATA_UPDATER_DEFAULT,

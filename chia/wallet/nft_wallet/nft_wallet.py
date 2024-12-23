@@ -36,6 +36,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import create_ownership_layer_puzzle, get_metadata_and_phs
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.payment import Payment

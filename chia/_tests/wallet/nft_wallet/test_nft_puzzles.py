@@ -7,18 +7,18 @@ from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
-from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_METADATA_UPDATER_HASH,
-    NFT_OWNERSHIP_LAYER,
-    NFT_STATE_LAYER_MOD,
-    NFT_STATE_LAYER_MOD_HASH,
-    NFT_TRANSFER_PROGRAM_DEFAULT
-)
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
     create_full_puzzle,
     create_nft_layer_puzzle_with_curry_params,
     recurry_nft_puzzle,
+)
+from chia.wallet.nft_wallet.nft_puzzles import (
+    NFT_METADATA_UPDATER_HASH,
+    NFT_OWNERSHIP_LAYER,
+    NFT_STATE_LAYER_MOD,
+    NFT_STATE_LAYER_MOD_HASH,
+    NFT_TRANSFER_PROGRAM_DEFAULT,
 )
 from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions

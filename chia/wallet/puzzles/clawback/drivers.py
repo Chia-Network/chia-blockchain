@@ -3,6 +3,20 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, Union
 
+from chia_puzzles_py.programs import (
+    AUGMENTED_CONDITION as AUGMENTED_CONDITION_BYTES,
+)
+from chia_puzzles_py.programs import (
+    AUGMENTED_CONDITION_HASH as AUGMENTED_CONDITION_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_1_OF_N as P2_1_OF_N_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_PUZZLE_HASH,
+    P2_PUZZLE_HASH_HASH,
+)
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -14,20 +28,11 @@ from chia.util.condition_tools import conditions_for_solution
 from chia.util.ints import uint64
 from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.wallet_types import RemarkDataType
-
-from chia_puzzles_py.programs import (
-    AUGMENTED_CONDITION as AUGMENTED_CONDITION_BYTES,
-    AUGMENTED_CONDITION_HASH as AUGMENTED_CONDITION_HASH_BYTES,
-    P2_1_OF_N as P2_1_OF_N_BYTES,
-    P2_PUZZLE_HASH,
-    P2_PUZZLE_HASH_HASH,
-)
 
 P2_1_OF_N = Program.from_bytes(P2_1_OF_N_BYTES)
 P2_CURRIED_PUZZLE_MOD = Program.from_bytes(P2_PUZZLE_HASH)
