@@ -7,7 +7,7 @@ it includes N public keys, any M of which needs to sign the delegated puzzle.
 
 from __future__ import annotations
 
-from chia_puzzles_py.puzzles import P2_M_OF_N_DELEGATE_DIRECT
+from chia_puzzles_py.programs import P2_M_OF_N_DELEGATE_DIRECT
 
 from chia.types.blockchain_format.program import Program
 

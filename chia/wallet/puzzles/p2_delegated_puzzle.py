@@ -14,7 +14,7 @@ This roughly corresponds to bitcoin's graftroot.
 
 from __future__ import annotations
 
-from chia_puzzles_py.puzzles import P2_DELEGATED_PUZZLE
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles import p2_conditions

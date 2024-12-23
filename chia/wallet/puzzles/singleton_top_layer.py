@@ -3,16 +3,16 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Optional
 
-from chia_puzzles_py.puzzles import (
+from chia_puzzles_py.programs import (
     P2_SINGLETON,
     P2_SINGLETON_OR_DELAYED_PUZHASH,
     SINGLETON_TOP_LAYER,
     SINGLETON_TOP_LAYER_HASH,
 )
-from chia_puzzles_py.puzzles import (
+from chia_puzzles_py.programs import (
     SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES,
 )
-from chia_puzzles_py.puzzles import (
+from chia_puzzles_py.programs import (
     SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES,
 )
 

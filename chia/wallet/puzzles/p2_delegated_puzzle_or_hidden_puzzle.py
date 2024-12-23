@@ -62,7 +62,7 @@ import hashlib
 from functools import lru_cache
 from typing import Union
 
-from chia_puzzles_py.puzzles import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZZLE
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZZLE
 from chia_rs import G1Element, PrivateKey
 from clvm.casts import int_from_bytes
 
