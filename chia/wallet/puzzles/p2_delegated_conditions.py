@@ -7,7 +7,7 @@ is returned literally.
 
 from __future__ import annotations
 
-from chia_puzzles_py.puzzles import P2_DELEGATED_CONDITIONS
+from chia_puzzles_py.programs import P2_DELEGATED_CONDITIONS
 
 from chia.types.blockchain_format.program import Program
 
