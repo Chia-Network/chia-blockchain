@@ -19,12 +19,10 @@ from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD, SINGLETON_LAUNCHER, P2_SINGLETON_MOD
+from chia.pools.pool_puzzles import POOL_MEMBER_MOD, POOL_WAITING_ROOM_MOD as POOL_WAITINGROOM_MOD
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clsp")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
+LAUNCHER_PUZZLE = SINGLETON_LAUNCHER
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
