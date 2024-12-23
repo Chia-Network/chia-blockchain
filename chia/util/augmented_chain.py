@@ -87,7 +87,6 @@ class AugmentedBlockchain:
         # need to keep the extra block around anymore
         hh = block_record.header_hash
         if hh in self._extra_blocks:
-            del self._height_to_hash[block_record.height]
             del self._extra_blocks[hh]
 
     # BlockRecordsProtocol

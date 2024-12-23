@@ -699,9 +699,8 @@ class FullNode:
                         f"Failed to fetch block {curr_height} from {peer.get_peer_logging()}, wrong type {type(curr)}"
                     )
                 blocks.append(curr.block)
-                if (
-                    self.blockchain.contains_block(curr.block.prev_header_hash, curr.block.height - 1)
-                    or curr_height == 0
+                if curr_height == 0 or self.blockchain.contains_block(
+                    curr.block.prev_header_hash, curr.block.height - 1
                 ):
                     found_fork_point = True
                     break
@@ -738,6 +737,7 @@ class FullNode:
         """
 
         try:
+            self.log.info(f"adding {request.height}")
             seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
             # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
             # Limit to 3 refreshes.
@@ -1619,7 +1619,7 @@ class FullNode:
                 cc_sub_slot = block.finished_sub_slots[0].challenge_chain
                 if cc_sub_slot.new_sub_slot_iters is not None or cc_sub_slot.new_difficulty is not None:
                     expected_sub_slot_iters, expected_difficulty = get_next_sub_slot_iters_and_difficulty(
-                        self.constants, True, block_record, self.blockchain
+                        self.constants, True, block_record, blockchain
                     )
                     assert cc_sub_slot.new_sub_slot_iters is not None
                     vs.ssi = cc_sub_slot.new_sub_slot_iters
