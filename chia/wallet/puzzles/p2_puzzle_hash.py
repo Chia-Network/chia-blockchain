@@ -7,7 +7,7 @@ hash along with its solution.
 
 from __future__ import annotations
 
-from chia_puzzles_py.puzzles import P2_PUZZLE_HASH
+from chia_puzzles_py.programs import P2_PUZZLE_HASH
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
