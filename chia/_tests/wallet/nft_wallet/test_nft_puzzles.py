@@ -12,7 +12,9 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_OWNERSHIP_LAYER,
     NFT_STATE_LAYER_MOD,
     NFT_STATE_LAYER_MOD_HASH,
-    NFT_TRANSFER_PROGRAM_DEFAULT,
+    NFT_TRANSFER_PROGRAM_DEFAULT
+)
+from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
     create_full_puzzle,
     create_nft_layer_puzzle_with_curry_params,

@@ -128,9 +128,9 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
     match_did_puzzle,
     metadata_to_program,
 )
-from chia.wallet.nft_wallet import nft_puzzles
+from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
+from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
@@ -3418,7 +3418,7 @@ class WalletRpcApi:
         else:
             nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(start_index=start_index, count=count)
         for nft in nfts:
-            nft_info = await nft_puzzles.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
+            nft_info = await nft_puzzle_utils.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
             nft_info_list.append(nft_info)
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
@@ -3436,7 +3436,7 @@ class WalletRpcApi:
             did_id = decode_puzzle_hash(did_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
         if not (
-            await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+            await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
             return {"success": False, "error": "The NFT doesn't support setting a DID."}
 
@@ -3497,7 +3497,7 @@ class WalletRpcApi:
                 nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             assert nft_coin_info is not None
             if not (
-                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+                await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
             ).supports_did:
                 log.warning(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
                 continue
@@ -3734,13 +3734,13 @@ class WalletRpcApi:
         # There is no way to rebuild the full puzzle in a different wallet.
         # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
         if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+            inner_puzzle = nft_puzzle_utils.recurry_nft_puzzle(
                 uncurried_nft, coin_spend.solution.to_program(), uncurried_nft.p2_puzzle
             )
         else:
             inner_puzzle = uncurried_nft.p2_puzzle
 
-        full_puzzle = nft_puzzles.create_full_puzzle(
+        full_puzzle = nft_puzzle_utils.create_full_puzzle(
             uncurried_nft.singleton_launcher_id,
             metadata,
             bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
@@ -3758,7 +3758,7 @@ class WalletRpcApi:
             }
         minter_did = await self.service.wallet_state_manager.get_minter_did(launcher_coin[0].coin, peer)
 
-        nft_info: NFTInfo = await nft_puzzles.get_nft_info_from_puzzle(
+        nft_info: NFTInfo = await nft_puzzle_utils.get_nft_info_from_puzzle(
             NFTCoinInfo(
                 uncurried_nft.singleton_launcher_id,
                 coin_state.coin,
