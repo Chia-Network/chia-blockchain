@@ -62,7 +62,7 @@ import hashlib
 from functools import lru_cache
 from typing import Union
 
-from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZZLE
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE
 from chia_rs import G1Element, PrivateKey
 from clvm.casts import int_from_bytes
 
@@ -75,7 +75,7 @@ DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
 DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(=)` always fails
 
-MOD = Program.from_bytes(P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZZLE)
+MOD = Program.from_bytes(P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE)
 
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(MOD.get_tree_hash())
 

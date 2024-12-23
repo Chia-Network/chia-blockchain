@@ -21,11 +21,19 @@ from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_has
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.wallet_types import RemarkDataType
 
-P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clsp")
-P2_CURRIED_PUZZLE_MOD = load_clvm_maybe_recompile("p2_puzzle_hash.clsp")
-P2_CURRIED_PUZZLE_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_CURRIED_PUZZLE_MOD.get_tree_hash())
-AUGMENTED_CONDITION = load_clvm_maybe_recompile("augmented_condition.clsp")
-AUGMENTED_CONDITION_HASH = AUGMENTED_CONDITION.get_tree_hash()
+from chia_puzzles_py.programs import (
+    AUGMENTED_CONDITION as AUGMENTED_CONDITION_BYTES,
+    AUGMENTED_CONDITION_HASH as AUGMENTED_CONDITION_HASH_BYTES,
+    P2_1_OF_N as P2_1_OF_N_BYTES,
+    P2_PUZZLE_HASH,
+    P2_PUZZLE_HASH_HASH,
+)
+
+P2_1_OF_N = Program.from_bytes(P2_1_OF_N_BYTES)
+P2_CURRIED_PUZZLE_MOD = Program.from_bytes(P2_PUZZLE_HASH)
+P2_CURRIED_PUZZLE_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_PUZZLE_HASH_HASH)
+AUGMENTED_CONDITION = Program.from_bytes(AUGMENTED_CONDITION_BYTES)
+AUGMENTED_CONDITION_HASH = bytes32(AUGMENTED_CONDITION_HASH_BYTES)
 log = logging.getLogger(__name__)
 
 
