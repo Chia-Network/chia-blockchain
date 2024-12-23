@@ -33,9 +33,9 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.nft_wallet import nft_puzzles
+from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle, get_metadata_and_phs
+from chia.wallet.nft_wallet.nft_puzzle_utils import create_ownership_layer_puzzle, get_metadata_and_phs
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.payment import Payment
@@ -210,13 +210,13 @@ class NFTWallet:
         mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         minter_did = None
         if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+            inner_puzzle = nft_puzzle_utils.recurry_nft_puzzle(
                 uncurried_nft, data.parent_coin_spend.solution.to_program(), p2_puzzle
             )
             minter_did = await self.wallet_state_manager.get_minter_did(launcher_coin_states[0].coin, peer)
         else:
             inner_puzzle = p2_puzzle
-        child_puzzle: Program = nft_puzzles.create_full_puzzle(
+        child_puzzle: Program = nft_puzzle_utils.create_full_puzzle(
             singleton_id,
             Program.to(metadata),
             bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
@@ -224,7 +224,7 @@ class NFTWallet:
         )
         self.log.debug(
             "Created NFT full puzzle with inner: %s",
-            nft_puzzles.create_full_puzzle_with_nft_puzzle(singleton_id, uncurried_nft.inner_puzzle),
+            nft_puzzle_utils.create_full_puzzle_with_nft_puzzle(singleton_id, uncurried_nft.inner_puzzle),
         )
         child_puzzle_hash = child_puzzle.get_tree_hash()
         for new_coin in compute_additions(data.parent_coin_spend):
@@ -375,7 +375,7 @@ class NFTWallet:
             inner_puzzle = p2_inner_puzzle
 
         # singleton eve puzzle
-        eve_fullpuz = nft_puzzles.create_full_puzzle(
+        eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
             launcher_coin.name(), metadata, NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
         )
         eve_fullpuz_hash = eve_fullpuz.get_tree_hash()
@@ -1292,7 +1292,7 @@ class NFTWallet:
                 metadata["royalty_pc"],
                 royalty_puzzle_hash=metadata["royalty_ph"],
             )
-            eve_fullpuz = nft_puzzles.create_full_puzzle(
+            eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
                 launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
             )
 
@@ -1516,7 +1516,7 @@ class NFTWallet:
         # Loop to create each intermediate coin, launcher, eve and (optional) transfer spends
         for mint_number in range(mint_number_start, mint_number_end):
             # Create  the puzzle, solution and coin spend for the intermediate launcher
-            intermediate_launcher_puz = nft_puzzles.INTERMEDIATE_LAUNCHER_MOD.curry(
+            intermediate_launcher_puz = nft_puzzle_utils.INTERMEDIATE_LAUNCHER_MOD.curry(
                 SINGLETON_LAUNCHER_PUZZLE_HASH, mint_number, mint_total
             )
             intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
@@ -1551,7 +1551,7 @@ class NFTWallet:
                 metadata["royalty_pc"],
                 royalty_puzzle_hash=metadata["royalty_ph"],
             )
-            eve_fullpuz = nft_puzzles.create_full_puzzle(
+            eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
                 launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
             )
 
