@@ -10,9 +10,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
-
-from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD as NFT_MOD
 from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD as NFT_MOD
 from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD
 
 log = logging.getLogger(__name__)

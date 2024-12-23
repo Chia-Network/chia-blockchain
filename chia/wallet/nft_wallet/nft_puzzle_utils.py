@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal, Optional, Union
 
-
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
@@ -12,14 +11,14 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_STATE_LAYER_MOD,
-    NFT_STATE_LAYER_MOD_HASH,
     NFT_OWNERSHIP_LAYER,
     NFT_OWNERSHIP_LAYER_HASH,
+    NFT_STATE_LAYER_MOD,
+    NFT_STATE_LAYER_MOD_HASH,
     NFT_TRANSFER_PROGRAM_DEFAULT,
 )
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
@@ -29,7 +28,6 @@ from chia.wallet.singleton import (
 from chia.wallet.util.address_type import AddressType
 
 log = logging.getLogger(__name__)
-
 
 
 def create_nft_layer_puzzle_with_curry_params(
