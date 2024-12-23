@@ -120,7 +120,7 @@ class ExtendedPeerInfo:
 
     def is_terrible(self, now: Optional[int] = None) -> bool:
         if now is None:
-            now = int(math.floor(time.time()))
+            now = math.floor(time.time())
         # never remove things tried in the last minute
         if self.last_try > 0 and self.last_try >= now - 60:
             return False
@@ -145,7 +145,7 @@ class ExtendedPeerInfo:
 
     def get_selection_chance(self, now: Optional[int] = None) -> float:
         if now is None:
-            now = int(math.floor(time.time()))
+            now = math.floor(time.time())
         chance = 1.0
         since_last_try = max(now - self.last_try, 0)
         # deprioritize very recent attempts away
@@ -565,7 +565,7 @@ class AddressManager:
         return addr
 
     def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int) -> None:
-        now = int(math.floor(time.time()))
+        now = math.floor(time.time())
         for bucket in range(NEW_BUCKET_COUNT):
             for pos in range(BUCKET_SIZE):
                 if self.new_matrix[bucket][pos] != -1:

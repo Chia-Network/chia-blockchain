@@ -89,7 +89,7 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
     eligible_coin_spends = EligibleCoinSpends()
     # We have no fast forward records yet, so we'll process this coin for the
     # first time here, but the DB lookup will return None
-    with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward."):
+    with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward\\."):
         await eligible_coin_spends.process_fast_forward_spends(
             mempool_item=internal_mempool_item,
             get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,

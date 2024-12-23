@@ -243,7 +243,7 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError, match="condition validation failure Err\\.ASSERT_ANNOUNCE_CONSUMED_FAILED"
         ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
@@ -270,7 +270,7 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError, match="condition validation failure Err\\.ASSERT_ANNOUNCE_CONSUMED_FAILED"
         ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol, bad_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
@@ -321,7 +321,9 @@ class TestPoolPuzzles(TestCase):
             (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it and hope it fails!
-        with pytest.raises(BadSpendBundleError, match="condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"):
+        with pytest.raises(
+            BadSpendBundleError, match="condition validation failure Err\\.ASSERT_HEIGHT_RELATIVE_FAILED"
+        ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([return_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
             )

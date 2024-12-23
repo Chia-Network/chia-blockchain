@@ -626,7 +626,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     assert resp["count"] == 2
     resp = await wait_rpc_state_condition(10, env.rpc_client.fetch, ["nft_count_nfts", {}], lambda x: x["success"])
     assert resp["count"] == 2
-    with pytest.raises(ResponseFailureError, match="Wallet 50 not found."):
+    with pytest.raises(ResponseFailureError, match="Wallet 50 not found\\."):
         resp = await wait_rpc_state_condition(
             10, env.rpc_client.fetch, ["nft_count_nfts", {"wallet_id": 50}], lambda x: x["success"] is False
         )
