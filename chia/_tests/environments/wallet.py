@@ -9,6 +9,8 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
+from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionEndpoint, TransactionsOut, WalletClientInfo
+from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -17,14 +19,30 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
-from chia.wallet.transaction_record import TransactionRecord
+from chia.util.ints import uint32, uint64
+from chia.wallet.transaction_record import LightTransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
+
+STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
+    rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+    tx_config_loader=NeedsTXConfig(
+        min_coin_amount=cli_amount_none,
+        max_coin_amount=cli_amount_none,
+        coins_to_exclude=(),
+        amounts_to_exclude=(),
+        reuse=None,
+    ),
+    transaction_writer=TransactionsOut(transaction_file_out=None),
+    fee=uint64(0),
+    push=True,
+    valid_at=None,
+    expires_at=None,
+).__dict__
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
@@ -246,9 +264,9 @@ class WalletEnvironment:
 
     async def wait_for_transactions_to_settle(
         self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: list[bytes32] = []
-    ) -> list[TransactionRecord]:
+    ) -> list[LightTransactionRecord]:
         # Gather all pending transactions
-        pending_txs: list[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+        pending_txs: list[LightTransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
         # Filter clawback txs
         pending_txs = [
             tx
@@ -286,6 +304,27 @@ class WalletTestFramework:
     environments: list[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
 
+    def cmd_tx_endpoint_args(self, env: WalletEnvironment) -> dict[str, Any]:
+        return {
+            **STANDARD_TX_ENDPOINT_ARGS,
+            "rpc_info": NeedsWalletRPC(
+                client_info=WalletClientInfo(
+                    env.rpc_client,
+                    env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                    env.wallet_state_manager.config,
+                )
+            ),
+            "tx_config_loader": NeedsTXConfig(
+                min_coin_amount=CliAmount(amount=self.tx_config.min_coin_amount, mojos=True),
+                max_coin_amount=CliAmount(amount=self.tx_config.max_coin_amount, mojos=True),
+                coins_to_exclude=tuple(self.tx_config.excluded_coin_ids),
+                amounts_to_exclude=tuple(
+                    CliAmount(amount=amt, mojos=True) for amt in self.tx_config.excluded_coin_amounts
+                ),
+                reuse=self.tx_config.reuse_puzhash,
+            ),
+        }
+
     @staticmethod
     @contextlib.contextmanager
     def new_puzzle_hashes_allowed() -> Iterator[None]:
@@ -318,7 +357,7 @@ class WalletTestFramework:
                     ph_indexes[wallet_id] = await env.wallet_state_manager.puzzle_store.get_unused_count(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
-        pending_txs: list[list[TransactionRecord]] = []
+        pending_txs: list[list[LightTransactionRecord]] = []
         peak = self.full_node.full_node.blockchain.get_peak_height()
         assert peak is not None
         # Check balances prior to block
@@ -374,7 +413,9 @@ class WalletTestFramework:
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
             except TimeoutError:  # pragma: no cover
-                unconfirmed: list[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                unconfirmed: list[
+                    LightTransactionRecord
+                ] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
                 raise TimeoutError(
                     f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
                 )

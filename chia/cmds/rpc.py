@@ -9,6 +9,7 @@ from typing import Any, Optional, TextIO
 import click
 from aiohttp import ClientResponseError
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
 from chia.util.ints import uint16
 
@@ -103,7 +104,7 @@ def rpc_cmd() -> None:
 @click.argument("service", type=click.Choice(services))
 @click.pass_context
 def endpoints_cmd(ctx: click.Context, service: str) -> None:
-    root_path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.set_default(ctx).root_path
     config = load_config(root_path, "config.yaml")
     try:
         routes = get_routes(service, config, root_path=root_path)
@@ -119,7 +120,7 @@ def endpoints_cmd(ctx: click.Context, service: str) -> None:
 def status_cmd(ctx: click.Context, json_output: bool) -> None:
     import json
 
-    root_path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.set_default(ctx).root_path
     config = load_config(root_path, "config.yaml")
 
     def print_row(c0: str, c1: str) -> None:
@@ -177,7 +178,7 @@ def create_commands() -> None:
             json_file: Optional[TextIO],
             service: str = service,
         ) -> None:
-            root_path: Path = ctx.obj["root_path"]
+            root_path: Path = ChiaCliContext.set_default(ctx).root_path
             config = load_config(root_path, "config.yaml")
             if request is not None and json_file is not None:
                 sys.exit(

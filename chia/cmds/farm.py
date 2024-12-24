@@ -4,6 +4,8 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
+
 
 @click.group("farm", help="Manage your farm")
 def farm_cmd() -> None:
@@ -61,7 +63,15 @@ def summary_cmd(
 
     from chia.cmds.farm_funcs import summary
 
-    asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port, root_path=ctx.obj["root_path"]))
+    asyncio.run(
+        summary(
+            rpc_port,
+            wallet_rpc_port,
+            harvester_rpc_port,
+            farmer_rpc_port,
+            root_path=ChiaCliContext.set_default(ctx).root_path,
+        )
+    )
 
 
 @farm_cmd.command("challenges", help="Show the latest challenges")
@@ -81,9 +91,10 @@ def summary_cmd(
     default=20,
     show_default=True,
 )
-def challenges_cmd(farmer_rpc_port: Optional[int], limit: int) -> None:
+@click.pass_context
+def challenges_cmd(ctx: click.Context, farmer_rpc_port: Optional[int], limit: int) -> None:
     import asyncio
 
     from chia.cmds.farm_funcs import challenges
 
-    asyncio.run(challenges(farmer_rpc_port, limit))
+    asyncio.run(challenges(ChiaCliContext.set_default(ctx).root_path, farmer_rpc_port, limit))

@@ -197,7 +197,7 @@ async def show_async(
 ) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         # Check State
         if print_state:
             if await print_blockchain_state(node_client, config) is True:
