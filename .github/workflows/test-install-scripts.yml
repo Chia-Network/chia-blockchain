@@ -1,15 +1,16 @@
 name: 🏗️ Test Install Scripts
 
+# TODO: re-enable once we are using a release of chia_rs
 on:
-#  push:
-#    paths-ignore:
-#      - "**.md"
-#    branches:
-#      - "long_lived/**"
-#      - main
-#      - "release/**"
-#  release:
-#    types: [published]
+  push:
+    paths-ignore:
+      - "**.md"
+    branches:
+      #      - "long_lived/**"
+      - main
+      - "release/**"
+  release:
+    types: [published]
 #  pull_request:
 #    paths-ignore:
 #      - "**.md"
