@@ -13,8 +13,6 @@ excepted_packages = {
     "chialisp_loader",
     "chialisp_puzzles",
     "chia_base",
-    # TODO: stop excluding this once we get to using a release
-    "chia_rs",
 }
 
 
