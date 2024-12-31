@@ -1,20 +1,20 @@
 name: 🏗️ Test Install Scripts
 
 on:
-  push:
-    paths-ignore:
-      - "**.md"
-    branches:
-      - "long_lived/**"
-      - main
-      - "release/**"
-  release:
-    types: [published]
-  pull_request:
-    paths-ignore:
-      - "**.md"
-    branches:
-      - "**"
+#  push:
+#    paths-ignore:
+#      - "**.md"
+#    branches:
+#      - "long_lived/**"
+#      - main
+#      - "release/**"
+#  release:
+#    types: [published]
+#  pull_request:
+#    paths-ignore:
+#      - "**.md"
+#    branches:
+#      - "**"
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
