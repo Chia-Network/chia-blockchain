@@ -35,6 +35,8 @@ from chia.data_layer.util.merkle_blob import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 
+pytestmark = pytest.mark.data_layer
+
 
 class MerkleBlobCallable(Protocol):
     def __call__(self, blob: bytearray) -> MerkleBlob: ...
@@ -444,7 +446,8 @@ def test_double_insert_fails(merkle_blob_type: MerkleBlobCallable) -> None:
     key, value = generate_kvid(0)
     hash = generate_hash(0)
     merkle_blob.insert(key, value, hash)
-    with pytest.raises(Exception, match="Key already present"):
+    # TODO: this exception should just be more specific to avoid the case sensitivity concerns
+    with pytest.raises(Exception, match="(?i)Key already present"):
         merkle_blob.insert(key, value, hash)
 
 
