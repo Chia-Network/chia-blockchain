@@ -2588,7 +2588,7 @@ class WalletRpcApi:
 
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         if derivation_record is None:
-            return {"success": False, "error": f"This DID {launcher_id} is not belong to the connected wallet"}
+            return {"success": False, "error": f"This DID {launcher_id} does not belong to the connected wallet"}
         else:
             our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
