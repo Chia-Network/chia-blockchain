@@ -7,11 +7,9 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.wallet.conditions import AssertPuzzleAnnouncement
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD, SINGLETON_LAUNCHER, P2_SINGLETON_MOD
+from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_MOD, SINGLETON_LAUNCHER, SINGLETON_MOD
 
 LAUNCHER_PUZZLE = SINGLETON_LAUNCHER
-P2_SINGLETON_MOD = P2_SINGLETON_MOD
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()

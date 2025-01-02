@@ -9,7 +9,6 @@ from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
-from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.pools.pool_puzzles import (
     create_absorb_spend,
     create_full_puzzle,
@@ -45,6 +44,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
 from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
