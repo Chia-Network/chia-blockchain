@@ -29,6 +29,7 @@ from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -218,7 +219,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     except ValueError:
                         pass
 
-                    self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
+                    self._connect_peers_task = create_referenced_task(self._connect_peers_task_handler())
 
                     self._log.info(
                         f"Started {self._service_name} service on network_id: {self._network_id} "

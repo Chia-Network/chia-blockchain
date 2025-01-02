@@ -30,6 +30,7 @@ from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -242,12 +243,12 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
             rand_i = random.randint(0, 9)
             if random.random() < 0.5:
                 tasks.append(
-                    asyncio.create_task(
+                    create_referenced_task(
                         store.add_full_block(blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i])
                     )
                 )
             if random.random() < 0.5:
-                tasks.append(asyncio.create_task(store.get_full_block(blocks[rand_i].header_hash)))
+                tasks.append(create_referenced_task(store.get_full_block(blocks[rand_i].header_hash)))
         await asyncio.gather(*tasks)
 
 

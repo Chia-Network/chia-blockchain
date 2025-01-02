@@ -63,6 +63,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.async_pool import Job, QueuedAsyncPool
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
@@ -200,7 +201,7 @@ class DataLayer:
             self._wallet_rpc = await self.wallet_rpc_init
 
             await self._data_store.migrate_db()
-            self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
+            self.periodically_manage_data_task = create_referenced_task(self.periodically_manage_data())
             try:
                 yield
             finally:

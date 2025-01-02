@@ -14,6 +14,7 @@ from _pytest.fixtures import SubRequest
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
 from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError, NestedForeignKeyDelayedRequestError
+from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
     ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
@@ -119,7 +120,7 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
 
             tasks = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(increment_counter(db_wrapper))
+                task = create_referenced_task(increment_counter(db_wrapper))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -263,7 +264,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
         async with get_reader() as reader:
             assert await query_value(connection=reader) == 0
 
-            task = asyncio.create_task(write())
+            task = create_referenced_task(write())
             await writer_committed.wait()
 
             assert await query_value(connection=reader) == 0 if transactioned else 1
@@ -342,7 +343,7 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
             tasks = []
             values: list[int] = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(sum_counter(db_wrapper, values))
+                task = create_referenced_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -371,11 +372,11 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
             tasks = []
             values: list[int] = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(increment_counter(db_wrapper))
+                task = create_referenced_task(increment_counter(db_wrapper))
                 tasks.append(task)
-                task = asyncio.create_task(decrement_counter(db_wrapper))
+                task = create_referenced_task(decrement_counter(db_wrapper))
                 tasks.append(task)
-                task = asyncio.create_task(sum_counter(db_wrapper, values))
+                task = create_referenced_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
