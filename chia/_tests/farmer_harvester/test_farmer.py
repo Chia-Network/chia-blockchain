@@ -93,7 +93,7 @@ class DummyHarvesterPeer:
         self.return_invalid_response = return_invalid_response
         self.version = version
 
-    async def send_message(self, arg1: Any) -> None:
+    async def send_message(self, arg1: Any, arg2: Optional[Any]) -> None:
         pass
 
     async def call_api(self, arg1: Any, request: harvester_protocol.RequestSignatures) -> Any:

@@ -29,11 +29,28 @@ class Unlimited:
     max_size: int  # Max size of each request
 
 
+# this class is used to configure *window size* limits of a message type. The
+# counts indicate how many messages or bytes are allowed to be requested
+# concurrently. This currently only works for incoming messages
+@dataclasses.dataclass(frozen=True)
+class RLWindow:
+    count: int  # Max number of concurrent requests
+    max_size: int  # Max size of each request
+
+
 def get_rate_limits_to_use(our_capabilities: list[Capability], peer_capabilities: list[Capability]) -> dict[str, Any]:
     # This will use the newest possible rate limits that both peers support. At this time there are only two
     # options, v1 and v2.
 
-    if Capability.RATE_LIMITS_V2 in our_capabilities and Capability.RATE_LIMITS_V2 in peer_capabilities:
+    if Capability.RATE_LIMITS_V3 in our_capabilities and Capability.RATE_LIMITS_V3 in peer_capabilities:
+        # Use V3 rate limits
+        if 3 in compose_rate_limits_cache:
+            return compose_rate_limits_cache[3]
+        composed = compose_rate_limits(rate_limits[1], rate_limits[2])
+        composed = compose_rate_limits(composed, rate_limits[3])
+        compose_rate_limits_cache[3] = composed
+        return composed
+    elif Capability.RATE_LIMITS_V2 in our_capabilities and Capability.RATE_LIMITS_V2 in peer_capabilities:
         # Use V2 rate limits
         if 2 in compose_rate_limits_cache:
             return compose_rate_limits_cache[2]
@@ -48,7 +65,7 @@ def get_rate_limits_to_use(our_capabilities: list[Capability], peer_capabilities
 def compose_rate_limits(old_rate_limits: dict[str, Any], new_rate_limits: dict[str, Any]) -> dict[str, Any]:
     # Composes two rate limits dicts, so that the newer values override the older values
     final_rate_limits: dict[str, Any] = copy.deepcopy(new_rate_limits)
-    categories: list[str] = ["rate_limits_tx", "rate_limits_other"]
+    categories: list[str] = ["rate_limits_tx", "rate_limits_sync", "rate_limits_other"]
     all_new_msgs_lists: list[list[ProtocolMessageTypes]] = [
         list(new_rate_limits[category].keys()) for category in categories
     ]
@@ -65,7 +82,7 @@ def compose_rate_limits(old_rate_limits: dict[str, Any], new_rate_limits: dict[s
 
 # Each number in this dict corresponds to a specific version of rate limits (1, 2,  etc).
 # Version 1 includes the original limits for chia software from versions 1.0 to 1.4.
-rate_limits = {
+rate_limits: dict[int, dict[str, Any]] = {
     1: {
         "default_settings": RLSettings(100, 1024 * 1024, 100 * 1024 * 1024),
         "non_tx_freq": 1000,  # There is also a freq limit for many requests
@@ -80,6 +97,8 @@ rate_limits = {
             ProtocolMessageTypes.send_transaction: RLSettings(5000, 1024 * 1024),
             ProtocolMessageTypes.transaction_ack: RLSettings(5000, 2048),
         },
+        # long-sync related messages
+        "rate_limits_sync": {},
         # All non-transaction apis also have an aggregate limit
         "rate_limits_other": {
             ProtocolMessageTypes.handshake: RLSettings(5, 10 * 1024, 5 * 10 * 1024),
@@ -207,8 +226,20 @@ rate_limits = {
             ProtocolMessageTypes.none_response: RLSettings(500, 100),
             ProtocolMessageTypes.error: RLSettings(50000, 100),
         },
+        "rate_limits_sync": {},
         "rate_limits_other": {  # These will have a lower cap since they don't scale with high TPS (NON_TX_FREQ)
             ProtocolMessageTypes.request_header_blocks: RLSettings(5000, 100),
         },
+    },
+    3: {
+        "default_settings": RLSettings(100, 1024 * 1024, 100 * 1024 * 1024),
+        "non_tx_freq": 1000,  # There is also a freq limit for many requests
+        "non_tx_max_total_size": 100 * 1024 * 1024,  # There is also a size limit for many requests
+        "rate_limits_tx": {},
+        "rate_limits_sync": {
+            ProtocolMessageTypes.request_block: RLWindow(10, 100),
+            ProtocolMessageTypes.request_blocks: RLWindow(5, 100),
+        },
+        "rate_limits_other": {},
     },
 }

@@ -136,7 +136,7 @@ class FullNodeDiscovery:
             and self.address_manager is not None
         ):
             msg = make_msg(ProtocolMessageTypes.request_peers, RequestPeers())
-            await peer.send_message(msg)
+            await peer.send_message(msg, None)
 
     # Updates timestamps each time we receive a message for outbound connections.
     async def update_peer_timestamp_on_message(self, peer: WSChiaConnection) -> None:
@@ -179,7 +179,7 @@ class FullNodeDiscovery:
 
         async def on_connect(peer: WSChiaConnection) -> None:
             msg = make_msg(ProtocolMessageTypes.request_peers_introducer, RequestPeersIntroducer())
-            await peer.send_message(msg)
+            await peer.send_message(msg, None)
 
         await self.server.start_client(
             PeerInfo(await resolve(self.introducer_info.host, prefer_ipv6=False), self.introducer_info.port), on_connect
@@ -666,7 +666,7 @@ class FullNodePeers(FullNodeDiscovery):
                         ProtocolMessageTypes.respond_peers,
                         RespondPeers([relay_peer]),
                     )
-                    await connection.send_message(msg)
+                    await connection.send_message(msg, None)
             except Exception as e:
                 self.log.error(f"Exception in address relay: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")

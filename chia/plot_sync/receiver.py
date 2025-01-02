@@ -173,7 +173,8 @@ class Receiver:
                     make_msg(
                         ProtocolMessageTypes.plot_sync_response,
                         PlotSyncResponse(message.identifier, int16(message_type.value), plot_sync_error),
-                    )
+                    ),
+                    message_type,
                 )
 
         try:

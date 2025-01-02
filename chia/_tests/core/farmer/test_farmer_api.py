@@ -89,10 +89,13 @@ async def test_farmer_responds_with_signed_values(farmer_one_harvester: FarmerOn
     request_signatures_message = await incoming_queue.get()
     assert ProtocolMessageTypes(request_signatures_message.type).name == "request_signatures"
     await dummy_wsc.outgoing_queue.put(
-        Message(
-            uint8(ProtocolMessageTypes.respond_signatures.value),
-            request_signatures_message.id,
-            bytes(respond_signatures),
+        (
+            Message(
+                uint8(ProtocolMessageTypes.respond_signatures.value),
+                request_signatures_message.id,
+                bytes(respond_signatures),
+            ),
+            None,
         )
     )
 

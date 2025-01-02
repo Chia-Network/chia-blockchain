@@ -216,7 +216,8 @@ async def skip_processing(self: Any, _: WSChiaConnection, message_type: Protocol
             make_msg(
                 ProtocolMessageTypes.plot_sync_response,
                 PlotSyncResponse(message.identifier, int16(message_type.value), None),
-            )
+            ),
+            None,
         )
     if self.simulate_error == ErrorSimulation.NonRecoverableError and self.message_counter > 1:
         await self.connection().send_message(
@@ -225,7 +226,8 @@ async def skip_processing(self: Any, _: WSChiaConnection, message_type: Protocol
                 PlotSyncResponse(
                     message.identifier, int16(message_type.value), PlotSyncError(int16(0), "non recoverable", None)
                 ),
-            )
+            ),
+            None,
         )
         self.simulate_error = 0
         return True

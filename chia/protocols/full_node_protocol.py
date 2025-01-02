@@ -171,6 +171,10 @@ class RespondEndOfSubSlot(Streamable):
     end_of_slot_bundle: EndOfSubSlotBundle
 
 
+# the RequestMempoolTransactions message has unusual semantics. A single
+# request can have any number of responses (including 0). The response messages
+# are RespondTransaction, one for each transaction in the mempool matching the
+# filter
 @streamable
 @dataclass(frozen=True)
 class RequestMempoolTransactions(Streamable):
