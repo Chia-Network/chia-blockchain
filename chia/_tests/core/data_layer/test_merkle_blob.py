@@ -4,7 +4,7 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, final
+from typing import Generic, Protocol, TypeVar, final
 
 import chia_rs
 import pytest
@@ -240,8 +240,7 @@ def generate_hash(seed: int) -> bytes:
     return hash_obj.digest()
 
 
-# TODO: re-enable
-def _test_insert_delete_loads_all_keys() -> None:
+def test_insert_delete_loads_all_keys() -> None:
     merkle_blob = MerkleBlob(blob=bytearray())
     num_keys = 200000
     extra_keys = 100000
@@ -466,10 +465,7 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
     merkle_blob.calculate_lazy_hashes()
     all_nodes = merkle_blob.get_nodes_with_indexes()
     for index, node in all_nodes:
-        # TODO: yucky hasattr
-        if hasattr(node, "left"):
-            if TYPE_CHECKING:
-                assert isinstance(node, RawInternalMerkleNode)
+        if isinstance(node, (RawInternalMerkleNode, chia_rs.InternalNode)):
             left = merkle_blob.get_raw_node(node.left)
             right = merkle_blob.get_raw_node(node.right)
             assert left.parent == index
@@ -479,8 +475,7 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
             assert node.left not in seen_indexes
             assert node.right not in seen_indexes
         else:
-            if TYPE_CHECKING:
-                assert isinstance(node, RawLeafMerkleNode)
+            assert isinstance(node, (RawLeafMerkleNode, chia_rs.LeafNode))
             seen_keys.add(node.key)
         seen_indexes.add(index)
 
