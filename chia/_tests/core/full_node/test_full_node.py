@@ -130,16 +130,6 @@ async def new_transaction_requested(incoming, new_spend):
     return False
 
 
-async def get_block_path(full_node: FullNodeAPI):
-    blocks_list = [await full_node.full_node.blockchain.get_full_peak()]
-    assert blocks_list[0] is not None
-    while blocks_list[0].height != 0:
-        b = await full_node.full_node.block_store.get_full_block(blocks_list[0].prev_header_hash)
-        assert b is not None
-        blocks_list.insert(0, b)
-    return blocks_list
-
-
 @pytest.mark.anyio
 async def test_sync_no_farmer(
     setup_two_nodes_and_wallet,
