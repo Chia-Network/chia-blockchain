@@ -4,8 +4,9 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import Generic, TypeVar, final
+from typing import Generic, Protocol, TypeVar, final
 
+import chia_rs
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -33,6 +34,21 @@ from chia.data_layer.util.merkle_blob import (
     unpack_raw_node,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
+
+pytestmark = pytest.mark.data_layer
+
+
+class MerkleBlobCallable(Protocol):
+    def __call__(self, blob: bytearray) -> MerkleBlob: ...
+
+
+@pytest.fixture(
+    name="merkle_blob_type",
+    params=[MerkleBlob, chia_rs.MerkleBlob],
+    ids=["python", "rust"],
+)
+def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
+    return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(
@@ -383,8 +399,8 @@ def test_as_tuple_matches_dataclasses_astuple(cls: type[RawMerkleNodeProtocol], 
     assert raw_node.as_tuple() == astuple(raw_node)  # type: ignore[call-overload]
 
 
-def test_helper_methods() -> None:
-    merkle_blob = MerkleBlob(blob=bytearray())
+def test_helper_methods(merkle_blob_type: MerkleBlobCallable) -> None:
+    merkle_blob = merkle_blob_type(blob=bytearray())
     assert merkle_blob.empty()
     assert merkle_blob.get_root_hash() is None
 
@@ -400,9 +416,9 @@ def test_helper_methods() -> None:
     assert merkle_blob.get_root_hash() is None
 
 
-def test_insert_with_reference_key_and_side() -> None:
+def test_insert_with_reference_key_and_side(merkle_blob_type: MerkleBlobCallable) -> None:
     num_inserts = 50
-    merkle_blob = MerkleBlob(blob=bytearray())
+    merkle_blob = merkle_blob_type(blob=bytearray())
     reference_kid = None
     side = None
 
@@ -424,17 +440,18 @@ def test_insert_with_reference_key_and_side() -> None:
         reference_kid = key
 
 
-def test_double_insert_fails() -> None:
-    merkle_blob = MerkleBlob(blob=bytearray())
+def test_double_insert_fails(merkle_blob_type: MerkleBlobCallable) -> None:
+    merkle_blob = merkle_blob_type(blob=bytearray())
     key, value = generate_kvid(0)
     hash = generate_hash(0)
     merkle_blob.insert(key, value, hash)
-    with pytest.raises(Exception, match="Key already present"):
+    # TODO: this exception should just be more specific to avoid the case sensitivity concerns
+    with pytest.raises(Exception, match="(?i)Key already present"):
         merkle_blob.insert(key, value, hash)
 
 
-def test_get_nodes() -> None:
-    merkle_blob = MerkleBlob(blob=bytearray())
+def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
+    merkle_blob = merkle_blob_type(blob=bytearray())
     num_inserts = 500
     keys = set()
     seen_keys = set()
@@ -448,7 +465,7 @@ def test_get_nodes() -> None:
     merkle_blob.calculate_lazy_hashes()
     all_nodes = merkle_blob.get_nodes_with_indexes()
     for index, node in all_nodes:
-        if isinstance(node, RawInternalMerkleNode):
+        if isinstance(node, (RawInternalMerkleNode, chia_rs.InternalNode)):
             left = merkle_blob.get_raw_node(node.left)
             right = merkle_blob.get_raw_node(node.right)
             assert left.parent == index
@@ -458,8 +475,28 @@ def test_get_nodes() -> None:
             assert node.left not in seen_indexes
             assert node.right not in seen_indexes
         else:
-            assert isinstance(node, RawLeafMerkleNode)
+            assert isinstance(node, (RawLeafMerkleNode, chia_rs.LeafNode))
             seen_keys.add(node.key)
         seen_indexes.add(index)
 
     assert keys == seen_keys
+
+
+def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
+    HASH = bytes(range(12, 44))
+
+    import pathlib
+
+    path = pathlib.Path("~/tmp/mbt/").expanduser()
+    path.joinpath("py").mkdir(parents=True, exist_ok=True)
+    path.joinpath("rs").mkdir(parents=True, exist_ok=True)
+
+    merkle_blob = merkle_blob_type(blob=bytearray())
+    import time
+
+    total_time = 0.0
+    for i in range(100000):
+        start = time.monotonic()
+        merkle_blob.insert(KVId(i), KVId(i), HASH)
+        end = time.monotonic()
+        total_time += end - start

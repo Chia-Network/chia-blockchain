@@ -1840,7 +1840,8 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
     await data_store.insert(
         key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
     )
-    with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
+    # TODO: this exception should just be more specific to avoid the case sensitivity concerns
+    with pytest.raises(Exception, match=f"(?i)Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
 
 
@@ -1855,7 +1856,8 @@ async def test_batch_insert_key_already_present(
     value = b"bar"
     changelist = [{"action": "insert", "key": key, "value": value}]
     await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
-    with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
+    # TODO: this exception should just be more specific to avoid the case sensitivity concerns
+    with pytest.raises(Exception, match=f"(?i)Key already present: {key.hex()}"):
         await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
 
 

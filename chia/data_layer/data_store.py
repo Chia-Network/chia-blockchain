@@ -1146,7 +1146,8 @@ class DataStore:
             try:
                 merkle_blob.insert(kid, vid, hash, reference_kid, side)
             except Exception as e:
-                if str(e) == "Key already present":
+                # TODO: this exception should just be more specific to avoid the case sensitivity concerns
+                if str(e).casefold() == "Key already present".casefold():
                     raise Exception(f"Key already present: {key.hex()}")
                 raise
 
