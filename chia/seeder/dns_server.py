@@ -24,6 +24,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
+from chia.util.task_referencer import create_referenced_task
 
 SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
     queue_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
 
     def start(self) -> None:
-        self.queue_task = asyncio.create_task(self.respond())  # This starts the dns respond loop.
+        self.queue_task = create_referenced_task(self.respond())  # This starts the dns respond loop.
 
     async def stop(self) -> None:
         if self.queue_task is not None:
@@ -81,8 +82,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         dns_request: Optional[DNSRecord] = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(self.handler(dns_request, addr))  # noqa: RUF006
+        create_referenced_task(self.handler(dns_request, addr), known_unreferenced=True)
 
     async def respond(self) -> None:
         log.info("UDP DNS responder started.")
@@ -180,7 +180,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                 if dns_request is None:  # Invalid Request, so we disconnect and don't send anything back.
                     self.transport.close()
                     return
-                self.futures.append(asyncio.create_task(self.handle_and_respond(dns_request)))
+                self.futures.append(create_referenced_task(self.handle_and_respond(dns_request)))
 
         self.buffer = bytearray(2 if self.expected_length == 0 else self.expected_length)  # Reset the buffer if empty.
 
@@ -195,8 +195,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                     f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}, "
                     f"closing connection after dns replies are sent."
                 )
-            # TODO: stop dropping tasks on the floor
-            asyncio.create_task(self.wait_for_futures())  # noqa: RUF006
+            create_referenced_task(self.wait_for_futures(), known_unreferenced=True)
             return True  # Keep connection open, until the futures are done.
         log.info(f"Received early EOF from {self.peer_info}, closing connection.")
         return False
@@ -342,7 +341,7 @@ class DNSServer:
 
         # Set up the crawl store and the peer update task.
         self.crawl_store = await CrawlStore.create(await aiosqlite.connect(self.db_path, timeout=120))
-        self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
+        self.reliable_task = create_referenced_task(self.periodically_get_reliable_peers())
 
         # One protocol instance will be created for each udp transport, so that we can accept ipv4 and ipv6
         self.udp_transport_ipv6, self.udp_protocol_ipv6 = await loop.create_datagram_endpoint(
