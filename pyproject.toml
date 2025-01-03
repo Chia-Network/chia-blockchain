@@ -14,7 +14,7 @@ packages = [{ include = "chia"}, { include = "mozilla-ca/cacert.pem" }]
 chia = "chia.cmds.chia:main"
 chia_daemon = "chia.daemon.server:main"
 chia_wallet = "chia.server.start_wallet:main"
-chia_full_node = "chia.server.start_full_node:main"
+chia_full_node = "chia.cmds.services:full_node_command"
 chia_harvester = "chia.server.start_harvester:main"
 chia_farmer = "chia.server.start_farmer:main"
 chia_introducer = "chia.server.start_introducer:main"

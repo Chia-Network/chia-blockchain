@@ -84,20 +84,20 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
 
 @pytest.mark.parametrize(argnames="signal_number", argvalues=sendable_termination_signals)
 @pytest.mark.parametrize(
-    argnames=["create_service", "module_path", "service_config_name"],
+    argnames=["create_service", "module_args", "service_config_name"],
     argvalues=[
-        [DataLayerRpcClient.create_as_context, "chia.server.start_data_layer", "data_layer"],
-        [FarmerRpcClient.create_as_context, "chia.server.start_farmer", "farmer"],
-        [FullNodeRpcClient.create_as_context, "chia.server.start_full_node", "full_node"],
-        [HarvesterRpcClient.create_as_context, "chia.server.start_harvester", "harvester"],
-        [WalletRpcClient.create_as_context, "chia.server.start_wallet", "wallet"],
-        [None, "chia.server.start_introducer", "introducer"],
+        [DataLayerRpcClient.create_as_context, ["chia.server.start_data_layer"], "data_layer"],
+        [FarmerRpcClient.create_as_context, ["chia.server.start_farmer"], "farmer"],
+        [FullNodeRpcClient.create_as_context, ["chia", "services", "full-node"], "full_node"],
+        [HarvesterRpcClient.create_as_context, ["chia.server.start_harvester"], "harvester"],
+        [WalletRpcClient.create_as_context, ["chia.server.start_wallet"], "wallet"],
+        [None, ["chia.server.start_introducer"], "introducer"],
         # TODO: fails...  make it not do that
-        # [None, "chia.seeder.start_crawler", "crawler"],
-        [None, "chia.server.start_timelord", "timelord"],
+        # [None, ["chia.seeder.start_crawler"], "crawler"],
+        [None, ["chia.server.start_timelord"], "timelord"],
         pytest.param(
             None,
-            "chia.timelord.timelord_launcher",
+            ["chia.timelord.timelord_launcher"],
             "timelord_launcher",
             marks=pytest.mark.skipif(
                 sys.platform in {"win32", "cygwin"},
@@ -105,9 +105,9 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
             ),
         ),
         # TODO: fails...  starts creating plots etc
-        # [None, "chia.simulator.start_simulator", "simulator"],
+        # [None, ["chia.simulator.start_simulator"], "simulator"],
         # TODO: fails...  make it not do that
-        # [None, "chia.data_layer.data_layer_server", "data_layer"],
+        # [None, ["chia.data_layer.data_layer_server"], "data_layer"],
     ],
 )
 @pytest.mark.anyio
@@ -115,7 +115,7 @@ async def test_services_terminate(
     signal_number: signal.Signals,
     chia_root: ChiaRoot,
     create_service: Optional[CreateServiceProtocol],
-    module_path: str,
+    module_args: list[str],
     service_config_name: str,
 ) -> None:
     with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
@@ -145,7 +145,7 @@ async def test_services_terminate(
             process = exit_stack.enter_context(
                 closing_chia_root_popen(
                     chia_root=chia_root,
-                    args=[sys.executable, "-m", module_path],
+                    args=[sys.executable, "-m", *module_args],
                 )
             )
 
