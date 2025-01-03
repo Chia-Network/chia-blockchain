@@ -85,7 +85,6 @@ class CRCATWallet(CATWallet):
         cat_tail_info: dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         name: Optional[str] = None,
         push: bool = False,
     ) -> CATWallet:  # pragma: no cover
@@ -399,7 +398,6 @@ class CRCATWallet(CATWallet):
         self,
         payments: list[Payment],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[set[Coin]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -426,182 +424,189 @@ class CRCATWallet(CATWallet):
         selected_cat_amount = sum(c.amount for c in cat_coins)
         assert selected_cat_amount >= starting_amount
 
-        # Figure out if we need to absorb/melt some XCH as part of this
-        regular_chia_to_claim: int = 0
-        if payment_amount > starting_amount:
-            # TODO: The no coverage comment is because minting is broken for both this and the standard CAT wallet
-            fee = uint64(fee + payment_amount - starting_amount)  # pragma: no cover
-        elif payment_amount < starting_amount:
-            regular_chia_to_claim = payment_amount
+        async with action_scope.use() as interface:
+            # Figure out if we need to absorb/melt some XCH as part of this
+            regular_chia_to_claim: int = 0
+            if payment_amount > starting_amount:  # pragma: no cover
+                # TODO: The no coverage comment is because minting is broken for both this and the standard CAT wallet
+                interface.side_effects.fee_left_to_pay = uint64(
+                    interface.side_effects.fee_left_to_pay + payment_amount - starting_amount
+                )
+            elif payment_amount < starting_amount:
+                regular_chia_to_claim = payment_amount
 
-        need_chia_transaction = (fee > 0 or regular_chia_to_claim > 0) and (fee - regular_chia_to_claim != 0)
-
-        # Calculate standard puzzle solutions
-        change = selected_cat_amount - starting_amount
-        primaries: list[Payment] = []
-        for payment in payments:
-            primaries.append(payment)
-
-        if change > 0:
-            origin_crcat_record = await self.wallet_state_manager.coin_store.get_coin_record(
-                next(iter(cat_coins)).name()
+            need_chia_transaction = (interface.side_effects.fee_left_to_pay > 0 or regular_chia_to_claim > 0) and (
+                interface.side_effects.fee_left_to_pay - regular_chia_to_claim != 0
             )
-            if origin_crcat_record is None:
-                raise RuntimeError("A CR-CAT coin was selected that we don't have a record for")  # pragma: no cover
-            origin_crcat = self.coin_record_to_crcat(origin_crcat_record)
-            if action_scope.config.tx_config.override(
-                reuse_puzhash=(
-                    True if not add_authorizations_to_cr_cats else action_scope.config.tx_config.reuse_puzhash
+
+            # Calculate standard puzzle solutions
+            change = selected_cat_amount - starting_amount
+            primaries: list[Payment] = []
+            for payment in payments:
+                primaries.append(payment)
+
+            if change > 0:
+                origin_crcat_record = await self.wallet_state_manager.coin_store.get_coin_record(
+                    next(iter(cat_coins)).name()
                 )
-            ).reuse_puzhash:
-                change_puzhash = origin_crcat.inner_puzzle_hash
-                for payment in payments:
-                    if change_puzhash == payment.puzzle_hash and change == payment.amount:
-                        # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-                        break
+                if origin_crcat_record is None:
+                    raise RuntimeError("A CR-CAT coin was selected that we don't have a record for")  # pragma: no cover
+                origin_crcat = self.coin_record_to_crcat(origin_crcat_record)
+                if action_scope.config.tx_config.override(
+                    reuse_puzhash=(
+                        True if not add_authorizations_to_cr_cats else action_scope.config.tx_config.reuse_puzhash
+                    )
+                ).reuse_puzhash:
+                    change_puzhash = origin_crcat.inner_puzzle_hash
+                    for payment in payments:
+                        if change_puzhash == payment.puzzle_hash and change == payment.amount:
+                            # We cannot create two coins has same id, create a new puzhash for the change
+                            change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+                            break
+                else:
+                    change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+                primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+
+            # Find the VC Wallet
+            vc_wallet: VCWallet
+            for wallet in self.wallet_state_manager.wallets.values():
+                if WalletType(wallet.type()) == WalletType.VC:
+                    assert isinstance(wallet, VCWallet)
+                    vc_wallet = wallet
+                    break
             else:
-                change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+                raise RuntimeError("CR-CATs cannot be spent without an appropriate VC")  # pragma: no cover
 
-        # Find the VC Wallet
-        vc_wallet: VCWallet
-        for wallet in self.wallet_state_manager.wallets.values():
-            if WalletType(wallet.type()) == WalletType.VC:
-                assert isinstance(wallet, VCWallet)
-                vc_wallet = wallet
-                break
-        else:
-            raise RuntimeError("CR-CATs cannot be spent without an appropriate VC")  # pragma: no cover
+            # Loop through the coins we've selected and gather the information we need to spend them
+            vc: Optional[VerifiedCredential] = None
+            vc_announcements_to_make: list[bytes] = []
+            inner_spends: list[tuple[CRCAT, int, Program, Program]] = []
+            first = True
+            announcement: CreateCoinAnnouncement
+            coin_ids: list[bytes32] = [coin.name() for coin in cat_coins]
+            coin_records: list[WalletCoinRecord] = (
+                await self.wallet_state_manager.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_ids))
+            ).records
+            assert len(coin_records) == len(cat_coins)
+            # sort the coin records to ensure they are in the same order as the CAT coins
+            coin_records = [rec for rec in sorted(coin_records, key=lambda rec: coin_ids.index(rec.coin.name()))]
+            for coin in coin_records:
+                if vc is None:
+                    vc = await vc_wallet.get_vc_with_provider_in_and_proofs(
+                        self.info.authorized_providers, self.info.proofs_checker.flags
+                    )
 
-        # Loop through the coins we've selected and gather the information we need to spend them
-        vc: Optional[VerifiedCredential] = None
-        vc_announcements_to_make: list[bytes] = []
-        inner_spends: list[tuple[CRCAT, int, Program, Program]] = []
-        first = True
-        announcement: CreateCoinAnnouncement
-        coin_ids: list[bytes32] = [coin.name() for coin in cat_coins]
-        coin_records: list[WalletCoinRecord] = (
-            await self.wallet_state_manager.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_ids))
-        ).records
-        assert len(coin_records) == len(cat_coins)
-        # sort the coin records to ensure they are in the same order as the CAT coins
-        coin_records = [rec for rec in sorted(coin_records, key=lambda rec: coin_ids.index(rec.coin.name()))]
-        for coin in coin_records:
-            if vc is None:
-                vc = await vc_wallet.get_vc_with_provider_in_and_proofs(
-                    self.info.authorized_providers, self.info.proofs_checker.flags
-                )
+                if cat_discrepancy is not None:
+                    cat_condition = UnknownCondition(
+                        opcode=Program.to(51),
+                        args=[
+                            Program.to(None),
+                            Program.to(-113),
+                            tail_reveal,
+                            tail_solution,
+                        ],
+                    )
+                    if first:
+                        extra_conditions = (*extra_conditions, cat_condition)
 
-            if cat_discrepancy is not None:
-                cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.to(None),
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
-                )
+                crcat: CRCAT = self.coin_record_to_crcat(coin)
+                vc_announcements_to_make.append(crcat.expected_announcement())
                 if first:
-                    extra_conditions = (*extra_conditions, cat_condition)
-
-            crcat: CRCAT = self.coin_record_to_crcat(coin)
-            vc_announcements_to_make.append(crcat.expected_announcement())
-            if first:
-                announcement = CreateCoinAnnouncement(std_hash(b"".join([c.name() for c in cat_coins])), coin.name())
-                if need_chia_transaction:
-                    if fee > regular_chia_to_claim:
-                        await self.create_tandem_xch_tx(
-                            fee,
-                            uint64(regular_chia_to_claim),
-                            action_scope,
-                            extra_conditions=(announcement.corresponding_assertion(),),
-                        )
+                    announcement = CreateCoinAnnouncement(
+                        std_hash(b"".join([c.name() for c in cat_coins])), coin.name()
+                    )
+                    if need_chia_transaction:
+                        if interface.side_effects.fee_left_to_pay > regular_chia_to_claim:
+                            await self.create_tandem_xch_tx(
+                                uint64(regular_chia_to_claim),
+                                action_scope,
+                                extra_conditions=(announcement.corresponding_assertion(),),
+                            )
+                            innersol = self.standard_wallet.make_solution(
+                                primaries=primaries,
+                                conditions=(*extra_conditions, announcement),
+                            )
+                        elif regular_chia_to_claim > interface.side_effects.fee_left_to_pay:
+                            xch_announcement = await self.create_tandem_xch_tx(
+                                uint64(regular_chia_to_claim),
+                                action_scope,
+                            )
+                            assert xch_announcement is not None
+                            innersol = self.standard_wallet.make_solution(
+                                primaries=primaries,
+                                conditions=(*extra_conditions, xch_announcement, announcement),
+                            )
+                        else:
+                            # TODO: what about when they are equal?
+                            raise Exception("Equality not handled")
+                    else:
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
-                    elif regular_chia_to_claim > fee:
-                        xch_announcement = await self.create_tandem_xch_tx(
-                            fee,
-                            uint64(regular_chia_to_claim),
-                            action_scope,
-                        )
-                        assert xch_announcement is not None
-                        innersol = self.standard_wallet.make_solution(
-                            primaries=primaries,
-                            conditions=(*extra_conditions, xch_announcement, announcement),
-                        )
-                    else:
-                        # TODO: what about when they are equal?
-                        raise Exception("Equality not handled")
                 else:
                     innersol = self.standard_wallet.make_solution(
-                        primaries=primaries,
-                        conditions=(*extra_conditions, announcement),
+                        primaries=[],
+                        conditions=(announcement.corresponding_assertion(),),
                     )
-            else:
-                innersol = self.standard_wallet.make_solution(
-                    primaries=[],
-                    conditions=(announcement.corresponding_assertion(),),
+                inner_derivation_record = (
+                    await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                        crcat.inner_puzzle_hash
+                    )
                 )
-            inner_derivation_record = (
-                await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    crcat.inner_puzzle_hash
+                if inner_derivation_record is None:
+                    raise RuntimeError(  # pragma: no cover
+                        f"CR-CAT {crcat} has an inner puzzle hash {crcat.inner_puzzle_hash} "
+                        "that we don't have the keys for"
+                    )
+                inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_derivation_record.pubkey)
+                inner_spends.append(
+                    (
+                        crcat,
+                        extra_delta if first else 0,
+                        inner_puzzle,
+                        innersol,
+                    )
                 )
+                first = False
+
+            if vc is None:  # pragma: no cover
+                raise RuntimeError("Spending no cat coins is not an appropriate use of _generate_unsigned_spendbundle")
+            if vc.proof_hash is None:
+                raise RuntimeError("CR-CATs found an appropriate VC but that VC contains no proofs")  # pragma: no cover
+
+            proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
+                vc.proof_hash, self.info.proofs_checker.flags
             )
-            if inner_derivation_record is None:
-                raise RuntimeError(  # pragma: no cover
-                    f"CR-CAT {crcat} has an inner puzzle hash {crcat.inner_puzzle_hash} that we don't have the keys for"
-                )
-            inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_derivation_record.pubkey)
-            inner_spends.append(
-                (
-                    crcat,
-                    extra_delta if first else 0,
-                    inner_puzzle,
-                    innersol,
-                )
-            )
-            first = False
 
-        if vc is None:  # pragma: no cover
-            raise RuntimeError("Spending no cat coins is not an appropriate use of _generate_unsigned_spendbundle")
-        if vc.proof_hash is None:
-            raise RuntimeError("CR-CATs found an appropriate VC but that VC contains no proofs")  # pragma: no cover
-
-        proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
-        )
-
-        expected_announcements, coin_spends, _ = CRCAT.spend_many(
-            inner_spends,
-            proof_of_inclusions,
-            Program.to(None),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
-            vc.launcher_id,
-            vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
-        )
-        if add_authorizations_to_cr_cats:
-            await vc_wallet.generate_signed_transaction(
+            expected_announcements, coin_spends, _ = CRCAT.spend_many(
+                inner_spends,
+                proof_of_inclusions,
+                Program.to(
+                    None
+                ),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
+                vc.proof_provider,
                 vc.launcher_id,
-                action_scope,
-                extra_conditions=(
-                    *expected_announcements,
-                    announcement,
-                    *(CreatePuzzleAnnouncement(ann) for ann in vc_announcements_to_make),
-                ),
+                vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
             )
+            if add_authorizations_to_cr_cats:
+                await vc_wallet.generate_signed_transaction(
+                    vc.launcher_id,
+                    action_scope,
+                    extra_conditions=(
+                        *expected_announcements,
+                        announcement,
+                        *(CreatePuzzleAnnouncement(ann) for ann in vc_announcements_to_make),
+                    ),
+                )
 
-        return WalletSpendBundle(coin_spends, G2Element())
+            return WalletSpendBundle(coin_spends, G2Element())
 
     async def generate_signed_transaction(
         self,
         amounts: list[uint64],
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         coins: Optional[set[Coin]] = None,
         memos: Optional[list[list[bytes]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -637,7 +642,6 @@ class CRCATWallet(CATWallet):
         spend_bundle = await self._generate_unsigned_spendbundle(
             payments,
             action_scope,
-            fee,
             cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,
             extra_conditions=extra_conditions,
@@ -657,7 +661,7 @@ class CRCATWallet(CATWallet):
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=payment.puzzle_hash,
                     amount=payment.amount,
-                    fee_amount=fee,
+                    fee_amount=action_scope.config.total_fee,
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=spend_bundle if i == 0 else None,
@@ -680,7 +684,6 @@ class CRCATWallet(CATWallet):
         self,
         min_amount_to_claim: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         coins: Optional[set[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
@@ -705,78 +708,79 @@ class CRCATWallet(CATWallet):
             )
 
         # Select the relevant XCH coins
-        if fee > 0:
-            chia_coins = await self.standard_wallet.select_coins(
-                fee,
-                action_scope,
-            )
-        else:
-            chia_coins = set()
-
-        # Select the relevant VC coin
-        vc_wallet: VCWallet = await self.wallet_state_manager.get_or_create_vc_wallet()
-        vc: Optional[VerifiedCredential] = await vc_wallet.get_vc_with_provider_in_and_proofs(
-            self.info.authorized_providers, self.info.proofs_checker.flags
-        )
-        if vc is None:  # pragma: no cover
-            raise RuntimeError(f"No VC exists that can approve spends for CR-CAT wallet {self.id()}")
-        if vc.proof_hash is None:
-            raise RuntimeError(f"VC {vc.launcher_id} has no proofs to authorize transaction")  # pragma: no cover
-        proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
-        )
-
-        # Generate the bundle nonce
-        nonce: bytes32 = Program.to(
-            [coin_as_list(c) for c in sorted(coins.union(chia_coins).union({vc.coin}), key=Coin.name)]
-        ).get_tree_hash()
-
-        # Make CR-CAT bundle
-        crcats_and_puzhashes: list[tuple[CRCAT, bytes32]] = [
-            (crcat, CRCATWallet.get_metadata_from_record(record).inner_puzzle_hash)
-            for record in [r for r in crcat_records if r.coin in coins]
-            for crcat in [self.coin_record_to_crcat(record)]
-        ]
-        expected_announcements, coin_spends, _ = CRCAT.spend_many(
-            [
-                (
-                    crcat,
-                    0,
-                    construct_pending_approval_state(inner_puzhash, uint64(crcat.coin.amount)),
-                    Program.to([nonce]),
-                )
-                for crcat, inner_puzhash in crcats_and_puzhashes
-            ],
-            proof_of_inclusions,
-            Program.to(None),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
-            vc.launcher_id,
-            vc.wrap_inner_with_backdoor().get_tree_hash(),
-        )
-        claim_bundle = WalletSpendBundle(coin_spends, G2Element())
-
-        # Make the Fee TX
-        if fee > 0:
-            await self.create_tandem_xch_tx(
-                fee,
-                uint64(0),
-                action_scope,
-                extra_conditions=tuple(expected_announcements),
-            )
-
-        # Make the VC TX
-        await vc_wallet.generate_signed_transaction(
-            vc.launcher_id,
-            action_scope,
-            extra_conditions=(
-                *extra_conditions,
-                *expected_announcements,
-                CreateCoinAnnouncement(nonce),
-                *(CreatePuzzleAnnouncement(crcat.expected_announcement()) for crcat, _ in crcats_and_puzhashes),
-            ),
-        )
-
         async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:
+                chia_coins = await self.standard_wallet.select_coins(
+                    interface.side_effects.fee_left_to_pay,
+                    action_scope,
+                )
+            else:
+                chia_coins = set()
+
+            # Select the relevant VC coin
+            vc_wallet: VCWallet = await self.wallet_state_manager.get_or_create_vc_wallet()
+            vc: Optional[VerifiedCredential] = await vc_wallet.get_vc_with_provider_in_and_proofs(
+                self.info.authorized_providers, self.info.proofs_checker.flags
+            )
+            if vc is None:  # pragma: no cover
+                raise RuntimeError(f"No VC exists that can approve spends for CR-CAT wallet {self.id()}")
+            if vc.proof_hash is None:
+                raise RuntimeError(f"VC {vc.launcher_id} has no proofs to authorize transaction")  # pragma: no cover
+            proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
+                vc.proof_hash, self.info.proofs_checker.flags
+            )
+
+            # Generate the bundle nonce
+            nonce: bytes32 = Program.to(
+                [coin_as_list(c) for c in sorted(coins.union(chia_coins).union({vc.coin}), key=Coin.name)]
+            ).get_tree_hash()
+
+            # Make CR-CAT bundle
+            crcats_and_puzhashes: list[tuple[CRCAT, bytes32]] = [
+                (crcat, CRCATWallet.get_metadata_from_record(record).inner_puzzle_hash)
+                for record in [r for r in crcat_records if r.coin in coins]
+                for crcat in [self.coin_record_to_crcat(record)]
+            ]
+            expected_announcements, coin_spends, _ = CRCAT.spend_many(
+                [
+                    (
+                        crcat,
+                        0,
+                        construct_pending_approval_state(inner_puzhash, uint64(crcat.coin.amount)),
+                        Program.to([nonce]),
+                    )
+                    for crcat, inner_puzhash in crcats_and_puzhashes
+                ],
+                proof_of_inclusions,
+                Program.to(
+                    None
+                ),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
+                vc.proof_provider,
+                vc.launcher_id,
+                vc.wrap_inner_with_backdoor().get_tree_hash(),
+            )
+            claim_bundle = WalletSpendBundle(coin_spends, G2Element())
+
+            # Make the Fee TX
+            if interface.side_effects.fee_left_to_pay > 0:
+                await self.create_tandem_xch_tx(
+                    uint64(0),
+                    action_scope,
+                    extra_conditions=tuple(expected_announcements),
+                )
+
+            # Make the VC TX
+            await vc_wallet.generate_signed_transaction(
+                vc.launcher_id,
+                action_scope,
+                extra_conditions=(
+                    *extra_conditions,
+                    *expected_announcements,
+                    CreateCoinAnnouncement(nonce),
+                    *(CreatePuzzleAnnouncement(crcat.expected_announcement()) for crcat, _ in crcats_and_puzhashes),
+                ),
+            )
+
             other_additions: set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.additions}
             other_removals: set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.removals}
             interface.side_effects.transactions.append(
@@ -785,7 +789,7 @@ class CRCATWallet(CATWallet):
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=await self.wallet_state_manager.main_wallet.get_puzzle_hash(False),
                     amount=uint64(sum(c.amount for c in coins)),
-                    fee_amount=fee,
+                    fee_amount=action_scope.config.total_fee,
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=claim_bundle,

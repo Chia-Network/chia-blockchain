@@ -1257,7 +1257,7 @@ class TestDIDWallet:
         fee = uint64(1000)
 
         async with wallet_0.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config, push=True, fee=fee
         ) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_0.wallet_state_manager,
@@ -1267,7 +1267,6 @@ class TestDIDWallet:
                 [ph],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
-                fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
 
@@ -1306,9 +1305,9 @@ class TestDIDWallet:
         # Transfer DID
         new_puzhash = await wallet_1.get_new_puzzlehash()
         async with did_wallet_1.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config, push=True, fee=fee
         ) as action_scope:
-            await did_wallet_1.transfer_did(new_puzhash, fee, with_recovery, action_scope)
+            await did_wallet_1.transfer_did(new_puzhash, with_recovery, action_scope)
 
         await wallet_environments.process_pending_states(
             [
@@ -1404,7 +1403,9 @@ class TestDIDWallet:
 
         # Check that we cap out at 10 DID Wallets automatically created upon transfer received
         for i in range(0, 14):
-            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            async with wallet.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG, push=True, fee=fee
+            ) as action_scope:
                 did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                     wallet_node.wallet_state_manager,
                     wallet,
@@ -1413,7 +1414,6 @@ class TestDIDWallet:
                     [bytes32(bytes(ph))],
                     uint64(1),
                     {"Twitter": "Test", "GitHub": "测试"},
-                    fee=fee,
                 )
             assert did_wallet_1.get_name() == "Profile 1"
             await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
@@ -1424,8 +1424,10 @@ class TestDIDWallet:
             assert did_wallet_1.did_info.origin_coin is not None
             origin_coin = did_wallet_1.did_info.origin_coin
             new_puzhash = await wallet2.get_new_puzzlehash()
-            async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-                await did_wallet_1.transfer_did(new_puzhash, fee, False, action_scope)
+            async with did_wallet_1.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG, push=True, fee=fee
+            ) as action_scope:
+                await did_wallet_1.transfer_did(new_puzhash, False, action_scope)
             await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
             await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
             # Check if the DID wallet is created in the wallet2
@@ -1500,7 +1502,7 @@ class TestDIDWallet:
         # Check we can still manually add new DIDs while at cap
         await full_node_api.farm_blocks_to_wallet(1, wallet2)
         ph = await wallet2.get_new_puzzlehash()
-        async with wallet2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        async with wallet2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True, fee=fee) as action_scope:
             did_wallet_11: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_2.wallet_state_manager,
                 wallet2,
@@ -1509,7 +1511,6 @@ class TestDIDWallet:
                 [bytes32(bytes(ph))],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
-                fee=fee,
             )
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
@@ -1626,7 +1627,7 @@ class TestDIDWallet:
         ph_1 = await wallet_1.get_new_puzzlehash()
 
         async with wallet_0.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config, push=True, fee=fee
         ) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_0.wallet_state_manager,
@@ -1635,7 +1636,6 @@ class TestDIDWallet:
                 action_scope,
                 [],
                 metadata={"twitter": "twitter"},
-                fee=fee,
             )
 
         await wallet_environments.process_pending_states(
@@ -1703,9 +1703,9 @@ class TestDIDWallet:
             coin_1 = (await wallet_0.select_coins(odd_amount, action_scope)).pop()
         assert coin_1.amount % 2 == 0
         async with wallet_0.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config.override(excluded_coin_ids=[coin_id]), push=True
+            wallet_environments.tx_config.override(excluded_coin_ids=[coin_id]), push=True, fee=fee
         ) as action_scope:
-            await wallet_0.generate_signed_transaction(odd_amount, ph_1, action_scope, fee)
+            await wallet_0.generate_signed_transaction(odd_amount, ph_1, action_scope)
 
         await wallet_environments.process_pending_states(
             [
@@ -1766,10 +1766,10 @@ class TestDIDWallet:
         fee = uint64(1000)
 
         async with wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config, push=True, fee=fee
         ) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), action_scope, [], fee=fee
+                wallet_node.wallet_state_manager, wallet, uint64(101), action_scope, []
             )
         await wallet_environments.process_pending_states(
             [
@@ -1831,10 +1831,10 @@ class TestDIDWallet:
         did_amount = uint64(101)
 
         async with wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config, push=True, fee=fee
         ) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, did_amount, action_scope, [], fee=fee
+                wallet_node.wallet_state_manager, wallet, did_amount, action_scope, []
             )
 
         await wallet_environments.process_pending_states(
@@ -1881,9 +1881,9 @@ class TestDIDWallet:
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
         async with did_wallet_1.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config, push=True, fee=fee
         ) as action_scope:
-            await did_wallet_1.create_update_spend(action_scope, fee)
+            await did_wallet_1.create_update_spend(action_scope)
 
         await wallet_environments.process_pending_states(
             [
@@ -1934,7 +1934,7 @@ class TestDIDWallet:
         ph = await wallet.get_new_puzzlehash()
 
         async with wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config, push=True, fee=fee
         ) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager,
@@ -1944,7 +1944,6 @@ class TestDIDWallet:
                 [ph],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
-                fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
 
@@ -2165,7 +2164,7 @@ class TestDIDWallet:
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True, fee=fee) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_1.wallet_state_manager,
                 wallet,
@@ -2174,7 +2173,6 @@ class TestDIDWallet:
                 [bytes32(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
-                fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
@@ -2183,8 +2181,10 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
-        async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await did_wallet_1.transfer_did(new_puzhash, fee, True, action_scope=action_scope)
+        async with did_wallet_1.wallet_state_manager.new_action_scope(
+            DEFAULT_TX_CONFIG, push=True, fee=fee
+        ) as action_scope:
+            await did_wallet_1.transfer_did(new_puzhash, True, action_scope=action_scope)
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2])
         # Check if the DID wallet is created in the wallet2
@@ -2264,7 +2264,7 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, monkey
         async with did_wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:
-            await did_wallet.transfer_did(await wallet.get_puzzle_hash(new=False), uint64(0), True, action_scope)
+            await did_wallet.transfer_did(await wallet.get_puzzle_hash(new=False), True, action_scope)
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(

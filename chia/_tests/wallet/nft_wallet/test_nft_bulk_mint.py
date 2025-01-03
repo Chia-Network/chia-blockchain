@@ -108,14 +108,15 @@ async def test_nft_mint_from_did(
 
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=fee
+    ) as action_scope:
         await nft_wallet_maker.mint_from_did(
             metadata_list,
             action_scope,
             target_list=target_list,
             mint_number_start=1,
             mint_total=mint_total,
-            fee=fee,
         )
     for record in action_scope.side_effects.transactions:
         if record.spend_bundle is not None:
@@ -599,7 +600,9 @@ async def test_nft_mint_from_did_multiple_xch(
 
     target_list = [ph_taker for x in range(mint_total)]
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=fee
+    ) as action_scope:
         await nft_wallet_maker.mint_from_did(
             metadata_list,
             action_scope,
@@ -607,7 +610,6 @@ async def test_nft_mint_from_did_multiple_xch(
             mint_number_start=1,
             mint_total=mint_total,
             xch_coins=xch_coins,
-            fee=fee,
         )
     sb = action_scope.side_effects.transactions[0].spend_bundle
     assert sb is not None
@@ -701,14 +703,15 @@ async def test_nft_mint_from_xch(
 
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=fee
+    ) as action_scope:
         await nft_wallet_maker.mint_from_xch(
             metadata_list,
             action_scope,
             target_list=target_list,
             mint_number_start=1,
             mint_total=mint_total,
-            fee=fee,
         )
 
     await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
@@ -1003,7 +1006,9 @@ async def test_nft_mint_from_xch_multiple_xch(
 
     target_list = [ph_taker for x in range(mint_total)]
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        DEFAULT_TX_CONFIG, push=True, fee=fee
+    ) as action_scope:
         await nft_wallet_maker.mint_from_xch(
             metadata_list,
             action_scope,
@@ -1011,7 +1016,6 @@ async def test_nft_mint_from_xch_multiple_xch(
             mint_number_start=1,
             mint_total=mint_total,
             xch_coins=xch_coins,
-            fee=fee,
         )
 
     await full_node_api.process_transaction_records(action_scope.side_effects.transactions)

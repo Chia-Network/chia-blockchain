@@ -364,7 +364,6 @@ class DAOCATWallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> list[TransactionRecord]:
         """
@@ -382,7 +381,6 @@ class DAOCATWallet:
             [amount],
             [lockup_puzzle.get_tree_hash()],
             action_scope,
-            fee=fee,
             extra_conditions=extra_conditions,
         )
         cat_puzzle_hash: bytes32 = construct_cat_puzzle(
@@ -395,7 +393,6 @@ class DAOCATWallet:
         self,
         coins: list[LockedCoinInfo],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         extra_delta, limitations_solution = 0, Program.to([])
@@ -452,52 +449,51 @@ class DAOCATWallet:
 
         spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
-        if fee > 0:  # pragma: no cover
-            await self.standard_wallet.create_tandem_xch_tx(
-                fee,
-                action_scope,
+        async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:  # pragma: no cover
+                await self.standard_wallet.create_tandem_xch_tx(
+                    action_scope,
+                )
+
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=new_inner_puzhash,
+                amount=uint64(total_amt),
+                fee_amount=action_scope.config.total_fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=spend_bundle.name(),
+                memos=[],
+                valid_times=parse_timelock_info(extra_conditions),
             )
 
-        record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=new_inner_puzhash,
-            amount=uint64(total_amt),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=spend_bundle.name(),
-            memos=[],
-            valid_times=parse_timelock_info(extra_conditions),
-        )
+            # TODO: Hack to just drop coins from locked list. Need to catch this event in WSM to
+            # check if we're adding CATs from our DAO CAT wallet and update the locked coin list
+            # accordingly
+            new_locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin not in spent_coins]
+            dao_cat_info: DAOCATInfo = DAOCATInfo(
+                self.dao_cat_info.dao_wallet_id,
+                self.dao_cat_info.free_cat_wallet_id,
+                self.dao_cat_info.limitations_program_hash,
+                self.dao_cat_info.my_tail,
+                new_locked_coins,
+            )
+            await self.save_info(dao_cat_info)
 
-        # TODO: Hack to just drop coins from locked list. Need to catch this event in WSM to
-        # check if we're adding CATs from our DAO CAT wallet and update the locked coin list
-        # accordingly
-        new_locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin not in spent_coins]
-        dao_cat_info: DAOCATInfo = DAOCATInfo(
-            self.dao_cat_info.dao_wallet_id,
-            self.dao_cat_info.free_cat_wallet_id,
-            self.dao_cat_info.limitations_program_hash,
-            self.dao_cat_info.my_tail,
-            new_locked_coins,
-        )
-        await self.save_info(dao_cat_info)
-        async with action_scope.use() as interface:
             interface.side_effects.transactions.append(record)
 
     async def remove_active_proposal(
         self,
         proposal_id_list: list[bytes32],
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
     ) -> WalletSpendBundle:
         locked_coins: list[tuple[LockedCoinInfo, list[bytes32]]] = []
         for lci in self.dao_cat_info.locked_coins:
@@ -557,8 +553,9 @@ class DAOCATWallet:
 
         spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
-        if fee > 0:  # pragma: no cover
-            await self.standard_wallet.create_tandem_xch_tx(fee, action_scope=action_scope)
+        async with action_scope.use() as interface:
+            if interface.side_effects.fee_left_to_pay > 0:  # pragma: no cover
+                await self.standard_wallet.create_tandem_xch_tx(action_scope=action_scope)
 
         return spend_bundle
 

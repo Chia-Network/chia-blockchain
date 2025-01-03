@@ -86,32 +86,33 @@ class NotificationManager:
         msg: bytes,
         amount: uint64,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
-        coins: set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(uint64(amount + fee), action_scope)
-        origin_coin: bytes32 = next(iter(coins)).name()
-        notification_puzzle: Program = construct_notification(target, amount)
-        notification_hash: bytes32 = notification_puzzle.get_tree_hash()
-        notification_coin: Coin = Coin(origin_coin, notification_hash, amount)
-        notification_spend = make_spend(
-            notification_coin,
-            notification_puzzle,
-            Program.to(None),
-        )
-        extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
-        await self.wallet_state_manager.main_wallet.generate_signed_transaction(
-            amount,
-            notification_hash,
-            action_scope,
-            fee,
-            coins=coins,
-            origin_id=origin_coin,
-            memos=[target, msg],
-            extra_conditions=(
-                *extra_conditions,
-                AssertCoinAnnouncement(asserted_id=notification_coin.name(), asserted_msg=b""),
-            ),
-        )
         async with action_scope.use() as interface:
+            coins: set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(
+                uint64(amount + interface.side_effects.fee_left_to_pay), action_scope
+            )
+            origin_coin: bytes32 = next(iter(coins)).name()
+            notification_puzzle: Program = construct_notification(target, amount)
+            notification_hash: bytes32 = notification_puzzle.get_tree_hash()
+            notification_coin: Coin = Coin(origin_coin, notification_hash, amount)
+            notification_spend = make_spend(
+                notification_coin,
+                notification_puzzle,
+                Program.to(None),
+            )
+            extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
+            await self.wallet_state_manager.main_wallet.generate_signed_transaction(
+                amount,
+                notification_hash,
+                action_scope,
+                coins=coins,
+                origin_id=origin_coin,
+                memos=[target, msg],
+                extra_conditions=(
+                    *extra_conditions,
+                    AssertCoinAnnouncement(asserted_id=notification_coin.name(), asserted_msg=b""),
+                ),
+            )
+
             interface.side_effects.extra_spends.append(extra_spend_bundle)
