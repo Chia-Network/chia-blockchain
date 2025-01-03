@@ -50,6 +50,7 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
 from chia.util.profiler import profile_task
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
@@ -187,8 +188,8 @@ class Farmer:
             # succeeds or until we need to shut down.
             while not self._shut_down:
                 if await self.setup_keys():
-                    self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
-                    self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+                    self.update_pool_state_task = create_referenced_task(self._periodically_update_pool_state_task())
+                    self.cache_clear_task = create_referenced_task(self._periodically_clear_cache_and_refresh_task())
                     log.debug("start_task: initialized")
                     self.started = True
                     return
@@ -198,11 +199,9 @@ class Farmer:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))  # noqa: RUF006
+                create_referenced_task(profile_task(self._root_path, "farmer", self.log), known_unreferenced=True)
 
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(start_task())  # noqa: RUF006
+        create_referenced_task(start_task(), known_unreferenced=True)
         try:
             yield
         finally:
@@ -313,7 +312,7 @@ class Farmer:
 
         if peer.connection_type is NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
-            self.harvester_handshake_task = asyncio.create_task(handshake_task())
+            self.harvester_handshake_task = create_referenced_task(handshake_task())
 
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
