@@ -117,7 +117,7 @@ from chia.wallet.derive_keys import (
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
-GENERATOR_MOD: Program = Program.from_bytes(ROM_BOOTSRAP_GENERATOR)
+GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSRAP_GENERATOR)
 
 test_constants = DEFAULT_CONSTANTS.replace(
     MIN_PLOT_SIZE=uint8(18),
