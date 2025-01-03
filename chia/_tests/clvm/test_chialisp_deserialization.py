@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
 
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.util.byte_types import hexstr_to_bytes
-from chia.wallet.puzzles.load_clvm import load_clvm
 
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles")
+DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
 
 def serialized_atom_overflow(size):

@@ -14,11 +14,12 @@ This roughly corresponds to bitcoin's graftroot.
 
 from __future__ import annotations
 
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE
+
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles import p2_conditions
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
-MOD = load_clvm_maybe_recompile("p2_delegated_puzzle.clsp")
+MOD = Program.from_bytes(P2_DELEGATED_PUZZLE)
 
 
 def puzzle_for_pk(public_key: bytes) -> Program:

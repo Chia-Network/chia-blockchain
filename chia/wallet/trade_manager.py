@@ -32,7 +32,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -53,8 +52,6 @@ from chia.wallet.wallet_protocol import WalletProtocol
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
 
 class TradeManager:

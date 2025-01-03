@@ -3,31 +3,31 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Union
 
+from chia_puzzles_py.programs import GRAFTROOT_DL_OFFERS as GRAFTROOT_DL_OFFERS_BYTES
+from chia_puzzles_py.programs import P2_PARENT as P2_PARENT_BYTES
+
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
-from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-
-# from chia.types.condition_opcodes import ConditionOpcode
-# from chia.wallet.util.merkle_tree import MerkleTree, TreeType
+from chia.wallet.nft_wallet.nft_puzzle_utils import create_nft_layer_puzzle_with_curry_params
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_TOP_LAYER_MOD,
+)
 
 ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
-SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
-GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile(
-    "graftroot_dl_offers.clsp", package_or_requirement="chia.data_layer.puzzles"
-)
-P2_PARENT = load_clvm_maybe_recompile("p2_parent.clsp")
+GRAFTROOT_DL_OFFERS = Program.from_bytes(GRAFTROOT_DL_OFFERS_BYTES)
+P2_PARENT = Program.from_bytes(P2_PARENT_BYTES)
 
 
 def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32, genesis_id: bytes32) -> Program:
     db_layer = create_host_layer_puzzle(innerpuz, current_root)
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    singleton_struct = Program.to((mod_hash, (genesis_id, SINGLETON_LAUNCHER.get_tree_hash())))
+    singleton_struct = Program.to((mod_hash, (genesis_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer)
 
 
@@ -72,7 +72,7 @@ def launch_solution_to_singleton_info(launch_solution: Program) -> tuple[bytes32
 
 def launcher_to_struct(launcher_id: bytes32) -> Program:
     struct: Program = Program.to(
-        (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER.get_tree_hash()))
+        (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH))
     )
     return struct
 

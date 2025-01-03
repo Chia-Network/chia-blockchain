@@ -12,10 +12,11 @@ the doctor ordered.
 
 from __future__ import annotations
 
-from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia_puzzles_py.programs import P2_CONDITIONS
 
-MOD = load_clvm_maybe_recompile("p2_conditions.clsp")
+from chia.types.blockchain_format.program import Program
+
+MOD = Program.from_bytes(P2_CONDITIONS)
 
 
 def puzzle_for_conditions(conditions) -> Program:

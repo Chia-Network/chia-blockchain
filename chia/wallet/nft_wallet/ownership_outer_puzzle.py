@@ -7,17 +7,13 @@ from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
-
-OWNERSHIP_LAYER_MOD = load_clvm_maybe_recompile(
-    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
 
 
 def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
-    if puzzle.mod == OWNERSHIP_LAYER_MOD:
+    if puzzle.mod == NFT_OWNERSHIP_LAYER:
         return True, list(puzzle.args.as_iter())
     return False, []
 
@@ -25,7 +21,7 @@ def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Pr
 def puzzle_for_ownership_layer(
     current_owner: Union[Program, bytes], transfer_program: Program, inner_puzzle: Program
 ) -> Program:
-    return OWNERSHIP_LAYER_MOD.curry(OWNERSHIP_LAYER_MOD.get_tree_hash(), current_owner, transfer_program, inner_puzzle)
+    return NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER.get_tree_hash(), current_owner, transfer_program, inner_puzzle)
 
 
 def solution_for_ownership_layer(inner_solution: Program) -> Program:

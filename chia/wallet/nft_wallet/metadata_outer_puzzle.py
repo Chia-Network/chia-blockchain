@@ -5,14 +5,12 @@ from typing import Callable, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
-
-NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile(
-    "nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+from chia.wallet.nft_wallet.nft_puzzles import (
+    NFT_STATE_LAYER_MOD,
+    NFT_STATE_LAYER_MOD_HASH,
 )
-NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
 def match_metadata_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:

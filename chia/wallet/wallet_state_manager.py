@@ -83,7 +83,7 @@ from chia.wallet.did_wallet.did_info import DIDCoinData
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
+from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager

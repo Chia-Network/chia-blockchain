@@ -37,7 +37,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE,
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
-    SINGLETON_LAUNCHER,
     create_cat_launcher_for_singleton_id,
     curry_cat_eve,
     curry_singleton,
@@ -64,6 +63,7 @@ from chia.wallet.dao_wallet.dao_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
     get_inner_puzzle_from_singleton,
     get_most_recent_singleton_coin_from_coin_spend,
     get_singleton_id_from_puzzle,
@@ -649,7 +649,7 @@ class DAOWallet:
         # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
 
-        genesis_launcher_puz = SINGLETON_LAUNCHER
+        genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), uint64(1))
 
@@ -857,7 +857,7 @@ class DAOWallet:
             return None
         # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
-        genesis_launcher_puz = SINGLETON_LAUNCHER
+        genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), dao_rules.proposal_minimum_amount)
 

@@ -62,12 +62,12 @@ import hashlib
 from functools import lru_cache
 from typing import Union
 
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE
 from chia_rs import G1Element, PrivateKey
 from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
@@ -75,7 +75,7 @@ DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
 DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(=)` always fails
 
-MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
+MOD = Program.from_bytes(P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE)
 
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(MOD.get_tree_hash())
 
