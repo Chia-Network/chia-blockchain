@@ -1031,79 +1031,83 @@ class DataLayerWallet:
         if dl_wallet is None:
             raise ValueError("DL Wallet is not initialized")
 
-        offered_launchers: list[bytes32] = [k for k, v in offer_dict.items() if v < 0 and k is not None]
-        all_transactions: list[TransactionRecord] = []
-        for launcher in offered_launchers:
-            try:
-                this_solver: Solver = solver[launcher.hex()]
-            except KeyError:
-                this_solver = solver["0x" + launcher.hex()]
-            new_root: bytes32 = this_solver["new_root"]
-            new_ph: bytes32 = await wallet_state_manager.main_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
-            async with wallet_state_manager.new_action_scope(
-                action_scope.config.tx_config, push=False
-            ) as inner_action_scope:
-                await dl_wallet.generate_signed_transaction(
-                    [uint64(1)],
-                    [new_ph],
-                    inner_action_scope,
-                    launcher_id=launcher,
-                    new_root_hash=new_root,
-                    add_pending_singleton=False,
-                    announce_new_state=True,
-                    extra_conditions=extra_conditions,
-                )
-                extra_conditions = tuple()
-
-                async with inner_action_scope.use() as interface:
-                    dl_spend: CoinSpend = next(
-                        cs
-                        for tx in interface.side_effects.transactions
-                        for cs in tx.spend_bundle.coin_spends
-                        if tx.spend_bundle is not None and match_dl_singleton(cs.puzzle_reveal)[0]
-                    )
-                dl_solution: Program = dl_spend.solution.to_program()
-                old_graftroot: Program = dl_solution.at("rrffrf")
-                new_graftroot: Program = create_graftroot_offer_puz(
-                    [bytes32(dep["launcher_id"]) for dep in this_solver["dependencies"]],
-                    [list(v for v in dep["values_to_prove"]) for dep in this_solver["dependencies"]],
-                    old_graftroot,
-                )
-
-                new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
-                new_spend: CoinSpend = dl_spend.replace(solution=SerializedProgram.from_program(new_solution))
-                async with inner_action_scope.use() as interface:
-                    for i, tx in enumerate(interface.side_effects.transactions):
-                        if tx.spend_bundle is not None and dl_spend in tx.spend_bundle.coin_spends:
-                            break
-                    else:
-                        # No test coverage for this line because it should never be reached
-                        raise RuntimeError("Internal logic error while constructing update offer")  # pragma: no cover
-                    new_bundle = WalletSpendBundle(
-                        [
-                            *(
-                                cs
-                                for cs in interface.side_effects.transactions[i].spend_bundle.coin_spends
-                                if cs != dl_spend
-                            ),
-                            new_spend,
-                        ],
-                        G2Element(),
-                    )
-                    interface.side_effects.transactions[i] = dataclasses.replace(
-                        interface.side_effects.transactions[i], spend_bundle=new_bundle, name=new_bundle.name()
-                    )
-
-            all_transactions.extend(inner_action_scope.side_effects.transactions)
-
-        # create some dummy requested payments
-        requested_payments = {
-            k: [NotarizedPayment(bytes32.zeros, uint64(v), [], bytes32.zeros)] for k, v in offer_dict.items() if v > 0
-        }
-
         async with action_scope.use() as interface:
+            offered_launchers: list[bytes32] = [k for k, v in offer_dict.items() if v < 0 and k is not None]
+            all_transactions: list[TransactionRecord] = []
+            for launcher in offered_launchers:
+                try:
+                    this_solver: Solver = solver[launcher.hex()]
+                except KeyError:
+                    this_solver = solver["0x" + launcher.hex()]
+                new_root: bytes32 = this_solver["new_root"]
+                new_ph: bytes32 = await wallet_state_manager.main_wallet.get_puzzle_hash(
+                    new=not action_scope.config.tx_config.reuse_puzhash
+                )
+                async with wallet_state_manager.new_action_scope(
+                    action_scope.config.tx_config, push=False, fee=interface.side_effects.fee_left_to_pay
+                ) as inner_action_scope:
+                    await dl_wallet.generate_signed_transaction(
+                        [uint64(1)],
+                        [new_ph],
+                        inner_action_scope,
+                        launcher_id=launcher,
+                        new_root_hash=new_root,
+                        add_pending_singleton=False,
+                        announce_new_state=True,
+                        extra_conditions=extra_conditions,
+                    )
+                    extra_conditions = tuple()
+
+                    async with inner_action_scope.use() as interface:
+                        dl_spend: CoinSpend = next(
+                            cs
+                            for tx in interface.side_effects.transactions
+                            if tx.spend_bundle is not None
+                            for cs in tx.spend_bundle.coin_spends
+                            if match_dl_singleton(cs.puzzle_reveal)[0]
+                        )
+                    dl_solution: Program = dl_spend.solution.to_program()
+                    old_graftroot: Program = dl_solution.at("rrffrf")
+                    new_graftroot: Program = create_graftroot_offer_puz(
+                        [bytes32(dep["launcher_id"]) for dep in this_solver["dependencies"]],
+                        [list(v for v in dep["values_to_prove"]) for dep in this_solver["dependencies"]],
+                        old_graftroot,
+                    )
+
+                    new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
+                    new_spend: CoinSpend = dl_spend.replace(solution=SerializedProgram.from_program(new_solution))
+                    async with inner_action_scope.use() as interface:
+                        for i, tx in enumerate(interface.side_effects.transactions):
+                            if tx.spend_bundle is not None and dl_spend in tx.spend_bundle.coin_spends:
+                                break
+                        else:
+                            # No test coverage for this line because it should never be reached
+                            raise RuntimeError(
+                                "Internal logic error while constructing update offer"
+                            )  # pragma: no cover
+                        dl_tx = interface.side_effects.transactions[i].spend_bundle
+                        assert dl_tx is not None
+                        new_bundle = WalletSpendBundle(
+                            [
+                                *(cs for cs in dl_tx.coin_spends if cs != dl_spend),
+                                new_spend,
+                            ],
+                            G2Element(),
+                        )
+                        interface.side_effects.transactions[i] = dataclasses.replace(
+                            interface.side_effects.transactions[i], spend_bundle=new_bundle, name=new_bundle.name()
+                        )
+
+                all_transactions.extend(inner_action_scope.side_effects.transactions)
+                interface.side_effects.fee_left_to_pay = inner_action_scope.side_effects.fee_left_to_pay
+
+            # create some dummy requested payments
+            requested_payments = {
+                k: [NotarizedPayment(bytes32.zeros, uint64(v), [], bytes32.zeros)]
+                for k, v in offer_dict.items()
+                if v > 0
+            }
+
             interface.side_effects.transactions.extend(all_transactions)
 
         return Offer(

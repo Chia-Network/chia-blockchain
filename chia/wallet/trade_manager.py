@@ -328,6 +328,7 @@ class TradeManager:
                                 excluded_coin_ids=[],
                             ),
                             push=False,
+                            fee=interface.side_effects.fee_left_to_pay,
                         ) as inner_action_scope:
                             await wallet.generate_signed_transaction(
                                 uint64(sum(c.amount for c in selected_coins) - interface.side_effects.fee_left_to_pay),
@@ -345,6 +346,7 @@ class TradeManager:
                                 excluded_coin_ids=[],
                             ),
                             push=False,
+                            fee=interface.side_effects.fee_left_to_pay,
                         ) as inner_action_scope:
                             await wallet.generate_signed_transaction(
                                 [coin.amount],
@@ -353,6 +355,8 @@ class TradeManager:
                                 coins={coin},
                                 extra_conditions=(*extra_conditions, *announcement_conditions),
                             )
+
+                    interface.side_effects.fee_left_to_pay = inner_action_scope.side_effects.fee_left_to_pay
 
                 cancellation_additions.extend(
                     [

@@ -895,7 +895,11 @@ class NFTWallet:
 
                     # First, sending all the coins to the OFFER_MOD
                     async with wallet_state_manager.new_action_scope(
-                        action_scope.config.tx_config, push=False
+                        action_scope.config.tx_config,
+                        push=False,
+                        fee=interface.side_effects.fee_left_to_pay
+                        if wallet.type() == WalletType.STANDARD_WALLET
+                        else fee_left_to_pay,
                     ) as inner_action_scope:
                         if wallet.type() == WalletType.STANDARD_WALLET:
                             payments = royalty_payments[asset] if asset in royalty_payments else []
@@ -905,7 +909,6 @@ class NFTWallet:
                                 OFFER_MOD_HASH,
                                 inner_action_scope,
                                 primaries=[Payment(OFFER_MOD_HASH, uint64(payment_sum))] if payment_sum > 0 else [],
-                                fee=interface.side_effects.fee_left_to_pay,
                                 coins=offered_coins_by_asset[asset],
                                 extra_conditions=(*extra_conditions, *announcements_to_assert),
                             )
@@ -915,7 +918,6 @@ class NFTWallet:
                                 [abs(amount)],
                                 [OFFER_MOD_HASH],
                                 inner_action_scope,
-                                fee=fee_left_to_pay,
                                 coins=offered_coins_by_asset[asset],
                                 trade_prices_list=[
                                     list(price)
@@ -930,7 +932,6 @@ class NFTWallet:
                                 [abs(amount), sum(p.amount for _, p in payments)],
                                 [OFFER_MOD_HASH, OFFER_MOD_HASH],
                                 inner_action_scope,
-                                fee=fee_left_to_pay,
                                 coins=offered_coins_by_asset[asset],
                                 extra_conditions=(*extra_conditions, *announcements_to_assert),
                             )
@@ -1049,6 +1050,7 @@ class NFTWallet:
             offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
 
             interface.side_effects.transactions.extend(all_transactions)
+            interface.side_effects.fee_left_to_pay = uint64(0)
 
         return offer
 
