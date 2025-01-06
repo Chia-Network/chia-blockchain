@@ -1308,7 +1308,6 @@ class FullNode:
                             await self.prevalidate_blocks(
                                 blockchain,
                                 [block],
-                                peer.peer_info,
                                 vs,
                                 summaries,
                             )
@@ -1489,7 +1488,6 @@ class FullNode:
         futures = await self.prevalidate_blocks(
             blockchain,
             blocks_to_validate,
-            peer_info,
             copy.copy(vs),
             wp_summaries,
         )
@@ -1558,7 +1556,6 @@ class FullNode:
         self,
         blockchain: AugmentedBlockchain,
         blocks_to_validate: list[FullBlock],
-        peer_info: PeerInfo,
         vs: ValidationState,
         wp_summaries: Optional[list[SubEpochSummary]] = None,
     ) -> Sequence[Awaitable[PreValidationResult]]:
@@ -1568,7 +1565,6 @@ class FullNode:
         Args:
             blockchain:
             blocks_to_validate:
-            peer_info:
             vs: The ValidationState for the first block in the batch. This is an in-out
                 parameter. It will be updated to be the validation state for the next
                 batch of blocks.
@@ -1626,8 +1622,14 @@ class FullNode:
                     vs.difficulty = cc_sub_slot.new_difficulty
                     assert expected_sub_slot_iters == vs.ssi
                     assert expected_difficulty == vs.difficulty
+            block_rec = blockchain.block_record(block.header_hash)
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], vs.ssi, fork_info, prev_ses_block=vs.prev_ses_block
+                block,
+                pre_validation_results[i],
+                vs.ssi,
+                fork_info,
+                prev_ses_block=vs.prev_ses_block,
+                block_record=block_rec,
             )
             if error is None:
                 blockchain.remove_extra_block(header_hash)
