@@ -335,10 +335,13 @@ class Timelord:
                     if self.last_state.get_deficit() < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                         self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
                     self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
-                    if block in self.overflow_blocks:
-                        self.overflow_blocks.remove(block)
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
+
+        # remove overflow blocks that where moved to unfinished cache
+        for block in new_unfinished_blocks:
+            if block in self.overflow_blocks:
+                self.overflow_blocks.remove(block)
         # Signage points.
         if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0
