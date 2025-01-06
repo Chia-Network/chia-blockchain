@@ -18,7 +18,13 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
-from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_MOD, SINGLETON_LAUNCHER, SINGLETON_MOD
+from chia.wallet.puzzles.singleton_top_layer import (
+    P2_SINGLETON_OR_DELAYED_MOD as P2_SINGLETON_MOD,
+)
+from chia.wallet.puzzles.singleton_top_layer import (
+    SINGLETON_LAUNCHER,
+    SINGLETON_MOD,
+)
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -384,7 +390,7 @@ def claim_p2_singleton(
         p2_singleton_puzzle,
         p2_singleton_spend_type="claim-p2-nft",
         singleton_inner_puzzle_hash=inner_puzzle_hash,
-        p2_singleton_coin_name=p2_singleton_coin_name,
+        p2_singleton_coin_name=bytes32(p2_singleton_coin_name),
     )
     p2_singleton_coin_spend = make_spend(
         p2_singleton_coin, SerializedProgram.from_program(p2_singleton_puzzle), p2_singleton_solution
