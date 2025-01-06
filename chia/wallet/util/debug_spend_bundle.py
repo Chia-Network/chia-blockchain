@@ -6,6 +6,7 @@ from clvm_tools.binutils import disassemble as bu_disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -160,7 +161,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     created = set(spend_bundle.additions())
     spent = set(spend_bundle.removals())
 
-    zero_coin_set = {coin.name() for coin in created if coin.amount == 0}
+    zero_coin_set = {bytes32(coin.name()) for coin in created if coin.amount == 0}
 
     ephemeral = created.intersection(spent)
     created.difference_update(ephemeral)
