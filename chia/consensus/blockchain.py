@@ -337,6 +337,8 @@ class Blockchain:
         if extending_main_chain:
             fork_info.reset(block.height - 1, block.prev_header_hash)
 
+        # we dont consider block_record passed in here since it might be from
+        # a current sync process and not yet fully validated and commited to the DB
         block_rec_from_db = await self.get_block_record_from_db(header_hash)
         if block_rec_from_db is not None:
             # We have already validated the block, but if it's not part of the

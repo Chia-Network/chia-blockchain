@@ -1554,7 +1554,6 @@ class FullNode:
         Args:
             blockchain:
             blocks_to_validate:
-            peer_info:
             vs: The ValidationState for the first block in the batch. This is an in-out
                 parameter. It will be updated to be the validation state for the next
                 batch of blocks.
