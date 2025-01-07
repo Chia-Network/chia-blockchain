@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSRAP_GENERATOR
+from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from clvm.CLVMObject import CLVMStorage
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
@@ -17,7 +17,7 @@ from chia.util.ints import uint32
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
-GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSRAP_GENERATOR)
+GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSTRAP_GENERATOR)
 
 MAX_COST = 10**15
 COST_PER_BYTE = 12000
