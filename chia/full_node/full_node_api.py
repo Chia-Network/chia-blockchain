@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 import traceback
+from collections.abc import Collection
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
@@ -1209,8 +1210,7 @@ class FullNodeAPI:
         if block is None:
             return None
 
-        tx_removals: list[bytes32] = []
-        tx_additions: list[Coin] = []
+        removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None
 
         if block.transactions_generator is not None:
             block_generator: Optional[BlockGenerator] = await get_block_generator(
@@ -1233,10 +1233,12 @@ class FullNodeAPI:
             )
             # strip the hint from additions, and compute the puzzle hash for
             # removals
-            tx_additions = [add[0] for add in additions]
-            tx_removals = [rem.name() for rem in removals]
+            removals_and_additions = ([r.name() for r in removals], [a[0] for a in additions])
+        elif block.is_transaction_block():
+            # This is a transaction block with just reward coins.
+            removals_and_additions = ([], [])
 
-        header_block = get_block_header(block, (tx_additions, tx_removals))
+        header_block = get_block_header(block, removals_and_additions)
         msg = make_msg(
             ProtocolMessageTypes.respond_block_header,
             wallet_protocol.RespondBlockHeader(header_block),
@@ -1528,7 +1530,7 @@ class FullNodeAPI:
             )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
-            header_block = get_block_header(block, (added_coins, removal_names))
+            header_block = get_block_header(block, (removal_names, added_coins))
             header_blocks.append(header_block)
 
         msg = make_msg(
