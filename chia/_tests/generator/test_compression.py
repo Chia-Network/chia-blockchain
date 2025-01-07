@@ -10,7 +10,7 @@ from chia_puzzles_py.programs import (
     DECOMPRESS_COIN_SPEND_ENTRY,
     DECOMPRESS_COIN_SPEND_ENTRY_WITH_PREFIX,
     DECOMPRESS_PUZZLE,
-    ROM_BOOTSRAP_GENERATOR,
+    ROM_BOOTSTRAP_GENERATOR,
 )
 from chia_rs import serialized_length
 from clvm.serialize import sexp_from_stream
@@ -25,7 +25,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
-GENERATOR_MOD: Program = Program.from_bytes(ROM_BOOTSRAP_GENERATOR)
+GENERATOR_MOD: Program = Program.from_bytes(ROM_BOOTSTRAP_GENERATOR)
 
 
 DECOMPRESS_PUZZLE = Program.from_bytes(DECOMPRESS_PUZZLE)
