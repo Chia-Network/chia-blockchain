@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
+import inspect
 import logging
 import sqlite3
 import time
@@ -19,7 +21,6 @@ from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.ints import uint32, uint64
-from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -32,13 +33,12 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
-    coins_added_at_height_cache: LRUCache[uint32, list[CoinRecord]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"CoinStore does not support database schema v{db_wrapper.db_version}")
-        self = CoinStore(db_wrapper, LRUCache(100))
+        self = CoinStore(db_wrapper)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating coin store tables and indexes.")
@@ -156,6 +156,20 @@ class CoinStore:
         coins: list[CoinRecord] = []
 
         async with self.db_wrapper.reader_no_transaction() as conn:
+            if conn!=self.db_wrapper._write_connection:
+                task=asyncio.current_task()
+                log.info(
+                    f"get_coin_records not using _current_writer {task.get_name()} {conn}"
+                )
+                frame = inspect.currentframe().f_back
+                log.info(f"  Trace 1 {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
+                frame = frame.f_back
+                log.info(f"  Trace 2 {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
+                frame = frame.f_back
+                log.info(f"  Trace 3 {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
+                frame = frame.f_back
+                log.info(f"  Trace 4 {inspect.getframeinfo(frame).filename} {frame.f_lineno}")
+ 
             cursors: list[Cursor] = []
             for batch in to_batches(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: tuple[Any, ...] = tuple(batch.entries)
@@ -177,10 +191,6 @@ class CoinStore:
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
-        coins_added: Optional[list[CoinRecord]] = self.coins_added_at_height_cache.get(height)
-        if coins_added is not None:
-            return coins_added
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -192,7 +202,6 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
-                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
@@ -566,7 +575,6 @@ class CoinStore:
                         coin_changes[record.name] = record
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
-        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 
     # Store CoinRecord in DB
