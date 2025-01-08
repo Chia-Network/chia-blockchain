@@ -29,6 +29,7 @@ from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.batches import to_batches
 from chia.util.ints import int16, uint32, uint64
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -120,7 +121,7 @@ class Sender:
         if self._task is not None and self._stop_requested:
             await self.await_closed()
         if self._task is None:
-            self._task = asyncio.create_task(self._run())
+            self._task = create_referenced_task(self._run())
             if not self._plot_manager.initial_refresh() or self._sync_id != 0:
                 self._reset()
         else:

@@ -287,6 +287,7 @@ class Blockchain:
         sub_slot_iters: uint64,
         fork_info: ForkInfo,
         prev_ses_block: Optional[BlockRecord] = None,
+        block_record: Optional[BlockRecord] = None,
     ) -> tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
@@ -355,14 +356,16 @@ class Blockchain:
         if extending_main_chain:
             fork_info.reset(block.height - 1, block.prev_header_hash)
 
-        block_rec = await self.get_block_record_from_db(header_hash)
-        if block_rec is not None:
+        # we dont consider block_record passed in here since it might be from
+        # a current sync process and not yet fully validated and commited to the DB
+        block_rec_from_db = await self.get_block_record_from_db(header_hash)
+        if block_rec_from_db is not None:
             # We have already validated the block, but if it's not part of the
             # main chain, we still need to re-run it to update the additions and
             # removals in fork_info.
             await self.advance_fork_info(block, fork_info)
             fork_info.include_spends(pre_validation_result.conds, block, header_hash)
-            self.add_block_record(block_rec)
+            self.add_block_record(block_rec_from_db)
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if fork_info.peak_hash != block.prev_header_hash:
@@ -398,14 +401,15 @@ class Blockchain:
         if not genesis and prev_block is not None:
             self.add_block_record(prev_block)
 
-        block_record = block_to_block_record(
-            self.constants,
-            self,
-            required_iters,
-            block,
-            sub_slot_iters=sub_slot_iters,
-            prev_ses_block=prev_ses_block,
-        )
+        if block_record is None:
+            block_record = block_to_block_record(
+                self.constants,
+                self,
+                required_iters,
+                block,
+                sub_slot_iters=sub_slot_iters,
+                prev_ses_block=prev_ses_block,
+            )
 
         # in case we fail and need to restore the blockchain state, remember the
         # peak height

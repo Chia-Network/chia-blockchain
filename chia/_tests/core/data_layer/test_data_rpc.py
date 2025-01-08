@@ -67,6 +67,7 @@ from chia.util.config import save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
@@ -2191,7 +2192,7 @@ async def test_issue_15955_deadlock(
         while time.monotonic() < end:
             with anyio.fail_after(adjusted_timeout(timeout)):
                 await asyncio.gather(
-                    *(asyncio.create_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
+                    *(create_referenced_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
                 )
 
 

@@ -17,6 +17,7 @@ from typing_extensions import final
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
 from chia.util.ip_address import IPAddress
+from chia.util.task_referencer import create_referenced_task
 
 
 @final
@@ -97,7 +98,7 @@ class WebServer:
         await self.runner.cleanup()
 
     def close(self) -> None:
-        self._close_task = asyncio.create_task(self._close())
+        self._close_task = create_referenced_task(self._close())
 
     async def await_closed(self) -> None:
         if self._close_task is None:
