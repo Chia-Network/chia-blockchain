@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Optional, TypeVar
 
+from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
 from chia_puzzles_py.programs import EML_COVENANT_MORPHER as EML_COVENANT_MORPHER_BYTES
 from chia_puzzles_py.programs import EML_TRANSFER_PROGRAM_COVENANT_ADAPTER as EML_TP_COVENANT_ADAPTER_BYTES
@@ -42,11 +43,7 @@ EML_TP_COVENANT_ADAPTER: Program = Program.from_bytes(EML_TP_COVENANT_ADAPTER_BY
 EML_DID_TP: Program = Program.from_bytes(EML_DID_TP_BYTES)
 EXTIGENT_METADATA_LAYER_COVENANT_MORPHER: Program = Program.from_bytes(EML_COVENANT_MORPHER_BYTES)
 REVOCATION_LAYER: Program = Program.from_bytes(REVOCATION_LAYER_BYTES)
-
-# (mod (METADATA conditions . solution) (if solution solution (list METADATA () ())))
-# (a (i 7 (q . 7) (q 4 2 (q () ()))) 1)
-ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, None, None]]], 1])
-
+ACS_TRANSFER_PROGRAM: Program = Program.from_bytes(ACS_TRANSFER_PROGRAM_BYTES)
 
 # Hashes
 EXTIGENT_METADATA_LAYER_HASH = EXTIGENT_METADATA_LAYER.get_tree_hash()
