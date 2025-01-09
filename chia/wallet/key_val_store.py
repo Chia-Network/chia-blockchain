@@ -18,9 +18,9 @@ class KeyValStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("CREATE TABLE IF NOT EXISTS key_val_store(key text PRIMARY KEY, value blob)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS key_val_name on key_val_store(key)")
-
+            # Remove an old redundant index on the primary key
+            # See https://github.com/Chia-Network/chia-blockchain/issues/10276
+            await conn.execute("DROP INDEX IF EXISTS key_val_name")
         return self
 
     async def get_object(self, key: str, object_type: Any) -> Any:
@@ -29,14 +29,14 @@ class KeyValStore:
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from key_val_store WHERE key=?", (key,))
+            cursor = await conn.execute("SELECT value from key_val_store WHERE key=?", (key,))
             row = await cursor.fetchone()
             await cursor.close()
 
         if row is None:
             return None
 
-        return object_type.from_bytes(row[1])
+        return object_type.from_bytes(row[0])
 
     async def set_object(self, key: str, obj: Any):
         """
@@ -45,7 +45,7 @@ class KeyValStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
-                (key, bytes(obj)),
+                (key, obj.stream_to_bytes()),
             )
             await cursor.close()
 

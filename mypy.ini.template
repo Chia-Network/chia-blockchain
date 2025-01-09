@@ -1,5 +1,5 @@
 [mypy]
-files = benchmarks,build_scripts,chia,tests,tools,*.py
+files = benchmarks,build_scripts,chia,tools,*.py
 ignore_missing_imports = True
 show_error_codes = True
 warn_unused_ignores = True
@@ -16,7 +16,6 @@ warn_return_any = True
 no_implicit_reexport = True
 strict_equality = True
 warn_redundant_casts = True
-enable_incomplete_feature = Unpack
 
 [mypy-chia-exclusions]
 disable_error_code = annotation-unchecked

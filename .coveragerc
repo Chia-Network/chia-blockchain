@@ -1,25 +1,27 @@
 [run]
 branch=True
+disable_warnings=
+  module-not-measured
 relative_files=True
 source_pkgs=
   chia
-  tests
 omit=
-  tests/**/config.py
+  chia/_tests/**/config.py
 concurrency=multiprocessing, thread
 parallel=True
 
 [paths]
 source =
   chia/
-  venv/**/site-packages/chia/
+  .venv/**/site-packages/chia/
 
 [report]
 precision = 1
-exclude_lines =
-  pragma: no cover
+exclude_also =
   abc\.abstractmethod
   typing\.overload
   ^\s*\.\.\.\s*$
   if typing.TYPE_CHECKING:
   if TYPE_CHECKING:
+  ^ *@pytest.mark.skip($|\()
+  benchmark_runner: BenchmarkRunner

@@ -1,0 +1,16 @@
+[Unit]
+Description=Chia Introducer Service for %i
+Requires=chia-daemon@%i.service
+After=chia-daemon@%i.service
+
+[Service]
+Type=simple
+Environment=CHIA_ROOT=/home/%i/.chia/mainnet
+ExecStart=/opt/chia/start_introducer
+User=%i
+Group=%i
+LimitNOFILE=1048576
+LimitNPROC=1048576
+
+[Install]
+WantedBy=multi-user.target

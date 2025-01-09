@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
-import multiprocessing
 from collections import Counter
 from pathlib import Path
 from threading import Lock
 from time import sleep, time
-from typing import List, Optional
+from typing import Optional
 
-from blspy import G1Element
+from chia_rs import G1Element
 from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
@@ -24,6 +23,7 @@ from chia.plotting.util import (
 )
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
+from chia.util.cpu import available_logical_cores
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
@@ -57,8 +57,9 @@ def check_plots(
 
     context_count = config["harvester"].get("parallel_decompressor_count", 5)
     thread_count = config["harvester"].get("decompressor_thread_count", 0)
+    cpu_count = available_logical_cores()
     if thread_count == 0:
-        thread_count = multiprocessing.cpu_count() // 2
+        thread_count = cpu_count // 2
     disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
     max_compression_level_allowed = config["harvester"].get("max_compression_level_allowed", 7)
     use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
@@ -102,7 +103,7 @@ def check_plots(
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
 
     if list_duplicates:
-        all_filenames: List[Path] = []
+        all_filenames: list[Path] = []
         for paths in get_plot_filenames(root_path).values():
             all_filenames += paths
         find_duplicate_plot_IDs(all_filenames)
@@ -134,7 +135,7 @@ def check_plots(
         log.info(f"Starting to test each plot with {num} challenges each\n")
     total_good_plots: Counter[str] = Counter()
     total_size = 0
-    bad_plots_list: List[Path] = []
+    bad_plots_list: list[Path] = []
 
     with plot_manager:
 
@@ -147,7 +148,7 @@ def check_plots(
 
             # Look up local_sk from plot to save locked memory
             (
-                pool_public_key_or_puzzle_hash,
+                _pool_public_key_or_puzzle_hash,
                 farmer_public_key,
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())
@@ -160,8 +161,8 @@ def check_plots(
                 if plot_info.pool_contract_puzzle_hash is not None:
                     pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
                     log.info(f"\t{'Pool contract address:':<23} {pca}")
-                log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
-                log.info(f"\t{'Local sk:' :<23} {local_sk}")
+                log.info(f"\t{'Farmer public key:':<23} {farmer_public_key}")
+                log.info(f"\t{'Local sk:':<23} {local_sk}")
 
             total_proofs = 0
             caught_exception: bool = False
@@ -228,14 +229,14 @@ def check_plots(
 
             if total_proofs > 0 and caught_exception is False:
                 log.info(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}. "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
                 total_good_plots[pr.get_size()] += 1
                 total_size += plot_path.stat().st_size
             else:
                 log.error(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)} "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)} "
                     f"Filepath: {plot_path}"
                 )
                 bad_plots_list.append(plot_path)

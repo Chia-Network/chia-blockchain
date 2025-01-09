@@ -3,14 +3,17 @@ name: 📦🚀 Trigger Main Docker Build
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
       - main
 
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   trigger:
@@ -18,6 +21,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger docker main workflow via github-glue
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/start
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/success/build-main
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: "{}"
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "docker-build-main/${{ github.sha }}"
+          glue_path: "start"
+
+      - name: Trigger docker main success via github-glue
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: "{}"
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "docker-build-main/${{ github.sha }}"
+          glue_path: "success/build-main"

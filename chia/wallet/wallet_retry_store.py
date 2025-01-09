@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import CoinState
 
@@ -17,7 +17,7 @@ class WalletRetryStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2) -> "WalletRetryStore":
+    async def create(cls, db_wrapper: DBWrapper2) -> WalletRetryStore:
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -30,7 +30,7 @@ class WalletRetryStore:
 
         return self
 
-    async def get_all_states_to_retry(self) -> List[Tuple[CoinState, bytes32, uint32]]:
+    async def get_all_states_to_retry(self) -> list[tuple[CoinState, bytes32, uint32]]:
         """
         Return all states that were failed to sync
         """

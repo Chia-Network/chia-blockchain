@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Optional, Set, Tuple
+from typing import Optional
 
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -18,16 +18,22 @@ from chia.util.ints import uint32
 MAX_POOL_WALLETS = 100
 
 
-def _derive_path(sk: PrivateKey, path: List[int]) -> PrivateKey:
+def _derive_path(sk: PrivateKey, path: list[int]) -> PrivateKey:
     for index in path:
         sk = AugSchemeMPL.derive_child_sk(sk, index)
     return sk
 
 
-def _derive_path_unhardened(sk: PrivateKey, path: List[int]) -> PrivateKey:
+def _derive_path_unhardened(sk: PrivateKey, path: list[int]) -> PrivateKey:
     for index in path:
         sk = AugSchemeMPL.derive_child_sk_unhardened(sk, index)
     return sk
+
+
+def _derive_pk_unhardened(pk: G1Element, path: list[int]) -> G1Element:
+    for index in path:
+        pk = AugSchemeMPL.derive_child_pk_unhardened(pk, index)
+    return pk
 
 
 def master_sk_to_farmer_sk(master: PrivateKey) -> PrivateKey:
@@ -51,9 +57,18 @@ def master_sk_to_wallet_sk_unhardened_intermediate(master: PrivateKey) -> Privat
     return _derive_path_unhardened(master, [12381, 8444, 2])
 
 
+def master_pk_to_wallet_pk_unhardened_intermediate(master: G1Element) -> G1Element:
+    return _derive_pk_unhardened(master, [12381, 8444, 2])
+
+
 def master_sk_to_wallet_sk_unhardened(master: PrivateKey, index: uint32) -> PrivateKey:
     intermediate = master_sk_to_wallet_sk_unhardened_intermediate(master)
     return _derive_path_unhardened(intermediate, [index])
+
+
+def master_pk_to_wallet_pk_unhardened(master: G1Element, index: uint32) -> G1Element:
+    intermediate = master_pk_to_wallet_pk_unhardened_intermediate(master)
+    return _derive_pk_unhardened(intermediate, [index])
 
 
 def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:
@@ -80,7 +95,7 @@ def master_sk_to_pooling_authentication_sk(master: PrivateKey, pool_wallet_index
     return _derive_path(master, [12381, 8444, 6, pool_wallet_index * 10000 + index])
 
 
-def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[Tuple[PrivateKey, uint32]]:
+def find_owner_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> Optional[tuple[PrivateKey, uint32]]:
     for pool_wallet_index in range(MAX_POOL_WALLETS):
         for sk in all_sks:
             try_owner_sk = master_sk_to_singleton_owner_sk(sk, uint32(pool_wallet_index))
@@ -89,7 +104,7 @@ def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[Tu
     return None
 
 
-def find_authentication_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[PrivateKey]:
+def find_authentication_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> Optional[PrivateKey]:
     # NOTE: might need to increase this if using a large number of wallets, or have switched authentication keys
     # many times.
     for pool_wallet_index in range(MAX_POOL_WALLETS):
@@ -102,8 +117,8 @@ def find_authentication_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Op
 
 
 def match_address_to_sk(
-    sk: PrivateKey, addresses_to_search: List[bytes32], max_ph_to_search: int = 500
-) -> Set[bytes32]:
+    sk: PrivateKey, addresses_to_search: list[bytes32], max_ph_to_search: int = 500
+) -> set[bytes32]:
     """
     Checks the list of given address is a derivation of the given sk within the given number of derivations
     Returns a Set of the addresses that are derivations of the given sk
@@ -111,8 +126,8 @@ def match_address_to_sk(
     if sk is None or not addresses_to_search:
         return set()
 
-    found_addresses: Set[bytes32] = set()
-    search_list: Set[bytes32] = set(addresses_to_search)
+    found_addresses: set[bytes32] = set()
+    search_list: set[bytes32] = set(addresses_to_search)
 
     for i in range(max_ph_to_search):
         phs = [
@@ -124,7 +139,7 @@ def match_address_to_sk(
             if address in phs:
                 found_addresses.add(address)
 
-        search_list = search_list - found_addresses
+        search_list -= found_addresses
         if not len(search_list):
             return found_addresses
 

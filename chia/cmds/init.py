@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
+
 
 @click.command("init", help="Create or migrate the configuration")
 @click.option(
@@ -40,31 +42,22 @@ def init_cmd(
     - Make a copy of your Farming Machine CA directory: ~/.chia/[version]/config/ssl/ca
     - Shut down all chia daemon processes with `chia stop all -d`
     - Run `chia init -c [directory]` on your remote harvester,
-      where [directory] is the the copy of your Farming Machine CA directory
+      where [directory] is the copy of your Farming Machine CA directory
     - Get more details on remote harvester on Chia wiki:
       https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
     """
     from pathlib import Path
 
+    from chia.cmds.init_funcs import init
     from chia.cmds.passphrase_funcs import initialize_passphrase
-
-    from .init_funcs import init
 
     if set_passphrase:
         initialize_passphrase()
 
     init(
         Path(create_certs) if create_certs is not None else None,
-        ctx.obj["root_path"],
+        ChiaCliContext.set_default(ctx).root_path,
         fix_ssl_permissions,
         testnet,
         v1_db,
     )
-
-
-if __name__ == "__main__":
-    from chia.util.default_root import DEFAULT_ROOT_PATH
-
-    from .init_funcs import chia_init
-
-    chia_init(DEFAULT_ROOT_PATH)

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Union
+from typing import Union
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def final_eos_is_already_included(
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     sub_slot_iters: uint64,
 ) -> bool:
     """
@@ -56,7 +56,7 @@ def final_eos_is_already_included(
 def get_block_challenge(
     constants: ConsensusConstants,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     genesis_block: bool,
     overflow: bool,
     skip_overflow_last_ss_validation: bool,
@@ -89,7 +89,7 @@ def get_block_challenge(
                     challenges_to_look_for = 2
             else:
                 challenges_to_look_for = 1
-            reversed_challenge_hashes: List[bytes32] = []
+            reversed_challenge_hashes: list[bytes32] = []
             curr: BlockRecord = blocks.block_record(header_block.prev_header_hash)
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:

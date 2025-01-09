@@ -3,14 +3,15 @@ from __future__ import annotations
 import asyncio
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
 from sqlite3 import Row
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Optional
 
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.pprint import print_compact_ranges
+from chia.wallet.util.pprint import print_compact_ranges
 from chia.wallet.util.wallet_types import WalletType
 
 # TODO: Check for missing paired wallets (eg. No DID wallet for an NFT)
@@ -48,18 +49,18 @@ def _validate_args_addresses_used(wallet_id: int, last_index: int, last_hardened
             raise ValueError(f"Invalid argument: noncontiguous derivation_index at {last_index} wallet_id={wallet_id}")
 
 
-def check_addresses_used_contiguous(derivation_paths: List[DerivationPath]) -> List[str]:
+def check_addresses_used_contiguous(derivation_paths: list[DerivationPath]) -> list[str]:
     """
     The used column for addresses in the derivation_paths table should be a
     zero or greater run of 1's, followed by a zero or greater run of 0's.
     There should be no used derivations after seeing a used derivation.
     """
-    errors: List[str] = []
+    errors: list[str] = []
 
     for wallet_id, dps in dp_by_wallet_id(derivation_paths).items():
         saw_unused = False
-        bad_used_values: Set[int] = set()
-        ordering_errors: List[str] = []
+        bad_used_values: set[int] = set()
+        ordering_errors: list[str] = []
         # last_index = None
         # last_hardened = None
         for dp in dps:
@@ -89,7 +90,7 @@ def check_addresses_used_contiguous(derivation_paths: List[DerivationPath]) -> L
     return errors
 
 
-def check_for_gaps(array: List[int], start: int, end: int, *, data_type_plural: str = "Elements") -> List[str]:
+def check_for_gaps(array: list[int], start: int, end: int, *, data_type_plural: str = "Elements") -> list[str]:
     """
     Check for compact sequence:
     Check that every value from start to end is present in array, and no more.
@@ -100,7 +101,7 @@ def check_for_gaps(array: List[int], start: int, end: int, *, data_type_plural: 
 
     if start > end:
         raise ValueError(f"{__name__} called with incorrect arguments: start={start} end={end} (start > end)")
-    errors: List[str] = []
+    errors: list[str] = []
 
     if start == end and len(array) == 1:
         return errors
@@ -123,7 +124,7 @@ def check_for_gaps(array: List[int], start: int, end: int, *, data_type_plural: 
 
 
 class FromDB:
-    def __init__(self, row: Iterable[Any], fields: List[str]) -> None:
+    def __init__(self, row: Iterable[Any], fields: list[str]) -> None:
         self.fields = fields
         for field, value in zip(fields, row):
             setattr(self, field, value)
@@ -138,13 +139,13 @@ class FromDB:
 def wallet_type_name(
     wallet_type: int,
 ) -> str:
-    if wallet_type in set(wt.value for wt in WalletType):
+    if wallet_type in {wt.value for wt in WalletType}:
         return f"{WalletType(wallet_type).name} ({wallet_type})"
     else:
         return f"INVALID_WALLET_TYPE ({wallet_type})"
 
 
-def _cwr(row: Row) -> List[Any]:
+def _cwr(row: Row) -> list[Any]:
     r = []
     for i, v in enumerate(row):
         if i == 2:
@@ -175,7 +176,7 @@ class Wallet(FromDB):
     data: str
 
 
-def dp_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[DerivationPath]]:
+def dp_by_wallet_id(derivation_paths: list[DerivationPath]) -> dict[int, list[DerivationPath]]:
     d = defaultdict(list)
     for derivation_path in derivation_paths:
         d[derivation_path.wallet_id].append(derivation_path)
@@ -184,7 +185,7 @@ def dp_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[De
     return d
 
 
-def derivation_indices_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[int]]:
+def derivation_indices_by_wallet_id(derivation_paths: list[DerivationPath]) -> dict[int, list[int]]:
     d = dp_by_wallet_id(derivation_paths)
     di = {}
     for k, v in d.items():
@@ -192,7 +193,7 @@ def derivation_indices_by_wallet_id(derivation_paths: List[DerivationPath]) -> D
     return di
 
 
-def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath]) -> None:
+def print_min_max_derivation_for_wallets(derivation_paths: list[DerivationPath]) -> None:
     d = derivation_indices_by_wallet_id(derivation_paths)
     print("Min, Max, Count of derivations for each wallet:")
     for wallet_id, derivation_index_list in d.items():
@@ -205,11 +206,12 @@ def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath])
 
 class WalletDBReader:
     db_wrapper: DBWrapper2  # TODO: Remove db_wrapper member
-    config = {"db_readers": 1}
-    sql_log_path = None
+    # TODO: make this a dataclass and make this an instance attribute instead of a mutable classvar
+    config = {"db_readers": 1}  # noqa: RUF012
+    sql_log_path: Optional[Path] = None
     verbose = False
 
-    async def get_all_wallets(self) -> List[Wallet]:
+    async def get_all_wallets(self) -> list[Wallet]:
         wallet_fields = ["id", "name", "wallet_type", "data"]
         async with self.db_wrapper.reader_no_transaction() as reader:
             # TODO: if table doesn't exist
@@ -217,7 +219,7 @@ class WalletDBReader:
             rows = await cursor.fetchall()
             return [Wallet(r, wallet_fields) for r in rows]
 
-    async def get_derivation_paths(self) -> List[DerivationPath]:
+    async def get_derivation_paths(self) -> list[DerivationPath]:
         fields = ["derivation_index", "pubkey", "puzzle_hash", "wallet_type", "wallet_id", "used", "hardened"]
         async with self.db_wrapper.reader_no_transaction() as reader:
             # TODO: if table doesn't exist
@@ -225,7 +227,7 @@ class WalletDBReader:
             rows = await cursor.fetchall()
             return [DerivationPath(row, fields) for row in rows]
 
-    async def show_tables(self) -> List[str]:
+    async def show_tables(self) -> list[str]:
         async with self.db_wrapper.reader_no_transaction() as reader:
             cursor = await reader.execute("""SELECT name FROM sqlite_master WHERE type='table';""")
             print("\nWallet DB Tables:")
@@ -237,7 +239,7 @@ class WalletDBReader:
             print()
             return []
 
-    async def check_wallets(self) -> List[str]:
+    async def check_wallets(self) -> list[str]:
         # id, name, wallet_type, data
         # TODO: Move this SQL up a level
         async with self.db_wrapper.reader_no_transaction() as reader:
@@ -256,6 +258,7 @@ class WalletDBReader:
             except Exception as e:
                 errors.append(f"Exception while trying to access wallet {main_wallet_id} from users_wallets: {e}")
 
+            max_id: Optional[int] = None
             max_id_row = await execute_fetchone(reader, "SELECT MAX(id) FROM users_wallets")
             if max_id_row is None:
                 errors.append("Error fetching max wallet ID from table users_wallets. No wallets ?!?")
@@ -263,6 +266,9 @@ class WalletDBReader:
                 cursor = await reader.execute("""SELECT * FROM users_wallets""")
                 rows = await cursor.fetchall()
                 max_id = max_id_row[0]
+
+            assert max_id is not None
+
             errors.extend(check_for_gaps([r[0] for r in rows], main_wallet_id, max_id, data_type_plural="Wallet IDs"))
 
             if self.verbose:
@@ -271,15 +277,15 @@ class WalletDBReader:
             # Check for invalid wallet types in users_wallets
             invalid_wallet_types = set()
             for row in rows:
-                if row[2] not in set(wt.value for wt in WalletType):
+                if row[2] not in {wt.value for wt in WalletType}:
                     invalid_wallet_types.add(row[2])
             if len(invalid_wallet_types) > 0:
                 errors.append(f"Invalid Wallet Types found in table users_wallets: {invalid_wallet_types}")
             return errors
 
     def check_wallets_missing_derivations(
-        self, wallets: List[Wallet], derivation_paths: List[DerivationPath]
-    ) -> List[str]:
+        self, wallets: list[Wallet], derivation_paths: list[DerivationPath]
+    ) -> list[str]:
         p = []
         d = derivation_indices_by_wallet_id(derivation_paths)  # TODO: calc this once, pass in
         for w in wallets:
@@ -289,7 +295,7 @@ class WalletDBReader:
             return [f"Wallet IDs with no derivations that require them: {p}"]
         return []
 
-    def check_derivations_are_compact(self, wallets: List[Wallet], derivation_paths: List[DerivationPath]) -> List[str]:
+    def check_derivations_are_compact(self, wallets: list[Wallet], derivation_paths: list[DerivationPath]) -> list[str]:
         errors = []
         """
         Gaps in derivation index
@@ -314,8 +320,8 @@ class WalletDBReader:
         return errors
 
     def check_unexpected_derivation_entries(
-        self, wallets: List[Wallet], derivation_paths: List[DerivationPath]
-    ) -> List[str]:
+        self, wallets: list[Wallet], derivation_paths: list[DerivationPath]
+    ) -> list[str]:
         """
         Check for unexpected derivation path entries
 
@@ -331,12 +337,12 @@ class WalletDBReader:
         wrong_type = defaultdict(list)
 
         for d in derivation_paths:
-            if d.wallet_type not in set(wt.value for wt in WalletType):
+            if d.wallet_type not in {wt.value for wt in WalletType}:
                 invalid_wallet_types.append(d.wallet_type)
             if d.wallet_id not in wallet_id_to_type:
                 missing_wallet_ids.append(d.wallet_id)
             elif d.wallet_type != wallet_id_to_type[d.wallet_id]:
-                wrong_type[(d.hardened, d.wallet_id, d.wallet_type, wallet_id_to_type[d.wallet_id])].append(
+                wrong_type[d.hardened, d.wallet_id, d.wallet_type, wallet_id_to_type[d.wallet_id]].append(
                     d.derivation_index
                 )
 
@@ -358,18 +364,18 @@ class WalletDBReader:
 
     async def scan(self, db_path: Path) -> int:
         """Returns number of lines of error output (not warnings)"""
-        self.db_wrapper = await DBWrapper2.create(
+        async with DBWrapper2.managed(
             database=db_path,
             reader_count=self.config.get("db_readers", 4),
             log_path=self.sql_log_path,
             synchronous=db_synchronous_on("auto"),
-        )
-        # TODO: Pass down db_wrapper
-        wallets = await self.get_all_wallets()
-        derivation_paths = await self.get_derivation_paths()
-        errors = []
-        warnings = []
-        try:
+        ) as self.db_wrapper:
+            # TODO: Pass down db_wrapper
+            wallets = await self.get_all_wallets()
+            derivation_paths = await self.get_derivation_paths()
+            errors = []
+            warnings = []
+
             if self.verbose:
                 await self.show_tables()
                 print_min_max_derivation_for_wallets(derivation_paths)
@@ -387,14 +393,13 @@ class WalletDBReader:
             if len(errors) > 0:
                 print(f"    ---- Errors Found for {db_path.name}----")
                 print("\n".join(errors))
-        finally:
-            await self.db_wrapper.close()
+
         return len(errors)
 
 
-async def scan(root_path: str, db_path: Optional[str] = None, *, verbose: bool = False) -> None:
+async def scan(root_path: Path, db_path: Optional[str] = None, *, verbose: bool = False) -> None:
     if db_path is None:
-        wallet_db_path = Path(root_path) / "wallet" / "db"
+        wallet_db_path = root_path / "wallet" / "db"
         wallet_db_paths = list(wallet_db_path.glob("blockchain_wallet_*.sqlite"))
     else:
         wallet_db_paths = [Path(db_path)]
@@ -412,4 +417,4 @@ async def scan(root_path: str, db_path: Optional[str] = None, *, verbose: bool =
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(scan("", sys.argv[1]))
+    loop.run_until_complete(scan(Path(), sys.argv[1]))

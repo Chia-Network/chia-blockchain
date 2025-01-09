@@ -1,31 +1,21 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import Optional, cast
 
+import chia_rs
 from bitstring import BitArray
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import Verifier
 
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32
-from chia.util.streamable import Streamable, streamable
+from chia.util.ints import uint32
+
+ProofOfSpace = chia_rs.ProofOfSpace
 
 log = logging.getLogger(__name__)
-
-
-@streamable
-@dataclass(frozen=True)
-class ProofOfSpace(Streamable):
-    challenge: bytes32
-    pool_public_key: Optional[G1Element]  # Only one of these two should be present
-    pool_contract_puzzle_hash: Optional[bytes32]
-    plot_public_key: G1Element
-    size: uint8
-    proof: bytes
 
 
 def get_plot_id(pos: ProofOfSpace) -> bytes32:
@@ -96,7 +86,7 @@ def passes_plot_filter(
 
 
 def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
-    prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER
+    prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER)
     if height >= constants.PLOT_FILTER_32_HEIGHT:
         prefix_bits -= 4
     elif height >= constants.PLOT_FILTER_64_HEIGHT:

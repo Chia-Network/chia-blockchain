@@ -1,8 +1,13 @@
 # Starts a sync test for every new release (pre-releases included)
 name: Start Sync Test
+
 on:
   release:
     types: [published]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   start_release:
@@ -13,7 +18,19 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Trigger Workflow
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"test_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/$RELEASE_TAG/start
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"test_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/$RELEASE_TAG/success/deploy
+
+      - name: Trigger sync test workflow via github-glue
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: '{"test_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "sync-test/${{ env.RELEASE_TAG }}"
+          glue_path: "start"
+
+      - name: Trigger sync test workflow success via github-glue
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: '{"test_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "sync-test/${{ env.RELEASE_TAG }}"
+          glue_path: "success/deploy"

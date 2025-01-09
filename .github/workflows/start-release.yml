@@ -5,6 +5,10 @@ on:
   release:
     types: [published]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   start_release:
     name: Starts release process in Glue API
@@ -16,11 +20,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Start pre-release
+        uses: Chia-Network/actions/github/glue@main
         if: "github.event.release.prerelease"
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/start
+        with:
+          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}"
+          glue_path: "start"
 
       - name: Start release
+        uses: Chia-Network/actions/github/glue@main
         if: "!github.event.release.prerelease"
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/start
+        with:
+          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}"
+          glue_path: "start"

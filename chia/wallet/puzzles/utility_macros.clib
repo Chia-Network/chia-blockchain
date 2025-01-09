@@ -37,4 +37,12 @@
     )
   )
 
+  (defun gte (atom_a atom_b)
+    (not (> atom_b atom_a))
+  )
+
+  (defun lte (atom_a atom_b)
+    (not (> atom_a atom_b))
+  )
+
 )

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from enum import IntEnum
+from typing import Optional
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
@@ -27,8 +29,8 @@ class PoolDifficulty(Streamable):
 @streamable
 @dataclass(frozen=True)
 class HarvesterHandshake(Streamable):
-    farmer_public_keys: List[G1Element]
-    pool_public_keys: List[G1Element]
+    farmer_public_keys: list[G1Element]
+    pool_public_keys: list[G1Element]
 
 
 @streamable
@@ -39,8 +41,14 @@ class NewSignagePointHarvester(Streamable):
     sub_slot_iters: uint64
     signage_point_index: uint8
     sp_hash: bytes32
-    pool_difficulties: List[PoolDifficulty]
+    pool_difficulties: list[PoolDifficulty]
     filter_prefix_bits: uint8
+
+
+@streamable
+@dataclass(frozen=True)
+class ProofOfSpaceFeeInfo(Streamable):
+    applied_fee_threshold: uint32
 
 
 @streamable
@@ -51,15 +59,41 @@ class NewProofOfSpace(Streamable):
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
+    include_source_signature_data: bool
+    farmer_reward_address_override: Optional[bytes32]
+    fee_info: Optional[ProofOfSpaceFeeInfo]
 
 
+# Source data corresponding to the hash that is sent to the Harvester for signing
+class SigningDataKind(IntEnum):
+    FOLIAGE_BLOCK_DATA = 1
+    FOLIAGE_TRANSACTION_BLOCK = 2
+    CHALLENGE_CHAIN_VDF = 3
+    REWARD_CHAIN_VDF = 4
+    CHALLENGE_CHAIN_SUB_SLOT = 5
+    REWARD_CHAIN_SUB_SLOT = 6
+    PARTIAL = 7
+
+
+@streamable
+@dataclass(frozen=True)
+class SignatureRequestSourceData(Streamable):
+    kind: uint8
+    data: bytes
+
+
+# message_data elements are optional as FoliageTransactionBlock may not always be present in
+# the case of the UnfinishedBlock not being a transaction block.
 @streamable
 @dataclass(frozen=True)
 class RequestSignatures(Streamable):
     plot_identifier: str
     challenge_hash: bytes32
     sp_hash: bytes32
-    messages: List[bytes32]
+    messages: list[bytes32]
+    # This, and rc_block_unfinished are only set when using a third-party harvester (see CHIP-22)
+    message_data: Optional[list[Optional[SignatureRequestSourceData]]]
+    rc_block_unfinished: Optional[RewardChainBlockUnfinished]
 
 
 @streamable
@@ -70,7 +104,9 @@ class RespondSignatures(Streamable):
     sp_hash: bytes32
     local_pk: G1Element
     farmer_pk: G1Element
-    message_signatures: List[Tuple[bytes32, G2Element]]
+    message_signatures: list[tuple[bytes32, G2Element]]
+    include_source_signature_data: bool
+    farmer_reward_address_override: Optional[bytes32]
 
 
 @streamable
@@ -96,9 +132,9 @@ class RequestPlots(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RespondPlots(Streamable):
-    plots: List[Plot]
-    failed_to_open_filenames: List[str]
-    no_key_filenames: List[str]
+    plots: list[Plot]
+    failed_to_open_filenames: list[str]
+    no_key_filenames: list[str]
 
 
 @streamable
@@ -130,7 +166,7 @@ class PlotSyncStart(Streamable):
 @dataclass(frozen=True)
 class PlotSyncPathList(Streamable):
     identifier: PlotSyncIdentifier
-    data: List[str]
+    data: list[str]
     final: bool
 
     def __str__(self) -> str:
@@ -141,7 +177,7 @@ class PlotSyncPathList(Streamable):
 @dataclass(frozen=True)
 class PlotSyncPlotList(Streamable):
     identifier: PlotSyncIdentifier
-    data: List[Plot]
+    data: list[Plot]
     final: bool
 
     def __str__(self) -> str:

@@ -5,10 +5,10 @@ import logging
 import ssl
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Literal, Optional, Union, overload
 
 from aiohttp import ClientConnectorError, ClientSession
-from blspy import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -20,6 +20,7 @@ from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_NO_KEYS,
 )
 from chia.server.server import ssl_context_for_client
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import (
     KeychainIsEmpty,
@@ -30,6 +31,7 @@ from chia.util.errors import (
     KeychainProxyConnectionTimeout,
 )
 from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage
 
 
@@ -70,7 +72,7 @@ class KeychainProxy(DaemonProxy):
         """
         return self.keychain is not None
 
-    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+    def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
         """
         Overrides DaemonProxy.format_request() to add keychain-specific RPC params
         """
@@ -97,8 +99,8 @@ class KeychainProxy(DaemonProxy):
         except asyncio.TimeoutError:
             raise KeychainProxyConnectionTimeout()
 
-    async def start(self) -> None:
-        self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
+    async def start(self, wait_for_start: bool = False) -> None:
+        self.keychain_connection_task = create_referenced_task(self.connect_to_keychain())
         await self.connection_established.wait()  # wait until connection is established.
 
     async def connect_to_keychain(self) -> None:
@@ -110,7 +112,7 @@ class KeychainProxy(DaemonProxy):
                     autoclose=True,
                     autoping=True,
                     heartbeat=self.heartbeat,
-                    ssl_context=self.ssl_context,
+                    ssl=self.ssl_context if self.ssl_context is not None else True,
                     max_msg_size=self.max_message_size,
                 )
                 await self.listener()
@@ -140,7 +142,7 @@ class KeychainProxy(DaemonProxy):
         if self.keychain_connection_task is not None:
             await self.keychain_connection_task
 
-    async def get_response_for_request(self, request_name: str, data: Dict[str, Any]) -> Tuple[WsRpcMessage, bool]:
+    async def get_response_for_request(self, request_name: str, data: dict[str, Any]) -> tuple[WsRpcMessage, bool]:
         request = self.format_request(request_name, data)
         response = await self._get(request)
         success = response["data"].get("success", False)
@@ -169,20 +171,42 @@ class KeychainProxy(DaemonProxy):
                     raise Exception(f"{err}")
                 raise Exception(f"{error}")
 
-    async def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
+    @overload
+    async def add_key(self, mnemonic_or_pk: str) -> PrivateKey: ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey: ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey: ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element: ...
+
+    @overload
+    async def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: bool
+    ) -> Union[PrivateKey, G1Element]: ...
+
+    async def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+    ) -> Union[PrivateKey, G1Element]:
         """
-        Forwards to Keychain.add_private_key()
+        Forwards to Keychain.add_key()
         """
-        key: PrivateKey
+        key: Union[PrivateKey, G1Element]
         if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic, label)
+            key = self.keychain.add_key(mnemonic_or_pk, label, private)
         else:
             response, success = await self.get_response_for_request(
-                "add_private_key", {"mnemonic": mnemonic, "label": label}
+                "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private}
             )
             if success:
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
+                if private:
+                    seed = mnemonic_to_seed(mnemonic_or_pk)
+                    key = AugSchemeMPL.key_gen(seed)
+                else:
+                    key = G1Element.from_bytes(hexstr_to_bytes(mnemonic_or_pk))
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:
@@ -229,11 +253,11 @@ class KeychainProxy(DaemonProxy):
             if not success:
                 self.handle_error(response)
 
-    async def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
+    async def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:
         """
         Forwards to Keychain.get_all_private_keys()
         """
-        keys: List[Tuple[PrivateKey, bytes]] = []
+        keys: list[tuple[PrivateKey, bytes]] = []
         if self.use_local_keychain():
             keys = self.keychain.get_all_private_keys()
         else:
@@ -304,37 +328,62 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[True]
+    ) -> Optional[PrivateKey]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[False]
+    ) -> Optional[G1Element]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool
+    ) -> Optional[Union[PrivateKey, G1Element]]: ...
+
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool = True
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Locates and returns a private key matching the provided fingerprint
         """
-        key: Optional[PrivateKey] = None
+        key: Optional[Union[PrivateKey, G1Element]] = None
         if self.use_local_keychain():
-            private_keys = self.keychain.get_all_private_keys()
-            if len(private_keys) == 0:
+            keys = self.keychain.get_keys(include_secrets=private)
+            if len(keys) == 0:
                 raise KeychainIsEmpty()
             else:
+                selected_key = keys[0]
                 if fingerprint is not None:
-                    for sk, _ in private_keys:
-                        if sk.get_g1().get_fingerprint() == fingerprint:
-                            key = sk
+                    for key_data in keys:
+                        if key_data.public_key.get_fingerprint() == fingerprint:
+                            selected_key = key_data
                             break
-                    if key is None:
+                    else:
                         raise KeychainKeyNotFound(fingerprint)
+                if private and selected_key.secrets is not None:
+                    key = selected_key.private_key
+                elif not private:
+                    key = selected_key.public_key
                 else:
-                    key = private_keys[0][0]
+                    return None
         else:
             response, success = await self.get_response_for_request(
-                "get_key_for_fingerprint", {"fingerprint": fingerprint}
+                "get_key_for_fingerprint", {"fingerprint": fingerprint, "private": private}
             )
             if success:
                 pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)
-                if pk is None or ent is None:
+                if pk is None or (private and ent is None):
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
-                else:
+                elif private:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
@@ -343,6 +392,8 @@ class KeychainProxy(DaemonProxy):
                     else:
                         err = "G1Elements don't match"
                         self.log.error(f"{err}")
+                else:
+                    key = G1Element.from_bytes(bytes.fromhex(pk))
             else:
                 self.handle_error(response)
 
@@ -365,11 +416,11 @@ class KeychainProxy(DaemonProxy):
                 self.handle_error(response)
         return key_data
 
-    async def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+    async def get_keys(self, include_secrets: bool = False) -> list[KeyData]:
         """
         Returns all KeyData
         """
-        keys: List[KeyData] = []
+        keys: list[KeyData] = []
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets)
         else:

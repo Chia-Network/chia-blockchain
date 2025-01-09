@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.util.ints import uint64
@@ -51,4 +51,4 @@ class FeeEstimateGroup(Streamable):
     """
 
     error: Optional[str]
-    estimates: List[FeeEstimate]
+    estimates: list[FeeEstimate]

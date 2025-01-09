@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Iterator, List, Optional, Tuple
+from collections.abc import Iterator
+from typing import Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -160,7 +161,7 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #
 
 
-def match_singleton_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, Iterator[Program]]:
+def match_singleton_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, Iterator[Program]]:
     if puzzle.mod == SINGLETON_MOD:
         return True, puzzle.args.as_iter()
     else:
@@ -172,18 +173,13 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
     return Coin(coin.name(), SINGLETON_LAUNCHER_HASH, amount)
 
 
-def remove_singleton_truth_wrapper(puzzle: Program) -> Program:
-    inner_puzzle: Program = puzzle.rest().first().rest()
-    return inner_puzzle
-
-
 # Take standard coin and amount -> launch conditions & launcher coin solution
 def launch_conditions_and_coinsol(
     coin: Coin,
     inner_puzzle: Program,
-    comment: List[Tuple[str, str]],
+    comment: list[tuple[str, str]],
     amount: uint64,
-) -> Tuple[List[Program], CoinSpend]:
+) -> tuple[list[Program], CoinSpend]:
     if (amount % 2) == 0:
         raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
@@ -216,7 +212,7 @@ def launch_conditions_and_coinsol(
 
     conditions = [create_launcher, assert_launcher_announcement]
 
-    launcher_coin_spend = CoinSpend(
+    launcher_coin_spend = make_spend(
         launcher_coin,
         SINGLETON_LAUNCHER,
         launcher_solution,
@@ -314,7 +310,7 @@ def claim_p2_singleton(
     launcher_id: bytes32,
     delay_time: Optional[uint64] = None,
     delay_ph: Optional[bytes32] = None,
-) -> Tuple[Program, Program, CoinSpend]:
+) -> tuple[Program, Program, CoinSpend]:
     assertion = Program.to([ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(p2_singleton_coin.name() + b"$")])
     announcement = Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin.name()])
     if delay_time is None or delay_ph is None:
@@ -325,7 +321,7 @@ def claim_p2_singleton(
             delay_time,
             delay_ph,
         )
-    claim_coinsol = CoinSpend(
+    claim_coinsol = make_spend(
         p2_singleton_coin,
         puzzle,
         solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),
@@ -341,7 +337,7 @@ def spend_to_delayed_puzzle(
     delay_time: uint64,
     delay_ph: bytes32,
 ) -> CoinSpend:
-    claim_coinsol = CoinSpend(
+    claim_coinsol = make_spend(
         p2_singleton_coin,
         pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph),
         solution_for_p2_delayed_puzzle(output_amount),

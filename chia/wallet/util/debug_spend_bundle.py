@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import List
-
-from blspy import AugSchemeMPL, G1Element
-from clvm import KEYWORD_FROM_ATOM
+from chia_rs import AugSchemeMPL
+from clvm.operators import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -14,7 +12,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 from chia.util.hash import std_hash
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
+CONDITIONS = {opcode.name: opcode.value[0] for opcode in ConditionOpcode}
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 
@@ -76,9 +74,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     pks = []
     msgs = []
 
-    created_coin_announcements: List[List[bytes]] = []
+    created_coin_announcements: list[list[bytes]] = []
     asserted_coin_announcements = []
-    created_puzzle_announcements: List[List[bytes]] = []
+    created_puzzle_announcements: list[list[bytes]] = []
     asserted_puzzle_announcements = []
 
     print("=" * 80)
@@ -106,11 +104,11 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             continue
 
         conditions = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
-        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
-            pks.append(G1Element.from_bytes(pk_bytes))
+        for pk, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
+            pks.append(pk)
             msgs.append(m)
         print()
-        cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+        _cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
         print(disassemble(r))
         create_coin_conditions = [con for con in r.as_iter() if con.first().as_int() == 51]
         print()
@@ -121,9 +119,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
                 for c in condition_programs:
                     if len(c.vars) == 0:
                         as_prog = Program.to([c.opcode])
-                    if len(c.vars) == 1:
+                    elif len(c.vars) == 1:
                         as_prog = Program.to([c.opcode, c.vars[0]])
-                    if len(c.vars) == 2:
+                    elif len(c.vars) == 2:
                         if c.opcode == ConditionOpcode.CREATE_COIN:
                             cc = next(
                                 cc
@@ -136,15 +134,18 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
                                 as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
                         else:
                             as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
+                    else:
+                        raise Exception(f"Unexpected number of vars: {len(c.vars)}")
+
                     print(f"  {disassemble(as_prog)}")
             created_coin_announcements.extend(
-                [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
+                [coin_name, *_.vars] for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
             )
             asserted_coin_announcements.extend(
                 [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
             )
             created_puzzle_announcements.extend(
-                [puzzle_reveal.get_tree_hash()] + _.vars
+                [puzzle_reveal.get_tree_hash(), *_.vars]
                 for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
             )
             asserted_puzzle_announcements.extend(
@@ -159,7 +160,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     created = set(spend_bundle.additions())
     spent = set(spend_bundle.removals())
 
-    zero_coin_set = set(coin.name() for coin in created if coin.amount == 0)
+    zero_coin_set = {coin.name() for coin in created if coin.amount == 0}
 
     ephemeral = created.intersection(spent)
     created.difference_update(ephemeral)
@@ -189,9 +190,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             as_hex = [f"0x{_.hex()}" for _ in announcement]
             print(f"  {as_hex} =>\n      {hashed}")
 
-    eor_coin_announcements = sorted(
-        set(_[-1] for _ in created_coin_announcement_pairs) ^ set(asserted_coin_announcements)
-    )
+    eor_coin_announcements = sorted({_[-1] for _ in created_coin_announcement_pairs} ^ set(asserted_coin_announcements))
 
     created_puzzle_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_puzzle_announcements]
     if created_puzzle_announcements:
@@ -201,7 +200,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             print(f"  {as_hex} =>\n      {hashed}")
 
     eor_puzzle_announcements = sorted(
-        set(_[-1] for _ in created_puzzle_announcement_pairs) ^ set(asserted_puzzle_announcements)
+        {_[-1] for _ in created_puzzle_announcement_pairs} ^ set(asserted_puzzle_announcements)
     )
 
     print()

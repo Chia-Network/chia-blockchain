@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import concurrent
+import contextlib
 import dataclasses
 import logging
-import multiprocessing
+from collections.abc import AsyncIterator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from typing_extensions import Literal
 
@@ -38,12 +39,18 @@ from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.util.cpu import available_logical_cores
 from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)
 
 
 class Harvester:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Harvester", None)
+
     plot_manager: PlotManager
     plot_sync_sender: Sender
     root_path: Path
@@ -65,7 +72,7 @@ class Harvester:
 
         return self._server
 
-    def __init__(self, root_path: Path, config: Dict[str, Any], constants: ConsensusConstants):
+    def __init__(self, root_path: Path, config: dict[str, Any], constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
         # TODO, remove checks below later after some versions / time
@@ -95,8 +102,9 @@ class Harvester:
 
         context_count = config.get("parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT)
         thread_count = config.get("decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT)
+        cpu_count = available_logical_cores()
         if thread_count == 0:
-            thread_count = multiprocessing.cpu_count() // 2
+            thread_count = cpu_count // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY)
         max_compression_level_allowed = config.get(
             "max_compression_level_allowed", DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED
@@ -123,21 +131,22 @@ class Harvester:
 
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
 
-    async def _start(self) -> None:
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
         self._refresh_lock = asyncio.Lock()
         self.event_loop = asyncio.get_running_loop()
+        try:
+            yield
+        finally:
+            self._shut_down = True
+            self.executor.shutdown(wait=True)
+            self.plot_manager.stop_refreshing()
+            self.plot_manager.reset()
+            self.plot_sync_sender.stop()
 
-    def _close(self) -> None:
-        self._shut_down = True
-        self.executor.shutdown(wait=True)
-        self.plot_manager.stop_refreshing()
-        self.plot_manager.reset()
-        self.plot_sync_sender.stop()
+            await self.plot_sync_sender.await_closed()
 
-    async def _await_closed(self) -> None:
-        await self.plot_sync_sender.await_closed()
-
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
@@ -146,7 +155,7 @@ class Harvester:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -166,16 +175,16 @@ class Harvester:
         if event == PlotRefreshEvents.done:
             self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection")
         self.plot_sync_sender.stop()
         asyncio.run_coroutine_threadsafe(self.plot_sync_sender.await_closed(), asyncio.get_running_loop())
         self.plot_manager.stop_refreshing()
 
-    def get_plots(self) -> Tuple[List[Dict[str, Any]], List[str], List[str]]:
+    def get_plots(self) -> tuple[list[dict[str, Any]], list[str], list[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
-        response_plots: List[Dict[str, Any]] = []
+        response_plots: list[dict[str, Any]] = []
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
@@ -214,7 +223,7 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_plot_directories(self) -> List[str]:
+    async def get_plot_directories(self) -> list[str]:
         return get_plot_directories(self.root_path)
 
     async def remove_plot_directory(self, str_path: str) -> bool:
@@ -222,7 +231,7 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_harvester_config(self) -> Dict[str, Any]:
+    async def get_harvester_config(self) -> dict[str, Any]:
         return get_harvester_config(self.root_path)
 
     async def update_harvester_config(

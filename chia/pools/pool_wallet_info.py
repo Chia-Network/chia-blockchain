@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
@@ -64,7 +62,7 @@ class PoolState(Streamable):
 
 
 def initial_pool_state_from_dict(
-    state_dict: Dict[str, Any],
+    state_dict: dict[str, Any],
     owner_pubkey: G1Element,
     owner_puzzle_hash: bytes32,
 ) -> PoolState:
@@ -76,7 +74,7 @@ def initial_pool_state_from_dict(
         pool_url: str = ""
         relative_lock_height = uint32(0)
     elif singleton_state == FARMING_TO_POOL:
-        target_puzzle_hash = bytes32(hexstr_to_bytes(state_dict["target_puzzle_hash"]))
+        target_puzzle_hash = bytes32.from_hexstr(state_dict["target_puzzle_hash"])
         pool_url = state_dict["pool_url"]
         relative_lock_height = uint32(state_dict["relative_lock_height"])
     else:
@@ -94,8 +92,8 @@ def create_pool_state(
     pool_url: Optional[str],
     relative_lock_height: uint32,
 ) -> PoolState:
-    if state not in set(s.value for s in PoolSingletonState):
-        raise AssertionError("state {state} is not a valid PoolSingletonState,")
+    if state not in {s.value for s in PoolSingletonState}:
+        raise AssertionError(f"state {state} is not a valid PoolSingletonState,")
     ps = PoolState(
         POOL_PROTOCOL_VERSION, uint8(state), target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height
     )
@@ -116,6 +114,5 @@ class PoolWalletInfo(Streamable):
     launcher_coin: Coin
     launcher_id: bytes32
     p2_singleton_puzzle_hash: bytes32
-    current_inner: Program  # Inner puzzle in current singleton, not revealed yet
     tip_singleton_coin_id: bytes32
     singleton_block_height: uint32  # Block height that current PoolState is from

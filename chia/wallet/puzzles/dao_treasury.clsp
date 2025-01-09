@@ -79,14 +79,17 @@
 
             (c
               (list ASSERT_COIN_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
-              (a
-                PROPOSAL_VALIDATOR
-                (list
-                  ATTENDANCE_REQUIRED
-                  PASS_MARGIN
-                  proposal_announcement
-                  proposal_validator_solution
-                  (a delegated_puzzle_reveal delegated_solution)
+              (c
+                (list ASSERT_HEIGHT_RELATIVE 1)
+                (a
+                  PROPOSAL_VALIDATOR
+                  (list
+                    ATTENDANCE_REQUIRED
+                    PASS_MARGIN
+                    proposal_announcement
+                    proposal_validator_solution
+                    (a delegated_puzzle_reveal delegated_solution)
+                  )
                 )
               )
             )

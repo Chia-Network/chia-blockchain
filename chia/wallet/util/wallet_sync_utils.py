@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, Optional, Union
 
-from chia_rs import compute_merkle_set_root
+from chia_rs import compute_merkle_set_root, confirm_included_already_hashed, confirm_not_included_already_hashed
 
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
@@ -33,10 +33,10 @@ from chia.protocols.wallet_protocol import (
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
-from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 
 log = logging.getLogger(__name__)
@@ -47,10 +47,10 @@ class PeerRequestException(Exception):
 
 
 async def subscribe_to_phs(
-    puzzle_hashes: List[bytes32],
+    puzzle_hashes: list[bytes32],
     peer: WSChiaConnection,
     min_height: int,
-) -> List[CoinState]:
+) -> list[CoinState]:
     """
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
@@ -64,10 +64,10 @@ async def subscribe_to_phs(
 
 
 async def subscribe_to_coin_updates(
-    coin_names: List[bytes32],
+    coin_names: list[bytes32],
     peer: WSChiaConnection,
     min_height: int,
-) -> List[CoinState]:
+) -> list[CoinState]:
     """
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
@@ -82,13 +82,13 @@ async def subscribe_to_coin_updates(
 
 
 def validate_additions(
-    coins: List[Tuple[bytes32, List[Coin]]],
-    proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
+    coins: list[tuple[bytes32, list[Coin]]],
+    proofs: Optional[list[tuple[bytes32, bytes, Optional[bytes]]]],
     root: bytes32,
 ) -> bool:
     if proofs is None:
         # Verify root
-        additions_merkle_items: List[bytes32] = []
+        additions_merkle_items: list[bytes32] = []
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle_hash, coins_l in coins:
@@ -101,7 +101,7 @@ def validate_additions(
     else:
         for i in range(len(coins)):
             assert coins[i][0] == proofs[i][0]
-            coin_list_1: List[Coin] = coins[i][1]
+            coin_list_1: list[Coin] = coins[i][1]
             puzzle_hash_proof: Optional[bytes] = proofs[i][1]
             coin_list_proof: Optional[bytes] = proofs[i][2]
             if len(coin_list_1) == 0:
@@ -144,19 +144,15 @@ def validate_additions(
 
 
 def validate_removals(
-    coins: List[Tuple[bytes32, Optional[Coin]]], proofs: Optional[List[Tuple[bytes32, bytes]]], root: bytes32
+    coins: list[tuple[bytes32, Optional[Coin]]], proofs: Optional[list[tuple[bytes32, bytes]]], root: bytes32
 ) -> bool:
     if proofs is None:
         # If there are no proofs, it means all removals were returned in the response.
         # we must find the ones relevant to our wallets.
 
         # Verify removals root
-        removals_merkle_set = MerkleSet()
-        for name_coin in coins:
-            _, coin = name_coin
-            if coin is not None:
-                removals_merkle_set.add_already_hashed(coin.name())
-        removals_root = removals_merkle_set.get_root()
+        removals_items = [name for name, coin in coins if coin is not None]
+        removals_root = bytes32(compute_merkle_set_root(removals_items))
         if root != removals_root:
             return False
     else:
@@ -202,7 +198,6 @@ async def request_and_validate_removals(
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
         return False
-    assert removals_res.proofs is not None
     return validate_removals(removals_res.coins, removals_res.proofs, removals_root)
 
 
@@ -241,7 +236,7 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
-def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
+def sort_coin_states(coin_states: set[CoinState]) -> list[CoinState]:
     return sorted(
         coin_states,
         key=lambda coin_state: (
@@ -254,21 +249,21 @@ def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
 
 async def request_header_blocks(
     peer: WSChiaConnection, start_height: uint32, end_height: uint32
-) -> Optional[List[HeaderBlock]]:
+) -> Optional[list[HeaderBlock]]:
     if Capability.BLOCK_HEADERS in peer.peer_capabilities:
         response = await peer.call_api(
             FullNodeAPI.request_block_headers, RequestBlockHeaders(start_height, end_height, False)
         )
     else:
         response = await peer.call_api(FullNodeAPI.request_header_blocks, RequestHeaderBlocks(start_height, end_height))
-    if response is None or isinstance(response, RejectBlockHeaders) or isinstance(response, RejectHeaderBlocks):
+    if response is None or isinstance(response, (RejectBlockHeaders, RejectHeaderBlocks)):
         return None
-    assert isinstance(response, RespondHeaderBlocks) or isinstance(response, RespondBlockHeaders)
+    assert isinstance(response, (RespondHeaderBlocks, RespondBlockHeaders))
     return response.header_blocks
 
 
 async def _fetch_header_blocks_inner(
-    all_peers: List[Tuple[WSChiaConnection, bool]],
+    all_peers: list[tuple[WSChiaConnection, bool]],
     request_start: uint32,
     request_end: uint32,
 ) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
@@ -304,9 +299,9 @@ async def fetch_header_blocks_in_range(
     start: uint32,
     end: uint32,
     peer_request_cache: PeerRequestCache,
-    all_peers: List[Tuple[WSChiaConnection, bool]],
-) -> Optional[List[HeaderBlock]]:
-    blocks: List[HeaderBlock] = []
+    all_peers: list[tuple[WSChiaConnection, bool]],
+) -> Optional[list[HeaderBlock]]:
+    blocks: list[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
         request_start = min(uint32(i), end)
         request_end = min(uint32(i + 31), end)
@@ -322,7 +317,9 @@ async def fetch_header_blocks_in_range(
                 res_h_blocks = await res_h_blocks_task
         else:
             log.debug(f"Fetching: {start}-{end}")
-            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_start, request_end))
+            res_h_blocks_task = create_referenced_task(
+                _fetch_header_blocks_inner(all_peers, request_start, request_end)
+            )
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
         if res_h_blocks is None:
@@ -341,7 +338,7 @@ async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -
     assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
     assert solution_response.response.coin_name == coin.name()
 
-    return CoinSpend(
+    return make_spend(
         coin,
         solution_response.response.puzzle,
         solution_response.response.solution,

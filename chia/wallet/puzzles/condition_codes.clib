@@ -34,6 +34,10 @@
   ; puzzle-hash
   (defconstant ASSERT_CONCURRENT_PUZZLE 65)
 
+  ; mask message ...
+  (defconstant SEND_MESSAGE 66)
+  (defconstant RECEIVE_MESSAGE 67)
+
   ; the conditions below let coins inquire about themselves
 
   (defconstant ASSERT_MY_COIN_ID 70)

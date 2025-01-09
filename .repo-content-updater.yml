@@ -1,0 +1,3 @@
+var_overrides:
+  DEPENDABOT_ACTIONS_REVIEWERS: '["cmmarslender", "altendky"]'
+  DEPENDENCY_REVIEW_ALLOW_DEPENDENCIES_LICENSES: pkg:pypi/pyinstaller, pkg:pypi/mypy

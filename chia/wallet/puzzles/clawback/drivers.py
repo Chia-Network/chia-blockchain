@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional, Set, Union
+from typing import Any, Optional, Union
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.ints import uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
@@ -28,11 +29,11 @@ AUGMENTED_CONDITION_HASH = AUGMENTED_CONDITION.get_tree_hash()
 log = logging.getLogger(__name__)
 
 
-def create_augmented_cond_puzzle(condition: List[Union[int, uint64]], puzzle: Program) -> Program:
+def create_augmented_cond_puzzle(condition: list[Union[int, uint64]], puzzle: Program) -> Program:
     return AUGMENTED_CONDITION.curry(condition, puzzle)
 
 
-def create_augmented_cond_puzzle_hash(condition: List[Any], puzzle_hash: bytes32) -> bytes32:
+def create_augmented_cond_puzzle_hash(condition: list[Any], puzzle_hash: bytes32) -> bytes32:
     hash_of_quoted_mod_hash = calculate_hash_of_quoted_mod_hash(AUGMENTED_CONDITION_HASH)
     hashed_args = [Program.to(condition).get_tree_hash(), puzzle_hash]
     return curry_and_treehash(hash_of_quoted_mod_hash, *hashed_args)
@@ -75,7 +76,7 @@ def create_merkle_proof(merkle_tree: MerkleTree, puzzle_hash: bytes32) -> Progra
     To spend a p2_1_of_n clawback we recreate the full merkle tree
     The required proof is then selected from the merkle tree based on the puzzle_hash of the puzzle we
     want to execute
-    Returns a proof: (int, List[bytes32]) which can be provided to the p2_1_of_n solution
+    Returns a proof: (int, list[bytes32]) which can be provided to the p2_1_of_n solution
     """
     proof = merkle_tree.generate_proof(puzzle_hash)
     program: Program = Program.to((proof[0], proof[1][0]))
@@ -121,11 +122,17 @@ def create_merkle_solution(
 
 
 def match_clawback_puzzle(
-    uncurried: UncurriedPuzzle, inner_puzzle: Program, inner_solution: Program
+    uncurried: UncurriedPuzzle,
+    inner_puzzle: Union[Program, SerializedProgram],
+    inner_solution: Union[Program, SerializedProgram],
 ) -> Optional[ClawbackMetadata]:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:
         return None
+    if not isinstance(inner_puzzle, SerializedProgram):
+        inner_puzzle = SerializedProgram.from_program(inner_puzzle)
+    if not isinstance(inner_solution, SerializedProgram):
+        inner_solution = SerializedProgram.from_program(inner_solution)
     # Fetch Remark condition
     conditions = conditions_for_solution(
         inner_puzzle,
@@ -133,7 +140,7 @@ def match_clawback_puzzle(
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
     )
     metadata: Optional[ClawbackMetadata] = None
-    new_puzhash: Set[bytes32] = set()
+    new_puzhash: set[bytes32] = set()
     if conditions is not None:
         for condition in conditions:
             if (
@@ -178,4 +185,4 @@ def generate_clawback_spend_bundle(
     solution: Program = create_merkle_solution(
         time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash, inner_puzzle, inner_solution
     )
-    return CoinSpend(coin, puzzle, solution)
+    return make_spend(coin, puzzle, solution)

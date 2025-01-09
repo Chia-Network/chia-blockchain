@@ -7,17 +7,17 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import click
 from aiohttp import web
 
 from chia.data_layer.download_data import is_filename_valid
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.path import path_from_root
 from chia.util.setproctitle import setproctitle
@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class DataLayerServer:
     root_path: Path
-    config: Dict[str, Any]
+    config: dict[str, Any]
     log: logging.Logger
     shutdown_event: asyncio.Event
     webserver: Optional[WebServer] = None
@@ -62,7 +62,12 @@ class DataLayerServer:
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 
         self.webserver = await WebServer.create(
-            hostname=self.host_ip, port=self.port, routes=[web.get("/{filename}", self.file_handler)]
+            hostname=self.host_ip,
+            port=self.port,
+            routes=[
+                web.get("/{filename}", self.file_handler),
+                web.get("/{tree_id}/{filename}", self.folder_handler),
+            ],
         )
         self.log.info("Started Data Layer HTTP Server.")
 
@@ -92,7 +97,22 @@ class DataLayerServer:
             content = reader.read()
         response = web.Response(
             content_type="application/octet-stream",
-            headers={"Content-Disposition": "attachment;filename={}".format(filename)},
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
+            body=content,
+        )
+        return response
+
+    async def folder_handler(self, request: web.Request) -> web.Response:
+        tree_id = request.match_info["tree_id"]
+        filename = request.match_info["filename"]
+        if not is_filename_valid(tree_id + "-" + filename):
+            raise Exception("Invalid file format requested.")
+        file_path = self.server_dir.joinpath(tree_id).joinpath(filename)
+        with open(file_path, "rb") as reader:
+            content = reader.read()
+        response = web.Response(
+            content_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
             body=content,
         )
         return response

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from subprocess import check_call
 from sys import stdout
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 import click
 from colorama import Back, Fore, Style, init
@@ -27,7 +27,7 @@ class Frame:
     size: int
     fun_id: int
     count: int = 1
-    callers: Dict[str, CallInfo] = field(default_factory=dict)
+    callers: dict[str, CallInfo] = field(default_factory=dict)
 
     def add(self, size: int) -> None:
         self.size += size
@@ -35,7 +35,7 @@ class Frame:
 
 
 def color(pct: float) -> str:
-    return f"{int((100.-pct)//10)+1}"
+    return f"{int((100. - pct) // 10) + 1}"
 
 
 def fontcolor(pct: float) -> str:
@@ -48,8 +48,8 @@ def fontcolor(pct: float) -> str:
 @lru_cache(maxsize=10000)
 def resolve_function(file: str, line: int) -> str:
     try:
-        with open(file, "r") as f:
-            all_lines: List[str] = []
+        with open(file) as f:
+            all_lines: list[str] = []
             for row in f:
                 all_lines.append(row)
 
@@ -116,7 +116,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
 
     print(f"generating call tree for slot {slot}")
 
-    all_frames: Dict[str, Frame] = {}
+    all_frames: dict[str, Frame] = {}
 
     total_size = 0
     calls = 0
@@ -126,10 +126,10 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
         total_size += trace.size
         calls += 1
         if ((calls - 1) & 255) == 0:
-            stdout.write(f"\rtotal size: {total_size/1000000:0.3f} MB ({calls} allocs) ")
+            stdout.write(f"\rtotal size: {total_size / 1000000:0.3f} MB ({calls} allocs) ")
         # to support recursive functions, make sure we only visit each frame
         # once during traversal
-        visited: Set[str] = set()
+        visited: set[str] = set()
         for frame in trace.traceback:
             fun = resolve_function(frame.filename, frame.lineno)
             if fun in visited:
@@ -171,7 +171,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
             f.write(
                 f'frame_{fr.fun_id} [shape=box, label="{name}()\\l'
                 f"{percent:0.2f}%\\n"
-                f"{fr.size/1000000:0.3f}MB\\n"
+                f"{fr.size / 1000000:0.3f}MB\\n"
                 f'{fr.count}x\\n",'
                 f"fillcolor={color(percent)}, "
                 f"color={color(percent)}, "
@@ -201,7 +201,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
                 f.write(
                     f"frame_{caller_id} -> frame_{fr.fun_id} "
                     f'[label="{percent:0.2f}%\\n{ci.calls}x",'
-                    f"penwidth={0.3+(ci.size*6/total_size):0.2f},"
+                    f"penwidth={0.3 + (ci.size * 6 / total_size):0.2f},"
                     f"color={color(percent)}]\n"
                 )
         f.write("}\n")
@@ -211,4 +211,4 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
 
 
 if __name__ == "__main__":
-    memory_profiler()  # pylint: disable = no-value-for-parameter
+    memory_profiler()

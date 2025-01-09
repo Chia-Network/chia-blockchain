@@ -11,7 +11,8 @@ if sys.platform == "win32":
     import _overlapped
     import _winapi
 
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 from typing_extensions import Protocol, TypeAlias
 
@@ -28,10 +29,9 @@ if TYPE_CHECKING:
     class _ProtocolFactory(Protocol):
         # https://github.com/python/mypy/issues/6910#issuecomment-1081107831
         # https://github.com/python/typeshed/pull/5718/files
-        def __call__(self) -> asyncio.protocols.BaseProtocol:
-            ...
+        def __call__(self) -> asyncio.protocols.BaseProtocol: ...
 
-    _SSLContext: TypeAlias = Union[bool, None, ssl.SSLContext]
+    _SSLContext: TypeAlias = Union[bool, ssl.SSLContext, None]
 
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L389
     # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/base_events.pyi#L64
@@ -47,8 +47,7 @@ if TYPE_CHECKING:
             backlog: int = ...,
             # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/constants.py#L16
             ssl_handshake_timeout: Optional[float] = ...,
-        ) -> None:
-            ...
+        ) -> None: ...
 
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L278
     # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/base_events.pyi#L27
@@ -64,38 +63,31 @@ if TYPE_CHECKING:
         _ssl_context: _SSLContext
         _ssl_handshake_timeout: Optional[float]
 
-        def _attach(self) -> None:
-            ...
+        def _attach(self) -> None: ...
 
-        def _detach(self) -> None:
-            ...
+        def _detach(self) -> None: ...
 
-        def _start_serving(self) -> None:
-            ...
+        def _start_serving(self) -> None: ...
 
     if sys.platform == "win32":
         # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L48
-        class _OverlappedFuture(asyncio.Future[Any]):
-            ...
+        class _OverlappedFuture(asyncio.Future[Any]): ...
 
         # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L410
         # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/windows_events.pyi#L44
         class IocpProactor(asyncio.windows_events.IocpProactor):
             _loop: Optional[asyncio.events.AbstractEventLoop]
 
-            def _register_with_iocp(self, obj: object) -> None:
-                ...
+            def _register_with_iocp(self, obj: object) -> None: ...
 
             def _register(
                 self,
                 ov: _overlapped.Overlapped,
                 obj: socket.socket,
-                callback: Callable[[object, socket.socket, _overlapped.Overlapped], Tuple[socket.socket, object]],
-            ) -> _OverlappedFuture:
-                ...
+                callback: Callable[[object, socket.socket, _overlapped.Overlapped], tuple[socket.socket, object]],
+            ) -> _OverlappedFuture: ...
 
-            def _get_accept_socket(self, family: socket.AddressFamily) -> socket.socket:
-                ...
+            def _get_accept_socket(self, family: socket.AddressFamily) -> socket.socket: ...
 
         # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L309
         # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/windows_events.pyi#L35
@@ -260,27 +252,30 @@ if sys.platform == "win32":
         def disable_connections(self) -> None:
             self.allow_connections = False
 
-        async def _chia_accept_loop(self, listener: socket.socket) -> Tuple[socket.socket, Tuple[object, ...]]:
+        async def _chia_accept_loop(self, listener: socket.socket) -> tuple[socket.socket, tuple[object, ...]]:
             while True:
-                # TODO: switch to Event code.
-                while not self.allow_connections:
+                # TODO: switch to event drive code
+                while not self.allow_connections:  # noqa: ASYNC110
                     await asyncio.sleep(0.01)
 
                 try:
                     return await self._chia_accept(listener)
-                except WindowsError as exc:  # pylint: disable=E0602
-                    if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
+                except OSError as exc:
+                    if exc.winerror not in {
+                        _winapi.ERROR_NETNAME_DELETED,
+                        _winapi.ERROR_OPERATION_ABORTED,
+                    }:
                         raise
 
-        def _chia_accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
+        def _chia_accept(self, listener: socket.socket) -> asyncio.Future[tuple[socket.socket, tuple[object, ...]]]:
             self._register_with_iocp(listener)
-            conn = self._get_accept_socket(listener.family)  # pylint: disable=assignment-from-no-return
+            conn = self._get_accept_socket(listener.family)
             ov = _overlapped.Overlapped(_winapi.NULL)
             ov.AcceptEx(listener.fileno(), conn.fileno())
 
             def finish_accept(
                 trans: object, key: socket.socket, ov: _overlapped.Overlapped
-            ) -> Tuple[socket.socket, object]:
+            ) -> tuple[socket.socket, object]:
                 ov.getresult()
                 # Use SO_UPDATE_ACCEPT_CONTEXT so getsockname() etc work.
                 buf = struct.pack("@P", listener.fileno())
@@ -295,17 +290,20 @@ if sys.platform == "win32":
                 except asyncio.CancelledError:
                     conn.close()
                     raise
-                except WindowsError as exc:  # pylint: disable=E0602
+                except OSError as exc:
                     # https://github.com/python/cpython/issues/93821#issuecomment-1157945855
-                    if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
+                    if exc.winerror not in {
+                        _winapi.ERROR_NETNAME_DELETED,
+                        _winapi.ERROR_OPERATION_ABORTED,
+                    }:
                         raise
 
-            future = self._register(ov, listener, finish_accept)  # pylint: disable=assignment-from-no-return
+            future = self._register(ov, listener, finish_accept)
             coro = accept_coro(self, future, conn)
-            asyncio.ensure_future(coro, loop=self._loop)
+            asyncio.ensure_future(coro, loop=self._loop)  # noqa: RUF006
             return future
 
-        def accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
+        def accept(self, listener: socket.socket) -> asyncio.Future[tuple[socket.socket, tuple[object, ...]]]:
             coro = self._chia_accept_loop(listener)
             return asyncio.ensure_future(coro)
 
