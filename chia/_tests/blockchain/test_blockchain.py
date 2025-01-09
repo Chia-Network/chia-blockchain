@@ -4184,3 +4184,25 @@ async def get_fork_info(blockchain: Blockchain, block: FullBlock, peak: BlockRec
     )
 
     return fork_info
+
+
+@pytest.mark.anyio
+async def test_get_header_blocks_in_range_order(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    """
+    Tests that we return the headers in the correct order even when we fetch
+    some blocks from the block cache and some from the DB.
+    """
+    bc = empty_blockchain
+    blocks = bt.get_consecutive_blocks(5)
+    blocks_hh = []
+    for block in blocks:
+        await _validate_and_add_block(bc, block)
+        blocks_hh.append(block.header_hash)
+    hh_to_header_block_map = await bc.get_header_blocks_in_range(0, 5)
+    assert list(hh_to_header_block_map) == blocks_hh
+    # Remove 1st and 3rd items from the block cache, so we fetch them from DB
+    for i in [0, 2]:
+        bc.block_store.block_cache.remove(blocks[i].header_hash)
+    # The order should remain the same
+    hh_to_header_block_map = await bc.get_header_blocks_in_range(0, 5)
+    assert list(hh_to_header_block_map) == blocks_hh

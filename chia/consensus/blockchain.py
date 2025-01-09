@@ -881,23 +881,29 @@ class Blockchain:
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
     ) -> dict[bytes32, HeaderBlock]:
-        hashes = []
+        hashes: list[bytes32] = []
         for height in range(start, stop + 1):
             header_hash: Optional[bytes32] = self.height_to_hash(uint32(height))
             if header_hash is not None:
                 hashes.append(header_hash)
 
-        blocks: list[FullBlock] = []
-        for hash in hashes.copy():
+        header_hash_to_block_map: dict[bytes32, FullBlock] = {}
+        non_cache_hashes: list[bytes32] = []
+        for hash in hashes:
             block = self.block_store.block_cache.get(hash)
             if block is not None:
-                blocks.append(block)
-                hashes.remove(hash)
-        blocks_on_disk: list[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
-        blocks.extend(blocks_on_disk)
+                header_hash_to_block_map[hash] = block
+            else:
+                non_cache_hashes.append(hash)
+        blocks_on_disk: list[FullBlock] = await self.block_store.get_blocks_by_hash(non_cache_hashes)
+        header_hash_to_block_map.update({block.header_hash: block for block in blocks_on_disk})
         header_blocks: dict[bytes32, HeaderBlock] = {}
 
-        for block in blocks:
+        for hash in hashes:
+            block = header_hash_to_block_map.get(hash)
+            # get_blocks_by_hash throws an exception if the blocks are not
+            # present, so this is just defensive.
+            assert block is not None
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
             if tx_filter is False:
