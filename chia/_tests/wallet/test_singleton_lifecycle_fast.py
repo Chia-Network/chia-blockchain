@@ -23,16 +23,17 @@ from chia.wallet.puzzles.singleton_top_layer import (
 )
 from chia.wallet.puzzles.singleton_top_layer import (
     SINGLETON_LAUNCHER,
+    SINGLETON_LAUNCHER_HASH,
     SINGLETON_MOD,
+    SINGLETON_MOD_HASH,
+    P2_SINGLETON_OR_DELAYED_MOD_HASH as P2_SINGLETON_MOD_HASH
 )
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 LAUNCHER_PUZZLE = SINGLETON_LAUNCHER
 
-LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
-SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
+LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER_HASH
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
 ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()
