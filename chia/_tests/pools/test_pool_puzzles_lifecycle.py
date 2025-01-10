@@ -11,7 +11,6 @@ from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_
 from chia._tests.util.key_tool import KeyTool
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.pools.pool_puzzles import (
-    SINGLETON_MOD_HASH,
     create_absorb_spend,
     create_p2_singleton_puzzle,
     create_p2_singleton_puzzle_hash,
@@ -41,6 +40,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD_HASH
 from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 
 """
