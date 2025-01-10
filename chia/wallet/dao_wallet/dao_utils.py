@@ -15,34 +15,64 @@ from chia_puzzles_py.programs import (
     DAO_FINISHED_STATE as DAO_FINISHED_STATE_BYTES,
 )
 from chia_puzzles_py.programs import (
+    DAO_FINISHED_STATE_HASH as DAO_FINISHED_STATE_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
     DAO_LOCKUP as DAO_LOCKUP_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_LOCKUP_HASH as DAO_LOCKUP_MOD_HASH_BYTES,
 )
 from chia_puzzles_py.programs import (
     DAO_PROPOSAL as DAO_PROPOSAL_MOD_BYTES,
 )
 from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_HASH as DAO_PROPOSAL_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
     DAO_PROPOSAL_TIMER as DAO_PROPOSAL_TIMER_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_TIMER_HASH as DAO_PROPOSAL_TIMER_MOD_HASH_BYTES,
 )
 from chia_puzzles_py.programs import (
     DAO_PROPOSAL_VALIDATOR as DAO_PROPOSAL_VALIDATOR_MOD_BYTES,
 )
 from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_VALIDATOR_HASH as DAO_PROPOSAL_VALIDATOR_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
     DAO_SPEND_P2_SINGLETON as SPEND_P2_SINGLETON_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_SPEND_P2_SINGLETON_HASH as SPEND_P2_SINGLETON_MOD_HASH_BYTES,
 )
 from chia_puzzles_py.programs import (
     DAO_TREASURY as DAO_TREASURY_MOD_BYTES,
 )
 from chia_puzzles_py.programs import (
+    DAO_TREASURY_HASH as DAO_TREASURY_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
     DAO_UPDATE_PROPOSAL as DAO_UPDATE_PROPOSAL_MOD_BYTES,
 )
 from chia_puzzles_py.programs import (
+    DAO_UPDATE_PROPOSAL_HASH as DAO_UPDATE_PROPOSAL_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
     GENESIS_BY_COIN_ID_OR_SINGLETON as DAO_CAT_TAIL_BYTES,
+)
+from chia_puzzles_py.programs import (
+    GENESIS_BY_COIN_ID_OR_SINGLETON_HASH as DAO_CAT_TAIL_HASH_BYTES,
 )
 from chia_puzzles_py.programs import (
     P2_SINGLETON_AGGREGATOR as P2_SINGLETON_AGGREGATOR_MOD_BYTES,
 )
 from chia_puzzles_py.programs import (
     P2_SINGLETON_VIA_DELEGATED_PUZZLE as P2_SINGLETON_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_SINGLETON_VIA_DELEGATED_PUZZLE_HASH as P2_SINGLETON_MOD_HASH_BYTES,
 )
 from clvm.EvalError import EvalError
 
@@ -66,36 +96,36 @@ from chia.wallet.singleton import get_singleton_struct_for_id
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 DAO_LOCKUP_MOD = Program.from_bytes(DAO_LOCKUP_MOD_BYTES)
-DAO_LOCKUP_MOD_HASH = DAO_LOCKUP_MOD.get_tree_hash()
+DAO_LOCKUP_MOD_HASH = bytes32(DAO_LOCKUP_MOD_HASH_BYTES)
 
 DAO_PROPOSAL_TIMER_MOD = Program.from_bytes(DAO_PROPOSAL_TIMER_MOD_BYTES)
-DAO_PROPOSAL_TIMER_MOD_HASH = DAO_PROPOSAL_TIMER_MOD.get_tree_hash()
+DAO_PROPOSAL_TIMER_MOD_HASH = bytes32(DAO_PROPOSAL_TIMER_MOD_HASH_BYTES)
 
 DAO_PROPOSAL_MOD = Program.from_bytes(DAO_PROPOSAL_MOD_BYTES)
-DAO_PROPOSAL_MOD_HASH = DAO_PROPOSAL_MOD.get_tree_hash()
+DAO_PROPOSAL_MOD_HASH = bytes32(DAO_PROPOSAL_MOD_HASH_BYTES)
 
 DAO_PROPOSAL_VALIDATOR_MOD = Program.from_bytes(DAO_PROPOSAL_VALIDATOR_MOD_BYTES)
-DAO_PROPOSAL_VALIDATOR_MOD_HASH = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
+DAO_PROPOSAL_VALIDATOR_MOD_HASH = bytes32(DAO_PROPOSAL_VALIDATOR_MOD_HASH_BYTES)
 
 DAO_TREASURY_MOD = Program.from_bytes(DAO_TREASURY_MOD_BYTES)
-DAO_TREASURY_MOD_HASH = DAO_TREASURY_MOD.get_tree_hash()
+DAO_TREASURY_MOD_HASH = bytes32(DAO_TREASURY_MOD_HASH_BYTES)
 
 SPEND_P2_SINGLETON_MOD = Program.from_bytes(SPEND_P2_SINGLETON_MOD_BYTES)
-SPEND_P2_SINGLETON_MOD_HASH = SPEND_P2_SINGLETON_MOD.get_tree_hash()
+SPEND_P2_SINGLETON_MOD_HASH = bytes32(SPEND_P2_SINGLETON_MOD_HASH_BYTES)
 
 DAO_FINISHED_STATE = Program.from_bytes(DAO_FINISHED_STATE_BYTES)
-DAO_FINISHED_STATE_HASH = DAO_FINISHED_STATE.get_tree_hash()
+DAO_FINISHED_STATE_HASH = bytes32(DAO_FINISHED_STATE_HASH_BYTES)
 
 DAO_CAT_TAIL = Program.from_bytes(DAO_CAT_TAIL_BYTES)
-DAO_CAT_TAIL_HASH = DAO_CAT_TAIL.get_tree_hash()
+DAO_CAT_TAIL_HASH = bytes32(DAO_CAT_TAIL_HASH_BYTES)
 
 DAO_CAT_LAUNCHER = Program.from_bytes(DAO_CAT_LAUNCHER_BYTES)
 
 P2_SINGLETON_MOD = Program.from_bytes(P2_SINGLETON_MOD_BYTES)
-P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
+P2_SINGLETON_MOD_HASH = bytes32(P2_SINGLETON_MOD_HASH_BYTES)
 
 DAO_UPDATE_PROPOSAL_MOD = Program.from_bytes(DAO_UPDATE_PROPOSAL_MOD_BYTES)
-DAO_UPDATE_PROPOSAL_MOD_HASH = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
+DAO_UPDATE_PROPOSAL_MOD_HASH = bytes32(DAO_UPDATE_PROPOSAL_MOD_HASH_BYTES)
 
 DAO_CAT_EVE = Program.from_bytes(DAO_CAT_EVE_BYTES)
 

@@ -4,7 +4,7 @@ import dataclasses
 from collections.abc import Iterator
 from typing import Optional, Union
 
-from chia_puzzles_py.programs import CAT_PUZZLE
+from chia_puzzles_py.programs import CAT_PUZZLE, CAT_PUZZLE_HASH
 from chia_rs import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -15,13 +15,15 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 NULL_SIGNATURE = G2Element()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 CAT_MOD = Program.from_bytes(CAT_PUZZLE)
-CAT_MOD_HASH = CAT_MOD.get_tree_hash()
+CAT_MOD_HASH = bytes32(CAT_PUZZLE_HASH)
+QUOTED_CAT_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 CAT_MOD_HASH_HASH: bytes32 = Program.to(CAT_MOD_HASH).get_tree_hash()
 
 
