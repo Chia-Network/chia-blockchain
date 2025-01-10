@@ -51,11 +51,11 @@ class MerkleBlob:
 
     @classmethod
     def from_node_list(
-        cls: type["MerkleBlob"],
+        cls: type[MerkleBlob],
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
         terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
         root_hash: Optional[bytes32],
-    ) -> "MerkleBlob":
+    ) -> MerkleBlob:
         merkle_blob = cls(blob=bytearray())
 
         if root_hash is None:

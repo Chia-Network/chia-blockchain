@@ -44,7 +44,6 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.util.merkle_blob import (
     KVId,
     MerkleBlob,
-    NodeMetadata,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     TreeIndex,
