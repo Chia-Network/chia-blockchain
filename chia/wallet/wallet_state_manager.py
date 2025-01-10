@@ -21,7 +21,6 @@ from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import (
-    SINGLETON_LAUNCHER_HASH,
     get_most_recent_singleton_coin_from_coin_spend,
     solution_to_pool_state,
 )
@@ -104,6 +103,7 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH
 from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.offer import Offer
