@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, ClassVar, NewType, Optional, Protocol, Type, TypeVar, cast, final
+from typing import TYPE_CHECKING, ClassVar, NewType, Optional, Protocol, TypeVar, cast, final
 
 from chia.data_layer.data_layer_util import InternalNode, ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -51,7 +51,7 @@ class MerkleBlob:
 
     @classmethod
     def from_node_list(
-        cls: Type["MerkleBlob"],
+        cls: type["MerkleBlob"],
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
         terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
         root_hash: Optional[bytes32],
