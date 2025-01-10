@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Optional, Union
 
-from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT, SETTLEMENT_PAYMENT_HASH
 from chia_rs import G2Element
 from clvm_tools.binutils import disassemble
 
@@ -44,7 +44,7 @@ from chia.wallet.util.puzzle_compression import (
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
-OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
+OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
 
 
 def detect_dependent_coin(

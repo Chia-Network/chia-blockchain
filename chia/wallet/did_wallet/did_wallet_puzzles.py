@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Optional, Union
 
-from chia_puzzles_py.programs import DID_INNERPUZ, NFT_INTERMEDIATE_LAUNCHER
+from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH, NFT_INTERMEDIATE_LAUNCHER
 from chia_rs import G1Element
 
 from chia.types.blockchain_format.coin import Coin
@@ -30,7 +30,7 @@ from chia.wallet.util.curry_and_treehash import (
 )
 
 DID_INNERPUZ_MOD = Program.from_bytes(DID_INNERPUZ)
-DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
+DID_INNERPUZ_MOD_HASH = bytes32(DID_INNERPUZ_HASH)
 DID_INNERPUZ_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
 INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
 
