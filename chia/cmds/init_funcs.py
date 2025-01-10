@@ -4,11 +4,10 @@ import os
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import yaml
 
-from chia import __version__
 from chia.cmds.configure import configure
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.ssl.create_ssl import create_all_ssl
@@ -41,9 +40,9 @@ from chia.wallet.derive_keys import (
 )
 
 
-def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
-    for k in do_not_migrate_keys:
-        if k in updated and do_not_migrate_keys[k] == "":
+def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_not_migrate_keys: dict[str, Any]) -> None:
+    for k, v in do_not_migrate_keys.items():
+        if k in updated and v == "":
             updated.pop(k)
     for k, v in default.items():
         ignore = False
@@ -57,7 +56,7 @@ def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict
             # If there is an intermediate key with empty string value, do not migrate all descendants
             if do_not_migrate_keys.get(k, None) == "":
                 do_not_migrate_keys[k] = v
-            dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))
+            dict_add_new_default(updated[k], v, do_not_migrate_keys.get(k, {}))
         elif k not in updated or ignore is True:
             updated[k] = v
 
@@ -145,7 +144,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
             )
 
         # Set the pool pks in the farmer
-        pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
+        pool_pubkeys_hex = {bytes(pk).hex() for pk in pool_child_pubkeys}
         if "pool_public_keys" in config["farmer"]:
             for pk_hex in config["farmer"]["pool_public_keys"]:
                 # Add original ones in config
@@ -155,7 +154,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         save_config(new_root, "config.yaml", config)
 
 
-def copy_files_rec(old_path: Path, new_path: Path):
+def copy_files_rec(old_path: Path, new_path: Path) -> None:
     if old_path.is_file():
         print(f"{new_path}")
         new_path.parent.mkdir(parents=True, exist_ok=True)
@@ -169,9 +168,9 @@ def copy_files_rec(old_path: Path, new_path: Path):
 def migrate_from(
     old_root: Path,
     new_root: Path,
-    manifest: List[str],
-    do_not_migrate_settings: List[str],
-):
+    manifest: list[str],
+    do_not_migrate_settings: list[str],
+) -> int:
     """
     Copy all the files in "manifest" to the new config directory.
     """
@@ -193,7 +192,7 @@ def migrate_from(
 
     with lock_and_load_config(new_root, "config.yaml") as config:
         config_str: str = initial_config_file("config.yaml")
-        default_config: Dict = yaml.safe_load(config_str)
+        default_config: dict[str, Any] = yaml.safe_load(config_str)
         flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
         dict_add_new_default(config, default_config, flattened_keys)
 
@@ -204,7 +203,7 @@ def migrate_from(
     return 1
 
 
-def copy_cert_files(cert_path: Path, new_path: Path):
+def copy_cert_files(cert_path: Path, new_path: Path) -> None:
     for old_path_child in cert_path.glob("*.crt"):
         new_path_child = new_path / old_path_child.name
         copy_files_rec(old_path_child, new_path_child)
@@ -222,7 +221,7 @@ def init(
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
     v1_db: bool = False,
-):
+) -> Optional[int]:
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):
@@ -255,58 +254,7 @@ def init(
     else:
         return chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet, v1_db=v1_db)
 
-
-def chia_version_number() -> Tuple[str, str, str, str]:
-    scm_full_version = __version__
-    left_full_version = scm_full_version.split("+")
-
-    version = left_full_version[0].split(".")
-
-    scm_major_version = version[0]
-    scm_minor_version = version[1]
-    if len(version) > 2:
-        smc_patch_version = version[2]
-        patch_release_number = smc_patch_version
-    else:
-        smc_patch_version = ""
-
-    major_release_number = scm_major_version
-    minor_release_number = scm_minor_version
-    dev_release_number = ""
-
-    # If this is a beta dev release - get which beta it is
-    if "0b" in scm_minor_version:
-        original_minor_ver_list = scm_minor_version.split("0b")
-        major_release_number = str(1 - int(scm_major_version))  # decrement the major release for beta
-        minor_release_number = scm_major_version
-        patch_release_number = original_minor_ver_list[1]
-        if smc_patch_version and "dev" in smc_patch_version:
-            dev_release_number = "." + smc_patch_version
-    elif "0rc" in version[1]:
-        original_minor_ver_list = scm_minor_version.split("0rc")
-        major_release_number = str(1 - int(scm_major_version))  # decrement the major release for release candidate
-        minor_release_number = str(int(scm_major_version) + 1)  # RC is 0.2.1 for RC 1
-        patch_release_number = original_minor_ver_list[1]
-        if smc_patch_version and "dev" in smc_patch_version:
-            dev_release_number = "." + smc_patch_version
-    else:
-        major_release_number = scm_major_version
-        minor_release_number = scm_minor_version
-        patch_release_number = smc_patch_version
-        dev_release_number = ""
-
-    install_release_number = major_release_number + "." + minor_release_number
-    if len(patch_release_number) > 0:
-        install_release_number += "." + patch_release_number
-    if len(dev_release_number) > 0:
-        install_release_number += dev_release_number
-
-    return major_release_number, minor_release_number, patch_release_number, dev_release_number
-
-
-def chia_full_version_str() -> str:
-    major, minor, patch, dev = chia_version_number()
-    return f"{major}.{minor}.{patch}{dev}"
+    return None
 
 
 def chia_init(
@@ -316,7 +264,7 @@ def chia_init(
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
     v1_db: bool = False,
-):
+) -> int:
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
@@ -383,7 +331,7 @@ def chia_init(
     if should_check_keys:
         check_keys(root_path)
 
-    config: Dict
+    config: dict[str, Any]
 
     db_path_replaced: str
     if v1_db:

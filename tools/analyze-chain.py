@@ -7,45 +7,45 @@ import sys
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import click
 import zstd
-from blspy import AugSchemeMPL, G1Element
-from chia_rs import MEMPOOL_MODE, run_generator
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    MEMPOOL_MODE,
+    AugSchemeMPL,
+    G1Element,
+    G2Element,
+    SpendBundleConditions,
+    run_block_generator,
+)
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.block_protocol import BlockInfo
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.full_block_utils import block_info_from_block, generator_from_block
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_ROM = bytes(get_generator())
 
 
-# returns an optional error code and an optional PySpendBundleConditions (from chia_rs)
+# returns an optional error code and an optional SpendBundleConditions (from chia_rs)
 # exactly one of those will hold a value and the number of seconds it took to
 # run
-def run_gen(env_data: bytes, block_program_args: bytes, flags: int):
-    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
-    cost_per_byte = DEFAULT_CONSTANTS.COST_PER_BYTE
-
-    # we don't charge for the size of the generator ROM. However, we do charge
-    # cost for the operations it executes
-    max_cost -= len(env_data) * cost_per_byte
-
-    env_data = b"\xff" + env_data + b"\xff" + block_program_args + b"\x80"
-
+def run_gen(
+    generator_program: SerializedProgram, block_program_args: list[bytes], flags: int
+) -> tuple[Optional[int], Optional[SpendBundleConditions], float]:
     try:
         start_time = time()
-        err, result = run_generator(
-            GENERATOR_ROM,
-            env_data,
-            max_cost,
-            flags,
+        err, result = run_block_generator(
+            bytes(generator_program),
+            block_program_args,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            flags | DONT_VALIDATE_SIGNATURE,
+            G2Element(),
+            None,
+            DEFAULT_CONSTANTS,
         )
         run_time = time() - start_time
         return err, result, run_time
@@ -71,8 +71,7 @@ def callable_for_module_function_path(call: str) -> Callable:
 @click.option("--end", default=None, help="last block to examine")
 @click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
 def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool):
-
-    call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, List[bytes], float, int], None]
+    call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]
     if call is None:
         call_f = partial(default_call, verify_signatures)
     else:
@@ -92,7 +91,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
         height: int = r[1]
         block: Union[BlockInfo, FullBlock]
         if verify_signatures:
-            block = FullBlock.from_bytes(zstd.decompress(r[2]))
+            block = FullBlock.from_bytes_unchecked(zstd.decompress(r[2]))
         else:
             block = block_info_from_block(zstd.decompress(r[2]))
 
@@ -106,7 +105,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
             ref = c.execute("SELECT block FROM full_blocks WHERE height=? and in_main_chain=1", (h,))
             generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
             assert generator is not None
-            generator_blobs.append(bytes(generator))
+            generator_blobs.append(generator)
             ref.close()
 
         ref_lookup_time = time() - start_time
@@ -125,24 +124,19 @@ def default_call(
     block: Union[BlockInfo, FullBlock],
     hh: bytes32,
     height: int,
-    generator_blobs: List[bytes],
+    generator_blobs: list[bytes],
     ref_lookup_time: float,
     flags: int,
 ) -> None:
     num_refs = len(generator_blobs)
 
     # add the block program arguments
-    block_program_args = bytearray(b"\xff")
-    for ref_block_blob in generator_blobs:
-        block_program_args += b"\xff"
-        block_program_args += Program.to(ref_block_blob).as_bin()
-    block_program_args += b"\x80\x80"
-
     assert block.transactions_generator is not None
-    err, result, run_time = run_gen(bytes(block.transactions_generator), bytes(block_program_args), flags)
+    err, result, run_time = run_gen(block.transactions_generator, generator_blobs, flags)
     if err is not None:
         sys.stderr.write(f"ERROR: {hh.hex()} {height} {err}\n")
         return
+    assert result is not None
 
     num_removals = len(result.spends)
     fees = result.reserve_fee
@@ -154,13 +148,12 @@ def default_call(
     if verify_signatures:
         assert isinstance(block, FullBlock)
         # create hash_key list for aggsig check
-        pairs_pks: List[bytes48] = []
-        pairs_msgs: List[bytes] = []
+        pairs_pks: list[G1Element] = []
+        pairs_msgs: list[bytes] = []
         pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
-        pairs_g1s = [G1Element.from_bytes(x) for x in pairs_pks]
         assert block.transactions_info is not None
         assert block.transactions_info.aggregated_signature is not None
-        assert AugSchemeMPL.aggregate_verify(pairs_g1s, pairs_msgs, block.transactions_info.aggregated_signature)
+        assert AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature)
 
     print(
         f"{hh.hex()}\t{height:7d}\t{cost:11d}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees:14}\t"
@@ -170,5 +163,4 @@ def default_call(
 
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()

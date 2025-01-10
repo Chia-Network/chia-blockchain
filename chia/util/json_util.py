@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import dataclasses
 import json
 from typing import Any
 
 from aiohttp import web
-
-from chia.wallet.util.wallet_types import WalletType
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -14,11 +11,9 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     Encodes bytes as hex strings with 0x, and converts all dataclasses to json.
     """
 
-    def default(self, o: Any):
-        if dataclasses.is_dataclass(o):
+    def default(self, o: Any) -> Any:
+        if hasattr(type(o), "to_json_dict"):
             return o.to_json_dict()
-        elif isinstance(o, WalletType):
-            return o.name
         elif hasattr(type(o), "__bytes__"):
             return f"0x{bytes(o).hex()}"
         elif isinstance(o, bytes):

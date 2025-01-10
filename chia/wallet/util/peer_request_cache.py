@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -13,12 +13,15 @@ from chia.util.lru_cache import LRUCache
 
 class PeerRequestCache:
     _blocks: LRUCache[uint32, HeaderBlock]  # height -> HeaderBlock
-    _block_requests: LRUCache[Tuple[uint32, uint32], asyncio.Task[Any]]  # (start, end) -> Task
+    _block_requests: LRUCache[tuple[uint32, uint32], asyncio.Task[Any]]  # (start, end) -> Task
     _states_validated: LRUCache[bytes32, Optional[uint32]]  # coin state hash -> last change height, or None for reorg
     _timestamps: LRUCache[uint32, uint64]  # block height -> timestamp
     _blocks_validated: LRUCache[bytes32, uint32]  # header_hash -> height
     _block_signatures_validated: LRUCache[bytes32, uint32]  # sig_hash -> height
-    _additions_in_block: LRUCache[Tuple[bytes32, bytes32], uint32]  # header_hash, puzzle_hash -> height
+    _additions_in_block: LRUCache[tuple[bytes32, bytes32], uint32]  # header_hash, puzzle_hash -> height
+    # The wallet gets the state update before receiving the block. In untrusted mode the block is required for the
+    # coin state validation, so we cache them before we apply them once we received the block.
+    _race_cache: dict[uint32, set[CoinState]]
 
     def __init__(self) -> None:
         self._blocks = LRUCache(100)
@@ -28,6 +31,7 @@ class PeerRequestCache:
         self._blocks_validated = LRUCache(1000)
         self._block_signatures_validated = LRUCache(1000)
         self._additions_in_block = LRUCache(200)
+        self._race_cache = {}
 
     def get_block(self, height: uint32) -> Optional[HeaderBlock]:
         return self._blocks.get(height)
@@ -87,6 +91,27 @@ class PeerRequestCache:
     def in_additions_in_block(self, header_hash: bytes32, addition_ph: bytes32) -> bool:
         return self._additions_in_block.get((header_hash, addition_ph)) is not None
 
+    def add_states_to_race_cache(self, coin_states: list[CoinState]) -> None:
+        for coin_state in coin_states:
+            created_height = 0 if coin_state.created_height is None else coin_state.created_height
+            spent_height = 0 if coin_state.spent_height is None else coin_state.spent_height
+            max_height = uint32(max(created_height, spent_height))
+            race_cache = self._race_cache.setdefault(max_height, set())
+            race_cache.add(coin_state)
+
+    def get_race_cache(self, height: int) -> set[CoinState]:
+        return self._race_cache[uint32(height)]
+
+    def rollback_race_cache(self, *, fork_height: int) -> None:
+        self._race_cache = {
+            height: coin_states for height, coin_states in self._race_cache.items() if height <= fork_height
+        }
+
+    def cleanup_race_cache(self, *, min_height: int) -> None:
+        self._race_cache = {
+            height: coin_states for height, coin_states in self._race_cache.items() if height >= min_height
+        }
+
     def clear_after_height(self, height: int) -> None:
         # Remove any cached item which relates to an event that happened at a height above height.
         new_blocks = LRUCache[uint32, HeaderBlock](self._blocks.capacity)
@@ -95,7 +120,7 @@ class PeerRequestCache:
                 new_blocks.put(k, v)
         self._blocks = new_blocks
 
-        new_block_requests: LRUCache[Tuple[uint32, uint32], asyncio.Task[Any]] = LRUCache(self._block_requests.capacity)
+        new_block_requests: LRUCache[tuple[uint32, uint32], asyncio.Task[Any]] = LRUCache(self._block_requests.capacity)
         for (start_h, end_h), fetch_task in self._block_requests.cache.items():
             if start_h <= height and end_h <= height:
                 new_block_requests.put((start_h, end_h), fetch_task)
@@ -125,14 +150,14 @@ class PeerRequestCache:
                 new_block_signatures_validated.put(sig_hash, h)
         self._block_signatures_validated = new_block_signatures_validated
 
-        new_additions_in_block: LRUCache[Tuple[bytes32, bytes32], uint32] = LRUCache(self._additions_in_block.capacity)
+        new_additions_in_block: LRUCache[tuple[bytes32, bytes32], uint32] = LRUCache(self._additions_in_block.capacity)
         for (hh, ph), h in self._additions_in_block.cache.items():
             if h <= height:
                 new_additions_in_block.put((hh, ph), h)
         self._additions_in_block = new_additions_in_block
 
 
-async def can_use_peer_request_cache(
+def can_use_peer_request_cache(
     coin_state: CoinState, peer_request_cache: PeerRequestCache, fork_height: Optional[uint32]
 ) -> bool:
     if not peer_request_cache.in_states_validated(coin_state.get_hash()):

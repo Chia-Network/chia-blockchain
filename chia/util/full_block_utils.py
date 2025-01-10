@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import io
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
-from blspy import G1Element, G2Element
-from chia_rs import serialized_length
+from chia_rs import G1Element, G2Element, serialized_length
 from chiabip158 import PyBIP158
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import TransactionsInfo
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 
@@ -31,7 +29,6 @@ def skip_bytes(buf: memoryview) -> memoryview:
 
 
 def skip_optional(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
-
     if buf[0] == 0:
         return buf[1:]
     assert buf[0] == 1
@@ -59,7 +56,7 @@ def skip_uint8(buf: memoryview) -> memoryview:
 
 
 def skip_bool(buf: memoryview) -> memoryview:
-    assert buf[0] in [0, 1]
+    assert buf[0] in {0, 1}
     return buf[1:]
 
 
@@ -170,7 +167,7 @@ def skip_foliage(buf: memoryview) -> memoryview:
     return skip_optional(buf, skip_g2_element)  # foliage_transaction_block_signature
 
 
-def prev_hash_from_foliage(buf: memoryview) -> Tuple[memoryview, bytes32]:
+def prev_hash_from_foliage(buf: memoryview) -> tuple[memoryview, bytes32]:
     prev_hash = buf[:32]  # prev_block_hash
     buf = skip_bytes32(buf)  # prev_block_hash
     buf = skip_bytes32(buf)  # reward_block_hash
@@ -207,7 +204,7 @@ def skip_transactions_info(buf: memoryview) -> memoryview:
     return skip_list(buf, skip_coin)
 
 
-def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
+def generator_from_block(buf: memoryview) -> Optional[bytes]:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf = skip_reward_chain_block(buf)  # reward_chain_block
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
@@ -225,7 +222,7 @@ def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
 
     buf = buf[1:]
     length = serialized_length(buf)
-    return SerializedProgram.from_bytes(bytes(buf[:length]))
+    return bytes(buf[:length])
 
 
 # this implements the BlockInfo protocol
@@ -233,7 +230,7 @@ def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
 class GeneratorBlockInfo:
     prev_header_hash: bytes32
     transactions_generator: Optional[SerializedProgram]
-    transactions_generator_ref_list: List[uint32]
+    transactions_generator_ref_list: list[uint32]
 
 
 def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
@@ -270,7 +267,7 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
 
 
 def header_block_from_block(
-    buf: memoryview, request_filter: bool = True, tx_addition_coins: List[Coin] = [], removal_names: List[bytes32] = []
+    buf: memoryview, request_filter: bool = True, tx_addition_coins: list[Coin] = [], removal_names: list[bytes32] = []
 ) -> bytes:
     buf2 = buf[:]
     buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots
@@ -300,9 +297,8 @@ def header_block_from_block(
             transactions_info_optional = bytes([0])
         else:
             transactions_info_optional = bytes([1])
-            buf3 = buf2[1:]
-            transactions_info = TransactionsInfo.parse(io.BytesIO(buf3))
-        byte_array_tx: List[bytearray] = []
+            transactions_info, _advance = TransactionsInfo.parse_rust(buf2[1:])
+        byte_array_tx: list[bytearray] = []
         if is_transaction_block and transactions_info:
             addition_coins = tx_addition_coins + list(transactions_info.reward_claims_incorporated)
             for coin in addition_coins:
@@ -323,3 +319,27 @@ def header_block_from_block(
         header_block += bytes(transactions_info)
 
     return header_block
+
+
+def get_height_and_tx_status_from_block(buf: memoryview) -> tuple[uint32, bool]:
+    """
+    Returns the height of the block and whether it's a transaction block or not.
+    We're considering the block as a transaction block if transactions_info is not None.
+    """
+    reward_chain_block_buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
+    # Get the block height from reward_chain_block_buf
+    height_buf = skip_uint128(reward_chain_block_buf)  # weight
+    height = uint32.from_bytes(height_buf[:4])
+    # Let's continue down to transactions_info
+    buf = skip_reward_chain_block(reward_chain_block_buf)  # reward_chain_block
+    buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # reward_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_ip_proof
+    buf = skip_foliage(buf)  # foliage
+    buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
+    # We're at the transactions_info optional.
+    # If it's not None, consider this a transaction block.
+    is_tx_block = buf[0] != 0
+    return height, is_tx_block

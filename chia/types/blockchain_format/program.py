@@ -1,22 +1,26 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
-from chia_rs import MEMPOOL_MODE, run_chia_program, run_generator, serialized_length, tree_hash
-from clvm import SExp
+from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, run_chia_program, tree_hash
 from clvm.casts import int_from_bytes
+from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
+from clvm.SExp import SExp
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.types.blockchain_format.tree_hash import sha256_treehash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 
-from .tree_hash import sha256_treehash
+INFINITE_COST = 11000000000
 
-INFINITE_COST = 0x7FFFFFFFFFFFFFFF
+DEFAULT_FLAGS = MEMPOOL_MODE
+
+T_CLVMStorage = TypeVar("T_CLVMStorage", bound=CLVMStorage)
+T_Program = TypeVar("T_Program", bound="Program")
 
 
 class Program(SExp):
@@ -25,42 +29,49 @@ class Program(SExp):
     """
 
     @classmethod
-    def parse(cls, f) -> "Program":
+    def parse(cls: type[T_Program], f) -> T_Program:
         return sexp_from_stream(f, cls.to)
 
     def stream(self, f):
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> Program:
+    def from_bytes(cls: type[T_Program], blob: bytes) -> T_Program:
         # this runs the program "1", which just returns the first argument.
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
         # parse serialized programs into a python compatible structure
-        cost, ret = run_chia_program(
+        _cost, ret = run_chia_program(
             b"\x01",
             blob,
             50,
-            0,
+            ALLOW_BACKREFS,
         )
-        return Program.to(ret)
+        return cls.to(ret)
 
     @classmethod
-    def fromhex(cls, hexstr: str) -> "Program":
+    def fromhex(cls: type[T_Program], hexstr: str) -> T_Program:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
-    def to_serialized_program(self) -> "SerializedProgram":
-        return SerializedProgram.from_bytes(bytes(self))
+    @classmethod
+    def from_json_dict(cls: type[Program], json_dict: Any) -> Program:
+        if isinstance(json_dict, cls):
+            return json_dict
+        item = hexstr_to_bytes(json_dict)
+        return cls.from_bytes(item)
+
+    def to_json_dict(self) -> str:
+        return f"0x{self}"
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
-        self.stream(f)  # noqa
+        self.stream(f)
         return f.getvalue()
 
     def __str__(self) -> str:
         return bytes(self).hex()
 
-    def at(self, position: str) -> "Program":
+    def at(self, position: str) -> Program:
         """
         Take a string of only `f` and `r` characters and follow the corresponding path.
 
@@ -79,7 +90,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def replace(self, **kwargs) -> "Program":
+    def replace(self: T_Program, **kwargs: Any) -> T_Program:
         """
         Create a new program replacing the given paths (using `at` syntax).
         Example:
@@ -112,14 +123,22 @@ class Program(SExp):
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
 
-    def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
+    def _run(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
         prog_args = Program.to(args)
-        cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, 0)
+        cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run(self, args) -> "Program":
-        cost, r = self.run_with_cost(INFINITE_COST, args)
+    def run_with_cost(self, max_cost: int, args: Any, flags=DEFAULT_FLAGS) -> tuple[int, Program]:
+        # when running puzzles in the wallet, default to enabling all soft-forks
+        # as well as enabling mempool-mode (i.e. strict mode)
+        return self._run(max_cost, flags, args)
+
+    def run(self, args: Any, max_cost=INFINITE_COST, flags=DEFAULT_FLAGS) -> Program:
+        _cost, r = self._run(max_cost, flags, args)
         return r
+
+    def run_with_flags(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
+        return self._run(max_cost, flags, args)
 
     # Replicates the curry function from clvm_tools, taking advantage of *args
     # being a list.  We iterate through args in reverse building the code to
@@ -137,14 +156,14 @@ class Program(SExp):
     #
     # Resulting in a function which places its own arguments after those
     # curried in in the form of a proper list.
-    def curry(self, *args) -> "Program":
+    def curry(self, *args) -> Program:
         fixed_args: Any = 1
         for arg in reversed(args):
             fixed_args = [4, (1, arg), fixed_args]
         return Program.to([2, (1, self), fixed_args])
 
-    def uncurry(self) -> Tuple[Program, Program]:
-        def match(o: SExp, expected: bytes) -> None:
+    def uncurry(self) -> tuple[Program, Program]:
+        def match(o: CLVMStorage, expected: bytes) -> None:
             if o.atom != expected:
                 raise ValueError(f"expected: {expected.hex()}")
 
@@ -152,6 +171,9 @@ class Program(SExp):
             # (2 (1 . <mod>) <args>)
             ev, quoted_inner, args_list = self.as_iter()
             match(ev, b"\x02")
+            if TYPE_CHECKING:
+                # this being False is presently handled in the TypeError exception handler below
+                assert quoted_inner.pair is not None
             match(quoted_inner.pair[0], b"\x01")
             mod = quoted_inner.pair[1]
             args = []
@@ -159,6 +181,9 @@ class Program(SExp):
                 # (4 (1 . <arg>) <rest>)
                 cons, quoted_arg, rest = args_list.as_iter()
                 match(cons, b"\x04")
+                if TYPE_CHECKING:
+                    # this being False is presently handled in the TypeError exception handler below
+                    assert quoted_arg.pair is not None
                 match(quoted_arg.pair[0], b"\x01")
                 args.append(quoted_arg.pair[1])
                 args_list = rest
@@ -178,27 +203,11 @@ class Program(SExp):
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
 
-    def as_atom_list(self) -> List[bytes]:
-        """
-        Pretend `self` is a list of atoms. Return the corresponding
-        python list of atoms.
-
-        At each step, we always assume a node to be an atom or a pair.
-        If the assumption is wrong, we exit early. This way we never fail
-        and always return SOMETHING.
-        """
-        items = []
-        obj = self
-        while True:
-            pair = obj.pair
-            if pair is None:
-                break
-            atom = pair[0].atom
-            if atom is None:
-                break
-            items.append(atom)
-            obj = pair[1]
-        return items
+    def as_atom(self) -> bytes:
+        ret: Optional[bytes] = self.atom
+        if ret is None:
+            raise ValueError("expected atom")
+        return ret
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))
@@ -206,7 +215,7 @@ class Program(SExp):
     EvalError = EvalError
 
 
-def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
+def _tree_hash(node: SExp, precalculated: set[bytes32]) -> bytes32:
     """
     Hash values in `precalculated` are presumed to have been hashed already.
     """
@@ -215,145 +224,23 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
         right = _tree_hash(node.rest(), precalculated)
         s = b"\2" + left + right
     else:
-        atom = node.as_atom()
+        # node.listp() is False so must be an atom
+        atom: bytes = node.as_atom()  # type: ignore[assignment]
         if atom in precalculated:
             return bytes32(atom)
         s = b"\1" + atom
     return bytes32(std_hash(s))
 
 
-def _serialize(node) -> bytes:
-    if type(node) == SerializedProgram:
-        return bytes(node)
-    else:
-        return SExp.to(node).as_bin()
-
-
-class SerializedProgram:
-    """
-    An opaque representation of a clvm program. It has a more limited interface than a full SExp
-    """
-
-    _buf: bytes = b""
-
-    @classmethod
-    def parse(cls, f) -> "SerializedProgram":
-        length = serialized_length(f.getvalue()[f.tell() :])
-        return SerializedProgram.from_bytes(f.read(length))
-
-    def stream(self, f):
-        f.write(self._buf)
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> "SerializedProgram":
-        ret = SerializedProgram()
-        ret._buf = bytes(blob)
-        return ret
-
-    @classmethod
-    def fromhex(cls, hexstr: str) -> "SerializedProgram":
-        return cls.from_bytes(hexstr_to_bytes(hexstr))
-
-    @classmethod
-    def from_program(cls, p: Program) -> "SerializedProgram":
-        ret = SerializedProgram()
-        ret._buf = bytes(p)
-        return ret
-
-    def to_program(self) -> Program:
-        return Program.from_bytes(self._buf)
-
-    def uncurry(self) -> Tuple["Program", "Program"]:
-        return self.to_program().uncurry()
-
-    def __bytes__(self) -> bytes:
-        return self._buf
-
-    def __str__(self) -> str:
-        return bytes(self).hex()
-
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, str(self))
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, SerializedProgram):
-            return False
-        return self._buf == other._buf
-
-    def __ne__(self, other) -> bool:
-        if not isinstance(other, SerializedProgram):
-            return True
-        return self._buf != other._buf
-
-    def get_tree_hash(self) -> bytes32:
-        return bytes32(tree_hash(self._buf))
-
-    def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
-        return self._run(max_cost, MEMPOOL_MODE, *args)
-
-    def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
-        return self._run(max_cost, 0, *args)
-
-    # returns an optional error code and an optional SpendBundleConditions (from chia_rs)
-    # exactly one of those will hold a value
-    def run_as_generator(
-        self, max_cost: int, flags: int, *args
-    ) -> Tuple[Optional[int], Optional[SpendBundleConditions]]:
-
-        serialized_args = bytearray()
-        if len(args) > 1:
-            # when we have more than one argument, serialize them into a list
-            for a in args:
-                serialized_args += b"\xff"
-                serialized_args += _serialize(a)
-            serialized_args += b"\x80"
-        else:
-            serialized_args += _serialize(args[0])
-
-        err, ret = run_generator(
-            self._buf,
-            bytes(serialized_args),
-            max_cost,
-            flags,
-        )
-        if err is not None:
-            assert err != 0
-            return err, None
-
-        assert ret is not None
-        return None, ret
-
-    def _run(self, max_cost: int, flags, *args) -> Tuple[int, Program]:
-        # when multiple arguments are passed, concatenate them into a serialized
-        # buffer. Some arguments may already be in serialized form (e.g.
-        # SerializedProgram) so we don't want to de-serialize those just to
-        # serialize them back again. This is handled by _serialize()
-        serialized_args = bytearray()
-        if len(args) > 1:
-            # when we have more than one argument, serialize them into a list
-            for a in args:
-                serialized_args += b"\xff"
-                serialized_args += _serialize(a)
-            serialized_args += b"\x80"
-        else:
-            serialized_args += _serialize(args[0])
-
-        cost, ret = run_chia_program(
-            self._buf,
-            bytes(serialized_args),
-            max_cost,
-            flags,
-        )
-        return cost, Program.to(ret)
-
-
 NIL = Program.from_bytes(b"\x80")
 
 
-def _sexp_replace(sexp: SExp, to_sexp: Callable[[Any], SExp], **kwargs) -> SExp:
+# real return type is more like Union[T_Program, CastableType] when considering corner and terminal cases
+def _sexp_replace(sexp: T_CLVMStorage, to_sexp: Callable[[Any], T_Program], **kwargs: Any) -> T_Program:
     # if `kwargs == {}` then `return sexp` unchanged
     if len(kwargs) == 0:
-        return sexp
+        # yes, the terminal case is hinted incorrectly for now
+        return sexp  # type: ignore[return-value]
 
     if "" in kwargs:
         if len(kwargs) > 1:
@@ -364,7 +251,7 @@ def _sexp_replace(sexp: SExp, to_sexp: Callable[[Any], SExp], **kwargs) -> SExp:
     # Now split `kwargs` into two groups: those
     # that start with `f` and those that start with `r`
 
-    args_by_prefix: Dict[str, SExp] = {}
+    args_by_prefix: dict[str, dict[str, Any]] = {}
     for k, v in kwargs.items():
         c = k[0]
         if c not in "fr":

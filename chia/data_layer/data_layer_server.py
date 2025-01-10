@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import logging
 import signal
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from types import FrameType
+from typing import Any, Optional
 
 import click
 from aiohttp import web
 
 from chia.data_layer.download_data import is_filename_valid
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
@@ -34,31 +35,17 @@ log = logging.getLogger(__name__)
 @dataclass
 class DataLayerServer:
     root_path: Path
-    config: Dict[str, Any]
+    config: dict[str, Any]
     log: logging.Logger
     shutdown_event: asyncio.Event
     webserver: Optional[WebServer] = None
     upnp: UPnP = field(default_factory=UPnP)
 
-    async def start(self) -> None:
+    async def start(self, signal_handlers: SignalHandlers) -> None:
         if self.webserver is not None:
             raise RuntimeError("DataLayerServer already started")
 
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)
-            signal.signal(signal.SIGINT, self._accept_signal)
-            signal.signal(signal.SIGTERM, self._accept_signal)
-        else:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(
-                signal.SIGINT,
-                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
-            )
-            loop.add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
-            )
+        signal_handlers.setup_sync_signal_handler(handler=self._accept_signal)
 
         self.log.info("Starting Data Layer HTTP Server.")
 
@@ -75,7 +62,12 @@ class DataLayerServer:
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 
         self.webserver = await WebServer.create(
-            hostname=self.host_ip, port=self.port, routes=[web.get("/{filename}", self.file_handler)]
+            hostname=self.host_ip,
+            port=self.port,
+            routes=[
+                web.get("/{filename}", self.file_handler),
+                web.get("/{tree_id}/{filename}", self.folder_handler),
+            ],
         )
         self.log.info("Started Data Layer HTTP Server.")
 
@@ -105,19 +97,38 @@ class DataLayerServer:
             content = reader.read()
         response = web.Response(
             content_type="application/octet-stream",
-            headers={"Content-Disposition": "attachment;filename={}".format(filename)},
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
             body=content,
         )
         return response
 
-    def _accept_signal(self, signal_number: int, stack_frame: Any = None) -> None:
-        self.log.info("Got SIGINT or SIGTERM signal - stopping")
+    async def folder_handler(self, request: web.Request) -> web.Response:
+        tree_id = request.match_info["tree_id"]
+        filename = request.match_info["filename"]
+        if not is_filename_valid(tree_id + "-" + filename):
+            raise Exception("Invalid file format requested.")
+        file_path = self.server_dir.joinpath(tree_id).joinpath(filename)
+        with open(file_path, "rb") as reader:
+            content = reader.read()
+        response = web.Response(
+            content_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
+            body=content,
+        )
+        return response
+
+    def _accept_signal(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
 
         self.close()
 
 
 async def async_start(root_path: Path) -> int:
-
     shutdown_event = asyncio.Event()
 
     dl_config = load_config(
@@ -134,9 +145,10 @@ async def async_start(root_path: Path) -> int:
     )
 
     data_layer_server = DataLayerServer(root_path, dl_config, log, shutdown_event)
-    await data_layer_server.start()
-    await shutdown_event.wait()
-    await data_layer_server.await_closed()
+    async with SignalHandlers.manage() as signal_handlers:
+        await data_layer_server.start(signal_handlers=signal_handlers)
+        await shutdown_event.wait()
+        await data_layer_server.await_closed()
 
     return 0
 

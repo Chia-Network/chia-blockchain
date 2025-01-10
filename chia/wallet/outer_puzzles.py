@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -13,6 +13,7 @@ from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
 from chia.wallet.nft_wallet.transfer_program_puzzle import TransferProgramPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.vc_wallet.cr_outer_puzzle import CROuterPuzzle
 
 """
 This file provides a central location for acquiring drivers for outer puzzles like CATs, NFTs, etc.
@@ -40,6 +41,7 @@ class AssetType(Enum):
     METADATA = "metadata"
     OWNERSHIP = "ownership"
     ROYALTY_TRANSFER_PROGRAM = "royalty transfer program"
+    CR = "credential restricted"
 
 
 def match_puzzle(puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
@@ -72,10 +74,11 @@ def create_asset_id(constructor: PuzzleInfo) -> Optional[bytes32]:
 
 function_args = (match_puzzle, construct_puzzle, solve_puzzle, get_inner_puzzle, get_inner_solution)
 
-driver_lookup: Dict[AssetType, DriverProtocol] = {
+driver_lookup: dict[AssetType, DriverProtocol] = {
     AssetType.CAT: CATOuterPuzzle(*function_args),
     AssetType.SINGLETON: SingletonOuterPuzzle(*function_args),
     AssetType.METADATA: MetadataOuterPuzzle(*function_args),
     AssetType.OWNERSHIP: OwnershipOuterPuzzle(*function_args),
     AssetType.ROYALTY_TRANSFER_PROGRAM: TransferProgramPuzzle(*function_args),
+    AssetType.CR: CROuterPuzzle(*function_args),
 }

@@ -1,0 +1,16 @@
+[Unit]
+Description=Chia Daemon Service for %i
+StopWhenUnneeded=true
+
+[Service]
+Type=simple
+Environment=CHIA_ROOT=/home/%i/.chia/mainnet
+ExecStart=/opt/chia/daemon
+ExecStartPost=/bin/bash -c '(while ! /opt/chia/chia rpc daemon get_version 2>/dev/null; do echo "Waiting for the daemon to listen on port 55400..."; sleep 1; done); sleep 1'
+User=%i
+Group=%i
+LimitNOFILE=1048576
+LimitNPROC=1048576
+
+[Install]
+WantedBy=multi-user.target

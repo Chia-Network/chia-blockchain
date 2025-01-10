@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
@@ -21,14 +21,12 @@ class CATLineageStore:
     table_name: str
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, asset_id: str) -> "CATLineageStore":
+    async def create(cls, db_wrapper: DBWrapper2, asset_id: str) -> CATLineageStore:
         self = cls()
         self.table_name = f"lineage_proofs_{asset_id}"
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute(
-                (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY KEY," " lineage blob)")
-            )
+            await conn.execute(f"CREATE TABLE IF NOT EXISTS {self.table_name}(coin_id text PRIMARY KEY, lineage blob)")
         return self
 
     async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof) -> None:
@@ -48,7 +46,6 @@ class CATLineageStore:
             await cursor.close()
 
     async def get_lineage_proof(self, coin_id: bytes32) -> Optional[LineageProof]:
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 f"SELECT * FROM {self.table_name} WHERE coin_id=?;",
@@ -63,7 +60,7 @@ class CATLineageStore:
 
         return None
 
-    async def get_all_lineage_proofs(self) -> Dict[bytes32, LineageProof]:
+    async def get_all_lineage_proofs(self) -> dict[bytes32, LineageProof]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(f"SELECT * FROM {self.table_name}")
             rows = await cursor.fetchall()

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import sys
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Optional, Tuple
+from typing import Any, Optional
 
-from blspy import PrivateKey
+from chia_rs import PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
+from chia.server.signal_handlers import SignalHandlers
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import (
@@ -34,7 +35,7 @@ These functions are used to test the simulator.
 """
 
 
-def mnemonic_fingerprint(keychain: Keychain) -> Tuple[str, int]:
+def mnemonic_fingerprint(keychain: Keychain) -> tuple[str, int]:
     mnemonic = (
         "today grape album ticket joy idle supreme sausage "
         "oppose voice angle roast you oven betray exact "
@@ -42,7 +43,7 @@ def mnemonic_fingerprint(keychain: Keychain) -> Tuple[str, int]:
     )
     # add key to keychain
     try:
-        sk = keychain.add_private_key(mnemonic)
+        sk = keychain.add_key(mnemonic)
     except KeychainFingerprintExists:
         pass
     fingerprint = sk.get_g1().get_fingerprint()
@@ -62,10 +63,10 @@ def get_puzzle_hash_from_key(keychain: Keychain, fingerprint: int, key_id: int =
 def create_config(
     chia_root: Path,
     fingerprint: int,
-    private_ca_crt_and_key: Tuple[bytes, bytes],
-    node_certs_and_keys: Dict[str, Dict[str, Dict[str, bytes]]],
+    private_ca_crt_and_key: tuple[bytes, bytes],
+    node_certs_and_keys: dict[str, dict[str, dict[str, bytes]]],
     keychain: Keychain,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # create chia directories
     create_default_chia_config(chia_root)
     create_all_ssl(
@@ -108,21 +109,19 @@ def create_config(
 
 async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
-    service = await start_simulator_main(True, automated_testing, root_path=chia_root)
-    await service.start()
+    started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
+    service = started_simulator.service
 
-    yield service._api
-
-    service.stop()
-    await service.wait_closed()
+    async with service.manage():
+        yield service._api
 
 
 async def get_full_chia_simulator(
     chia_root: Path,
     keychain: Optional[Keychain] = None,
     automated_testing: bool = False,
-    config: Optional[Dict[str, Any]] = None,
-) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int, Keychain], None]:
+    config: Optional[dict[str, Any]] = None,
+) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
     """
     A chia root Path is required.
     The chia root Path can be a temporary directory (tempfile.TemporaryDirectory)
@@ -136,15 +135,14 @@ async def get_full_chia_simulator(
         keychain = Keychain()
 
     with Lockfile.create(daemon_launch_lock_path(chia_root)):
-
         mnemonic, fingerprint = mnemonic_fingerprint(keychain)
 
-        ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
-            SSLTestCACertAndPrivateKey
-        ] = get_next_private_ca_cert_and_key()
-        ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
-            SSLTestNodeCertsAndKeys
-        ] = get_next_nodes_certs_and_keys()
+        ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[SSLTestCACertAndPrivateKey] = (
+            get_next_private_ca_cert_and_key()
+        )
+        ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[SSLTestNodeCertsAndKeys] = (
+            get_next_nodes_certs_and_keys()
+        )
         if config is None:
             config = create_config(
                 chia_root,
@@ -158,13 +156,9 @@ async def get_full_chia_simulator(
         ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
         ca_key_path = chia_root / config["private_ssl_ca"]["key"]
 
-        shutdown_event = asyncio.Event()
-        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
-        await ws_server.setup_process_global_state()
-        await ws_server.start()
-
-        async for simulator in start_simulator(chia_root, automated_testing):
-            yield simulator, chia_root, config, mnemonic, fingerprint, keychain
-
-        await ws_server.stop()
-        await shutdown_event.wait()  # wait till shutdown is complete
+        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path)
+        async with SignalHandlers.manage() as signal_handlers:
+            await ws_server.setup_process_global_state(signal_handlers=signal_handlers)
+            async with ws_server.run():
+                async for simulator in start_simulator(chia_root, automated_testing):
+                    yield simulator, chia_root, config, mnemonic, fingerprint, keychain

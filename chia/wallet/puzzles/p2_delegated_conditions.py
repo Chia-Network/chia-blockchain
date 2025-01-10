@@ -5,14 +5,12 @@ In this puzzle program, the solution must be a signed list of conditions, which
 is returned literally.
 """
 
-
 from __future__ import annotations
 
 from chia.types.blockchain_format.program import Program
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
-from .load_clvm import load_clvm_maybe_recompile
-
-MOD = load_clvm_maybe_recompile("p2_delegated_conditions.clvm")
+MOD = load_clvm_maybe_recompile("p2_delegated_conditions.clsp")
 
 
 def puzzle_for_pk(public_key: Program) -> Program:

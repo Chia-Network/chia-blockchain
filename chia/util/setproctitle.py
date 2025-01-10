@@ -1,3 +1,5 @@
+# Package: utils
+
 from __future__ import annotations
 
 try:
@@ -15,7 +17,6 @@ def setproctitle(ps_name: str) -> None:
 
 def getproctitle() -> str:
     if no_setproctitle is False:
-        # TODO: add type hints to setproctitle
-        return pysetproctitle.getproctitle()  # type: ignore[no-any-return]
+        return pysetproctitle.getproctitle()
 
     return ""

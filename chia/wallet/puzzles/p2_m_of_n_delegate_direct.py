@@ -8,10 +8,9 @@ it includes N public keys, any M of which needs to sign the delegated puzzle.
 from __future__ import annotations
 
 from chia.types.blockchain_format.program import Program
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
-from .load_clvm import load_clvm_maybe_recompile
-
-MOD = load_clvm_maybe_recompile("p2_m_of_n_delegate_direct.clvm")
+MOD = load_clvm_maybe_recompile("p2_m_of_n_delegate_direct.clsp")
 
 
 def puzzle_for_m_of_public_key_list(m, public_key_list) -> Program:

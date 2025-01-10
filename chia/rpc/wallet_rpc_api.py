@@ -1,41 +1,117 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import json
 import logging
+import zlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
+from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.server.outbound_message import NodeType, make_msg
+from chia.rpc.util import marshal, tx_endpoint
+from chia.rpc.wallet_request_types import (
+    AddKey,
+    AddKeyResponse,
+    ApplySignatures,
+    ApplySignaturesResponse,
+    CheckDeleteKey,
+    CheckDeleteKeyResponse,
+    CombineCoins,
+    CombineCoinsResponse,
+    DeleteKey,
+    Empty,
+    ExecuteSigningInstructions,
+    ExecuteSigningInstructionsResponse,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    GenerateMnemonicResponse,
+    GetHeightInfoResponse,
+    GetLoggedInFingerprintResponse,
+    GetNotifications,
+    GetNotificationsResponse,
+    GetPrivateKey,
+    GetPrivateKeyFormat,
+    GetPrivateKeyResponse,
+    GetPublicKeysResponse,
+    GetSyncStatusResponse,
+    GetTimestampForHeight,
+    GetTimestampForHeightResponse,
+    LogIn,
+    LogInResponse,
+    PushTransactions,
+    PushTransactionsResponse,
+    PushTX,
+    SetWalletResyncOnStartup,
+    SplitCoins,
+    SplitCoinsResponse,
+    SubmitTransactions,
+    SubmitTransactionsResponse,
+    VCAddProofs,
+    VCGet,
+    VCGetList,
+    VCGetListResponse,
+    VCGetProofsForRoot,
+    VCGetProofsForRootResponse,
+    VCGetResponse,
+    VCMint,
+    VCMintResponse,
+    VCProofsRPC,
+    VCProofWithHash,
+    VCRecordWithCoinID,
+    VCRevoke,
+    VCRevokeResponse,
+    VCSpend,
+    VCSpendResponse,
+)
+from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
+from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
+from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
+from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
+    Condition,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
+    parse_conditions_non_consensus,
+)
+from chia.wallet.dao_wallet.dao_info import DAORules
+from chia.wallet.dao_wallet.dao_utils import (
+    generate_mint_proposal_innerpuz,
+    generate_simple_proposal_innerpuz,
+    generate_update_proposal_innerpuz,
+    get_treasury_rules_from_puzzle,
+)
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
@@ -44,13 +120,13 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDInfo
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
-    create_fullpuz,
+    did_program_to_metadata,
     match_did_puzzle,
-    program_to_metadata,
+    metadata_to_program,
 )
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
@@ -59,22 +135,42 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles import p2_delegated_conditions
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
+from chia.wallet.signer_protocol import SigningResponse
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE_HASH,
+    create_singleton_puzzle,
+    get_inner_puzzle_from_singleton,
+)
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
-from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
+from chia.wallet.util.query_filter import FilterMode, HashFilter, TransactionTypeFilter
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
+from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
+from chia.wallet.vc_wallet.vc_store import VCProofs
+from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -85,13 +181,20 @@ log = logging.getLogger(__name__)
 
 
 class WalletRpcApi:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcApiProtocol
+
+        _protocol_check: ClassVar[RpcApiProtocol] = cast("WalletRpcApi", None)
+
+    max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
+    max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
+
     def __init__(self, wallet_node: WalletNode):
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
-        self.balance_cache: Dict[int, Any] = {}
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         return {
             # Key management
             "/log_in": self.log_in,
@@ -104,26 +207,28 @@ class WalletRpcApi:
             "/check_delete_key": self.check_delete_key,
             "/delete_all_keys": self.delete_all_keys,
             # Wallet node
+            "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
-            "/farm_block": self.farm_block,  # Only when node simulator is running
-            # this function is just here for backwards-compatibility. It will probably
-            # be removed in the future
-            "/get_initial_freeze_period": self.get_initial_freeze_period,
-            "/get_network_info": self.get_network_info,
+            "/get_timestamp_for_height": self.get_timestamp_for_height,
+            "/set_auto_claim": self.set_auto_claim,
+            "/get_auto_claim": self.get_auto_claim,
             # Wallet management
             "/get_wallets": self.get_wallets,
             "/create_new_wallet": self.create_new_wallet,
             # Wallet
             "/get_wallet_balance": self.get_wallet_balance,
+            "/get_wallet_balances": self.get_wallet_balances,
             "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
             "/get_transaction_count": self.get_transaction_count,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
+            "/spend_clawback_coins": self.spend_clawback_coins,
+            "/get_coin_records": self.get_coin_records,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -138,6 +243,9 @@ class WalletRpcApi:
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
             "/verify_signature": self.verify_signature,
+            "/get_transaction_memo": self.get_transaction_memo,
+            "/split_coins": self.split_coins,
+            "/combine_coins": self.combine_coins,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -173,8 +281,24 @@ class WalletRpcApi:
             "/did_message_spend": self.did_message_spend,
             "/did_get_info": self.did_get_info,
             "/did_find_lost_did": self.did_find_lost_did,
+            # DAO Wallets
+            "/dao_get_proposals": self.dao_get_proposals,
+            "/dao_create_proposal": self.dao_create_proposal,
+            "/dao_parse_proposal": self.dao_parse_proposal,
+            "/dao_vote_on_proposal": self.dao_vote_on_proposal,
+            "/dao_get_treasury_balance": self.dao_get_treasury_balance,
+            "/dao_get_treasury_id": self.dao_get_treasury_id,
+            "/dao_get_rules": self.dao_get_rules,
+            "/dao_close_proposal": self.dao_close_proposal,
+            "/dao_exit_lockup": self.dao_exit_lockup,
+            "/dao_adjust_filter_level": self.dao_adjust_filter_level,
+            "/dao_add_funds_to_treasury": self.dao_add_funds_to_treasury,
+            "/dao_send_to_lockup": self.dao_send_to_lockup,
+            "/dao_get_proposal_state": self.dao_get_proposal_state,
+            "/dao_free_coins_from_finished_proposals": self.dao_free_coins_from_finished_proposals,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
+            "/nft_count_nfts": self.nft_count_nfts,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
             "/nft_set_nft_did": self.nft_set_nft_did,
@@ -186,7 +310,8 @@ class WalletRpcApi:
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
             "/nft_mint_bulk": self.nft_mint_bulk,
-            "/nft_set_did_bulk": self.nft_set_bulk_nft_did,
+            "/nft_set_did_bulk": self.nft_set_did_bulk,
+            "/nft_transfer_bulk": self.nft_transfer_bulk,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -205,52 +330,50 @@ class WalletRpcApi:
             "/dl_get_mirrors": self.dl_get_mirrors,
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
+            "/dl_verify_proof": self.dl_verify_proof,
+            # Verified Credential
+            "/vc_mint": self.vc_mint,
+            "/vc_get": self.vc_get,
+            "/vc_get_list": self.vc_get_list,
+            "/vc_spend": self.vc_spend,
+            "/vc_add_proofs": self.vc_add_proofs,
+            "/vc_get_proofs_for_root": self.vc_get_proofs_for_root,
+            "/vc_revoke": self.vc_revoke,
+            # CR-CATs
+            "/crcat_approve_pending": self.crcat_approve_pending,
+            # Signer Protocol
+            "/gather_signing_info": self.gather_signing_info,
+            "/apply_signatures": self.apply_signatures,
+            "/submit_transactions": self.submit_transactions,
+            # Not technically Signer Protocol but related
+            "/execute_signing_instructions": self.execute_signing_instructions,
         }
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.service.server, request_node_type=request_node_type)
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
         payloads = []
-        if change in {"sync_changed", "coin_added"}:
+        if change in {"sync_changed", "coin_added", "add_connection", "close_connection"}:
             # Metrics is the only current consumer for this event
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        if change in {
-            "offer_cancelled",
-            "offer_added",
-            "wallet_created",
-            "did_coin_added",
-            "nft_coin_added",
-            "nft_coin_removed",
-            "nft_coin_updated",
-            "nft_coin_did_set",
-            "new_block",
-            "coin_removed",
-            "coin_added",
-            "new_derivation_index",
-            "added_stray_cat",
-            "pending_transaction",
-            "tx_update",
-        }:
-            payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
+        payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads
 
-    async def _stop_wallet(self):
+    async def _stop_wallet(self) -> None:
         """
         Stops a currently running wallet/key, which allows starting the wallet with a new key.
         Each key has it's own wallet database.
         """
         if self.service is not None:
             self.service._close()
-            peers_close_task: Optional[asyncio.Task] = await self.service._await_closed(shutting_down=False)
-            if peers_close_task is not None:
-                await peers_close_task
+            await self.service._await_closed(shutting_down=False)
 
     async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
         return dataclasses.replace(
@@ -261,11 +384,9 @@ class WalletRpcApi:
         )
 
     async def get_latest_singleton_coin_spend(
-        self, peer: Optional[WSChiaConnection], coin_id: bytes32, latest: bool = True
-    ) -> Tuple[CoinSpend, CoinState]:
-        if peer is None:
-            raise ValueError("No peers to get info from")
-        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+        self, peer: WSChiaConnection, coin_id: bytes32, latest: bool = True
+    ) -> tuple[CoinSpend, CoinState]:
+        coin_state_list: list[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
         )
         if coin_state_list is None or len(coin_state_list) < 1:
@@ -287,57 +408,57 @@ class WalletRpcApi:
                     raise ValueError("Cannot find child coin, please wait then retry.")
                 coin_state = odd_coin
         # Get parent coin
-        parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+        parent_coin_state_list: list[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer
         )
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         return coin_spend, coin_state
 
     ##########################################################################################
     # Key management
     ##########################################################################################
 
-    async def log_in(self, request) -> EndpointResult:
+    @marshal
+    async def log_in(self, request: LogIn) -> LogInResponse:
         """
         Logs in the wallet with a specific key.
         """
 
-        fingerprint = request["fingerprint"]
-        if self.service.logged_in_fingerprint == fingerprint:
-            return {"fingerprint": fingerprint}
+        if self.service.logged_in_fingerprint == request.fingerprint:
+            return LogInResponse(request.fingerprint)
 
         await self._stop_wallet()
-        self.balance_cache = {}
-        started = await self.service._start_with_fingerprint(fingerprint)
+        started = await self.service._start_with_fingerprint(request.fingerprint)
         if started is True:
-            return {"fingerprint": fingerprint}
+            return LogInResponse(request.fingerprint)
 
-        return {"success": False, "error": "Unknown Error"}
+        raise ValueError(f"fingerprint {request.fingerprint} not found in keychain or keychain is empty")
 
-    async def get_logged_in_fingerprint(self, request: Dict) -> EndpointResult:
-        return {"fingerprint": self.service.logged_in_fingerprint}
+    @marshal
+    async def get_logged_in_fingerprint(self, request: Empty) -> GetLoggedInFingerprintResponse:
+        return GetLoggedInFingerprintResponse(uint32.construct_optional(self.service.logged_in_fingerprint))
 
-    async def get_public_keys(self, request: Dict) -> EndpointResult:
+    @marshal
+    async def get_public_keys(self, request: Empty) -> GetPublicKeysResponse:
         try:
             fingerprints = [
-                sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
+                uint32(sk.get_g1().get_fingerprint())
+                for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
         except KeychainIsLocked:
-            return {"keyring_is_locked": True}
+            return GetPublicKeysResponse(keyring_is_locked=True)
         except Exception as e:
             raise Exception(
                 "Error while getting keys.  If the issue persists, restart all services."
                 f"  Original error: {type(e).__name__}: {e}"
             ) from e
         else:
-            return {"public_key_fingerprints": fingerprints}
+            return GetPublicKeysResponse(keyring_is_locked=False, public_key_fingerprints=fingerprints)
 
-    async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
+    async def _get_private_key(self, fingerprint: int) -> tuple[Optional[PrivateKey], Optional[bytes]]:
         try:
             all_keys = await self.service.keychain_proxy.get_all_private_keys()
             for sk, seed in all_keys:
@@ -347,44 +468,37 @@ class WalletRpcApi:
             log.error(f"Failed to get private key by fingerprint: {e}")
         return None, None
 
-    async def get_private_key(self, request) -> EndpointResult:
-        fingerprint = request["fingerprint"]
-        sk, seed = await self._get_private_key(fingerprint)
+    @marshal
+    async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
+        sk, seed = await self._get_private_key(request.fingerprint)
         if sk is not None:
             s = bytes_to_mnemonic(seed) if seed is not None else None
-            return {
-                "private_key": {
-                    "fingerprint": fingerprint,
-                    "sk": bytes(sk).hex(),
-                    "pk": bytes(sk.get_g1()).hex(),
-                    "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
-                    "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
-                    "seed": s,
-                },
-            }
-        return {"success": False, "private_key": {"fingerprint": fingerprint}}
+            return GetPrivateKeyResponse(
+                private_key=GetPrivateKeyFormat(
+                    fingerprint=request.fingerprint,
+                    sk=sk,
+                    pk=sk.get_g1(),
+                    farmer_pk=master_sk_to_farmer_sk(sk).get_g1(),
+                    pool_pk=master_sk_to_pool_sk(sk).get_g1(),
+                    seed=s,
+                )
+            )
 
-    async def generate_mnemonic(self, request: Dict) -> EndpointResult:
-        return {"mnemonic": generate_mnemonic().split(" ")}
+        raise ValueError(f"Could not get a private key for fingerprint {request.fingerprint}")
 
-    async def add_key(self, request) -> EndpointResult:
-        if "mnemonic" not in request:
-            raise ValueError("Mnemonic not in request")
+    @marshal
+    async def generate_mnemonic(self, request: Empty) -> GenerateMnemonicResponse:
+        return GenerateMnemonicResponse(generate_mnemonic().split(" "))
 
+    @marshal
+    async def add_key(self, request: AddKey) -> AddKeyResponse:
         # Adding a key from 24 word mnemonic
-        mnemonic = request["mnemonic"]
         try:
-            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic))
+            sk = await self.service.keychain_proxy.add_key(" ".join(request.mnemonic))
         except KeyError as e:
-            return {
-                "success": False,
-                "error": f"The word '{e.args[0]}' is incorrect.'",
-                "word": e.args[0],
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            raise ValueError(f"The word '{e.args[0]}' is incorrect.")
 
-        fingerprint = sk.get_g1().get_fingerprint()
+        fingerprint = uint32(sk.get_g1().get_fingerprint())
         await self._stop_wallet()
 
         # Makes sure the new key is added to config properly
@@ -395,28 +509,28 @@ class WalletRpcApi:
             log.error(f"Failed to check_keys after adding a new key: {e}")
         started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
-            return {"fingerprint": fingerprint}
+            return AddKeyResponse(fingerprint=fingerprint)
         raise ValueError("Failed to start")
 
-    async def delete_key(self, request) -> EndpointResult:
+    @marshal
+    async def delete_key(self, request: DeleteKey) -> Empty:
         await self._stop_wallet()
-        fingerprint = request["fingerprint"]
         try:
-            await self.service.keychain_proxy.delete_key_by_fingerprint(fingerprint)
+            await self.service.keychain_proxy.delete_key_by_fingerprint(request.fingerprint)
         except Exception as e:
             log.error(f"Failed to delete key by fingerprint: {e}")
-            return {"success": False, "error": str(e)}
+            raise e
         path = path_from_root(
             self.service.root_path,
-            f"{self.service.config['database_path']}-{fingerprint}",
+            f"{self.service.config['database_path']}-{request.fingerprint}",
         )
         if path.exists():
             path.unlink()
-        return {}
+        return Empty()
 
     async def _check_key_used_for_rewards(
         self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
-    ) -> Tuple[bool, bool]:
+    ) -> tuple[bool, bool]:
         """Checks if the given key is used for either the farmer rewards or pool rewards
         returns a tuple of two booleans
         The first is true if the key is used as the Farmer rewards, otherwise false
@@ -426,40 +540,56 @@ class WalletRpcApi:
         if sk is None:
             return False, False
 
-        config: Dict = load_config(new_root, "config.yaml")
-        farmer_target = config["farmer"].get("xch_target_address")
-        pool_target = config["pool"].get("xch_target_address")
-        address_to_check: List[bytes32] = [decode_puzzle_hash(farmer_target), decode_puzzle_hash(pool_target)]
+        config: dict[str, Any] = load_config(new_root, "config.yaml")
+        farmer_target = config["farmer"].get("xch_target_address", "")
+        pool_target = config["pool"].get("xch_target_address", "")
+        address_to_check: list[bytes32] = []
 
-        found_addresses: Set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+        try:
+            farmer_decoded = decode_puzzle_hash(farmer_target)
+            address_to_check.append(farmer_decoded)
+        except ValueError:
+            farmer_decoded = None
 
-        found_farmer = address_to_check[0] in found_addresses
-        found_pool = address_to_check[1] in found_addresses
+        try:
+            pool_decoded = decode_puzzle_hash(pool_target)
+            address_to_check.append(pool_decoded)
+        except ValueError:
+            pool_decoded = None
+
+        found_addresses: set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+        found_farmer = False
+        found_pool = False
+
+        if farmer_decoded is not None:
+            found_farmer = farmer_decoded in found_addresses
+
+        if pool_decoded is not None:
+            found_pool = pool_decoded in found_addresses
 
         return found_farmer, found_pool
 
-    async def check_delete_key(self, request) -> EndpointResult:
+    @marshal
+    async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
         """Check the key use prior to possible deletion
         checks whether key is used for either farm or pool rewards
         checks if any wallets have a non-zero balance
         """
         used_for_farmer: bool = False
         used_for_pool: bool = False
-        walletBalance: bool = False
+        wallet_balance: bool = False
 
-        fingerprint = request["fingerprint"]
-        max_ph_to_search = request.get("max_ph_to_search", 100)
-        sk, _ = await self._get_private_key(fingerprint)
+        sk, _ = await self._get_private_key(request.fingerprint)
         if sk is not None:
             used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
-                self.service.root_path, sk, max_ph_to_search
+                self.service.root_path, sk, request.max_ph_to_search
             )
 
-            if self.service.logged_in_fingerprint != fingerprint:
+            if self.service.logged_in_fingerprint != request.fingerprint:
                 await self._stop_wallet()
-                await self.service._start_with_fingerprint(fingerprint=fingerprint)
+                await self.service._start_with_fingerprint(fingerprint=request.fingerprint)
 
-            wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+            wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
                 wallet = self.service.wallet_state_manager.wallets[w.id]
                 unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
@@ -467,102 +597,195 @@ class WalletRpcApi:
                 pending_balance = await wallet.get_unconfirmed_balance(unspent)
 
                 if (balance + pending_balance) > 0:
-                    walletBalance = True
+                    wallet_balance = True
                     break
 
-        return {
-            "fingerprint": fingerprint,
-            "used_for_farmer_rewards": used_for_farmer,
-            "used_for_pool_rewards": used_for_pool,
-            "wallet_balance": walletBalance,
-        }
+        return CheckDeleteKeyResponse(
+            fingerprint=request.fingerprint,
+            used_for_farmer_rewards=used_for_farmer,
+            used_for_pool_rewards=used_for_pool,
+            wallet_balance=wallet_balance,
+        )
 
-    async def delete_all_keys(self, request: Dict) -> EndpointResult:
+    @marshal
+    async def delete_all_keys(self, request: Empty) -> Empty:
         await self._stop_wallet()
         try:
             await self.service.keychain_proxy.delete_all_keys()
         except Exception as e:
             log.error(f"Failed to delete all keys: {e}")
-            return {"success": False, "error": str(e)}
+            raise e
         path = path_from_root(self.service.root_path, self.service.config["database_path"])
         if path.exists():
             path.unlink()
-        return {}
+        return Empty()
 
     ##########################################################################################
     # Wallet Node
     ##########################################################################################
+    @marshal
+    async def set_wallet_resync_on_startup(self, request: SetWalletResyncOnStartup) -> Empty:
+        """
+        Resync the current logged in wallet. The transaction and offer records will be kept.
+        :param request: optionally pass in `enable` as bool to enable/disable resync
+        :return:
+        """
+        assert self.service.wallet_state_manager is not None
+        fingerprint = self.service.logged_in_fingerprint
+        if fingerprint is not None:
+            self.service.set_resync_on_startup(fingerprint, request.enable)
+        else:
+            raise ValueError("You need to login into wallet to use this RPC call")
+        return Empty()
 
-    async def get_sync_status(self, request: Dict) -> EndpointResult:
+    @marshal
+    async def get_sync_status(self, request: Empty) -> GetSyncStatusResponse:
         sync_mode = self.service.wallet_state_manager.sync_mode
         has_pending_queue_items = self.service.new_peak_queue.has_pending_data_process_items()
         syncing = sync_mode or has_pending_queue_items
         synced = await self.service.wallet_state_manager.synced()
-        return {"synced": synced, "syncing": syncing, "genesis_initialized": True}
+        return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
-    async def get_height_info(self, request: Dict) -> EndpointResult:
+    @marshal
+    async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        return {"height": height}
+        return GetHeightInfoResponse(height=height)
 
-    async def get_network_info(self, request: Dict) -> EndpointResult:
-        network_name = self.service.config["selected_network"]
-        address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
-        return {"network_name": network_name, "network_prefix": address_prefix}
-
-    async def push_tx(self, request: Dict) -> EndpointResult:
+    @marshal
+    async def push_tx(self, request: PushTX) -> Empty:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
-        return {}
+        await self.service.push_tx(request.spend_bundle)
+        return Empty()
 
-    async def push_transactions(self, request: Dict) -> EndpointResult:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before sending transactions")
+    @tx_endpoint(push=True)
+    @marshal
+    async def push_transactions(
+        self,
+        request: PushTransactions,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> PushTransactionsResponse:
+        if not action_scope.config.push:
+            raise ValueError("Cannot push transactions if push is False")
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend(request.transactions)
+            if request.fee != 0:
+                all_conditions_and_origins = [
+                    (condition, cs.coin.name())
+                    for tx in interface.side_effects.transactions
+                    if tx.spend_bundle is not None
+                    for cs in tx.spend_bundle.coin_spends
+                    for condition in cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)[1].as_iter()
+                ]
+                create_coin_announcement = next(
+                    condition
+                    for condition in parse_conditions_non_consensus(
+                        [con for con, coin in all_conditions_and_origins], abstractions=False
+                    )
+                    if isinstance(condition, CreateCoinAnnouncement)
+                )
+                announcement_origin = next(
+                    coin
+                    for condition, coin in all_conditions_and_origins
+                    if condition == create_coin_announcement.to_program()
+                )
+                async with self.service.wallet_state_manager.new_action_scope(
+                    dataclasses.replace(
+                        action_scope.config.tx_config,
+                        excluded_coin_ids=[
+                            *action_scope.config.tx_config.excluded_coin_ids,
+                            *(c.name() for tx in interface.side_effects.transactions for c in tx.removals),
+                        ],
+                    ),
+                    push=False,
+                ) as inner_action_scope:
+                    await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                        request.fee,
+                        inner_action_scope,
+                        (
+                            *extra_conditions,
+                            CreateCoinAnnouncement(
+                                create_coin_announcement.msg, announcement_origin
+                            ).corresponding_assertion(),
+                        ),
+                    )
 
-        wallet = self.service.wallet_state_manager.main_wallet
+                interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
-        txs: List[TransactionRecord] = []
-        for transaction_hexstr in request["transactions"]:
-            tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr))
-            txs.append(tx)
+        return PushTransactionsResponse([], [])  # tx_endpoint takes care of this
 
-        async with self.service.wallet_state_manager.lock:
-            for tx in txs:
-                await wallet.push_transaction(tx)
+    @marshal
+    async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
+        return GetTimestampForHeightResponse(await self.service.get_timestamp_for_height(request.height))
 
-        return {}
+    @marshal
+    async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
+        """
+        Set auto claim merkle coins config
+        :param request: Example {"enable": true, "tx_fee": 100000, "min_amount": 0, "batch_size": 50}
+        :return:
+        """
+        return AutoClaimSettings.from_json_dict(self.service.set_auto_claim(request))
 
-    async def farm_block(self, request) -> EndpointResult:
-        raw_puzzle_hash = decode_puzzle_hash(request["address"])
-        request = FarmNewBlockProtocol(raw_puzzle_hash)
-        msg = make_msg(ProtocolMessageTypes.farm_new_block, request)
-
-        await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
-        return {}
+    @marshal
+    async def get_auto_claim(self, request: Empty) -> AutoClaimSettings:
+        """
+        Get auto claim merkle coins config
+        :param request: None
+        :return:
+        """
+        auto_claim_settings = AutoClaimSettings.from_json_dict(
+            self.service.wallet_state_manager.config.get("auto_claim", {})
+        )
+        return auto_claim_settings
 
     ##########################################################################################
     # Wallet Management
     ##########################################################################################
 
-    async def get_wallets(self, request: Dict) -> EndpointResult:
+    async def get_wallets(self, request: dict[str, Any]) -> EndpointResult:
         include_data: bool = request.get("include_data", True)
         wallet_type: Optional[WalletType] = None
         if "type" in request:
             wallet_type = WalletType(request["type"])
 
-        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
+        wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
         if not include_data:
-            result: List[WalletInfo] = []
+            result: list[WalletInfo] = []
             for wallet in wallets:
                 result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
             wallets = result
         response: EndpointResult = {"wallets": wallets}
+        if include_data:
+            response = {
+                "wallets": [
+                    (
+                        wallet
+                        if wallet.type != WalletType.CRCAT
+                        else {
+                            **wallet.to_json_dict(),
+                            "authorized_providers": [
+                                p.hex() for p in CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
+                            ],
+                            "flags_needed": CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags,
+                        }
+                    )
+                    for wallet in response["wallets"]
+                ]
+            }
         if self.service.logged_in_fingerprint is not None:
             response["fingerprint"] = self.service.logged_in_fingerprint
         return response
 
-    async def create_new_wallet(self, request: Dict) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def create_new_wallet(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wallet_state_manager = self.service.wallet_state_manager
 
         if await self.service.wallet_state_manager.synced() is False:
@@ -574,17 +797,32 @@ class WalletRpcApi:
             # If not provided, the name will be autogenerated based on the tail hash.
             name = request.get("name", None)
             if request["mode"] == "new":
-                async with self.service.wallet_state_manager.lock:
-                    cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                        wallet_state_manager,
-                        main_wallet,
-                        {"identifier": "genesis_by_id"},
-                        uint64(request["amount"]),
-                        name,
+                if request.get("test", False):
+                    if not action_scope.config.push:
+                        raise ValueError("Test CAT minting must be pushed automatically")  # pragma: no cover
+                    async with self.service.wallet_state_manager.lock:
+                        cat_wallet = await CATWallet.create_new_cat_wallet(
+                            wallet_state_manager,
+                            main_wallet,
+                            {"identifier": "genesis_by_id"},
+                            uint64(request["amount"]),
+                            action_scope,
+                            fee,
+                            name,
+                        )
+                        asset_id = cat_wallet.get_asset_id()
+                    self.service.wallet_state_manager.state_changed("wallet_created")
+                    return {
+                        "type": cat_wallet.type(),
+                        "asset_id": asset_id,
+                        "wallet_id": cat_wallet.id(),
+                        "transactions": None,  # tx_endpoint wrapper will take care of this
+                    }
+                else:
+                    raise ValueError(
+                        "Support for this RPC mode has been dropped."
+                        " Please use the CAT Admin Tool @ https://github.com/Chia-Network/CAT-admin-tool instead."
                     )
-                    asset_id = cat_wallet.get_asset_id()
-                self.service.wallet_state_manager.state_changed("wallet_created")
-                return {"type": cat_wallet.type(), "asset_id": asset_id, "wallet_id": cat_wallet.id()}
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
@@ -604,7 +842,7 @@ class WalletRpcApi:
                     backup_dids.append(decode_puzzle_hash(d))
                 if len(backup_dids) > 0:
                     num_needed = uint64(request["num_of_backup_ids_needed"])
-                metadata: Dict[str, str] = {}
+                metadata: dict[str, str] = {}
                 if "metadata" in request:
                     if type(request["metadata"]) is dict:
                         metadata = request["metadata"]
@@ -617,30 +855,33 @@ class WalletRpcApi:
                         wallet_state_manager,
                         main_wallet,
                         uint64(request["amount"]),
+                        action_scope,
                         backup_dids,
                         uint64(num_needed),
                         metadata,
                         did_wallet_name,
                         uint64(request.get("fee", 0)),
+                        extra_conditions=extra_conditions,
                     )
 
-                    my_did_id = encode_puzzle_hash(
-                        bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
-                    )
-                    nft_wallet_name = did_wallet_name
-                    if nft_wallet_name is not None:
-                        nft_wallet_name = f"{nft_wallet_name} NFT Wallet"
-                    await NFTWallet.create_new_nft_wallet(
-                        wallet_state_manager,
-                        main_wallet,
-                        bytes32.fromhex(did_wallet.get_my_DID()),
-                        nft_wallet_name,
-                    )
+                my_did_id = encode_puzzle_hash(
+                    bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
+                )
+                nft_wallet_name = did_wallet_name
+                if nft_wallet_name is not None:
+                    nft_wallet_name = f"{nft_wallet_name} NFT Wallet"
+                await NFTWallet.create_new_nft_wallet(
+                    wallet_state_manager,
+                    main_wallet,
+                    bytes32.fromhex(did_wallet.get_my_DID()),
+                    nft_wallet_name,
+                )
                 return {
                     "success": True,
                     "type": did_wallet.type(),
                     "my_did": my_did_id,
                     "wallet_id": did_wallet.id(),
+                    "transactions": None,  # tx_endpoint wrapper will take care of this
                 }
 
             elif request["did_type"] == "recovery":
@@ -670,6 +911,48 @@ class WalletRpcApi:
                 }
             else:  # undefined did_type
                 pass
+        elif request["wallet_type"] == "dao_wallet":
+            name = request.get("name", None)
+            mode = request.get("mode", None)
+            if mode == "new":
+                dao_rules_json = request.get("dao_rules", None)
+                if dao_rules_json:
+                    dao_rules = DAORules.from_json_dict(dao_rules_json)
+                else:
+                    raise ValueError("DAO rules must be specified for wallet creation")
+                async with self.service.wallet_state_manager.lock:
+                    dao_wallet = await DAOWallet.create_new_dao_and_wallet(
+                        wallet_state_manager,
+                        main_wallet,
+                        uint64(request.get("amount_of_cats", None)),
+                        dao_rules,
+                        action_scope,
+                        uint64(request.get("filter_amount", 1)),
+                        name,
+                        uint64(request.get("fee", 0)),
+                        uint64(request.get("fee_for_cat", 0)),
+                    )
+            elif mode == "existing":
+                # async with self.service.wallet_state_manager.lock:
+                dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+                    wallet_state_manager,
+                    main_wallet,
+                    bytes32.from_hexstr(request.get("treasury_id", None)),
+                    uint64(request.get("filter_amount", 1)),
+                    name,
+                )
+            else:
+                raise Exception(f"Invalid DAO wallet mode: {mode!r}")
+
+            return {
+                "success": True,
+                "type": dao_wallet.type(),
+                "wallet_id": dao_wallet.id(),
+                "treasury_id": dao_wallet.dao_info.treasury_id,
+                "cat_wallet_id": dao_wallet.dao_info.cat_wallet_id,
+                "dao_cat_wallet_id": dao_wallet.dao_info.dao_cat_wallet_id,
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
                 did_id: Optional[bytes32] = None
@@ -699,7 +982,9 @@ class WalletRpcApi:
                 if "initial_target_state" not in request:
                     raise AttributeError("Daemon didn't send `initial_target_state`. Try updating the daemon.")
 
-                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
+                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(
+                    new=not action_scope.config.tx_config.reuse_puzhash
+                )
 
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
 
@@ -714,14 +999,13 @@ class WalletRpcApi:
                         if wallet.type() == WalletType.POOLING_WALLET:
                             assert isinstance(wallet, PoolWallet)
                             pool_wallet_index = await wallet.get_pool_wallet_index()
-                            if pool_wallet_index > max_pwi:
-                                max_pwi = pool_wallet_index
+                            max_pwi = max(max_pwi, pool_wallet_index)
 
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
                     owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.private_key, uint32(max_pwi + 1)
+                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
                     )
                     owner_pk: G1Element = owner_sk.get_g1()
 
@@ -734,19 +1018,24 @@ class WalletRpcApi:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
                             delayed_address = bytes32.from_hexstr(request["p2_singleton_delayed_ph"])
-                        tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
+
+                        p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
+                            action_scope,
                             fee,
                             request.get("p2_singleton_delay_time", None),
                             delayed_address,
+                            extra_conditions=extra_conditions,
                         )
+
                     except Exception as e:
                         raise ValueError(str(e))
                     return {
                         "total_fee": fee * 2,
-                        "transaction": tr,
+                        "transaction": None,  # tx_endpoint wrapper will take care of this
+                        "transactions": None,  # tx_endpoint wrapper will take care of this
                         "launcher_id": launcher_id.hex(),
                         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
                     }
@@ -763,68 +1052,40 @@ class WalletRpcApi:
     # Wallet
     ##########################################################################################
 
-    async def get_wallet_balance(self, request: Dict) -> EndpointResult:
-        wallet_id = uint32(int(request["wallet_id"]))
+    async def _get_wallet_balance(self, wallet_id: uint32) -> dict[str, Any]:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        balance = await self.service.get_balance(wallet_id)
+        wallet_balance = balance.to_json_dict()
+        wallet_balance["wallet_id"] = wallet_id
+        wallet_balance["wallet_type"] = wallet.type()
+        if self.service.logged_in_fingerprint is not None:
+            wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
+        if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
+            assert isinstance(wallet, CATWallet)
+            wallet_balance["asset_id"] = wallet.get_asset_id()
+            if wallet.type() == WalletType.CRCAT:
+                assert isinstance(wallet, CRCATWallet)
+                wallet_balance["pending_approval_balance"] = await wallet.get_pending_approval_balance()
 
-        # If syncing return the last available info or 0s
-        syncing = self.service.wallet_state_manager.sync_mode
-        if syncing:
-            if wallet_id in self.balance_cache:
-                wallet_balance = self.balance_cache[wallet_id]
-            else:
-                wallet_balance = {
-                    "wallet_id": wallet_id,
-                    "confirmed_wallet_balance": 0,
-                    "unconfirmed_wallet_balance": 0,
-                    "spendable_balance": 0,
-                    "pending_change": 0,
-                    "max_send_amount": 0,
-                    "unspent_coin_count": 0,
-                    "pending_coin_removal_count": 0,
-                    "wallet_type": wallet.type(),
-                }
-                if self.service.logged_in_fingerprint is not None:
-                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
-                if wallet.type() == WalletType.CAT:
-                    assert isinstance(wallet, CATWallet)
-                    wallet_balance["asset_id"] = wallet.get_asset_id()
-        else:
-            async with self.service.wallet_state_manager.lock:
-                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
-                    wallet_id
-                )
-                balance = await wallet.get_confirmed_balance(unspent_records)
-                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-                spendable_balance = await wallet.get_spendable_balance(unspent_records)
-                pending_change = await wallet.get_pending_change_balance()
-                max_send_amount = await wallet.get_max_send_amount(unspent_records)
+        return wallet_balance
 
-                unconfirmed_removals: Dict[
-                    bytes32, Coin
-                ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
-                wallet_balance = {
-                    "wallet_id": wallet_id,
-                    "confirmed_wallet_balance": balance,
-                    "unconfirmed_wallet_balance": pending_balance,
-                    "spendable_balance": spendable_balance,
-                    "pending_change": pending_change,
-                    "max_send_amount": max_send_amount,
-                    "unspent_coin_count": len(unspent_records),
-                    "pending_coin_removal_count": len(unconfirmed_removals),
-                    "wallet_type": wallet.type(),
-                }
-                if self.service.logged_in_fingerprint is not None:
-                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
-                if wallet.type() == WalletType.CAT:
-                    assert isinstance(wallet, CATWallet)
-                    wallet_balance["asset_id"] = wallet.get_asset_id()
-                self.balance_cache[wallet_id] = wallet_balance
-
+    async def get_wallet_balance(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(int(request["wallet_id"]))
+        wallet_balance = await self._get_wallet_balance(wallet_id)
         return {"wallet_balance": wallet_balance}
 
-    async def get_transaction(self, request: Dict) -> EndpointResult:
-        transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
+    async def get_wallet_balances(self, request: dict[str, Any]) -> EndpointResult:
+        try:
+            wallet_ids: list[uint32] = [uint32(int(wallet_id)) for wallet_id in request["wallet_ids"]]
+        except (TypeError, KeyError):
+            wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
+        wallet_balances: dict[uint32, dict[str, Any]] = {}
+        for wallet_id in wallet_ids:
+            wallet_balances[wallet_id] = await self._get_wallet_balance(wallet_id)
+        return {"wallet_balances": wallet_balances}
+
+    async def get_transaction(self, request: dict[str, Any]) -> EndpointResult:
+        transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
         tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
@@ -834,7 +1095,210 @@ class WalletRpcApi:
             "transaction_id": tr.name,
         }
 
-    async def get_transactions(self, request: Dict) -> EndpointResult:
+    async def get_transaction_memo(self, request: dict[str, Any]) -> EndpointResult:
+        transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
+        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+        if tr is None:
+            raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
+        if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
+            if tr.type == uint32(TransactionType.INCOMING_TX.value):
+                # Fetch incoming tx coin spend
+                peer = self.service.get_full_node_peer()
+                assert len(tr.additions) == 1
+                coin_state_list: list[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+                    [tr.additions[0].parent_coin_info], peer=peer
+                )
+                assert len(coin_state_list) == 1
+                coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
+                tr = dataclasses.replace(tr, spend_bundle=WalletSpendBundle([coin_spend], G2Element()))
+            else:
+                raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
+        assert tr.spend_bundle is not None
+        memos: dict[bytes32, list[bytes]] = compute_memos(tr.spend_bundle)
+        response = {}
+        # Convert to hex string
+        for coin_id, memo_list in memos.items():
+            response[coin_id.hex()] = [memo.hex() for memo in memo_list]
+        return {transaction_id.hex(): response}
+
+    @tx_endpoint(push=False)
+    @marshal
+    async def split_coins(
+        self, request: SplitCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
+    ) -> SplitCoinsResponse:
+        if request.number_of_coins > 500:
+            raise ValueError(f"{request.number_of_coins} coins is greater then the maximum limit of 500 coins.")
+
+        optional_coin = await self.service.wallet_state_manager.coin_store.get_coin_record(request.target_coin_id)
+        if optional_coin is None:
+            raise ValueError(f"Could not find coin with ID {request.target_coin_id}")
+        else:
+            coin = optional_coin.coin
+
+        total_amount = request.amount_per_coin * request.number_of_coins
+
+        if coin.amount < total_amount:
+            raise ValueError(
+                f"Coin amount: {coin.amount} is less than the total amount of the split: {total_amount}, exiting."
+            )
+
+        if request.wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
+        if not isinstance(wallet, (Wallet, CATWallet)):
+            raise ValueError("Cannot split coins from non-fungible wallet types")
+
+        outputs = [
+            Payment(
+                await wallet.get_puzzle_hash(new=True)
+                if isinstance(wallet, Wallet)
+                else await wallet.standard_wallet.get_puzzle_hash(new=True),
+                request.amount_per_coin,
+            )
+            for _ in range(request.number_of_coins)
+        ]
+        if len(outputs) == 0:
+            return SplitCoinsResponse([], [])
+
+        # TODO: unify GST API
+        if wallet.type() == WalletType.STANDARD_WALLET:
+            assert isinstance(wallet, Wallet)
+            if coin.amount < total_amount + request.fee:
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.append(coin)
+                coins = await wallet.select_coins(
+                    uint64(total_amount + request.fee - coin.amount),
+                    action_scope,
+                )
+                coins.add(coin)
+            else:
+                coins = {coin}
+            await wallet.generate_signed_transaction(
+                outputs[0].amount,
+                outputs[0].puzzle_hash,
+                action_scope,
+                request.fee,
+                coins,
+                outputs[1:] if len(outputs) > 1 else None,
+                extra_conditions=extra_conditions,
+            )
+        else:
+            assert isinstance(wallet, CATWallet)
+            await wallet.generate_signed_transaction(
+                [output.amount for output in outputs],
+                [output.puzzle_hash for output in outputs],
+                action_scope,
+                request.fee,
+                coins={coin},
+                extra_conditions=extra_conditions,
+            )
+
+        return SplitCoinsResponse([], [])  # tx_endpoint will take care to fill this out
+
+    @tx_endpoint(push=False)
+    @marshal
+    async def combine_coins(
+        self, request: CombineCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
+    ) -> CombineCoinsResponse:
+        # Some "number of coins" validation
+        if request.number_of_coins > request.coin_num_limit:
+            raise ValueError(
+                f"{request.number_of_coins} coins is greater then the maximum limit of {request.coin_num_limit} coins."
+            )
+        if request.number_of_coins < 1:
+            raise ValueError("You need at least two coins to combine")
+        if len(request.target_coin_ids) > request.number_of_coins:
+            raise ValueError("More coin IDs specified than desired number of coins to combine")
+
+        if request.wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
+        if not isinstance(wallet, (Wallet, CATWallet)):
+            raise ValueError("Cannot combine coins from non-fungible wallet types")
+
+        coins: list[Coin] = []
+
+        # First get the coin IDs specified
+        if request.target_coin_ids != []:
+            coins.extend(
+                cr.coin
+                for cr in (
+                    await self.service.wallet_state_manager.coin_store.get_coin_records(
+                        wallet_id=request.wallet_id,
+                        coin_id_filter=HashFilter(request.target_coin_ids, mode=uint8(FilterMode.include.value)),
+                    )
+                ).records
+            )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.selected_coins.extend(coins)
+
+        # Next let's select enough coins to meet the target + fee if there is one
+        fungible_amount_needed = uint64(0) if request.target_coin_amount is None else request.target_coin_amount
+        if isinstance(wallet, Wallet):
+            fungible_amount_needed = uint64(fungible_amount_needed + request.fee)
+        amount_selected = sum(c.amount for c in coins)
+        if amount_selected < fungible_amount_needed:  # implicit fungible_amount_needed > 0 here
+            coins.extend(
+                await wallet.select_coins(
+                    amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
+                )
+            )
+
+        if len(coins) > request.number_of_coins:
+            raise ValueError(
+                f"Options specified cannot be met without selecting more coins than specified: {len(coins)}"
+            )
+
+        # Now let's select enough coins to get to the target number to combine
+        if len(coins) < request.number_of_coins:
+            async with action_scope.use() as interface:
+                coins.extend(
+                    cr.coin
+                    for cr in (
+                        await self.service.wallet_state_manager.coin_store.get_coin_records(
+                            wallet_id=request.wallet_id,
+                            limit=uint32(request.number_of_coins - len(coins)),
+                            order=CoinRecordOrder.amount,
+                            coin_id_filter=HashFilter(
+                                [c.name() for c in interface.side_effects.selected_coins],
+                                mode=uint8(FilterMode.exclude.value),
+                            ),
+                            reverse=request.largest_first,
+                        )
+                    ).records
+                )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.selected_coins.extend(coins)
+
+        primary_output_amount = (
+            uint64(sum(c.amount for c in coins)) if request.target_coin_amount is None else request.target_coin_amount
+        )
+        if isinstance(wallet, Wallet):
+            primary_output_amount = uint64(primary_output_amount - request.fee)
+            await wallet.generate_signed_transaction(
+                primary_output_amount,
+                await wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
+                action_scope,
+                request.fee,
+                set(coins),
+                extra_conditions=extra_conditions,
+            )
+        else:
+            assert isinstance(wallet, CATWallet)
+            await wallet.generate_signed_transaction(
+                [primary_output_amount],
+                [await wallet.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
+                action_scope,
+                request.fee,
+                coins=set(coins),
+                extra_conditions=extra_conditions,
+            )
+
+        return CombineCoinsResponse([], [])  # tx_endpoint will take care to fill this out
+
+    async def get_transactions(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
 
         start = request.get("start", 0)
@@ -846,33 +1310,60 @@ class WalletRpcApi:
         to_puzzle_hash: Optional[bytes32] = None
         if to_address is not None:
             to_puzzle_hash = decode_puzzle_hash(to_address)
+        type_filter = None
+        if "type_filter" in request:
+            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id, start, end, sort_key=sort_key, reverse=reverse, to_puzzle_hash=to_puzzle_hash
+            wallet_id,
+            start,
+            end,
+            sort_key=sort_key,
+            reverse=reverse,
+            to_puzzle_hash=to_puzzle_hash,
+            type_filter=type_filter,
+            confirmed=request.get("confirmed", None),
         )
+        tx_list = []
+        # Format for clawback transactions
+        for tr in transactions:
+            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+            tx_list.append(tx)
+            if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                continue
+            coin: Coin = tr.additions[0]
+            record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
+                coin.name()
+            )
+            if record is None:
+                log.error(f"Cannot find coin record for type {tx['type']} transaction {tx['name']}")
+                continue
+            try:
+                tx["metadata"] = record.parsed_metadata().to_json_dict()
+            except ValueError as e:
+                log.error(f"Could not parse coin record metadata: {type(e).__name__} {e}")
+                continue
+            tx["metadata"]["coin_id"] = coin.name().hex()
+            tx["metadata"]["spent"] = record.spent
         return {
-            "transactions": [
-                (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
-                for tr in transactions
-            ],
+            "transactions": tx_list,
             "wallet_id": wallet_id,
         }
 
-    async def get_transaction_count(self, request: Dict) -> EndpointResult:
+    async def get_transaction_count(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
-        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
+        type_filter = None
+        if "type_filter" in request:
+            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
+        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+            wallet_id, confirmed=request.get("confirmed", None), type_filter=type_filter
+        )
         return {
             "count": count,
             "wallet_id": wallet_id,
         }
 
-    # this function is just here for backwards-compatibility. It will probably
-    # be removed in the future
-    async def get_initial_freeze_period(self, _: Dict) -> EndpointResult:
-        # Mon May 03 2021 17:00:00 GMT+0000
-        return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
-
-    async def get_next_address(self, request: Dict) -> EndpointResult:
+    async def get_next_address(self, request: dict[str, Any]) -> EndpointResult:
         """
         Returns a new address
         """
@@ -888,7 +1379,7 @@ class WalletRpcApi:
             assert isinstance(wallet, Wallet)
             raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
-        elif wallet.type() == WalletType.CAT:
+        elif wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
             assert isinstance(wallet, CATWallet)
             raw_puzzle_hash = await wallet.standard_wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
@@ -900,7 +1391,13 @@ class WalletRpcApi:
             "address": address,
         }
 
-    async def send_transaction(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def send_transaction(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
@@ -917,70 +1414,122 @@ class WalletRpcApi:
             raise ValueError("Unexpected Address Prefix")
         puzzle_hash: bytes32 = decode_puzzle_hash(address)
 
-        memos: List[bytes] = []
+        memos: list[bytes] = []
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
 
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
-        if exclude_coin_amounts is not None:
-            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
-        exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
-        if exclude_coin_ids is not None:
-            exclude_coins: Set[Coin] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
-                )
-                if wr is not None
-            }
-        else:
-            exclude_coins = set()
+
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(
+            await wallet.generate_signed_transaction(
                 amount,
                 puzzle_hash,
+                action_scope,
                 fee,
                 memos=memos,
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                exclude_coin_amounts=exclude_coin_amounts,
-                exclude_coins=exclude_coins,
+                puzzle_decorator_override=request.get("puzzle_decorator", None),
+                extra_conditions=extra_conditions,
             )
-            await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
-            "transaction": tx.to_json_dict_convenience(self.service.config),
-            "transaction_id": tx.name,
+            "transaction": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+            "transaction_id": None,  # tx_endpoint wrapper will take care of this
         }
 
-    async def send_transaction_multi(self, request) -> EndpointResult:
+    async def send_transaction_multi(self, request: dict[str, Any]) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
+
+        # This is required because this is a "@tx_endpoint" that calls other @tx_endpoints
+        request.setdefault("push", True)
+        request.setdefault("merge_spends", True)
 
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            if wallet.type() == WalletType.CAT:
+            if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
                 assert isinstance(wallet, CATWallet)
-                transaction: Dict = (await self.cat_spend(request, hold_lock=False))["transaction"]
+                response = await self.cat_spend(request, hold_lock=False)
+                transaction = response["transaction"]
+                transactions = response["transactions"]
             else:
-                transaction = (await self.create_signed_transaction(request, hold_lock=False))["signed_tx"]
-            tr = TransactionRecord.from_json_dict_convenience(transaction)
-            if wallet.type() != WalletType.CAT:
-                assert isinstance(wallet, Wallet)
-                await wallet.push_transaction(tr)
+                response = await self.create_signed_transaction(request, hold_lock=False)
+                transaction = response["signed_tx"]
+                transactions = response["transactions"]
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
-        return {"transaction": transaction, "transaction_id": tr.name}
+        return {
+            "transaction": transaction,
+            "transaction_id": TransactionRecord.from_json_dict_convenience(transaction).name,
+            "transactions": transactions,
+            "unsigned_transactions": response["unsigned_transactions"],
+        }
 
-    async def delete_unconfirmed_transactions(self, request) -> EndpointResult:
+    @tx_endpoint(push=True, merge_spends=False)
+    async def spend_clawback_coins(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        """Spend clawback coins that were sent (to claw them back) or received (to claim them).
+
+        :param coin_ids: list of coin ids to be spent
+        :param batch_size: number of coins to spend per bundle
+        :param fee: transaction fee in mojos
+        :return:
+        """
+        if "coin_ids" not in request:
+            raise ValueError("Coin IDs are required.")
+        coin_ids: list[bytes32] = [bytes32.from_hexstr(coin) for coin in request["coin_ids"]]
+        tx_fee: uint64 = uint64(request.get("fee", 0))
+        # Get inner puzzle
+        coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+            coin_id_filter=HashFilter.include(coin_ids),
+            coin_type=CoinType.CLAWBACK,
+            wallet_type=WalletType.STANDARD_WALLET,
+            spent_range=UInt32Range(stop=uint32(0)),
+        )
+
+        coins: dict[Coin, ClawbackMetadata] = {}
+        batch_size = request.get(
+            "batch_size", self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
+        )
+        for coin_id, coin_record in coin_records.coin_id_to_record.items():
+            try:
+                metadata = coin_record.parsed_metadata()
+                assert isinstance(metadata, ClawbackMetadata)
+                coins[coin_record.coin] = metadata
+                if len(coins) >= batch_size:
+                    await self.service.wallet_state_manager.spend_clawback_coins(
+                        coins,
+                        tx_fee,
+                        action_scope,
+                        request.get("force", False),
+                        extra_conditions=extra_conditions,
+                    )
+                    coins = {}
+            except Exception as e:
+                log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
+        if len(coins) > 0:
+            await self.service.wallet_state_manager.spend_clawback_coins(
+                coins,
+                tx_fee,
+                action_scope,
+                request.get("force", False),
+                extra_conditions=extra_conditions,
+            )
+
+        return {
+            "success": True,
+            "transaction_ids": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    async def delete_unconfirmed_transactions(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         if wallet_id not in self.service.wallet_state_manager.wallets:
             raise ValueError(f"Wallet id {wallet_id} does not exist")
@@ -995,36 +1544,38 @@ class WalletRpcApi:
                 wallet.target_state = None
             return {}
 
-    async def select_coins(self, request) -> EndpointResult:
+    async def select_coins(
+        self,
+        request: dict[str, Any],
+    ) -> EndpointResult:
+        assert self.service.logged_in_fingerprint is not None
+        tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
+
+        # Some backwards compat fill-ins
+        if tx_config_loader.excluded_coin_ids is None:
+            excluded_coins: Optional[list[dict[str, Any]]] = request.get("excluded_coins", request.get("exclude_coins"))
+            if excluded_coins is not None:
+                tx_config_loader = tx_config_loader.override(
+                    excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
+                )
+
+        tx_config: TXConfig = tx_config_loader.autofill(
+            constants=self.service.wallet_state_manager.constants,
+        )
+
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before selecting coins")
 
         amount = uint64(request["amount"])
         wallet_id = uint32(request["wallet_id"])
-        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        excluded_coin_amounts: Optional[List[uint64]] = request.get("excluded_coin_amounts")
-        if excluded_coin_amounts is not None:
-            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
-        excluded_coins: Optional[List] = request.get("excluded_coins")
-        if excluded_coins is not None:
-            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins]
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        async with self.service.wallet_state_manager.lock:
-            selected_coins = await wallet.select_coins(
-                amount=amount,
-                min_coin_amount=min_coin_amount,
-                exclude=excluded_coins,
-                max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=excluded_coin_amounts,
-            )
+        async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
+            selected_coins = await wallet.select_coins(amount, action_scope)
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
-    async def get_spendable_coins(self, request) -> EndpointResult:
+    async def get_spendable_coins(self, request: dict[str, Any]) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
@@ -1033,48 +1584,48 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        excluded_coin_amounts: Optional[List[uint64]] = request.get("excluded_coin_amounts")
+        excluded_coin_amounts: Optional[list[uint64]] = request.get("excluded_coin_amounts")
         if excluded_coin_amounts is not None:
             excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
         else:
             excluded_coin_amounts = []
-        excluded_coins: Optional[List] = request.get("excluded_coins")
-        if excluded_coins is not None:
-            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins]
+        excluded_coins_input: Optional[dict[str, dict[str, Any]]] = request.get("excluded_coins")
+        if excluded_coins_input is not None:
+            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins_input.values()]
         else:
             excluded_coins = []
-        excluded_coin_ids: Optional[List] = request.get("excluded_coin_ids")
-        if excluded_coin_ids is not None:
-            excluded_coin_ids = [bytes32.from_hexstr(hex_id) for hex_id in excluded_coin_ids]
+        excluded_coin_ids_input: Optional[list[str]] = request.get("excluded_coin_ids")
+        if excluded_coin_ids_input is not None:
+            excluded_coin_ids = [bytes32.from_hexstr(hex_id) for hex_id in excluded_coin_ids_input]
         else:
             excluded_coin_ids = []
         state_mgr = self.service.wallet_state_manager
         wallet = state_mgr.wallets[wallet_id]
         async with state_mgr.lock:
             all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(wallet_id)
-            if wallet.type() == WalletType.CAT:
+            if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
                 assert isinstance(wallet, CATWallet)
-                spendable_coins: List[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
+                spendable_coins: list[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
             else:
                 spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(wallet_id, all_coin_records))
 
             # Now we get the unconfirmed transactions and manually derive the additions and removals.
-            unconfirmed_transactions: List[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
+            unconfirmed_transactions: list[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
                 wallet_id
             )
-            unconfirmed_removal_ids: Dict[bytes32, uint64] = {
+            unconfirmed_removal_ids: dict[bytes32, uint64] = {
                 coin.name(): transaction.created_at_time
                 for transaction in unconfirmed_transactions
                 for coin in transaction.removals
             }
-            unconfirmed_additions: List[Coin] = [
+            unconfirmed_additions: list[Coin] = [
                 coin
                 for transaction in unconfirmed_transactions
                 for coin in transaction.additions
                 if await state_mgr.does_coin_belong_to_wallet(coin, wallet_id)
             ]
-            valid_spendable_cr: List[CoinRecord] = []
-            unconfirmed_removals: List[CoinRecord] = []
+            valid_spendable_cr: list[CoinRecord] = []
+            unconfirmed_removals: list[CoinRecord] = []
             for coin_record in all_coin_records:
                 if coin_record.name() in unconfirmed_removal_ids:
                     unconfirmed_removals.append(coin_record.to_coin_record(unconfirmed_removal_ids[coin_record.name()]))
@@ -1099,44 +1650,48 @@ class WalletRpcApi:
             "unconfirmed_additions": [coin.to_json_dict() for coin in unconfirmed_additions],
         }
 
-    async def get_coin_records_by_names(self, request) -> EndpointResult:
+    async def get_coin_records_by_names(self, request: dict[str, Any]) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
 
         if "names" not in request:
             raise ValueError("Names not in request")
-        kwargs: Dict[str, Any] = {
-            "include_spent_coins": False,
-            "coin_names": [hexstr_to_bytes(name) for name in request["names"]],
+        coin_ids = [bytes32.from_hexstr(name) for name in request["names"]]
+        kwargs: dict[str, Any] = {
+            "coin_id_filter": HashFilter.include(coin_ids),
         }
-        if "start_height" in request:
-            kwargs["start_height"] = uint32(request["start_height"])
-        if "end_height" in request:
-            kwargs["end_height"] = uint32(request["end_height"])
 
-        if "include_spent_coins" in request:
-            kwargs["include_spent_coins"] = request["include_spent_coins"]
+        confirmed_range = UInt32Range()
+        if "start_height" in request:
+            confirmed_range = dataclasses.replace(confirmed_range, start=uint32(request["start_height"]))
+        if "end_height" in request:
+            confirmed_range = dataclasses.replace(confirmed_range, stop=uint32(request["end_height"]))
+        if confirmed_range != UInt32Range():
+            kwargs["confirmed_range"] = confirmed_range
+
+        if "include_spent_coins" in request and not str2bool(request["include_spent_coins"]):
+            kwargs["spent_range"] = unspent_range
 
         async with self.service.wallet_state_manager.lock:
-            coin_records: List[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
+            coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
-            missed_coins: List[str] = [
-                "0x" + c_id.hex() for c_id in kwargs["coin_names"] if c_id not in [cr.name for cr in coin_records]
+            missed_coins: list[str] = [
+                "0x" + c_id.hex() for c_id in coin_ids if c_id not in [cr.name for cr in coin_records]
             ]
             if missed_coins:
                 raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
         return {"coin_records": [cr.to_json_dict() for cr in coin_records]}
 
-    async def get_current_derivation_index(self, request) -> Dict[str, Any]:
+    async def get_current_derivation_index(self, request: dict[str, Any]) -> dict[str, Any]:
         assert self.service.wallet_state_manager is not None
 
         index: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
         return {"success": True, "index": index}
 
-    async def extend_derivation_index(self, request) -> Dict[str, Any]:
+    async def extend_derivation_index(self, request: dict[str, Any]) -> dict[str, Any]:
         assert self.service.wallet_state_manager is not None
 
         # Require a new max derivation index
@@ -1177,37 +1732,25 @@ class WalletRpcApi:
 
         return {"success": True, "index": updated_index}
 
-    async def get_notifications(self, request) -> EndpointResult:
-        ids: Optional[List[str]] = request.get("ids", None)
-        start: Optional[int] = request.get("start", None)
-        end: Optional[int] = request.get("end", None)
-        if ids is None:
-            notifications: List[
+    @marshal
+    async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
+        if request.ids is None:
+            notifications: list[
                 Notification
             ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                pagination=(start, end)
+                pagination=(request.start, request.end)
             )
         else:
             notifications = (
                 await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
-                    [bytes32.from_hexstr(id) for id in ids]
+                    request.ids
                 )
             )
 
-        return {
-            "notifications": [
-                {
-                    "id": notification.coin_id.hex(),
-                    "message": notification.message.hex(),
-                    "amount": notification.amount,
-                    "height": notification.height,
-                }
-                for notification in notifications
-            ]
-        }
+        return GetNotificationsResponse(notifications)
 
-    async def delete_notifications(self, request) -> EndpointResult:
-        ids: Optional[List[str]] = request.get("ids", None)
+    async def delete_notifications(self, request: dict[str, Any]) -> EndpointResult:
+        ids: Optional[list[str]] = request.get("ids", None)
         if ids is None:
             await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
         else:
@@ -1217,59 +1760,133 @@ class WalletRpcApi:
 
         return {}
 
-    async def send_notification(self, request) -> EndpointResult:
-        tx: TransactionRecord = await self.service.wallet_state_manager.notification_manager.send_new_notification(
+    @tx_endpoint(push=True)
+    async def send_notification(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        await self.service.wallet_state_manager.notification_manager.send_new_notification(
             bytes32.from_hexstr(request["target"]),
             bytes.fromhex(request["message"]),
             uint64(request["amount"]),
+            action_scope,
             request.get("fee", uint64(0)),
+            extra_conditions=extra_conditions,
         )
-        await self.service.wallet_state_manager.add_pending_transaction(tx)
-        return {"tx": tx.to_json_dict_convenience(self.service.config)}
 
-    async def verify_signature(self, request) -> EndpointResult:
+        return {"tx": None, "transactions": None}  # tx_endpoint wrapper will take care of this
+
+    async def verify_signature(self, request: dict[str, Any]) -> EndpointResult:
         """
         Given a public key, message and signature, verify if it is valid.
         :param request:
         :return:
         """
+        input_message: str = request["message"]
+        signing_mode_str: Optional[str] = request.get("signing_mode")
+        # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
+        # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        if signing_mode_str is None:
+            signing_mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        else:
+            try:
+                signing_mode = SigningMode(signing_mode_str)
+            except ValueError:
+                raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
+
+        if signing_mode in {SigningMode.CHIP_0002, SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS}:
+            # CHIP-0002 message signatures are made over the tree hash of:
+            #   ("Chia Signed Message", message)
+            message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
+        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
+            # Message is expected to be a hex string
+            message_to_verify = hexstr_to_bytes(input_message)
+        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
+            # Message is expected to be a UTF-8 string
+            message_to_verify = bytes(input_message, "utf-8")
+        else:
+            raise ValueError(f"Unsupported signing mode: {signing_mode_str!r}")
+
+        # Verify using the BLS message augmentation scheme
         is_valid = AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
-            bytes.fromhex(request["message"]),
-            G2Element.from_bytes(bytes.fromhex(request["signature"])),
+            G1Element.from_bytes(hexstr_to_bytes(request["pubkey"])),
+            message_to_verify,
+            G2Element.from_bytes(hexstr_to_bytes(request["signature"])),
         )
-        if "address" in request:
-            puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-            if puzzle_hash != puzzle_hash_for_synthetic_public_key(
-                G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
-            ):
+        address = request.get("address")
+        if address is not None:
+            # For signatures made by the sign_message_by_address/sign_message_by_id
+            # endpoints, the "address" field should contain the p2_address of the NFT/DID
+            # that was used to sign the message.
+            puzzle_hash: bytes32 = decode_puzzle_hash(address)
+            expected_puzzle_hash: Optional[bytes32] = None
+            if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
+                puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(hexstr_to_bytes(request["pubkey"])))
+                expected_puzzle_hash = bytes32(puzzle.get_tree_hash())
+            else:
+                expected_puzzle_hash = puzzle_hash_for_synthetic_public_key(
+                    G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
+                )
+            if puzzle_hash != expected_puzzle_hash:
                 return {"isValid": False, "error": "Public key doesn't match the address"}
         if is_valid:
             return {"isValid": is_valid}
         else:
             return {"isValid": False, "error": "Signature is invalid."}
 
-    async def sign_message_by_address(self, request) -> EndpointResult:
+    async def sign_message_by_address(self, request: dict[str, Any]) -> EndpointResult:
         """
         Given a derived P2 address, sign the message by its private key.
         :param request:
         :return:
         """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        is_hex: bool = request.get("is_hex", False)
+        if isinstance(is_hex, str):
+            is_hex = True if is_hex.lower() == "true" else False
+        safe_mode: bool = request.get("safe_mode", True)
+        if isinstance(safe_mode, str):
+            safe_mode = True if safe_mode.lower() == "true" else False
+        mode: SigningMode = SigningMode.CHIP_0002
+        if is_hex and safe_mode:
+            mode = SigningMode.CHIP_0002_HEX_INPUT
+        elif not is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+        elif is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request["message"], puzzle_hash
+            request["message"], puzzle_hash, mode
         )
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+        return {
+            "success": True,
+            "pubkey": str(pubkey),
+            "signature": str(signature),
+            "signing_mode": mode.value,
+        }
 
-    async def sign_message_by_id(self, request) -> EndpointResult:
+    async def sign_message_by_id(self, request: dict[str, Any]) -> EndpointResult:
         """
         Given a NFT/DID ID, sign the message by the P2 private key.
         :param request:
         :return:
         """
-
         entity_id: bytes32 = decode_puzzle_hash(request["id"])
-        selected_wallet: Optional[WalletProtocol] = None
+        selected_wallet: Optional[WalletProtocol[Any]] = None
+        is_hex: bool = request.get("is_hex", False)
+        if isinstance(is_hex, str):
+            is_hex = True if is_hex.lower() == "true" else False
+        safe_mode: bool = request.get("safe_mode", True)
+        if isinstance(safe_mode, str):
+            safe_mode = True if safe_mode.lower() == "true" else False
+        mode: SigningMode = SigningMode.CHIP_0002
+        if is_hex and safe_mode:
+            mode = SigningMode.CHIP_0002_HEX_INPUT
+        elif not is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+        elif is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.DECENTRALIZED_ID.value:
@@ -1281,11 +1898,8 @@ class WalletRpcApi:
             if selected_wallet is None:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"])
-            latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1))
-            latest_coin_id = None
-            if len(latest_coin) > 0:
-                latest_coin_id = latest_coin.pop().name()
+            pubkey, signature = await selected_wallet.sign_message(request["message"], mode)
+            latest_coin_id = (await selected_wallet.get_coin()).name()
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1300,39 +1914,39 @@ class WalletRpcApi:
                 return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
 
             assert isinstance(selected_wallet, NFTWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, mode)
             latest_coin_id = target_nft.coin.name()
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
 
-        assert latest_coin_id is not None
         return {
             "success": True,
             "pubkey": str(pubkey),
             "signature": str(signature),
-            "latest_coin_id": latest_coin_id.hex(),
+            "latest_coin_id": latest_coin_id.hex() if latest_coin_id is not None else None,
+            "signing_mode": mode.value,
         }
 
     ##########################################################################################
     # CATs and Trading
     ##########################################################################################
 
-    async def get_cat_list(self, request) -> EndpointResult:
+    async def get_cat_list(self, request: dict[str, Any]) -> EndpointResult:
         return {"cat_list": list(DEFAULT_CATS.values())}
 
-    async def cat_set_name(self, request) -> EndpointResult:
+    async def cat_set_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
         await wallet.set_name(str(request["name"]))
         return {"wallet_id": wallet_id}
 
-    async def cat_get_name(self, request) -> EndpointResult:
+    async def cat_get_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
         name: str = wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
 
-    async def get_stray_cats(self, request) -> EndpointResult:
+    async def get_stray_cats(self, request: dict[str, Any]) -> EndpointResult:
         """
         Get a list of all unacknowledged CATs
         :param request: RPC request
@@ -1341,16 +1955,23 @@ class WalletRpcApi:
         cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
         return {"stray_cats": cats}
 
-    async def cat_spend(self, request, hold_lock=True) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def cat_spend(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        hold_lock: bool = True,
+    ) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
 
-        amounts: List[uint64] = []
-        puzzle_hashes: List[bytes32] = []
-        memos: List[List[bytes]] = []
-        additions: Optional[List[Dict]] = request.get("additions")
+        amounts: list[uint64] = []
+        puzzle_hashes: list[bytes32] = []
+        memos: list[list[bytes]] = []
+        additions: Optional[list[dict[str, Any]]] = request.get("additions")
         if not isinstance(request["fee"], int) or (additions is None and not isinstance(request["amount"], int)):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         if additions is not None:
@@ -1370,67 +1991,66 @@ class WalletRpcApi:
             puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
             if "memos" in request:
                 memos.append([mem.encode("utf-8") for mem in request["memos"]])
+        coins: Optional[set[Coin]] = None
+        if "coins" in request and len(request["coins"]) > 0:
+            coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
-        if exclude_coin_amounts is not None:
-            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
-        exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
-        if exclude_coin_ids is not None:
-            exclude_coins: Set[Coin] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+
+        cat_discrepancy_params: tuple[Optional[int], Optional[str], Optional[str]] = (
+            request.get("extra_delta", None),
+            request.get("tail_reveal", None),
+            request.get("tail_solution", None),
+        )
+        cat_discrepancy: Optional[tuple[int, Program, Program]] = None
+        if cat_discrepancy_params != (None, None, None):
+            if None in cat_discrepancy_params:
+                raise ValueError("Specifying extra_delta, tail_reveal, or tail_solution requires specifying the others")
+            else:
+                assert cat_discrepancy_params[0] is not None
+                assert cat_discrepancy_params[1] is not None
+                assert cat_discrepancy_params[2] is not None
+                cat_discrepancy = (
+                    cat_discrepancy_params[0],  # mypy sanitization
+                    Program.fromhex(cat_discrepancy_params[1]),
+                    Program.fromhex(cat_discrepancy_params[2]),
                 )
-                if wr is not None
-            }
-        else:
-            exclude_coins = set()
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
-                txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+                await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
+                    action_scope,
                     fee,
+                    cat_discrepancy=cat_discrepancy,
+                    coins=coins,
                     memos=memos if memos else None,
-                    min_coin_amount=min_coin_amount,
-                    max_coin_amount=max_coin_amount,
-                    exclude_coin_amounts=exclude_coin_amounts,
-                    exclude_cat_coins=exclude_coins,
+                    extra_conditions=extra_conditions,
                 )
-                for tx in txs:
-                    await wallet.standard_wallet.push_transaction(tx)
         else:
-            txs = await wallet.generate_signed_transaction(
+            await wallet.generate_signed_transaction(
                 amounts,
                 puzzle_hashes,
+                action_scope,
                 fee,
+                cat_discrepancy=cat_discrepancy,
+                coins=coins,
                 memos=memos if memos else None,
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                exclude_coin_amounts=exclude_coin_amounts,
-                exclude_cat_coins=exclude_coins,
+                extra_conditions=extra_conditions,
             )
-            for tx in txs:
-                await wallet.standard_wallet.push_transaction(tx)
 
-        # Return the first transaction, which is expected to be the CAT spend. If a fee is
-        # included, it is currently ordered after the CAT spend.
         return {
-            "transaction": txs[0].to_json_dict_convenience(self.service.config),
-            "transaction_id": txs[0].name,
+            "transaction": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+            "transaction_id": None,  # tx_endpoint wrapper will take care of this
         }
 
-    async def cat_get_asset_id(self, request) -> EndpointResult:
+    async def cat_get_asset_id(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
         asset_id: str = wallet.get_asset_id()
         return {"asset_id": asset_id, "wallet_id": wallet_id}
 
-    async def cat_asset_id_to_name(self, request) -> EndpointResult:
+    async def cat_asset_id_to_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
         if wallet is None:
             if request["asset_id"] in DEFAULT_CATS:
@@ -1440,15 +2060,20 @@ class WalletRpcApi:
         else:
             return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
 
-    async def create_offer_for_ids(self, request) -> EndpointResult:
-        offer: Dict[str, int] = request["offer"]
+    @tx_endpoint(push=False)
+    async def create_offer_for_ids(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        if action_scope.config.push:
+            raise ValueError("Cannot push an incomplete spend")  # pragma: no cover
+
+        offer: dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
-        driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
-        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
+        driver_dict_str: Optional[dict[str, Any]] = request.get("driver_dict", None)
         marshalled_solver = request.get("solver")
         solver: Optional[Solver]
         if marshalled_solver is None:
@@ -1457,7 +2082,7 @@ class WalletRpcApi:
             solver = Solver(info=marshalled_solver)
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
-        driver_dict: Dict[bytes32, PuzzleInfo] = {}
+        driver_dict: dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
             for key, amount in offer.items():
                 if amount > 0:
@@ -1471,100 +2096,200 @@ class WalletRpcApi:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
-        modified_offer: Dict[Union[int, bytes32], int] = {}
-        for key in offer:
+        modified_offer: dict[Union[int, bytes32], int] = {}
+        for wallet_identifier, change in offer.items():
             try:
-                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+                modified_offer[bytes32.from_hexstr(wallet_identifier)] = change
             except ValueError:
-                modified_offer[int(key)] = offer[key]
+                modified_offer[int(wallet_identifier)] = change
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
                 modified_offer,
+                action_scope,
                 driver_dict,
                 solver=solver,
                 fee=fee,
                 validate_only=validate_only,
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
+                extra_conditions=extra_conditions,
             )
         if result[0]:
-            success, trade_record, error = result
+            _success, trade_record, _error = result
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
+                "transactions": None,  # tx_endpoint wrapper will take care of this
             }
         raise ValueError(result[2])
 
-    async def get_offer_summary(self, request) -> EndpointResult:
+    async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
-        offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos = offer.summary()
 
         ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
-        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
         from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
             raise ValueError("Invalid Offer")
         decoded = convertbits(list(data), 5, 8, False)
         decoded_bytes = bytes(decoded)
         try:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except TypeError:
+        except zlib.error:
             decompressed_bytes = decoded_bytes
-        bundle = SpendBundle.from_bytes(decompressed_bytes)
-        for spend in bundle.coin_spends:
-            mod, _ = spend.puzzle_reveal.to_program().uncurry()
-            if mod.get_tree_hash() == bytes32.from_hexstr(
-                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
-            ):
-                raise ValueError("CAT1s are no longer supported")
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
         ###
 
+        offer = Offer.from_bech32(offer_hex)
+        offered, requested, infos, valid_times = offer.summary()
+
         if request.get("advanced", False):
-            return {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+            response = {
+                "summary": {
+                    "offered": offered,
+                    "requested": requested,
+                    "fees": offer.fees(),
+                    "infos": infos,
+                    "additions": [c.name().hex() for c in offer.additions()],
+                    "removals": [c.name().hex() for c in offer.removals()],
+                    "valid_times": {
+                        k: v
+                        for k, v in valid_times.to_json_dict().items()
+                        if k
+                        not in {
+                            "max_secs_after_created",
+                            "min_secs_since_created",
+                            "max_blocks_after_created",
+                            "min_blocks_since_created",
+                        }
+                    },
+                },
+                "id": offer.name(),
             }
         else:
-            return {"summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer)}
+            response = {
+                "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
+                "id": offer.name(),
+            }
 
-    async def check_offer_validity(self, request) -> EndpointResult:
+        # This is a bit of a hack in favor of returning some more manageable information about CR-CATs
+        # A more general solution surely exists, but I'm not sure what it is right now
+        return {
+            **response,
+            "summary": {
+                **response["summary"],  # type: ignore[dict-item]
+                "infos": {
+                    key: (
+                        {
+                            **info,
+                            "also": {
+                                **info["also"],
+                                "flags": ProofsChecker.from_program(
+                                    uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
+                                ).flags,
+                            },
+                        }
+                        if "also" in info and "proofs_checker" in info["also"]
+                        else info
+                    )
+                    for key, info in response["summary"]["infos"].items()  # type: ignore[index]
+                },
+            },
+        }
+
+    async def check_offer_validity(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
+
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
+
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")  # pragma: no cover
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except zlib.error:
+            decompressed_bytes = decoded_bytes
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
+        ###
+
         offer = Offer.from_bech32(offer_hex)
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
-        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer))}
+        peer = self.service.get_full_node_peer()
+        return {
+            "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
+            "id": offer.name(),
+        }
 
-    async def take_offer(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def take_offer(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         offer_hex: str = request["offer"]
+
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
+
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")  # pragma: no cover
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except zlib.error:
+            decompressed_bytes = decoded_bytes
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
+        ###
+
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        maybe_marshalled_solver: Dict[str, Any] = request.get("solver")
+        maybe_marshalled_solver: Optional[dict[str, Any]] = request.get("solver")
         solver: Optional[Solver]
         if maybe_marshalled_solver is None:
             solver = None
         else:
             solver = Solver(info=maybe_marshalled_solver)
 
-        async with self.service.wallet_state_manager.lock:
-            peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-            if peer is None:
-                raise ValueError("No peer connected")
-            trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, peer, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, solver=solver
-            )
-        return {"trade_record": trade_record.to_json_dict_convenience()}
+        peer = self.service.get_full_node_peer()
+        trade_record = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+            offer,
+            peer,
+            action_scope,
+            fee=fee,
+            solver=solver,
+            extra_conditions=extra_conditions,
+        )
 
-    async def get_offer(self, request: Dict) -> EndpointResult:
+        async with action_scope.use() as interface:
+            interface.side_effects.signing_responses.append(
+                SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)
+            )
+
+        return {
+            "trade_record": trade_record.to_json_dict_convenience(),
+            "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+            "signing_responses": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    async def get_offer(self, request: dict[str, Any]) -> EndpointResult:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         trade_id = bytes32.from_hexstr(request["trade_id"])
@@ -1577,7 +2302,7 @@ class WalletRpcApi:
         offer_value: Optional[str] = Offer.from_bytes(offer_to_return).to_bech32() if file_contents else None
         return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
 
-    async def get_all_offers(self, request: Dict) -> EndpointResult:
+    async def get_all_offers(self, request: dict[str, Any]) -> EndpointResult:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         start: int = request.get("start", 0)
@@ -1599,7 +2324,7 @@ class WalletRpcApi:
             include_completed=include_completed,
         )
         result = []
-        offer_values: Optional[List[str]] = [] if file_contents else None
+        offer_values: Optional[list[str]] = [] if file_contents else None
         for trade in all_trades:
             result.append(trade.to_json_dict_convenience())
             if file_contents and offer_values is not None:
@@ -1608,26 +2333,38 @@ class WalletRpcApi:
 
         return {"trade_records": result, "offers": offer_values}
 
-    async def get_offers_count(self, request: Dict) -> EndpointResult:
+    async def get_offers_count(self, request: dict[str, Any]) -> EndpointResult:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         (total, my_offers_count, taken_offers_count) = await trade_mgr.trade_store.get_trades_count()
 
         return {"total": total, "my_offers_count": my_offers_count, "taken_offers_count": taken_offers_count}
 
-    async def cancel_offer(self, request: Dict) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def cancel_offer(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
         async with self.service.wallet_state_manager.lock:
-            if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
-            else:
-                await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
-        return {}
+            await wsm.trade_manager.cancel_pending_offers(
+                [bytes32(trade_id)], action_scope, fee=fee, secure=secure, extra_conditions=extra_conditions
+            )
 
-    async def cancel_offers(self, request: Dict) -> EndpointResult:
+        return {"transactions": None}  # tx_endpoint wrapper will take care of this
+
+    @tx_endpoint(push=True, merge_spends=False)
+    async def cancel_offers(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         secure = request["secure"]
         batch_fee: uint64 = uint64(request.get("batch_fee", 0))
         batch_size = request.get("batch_size", 5)
@@ -1646,7 +2383,7 @@ class WalletRpcApi:
         if asset_id is not None and asset_id != "xch":
             key = bytes32.from_hexstr(asset_id)
         while True:
-            records: List[TradeRecord] = []
+            records: dict[bytes32, TradeRecord] = {}
             trades = await trade_mgr.trade_store.get_trades_between(
                 start,
                 end,
@@ -1657,45 +2394,62 @@ class WalletRpcApi:
             )
             for trade in trades:
                 if cancel_all:
-                    records.append(trade)
+                    records[trade.trade_id] = trade
                     continue
                 if trade.offer and trade.offer != b"":
                     offer = Offer.from_bytes(trade.offer)
-                    if key in offer.driver_dict:
-                        records.append(trade)
+                    if key in offer.arbitrage():
+                        records[trade.trade_id] = trade
                         continue
 
+            if len(records) == 0:
+                break
+
             async with self.service.wallet_state_manager.lock:
-                await trade_mgr.cancel_pending_offers(records, batch_fee, secure)
+                await trade_mgr.cancel_pending_offers(
+                    list(records.keys()),
+                    action_scope,
+                    batch_fee,
+                    secure,
+                    records,
+                    extra_conditions=extra_conditions,
+                )
+
             log.info(f"Cancelled offers {start} to {end} ...")
             # If fewer records were returned than requested, we're done
             if len(trades) < batch_size:
                 break
             start = end
             end += batch_size
-        return {"success": True}
+
+        return {"transactions": None}  # tx_endpoint wrapper will take care of this
 
     ##########################################################################################
     # Distributed Identities
     ##########################################################################################
 
-    async def did_set_wallet_name(self, request) -> EndpointResult:
+    async def did_set_wallet_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         await wallet.set_name(str(request["name"]))
         return {"success": True, "wallet_id": wallet_id}
 
-    async def did_get_wallet_name(self, request) -> EndpointResult:
+    async def did_get_wallet_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        name: str = wallet.get_name()
+        name: str = wallet.get_name()  # type: ignore[no-untyped-call]  # Missing hint in `did_wallet.py`
         return {"success": True, "wallet_id": wallet_id, "name": name}
 
-    async def did_update_recovery_ids(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def did_update_recovery_ids(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         recovery_list = []
-        success: bool = False
         for _ in request["new_list"]:
             recovery_list.append(decode_puzzle_hash(_))
         if "num_verifications_required" in request:
@@ -1706,24 +2460,41 @@ class WalletRpcApi:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
             if update_success:
-                spend_bundle = await wallet.create_update_spend()
-                if spend_bundle is not None:
-                    success = True
-        return {"success": success}
+                await wallet.create_update_spend(
+                    action_scope, fee=uint64(request.get("fee", 0)), extra_conditions=extra_conditions
+                )
+                return {
+                    "success": True,
+                    "transactions": None,  # tx_endpoint wrapper will take care of this
+                }
+            else:
+                return {"success": False, "transactions": []}  # pragma: no cover
 
-    async def did_message_spend(self, request) -> EndpointResult:
+    @tx_endpoint(push=False)
+    async def did_message_spend(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        coin_announcements: Set[bytes] = set([])
-        for ca in request.get("coin_announcements", []):
-            coin_announcements.add(bytes.fromhex(ca))
-        puzzle_announcements: Set[bytes] = set([])
-        for pa in request.get("puzzle_announcements", []):
-            puzzle_announcements.add(bytes.fromhex(pa))
-        spend_bundle = await wallet.create_message_spend(coin_announcements, puzzle_announcements)
-        return {"success": True, "spend_bundle": spend_bundle}
 
-    async def did_get_info(self, request) -> EndpointResult:
+        await wallet.create_message_spend(
+            action_scope,
+            extra_conditions=(
+                *extra_conditions,
+                *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in request.get("coin_announcements", [])),
+                *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in request.get("puzzle_announcements", [])),
+            ),
+        )
+        return {
+            "success": True,
+            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    async def did_get_info(self, request: dict[str, Any]) -> EndpointResult:
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
         coin_id = request["coin_id"]
@@ -1732,35 +2503,38 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
-        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        uncurried = uncurry_puzzle(full_puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
-        memos = compute_memos(SpendBundle([coin_spend], G2Element()))
+        memos = compute_memos(WalletSpendBundle([coin_spend], G2Element()))
         hints = []
-        if coin_state.coin.name() in memos:
-            for memo in memos[coin_state.coin.name()]:
+        coin_memos = memos.get(coin_state.coin.name())
+        if coin_memos is not None:
+            for memo in coin_memos:
                 hints.append(memo.hex())
         return {
             "success": True,
+            "did_id": encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.as_python().hex(),
-            "recovery_list_hash": recovery_list_hash.as_python().hex(),
+            "public_key": public_key.as_atom().hex(),
+            "recovery_list_hash": recovery_list_hash.as_atom().hex(),
             "num_verification": num_verification.as_int(),
-            "metadata": program_to_metadata(metadata),
-            "launcher_id": singleton_struct.rest().first().as_python().hex(),
-            "full_puzzle": full_puzzle,
+            "metadata": did_program_to_metadata(metadata),
+            "launcher_id": launcher_id.hex(),
+            "full_puzzle": coin_spend.puzzle_reveal,
+            "solution": coin_spend.solution.to_program().as_python(),
             "hints": hints,
         }
 
-    async def did_find_lost_did(self, request) -> EndpointResult:
+    async def did_find_lost_did(self, request: dict[str, Any]) -> EndpointResult:
         """
         Recover a missing or unspendable DID wallet by a coin id of the DID
         :param coin_id: It can be DID ID, launcher coin ID or any coin ID of the DID you want to find.
@@ -1776,45 +2550,45 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        assert peer is not None
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
-        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        uncurried = uncurry_puzzle(full_puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-
-        hint_list = compute_coin_hints(coin_spend)
-        old_inner_puzhash = DID_INNERPUZ_MOD.curry(
-            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
-        ).get_tree_hash()
-        derivation_record = None
+        did_data: DIDCoinData = DIDCoinData(
+            p2_puzzle,
+            bytes32(recovery_list_hash.as_atom()),
+            uint16(num_verification.as_int()),
+            singleton_struct,
+            metadata,
+            get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
+            coin_state,
+        )
+        hinted_coins, _ = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
-        is_invalid = len(hint_list) == 0
-        for hint in hint_list:
+        hint: Optional[bytes32] = None
+        for hinted_coin in hinted_coins.values():
+            if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
+                hint = hinted_coin.hint
+                break
+        derivation_record = None
+        if hint is not None:
             derivation_record = (
-                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    bytes32(hint)
-                )
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
             )
-            if derivation_record is not None:
-                break
-            # Check if the mismatch is because of the memo bug
-            if hint == old_inner_puzhash:
-                is_invalid = True
-                break
-        if is_invalid:
+        if derivation_record is None:
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     p2_puzzle.get_tree_hash()
                 )
             )
-        launcher_id = singleton_struct.rest().first().as_python()
+
+        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         if derivation_record is None:
-            return {"success": False, "error": f"This DID {launcher_id.hex()} is not belong to the connected wallet"}
+            return {"success": False, "error": f"This DID {launcher_id} does not belong to the connected wallet"}
         else:
             our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
@@ -1822,19 +2596,10 @@ class WalletRpcApi:
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
             )
-            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
+                our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, metadata
             )
-            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
-            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
-                if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
-                    did_puzzle = did_puzzle_empty_recovery
-                else:
-                    return {
-                        "success": False,
-                        "error": f"Cannot recover DID {launcher_id.hex()} because the last spend is metadata update.",
-                    }
             # Check if we have the DID wallet
             did_wallet: Optional[DIDWallet] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1844,11 +2609,68 @@ class WalletRpcApi:
                         did_wallet = wallet
                         break
 
+            full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
+            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                # It's unclear whether this path is ever reached, and there is no coverage in the DID wallet tests
+                if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = did_puzzle_empty_recovery
+                elif (
+                    did_wallet is not None
+                    and did_wallet.did_info.current_inner is not None
+                    and create_singleton_puzzle(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
+                    == coin_state.coin.puzzle_hash
+                ):
+                    # Check if the old wallet has the inner puzzle
+                    did_puzzle = did_wallet.did_info.current_inner
+                else:
+                    # Try override
+                    if "recovery_list_hash" in request:
+                        recovery_list_hash = Program.from_bytes(bytes.fromhex(request["recovery_list_hash"]))
+                    num_verification = request.get("num_verification", num_verification)
+                    if "metadata" in request:
+                        metadata = metadata_to_program(request["metadata"])
+                    did_puzzle = DID_INNERPUZ_MOD.curry(
+                        our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                    )
+                    full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
+                    matched = True
+                    if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                        matched = False
+                        # Brute force addresses
+                        index = 0
+                        derivation_record = await self.service.wallet_state_manager.puzzle_store.get_derivation_record(
+                            uint32(index), uint32(1), False
+                        )
+                        while derivation_record is not None:
+                            our_inner_puzzle = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
+                                derivation_record.pubkey
+                            )
+                            did_puzzle = DID_INNERPUZ_MOD.curry(
+                                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                            )
+                            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
+                            if full_puzzle.get_tree_hash() == coin_state.coin.puzzle_hash:
+                                matched = True
+                                break
+                            index += 1
+                            derivation_record = (
+                                await self.service.wallet_state_manager.puzzle_store.get_derivation_record(
+                                    uint32(index), uint32(1), False
+                                )
+                            )
+
+                    if not matched:
+                        return {
+                            "success": False,
+                            "error": f"Cannot recover DID {launcher_id}"
+                            f" because the last spend updated recovery_list_hash/num_verification/metadata.",
+                        }
+
             if did_wallet is None:
                 # Create DID wallet
-                response: List[CoinState] = await self.service.get_coin_state([launcher_id], peer=peer)
+                response: list[CoinState] = await self.service.get_coin_state([launcher_id], peer=peer)
                 if len(response) == 0:
-                    return {"success": False, "error": f"Could not find the launch coin with ID: {launcher_id.hex()}"}
+                    return {"success": False, "error": f"Could not find the launch coin with ID: {launcher_id}"}
                 launcher_coin: CoinState = response[0]
                 did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                     self.service.wallet_state_manager,
@@ -1864,9 +2686,9 @@ class WalletRpcApi:
                     # Inner DID puzzle doesn't match, we need to update the DID info
                     full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
                     inner_solution: Program = full_solution.rest().rest().first()
-                    recovery_list: List[bytes32] = []
+                    recovery_list: list[bytes32] = []
                     backup_required: int = num_verification.as_int()
-                    if recovery_list_hash != Program.to([]).get_tree_hash():
+                    if recovery_list_hash != NIL_TREEHASH:
                         try:
                             for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                                 recovery_list.append(did[0])
@@ -1883,61 +2705,74 @@ class WalletRpcApi:
                         None,
                         None,
                         False,
-                        json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+                        json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
                     )
                     await did_wallet.save_info(did_info)
                     await self.service.wallet_state_manager.update_wallet_puzzle_hashes(did_wallet.wallet_info.id)
 
             try:
-                coins = await did_wallet.select_coins(uint64(1))
-                coin = coins.pop()
+                coin = await did_wallet.get_coin()
                 if coin.name() == coin_state.coin.name():
                     return {"success": True, "latest_coin_id": coin.name().hex()}
-            except ValueError:
+            except RuntimeError:
                 # We don't have any coin for this wallet, add the coin
                 pass
 
             wallet_id = did_wallet.id()
-            wallet_type = WalletType(did_wallet.type())
+            wallet_type = did_wallet.type()
             assert coin_state.created_height is not None
             coin_record: WalletCoinRecord = WalletCoinRecord(
                 coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
             )
             await self.service.wallet_state_manager.coin_store.add_coin_record(coin_record, coin_state.coin.name())
-            await did_wallet.coin_added(coin_state.coin, uint32(coin_state.created_height), peer)
+            await did_wallet.coin_added(
+                coin_state.coin,
+                uint32(coin_state.created_height),
+                peer,
+                did_data,
+            )
             return {"success": True, "latest_coin_id": coin_state.coin.name().hex()}
 
-    async def did_update_metadata(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def did_update_metadata(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        metadata: Dict[str, str] = {}
+        metadata: dict[str, str] = {}
         if "metadata" in request and type(request["metadata"]) is dict:
             metadata = request["metadata"]
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
             if update_success:
-                spend_bundle = await wallet.create_update_spend(uint64(request.get("fee", 0)))
-                if spend_bundle is not None:
-                    return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
-                else:
-                    return {"success": False, "error": "Couldn't create an update spend bundle."}
+                await wallet.create_update_spend(
+                    action_scope, uint64(request.get("fee", 0)), extra_conditions=extra_conditions
+                )
+                return {
+                    "wallet_id": wallet_id,
+                    "success": True,
+                    "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+                    "transactions": None,  # tx_endpoint wrapper will take care of this
+                }
             else:
                 return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
 
-    async def did_get_did(self, request) -> EndpointResult:
+    async def did_get_did(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
         async with self.service.wallet_state_manager.lock:
             try:
-                coins = await wallet.select_coins(uint64(1))
-                coin = coins.pop()
+                coin = await wallet.get_coin()
                 return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
-            except ValueError:
+            except RuntimeError:
                 return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
 
-    async def did_get_recovery_list(self, request) -> EndpointResult:
+    async def did_get_recovery_list(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         recovery_list = wallet.did_info.backup_ids
@@ -1951,7 +2786,7 @@ class WalletRpcApi:
             "num_required": wallet.did_info.num_of_backup_ids_needed,
         }
 
-    async def did_get_metadata(self, request) -> EndpointResult:
+    async def did_get_metadata(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         metadata = json.loads(wallet.did_info.metadata)
@@ -1961,12 +2796,13 @@ class WalletRpcApi:
             "metadata": metadata,
         }
 
-    async def did_recovery_spend(self, request) -> EndpointResult:
+    # TODO: this needs a test
+    # Don't need full @tx_endpoint decorator here, but "push" is still a valid option
+    async def did_recovery_spend(self, request: dict[str, Any]) -> EndpointResult:  # pragma: no cover
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
-        spend_bundle = None
         async with self.service.wallet_state_manager.lock:
             (
                 info_list,
@@ -1977,7 +2813,7 @@ class WalletRpcApi:
                 pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             else:
                 assert wallet.did_info.temp_pubkey is not None
-                pubkey = wallet.did_info.temp_pubkey
+                pubkey = G1Element.from_bytes(wallet.did_info.temp_pubkey)
 
             if "puzhash" in request:
                 puzhash = bytes32.from_hexstr(request["puzhash"])
@@ -1986,47 +2822,63 @@ class WalletRpcApi:
                 puzhash = wallet.did_info.temp_puzhash
 
             assert wallet.did_info.temp_coin is not None
-            spend_bundle = await wallet.recovery_spend(
-                wallet.did_info.temp_coin,
-                puzhash,
-                info_list,
-                pubkey,
-                message_spend_bundle,
-            )
-        if spend_bundle:
-            return {"success": True, "spend_bundle": spend_bundle}
-        else:
-            return {"success": False}
+            async with self.service.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG, push=request.get("push", True)
+            ) as action_scope:
+                await wallet.recovery_spend(
+                    wallet.did_info.temp_coin,
+                    puzhash,
+                    info_list,
+                    pubkey,
+                    message_spend_bundle,
+                    action_scope,
+                )
+            [tx] = action_scope.side_effects.transactions
+        return {
+            "success": True,
+            "spend_bundle": tx.spend_bundle,
+            "transactions": [tx.to_json_dict_convenience(self.service.config)],
+        }
 
-    async def did_get_pubkey(self, request) -> EndpointResult:
+    async def did_get_pubkey(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         pubkey = bytes((await wallet.wallet_state_manager.get_unused_derivation_record(wallet_id)).pubkey).hex()
         return {"success": True, "pubkey": pubkey}
 
-    async def did_create_attest(self, request) -> EndpointResult:
+    # TODO: this needs a test
+    @tx_endpoint(push=True)
+    async def did_create_attest(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:  # pragma: no cover
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         async with self.service.wallet_state_manager.lock:
             info = await wallet.get_info_for_recovery()
             coin = bytes32.from_hexstr(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-            spend_bundle, attest_data = await wallet.create_attestment(
+            message_spend_bundle, attest_data = await wallet.create_attestment(
                 coin,
                 bytes32.from_hexstr(request["puzhash"]),
                 pubkey,
+                action_scope,
+                extra_conditions=extra_conditions,
             )
-        if info is not None and spend_bundle is not None:
+        if info is not None:
             return {
                 "success": True,
-                "message_spend_bundle": bytes(spend_bundle).hex(),
+                "message_spend_bundle": bytes(message_spend_bundle).hex(),
                 "info": [info[0].hex(), info[1].hex(), info[2]],
                 "attest_data": attest_data,
+                "transactions": None,  # tx_endpoint wrapper will take care of this
             }
         else:
             return {"success": False}
 
-    async def did_get_information_needed_for_recovery(self, request) -> EndpointResult:
+    async def did_get_information_needed_for_recovery(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
@@ -2044,12 +2896,13 @@ class WalletRpcApi:
             "backup_dids": did_wallet.did_info.backup_ids,
         }
 
-    async def did_get_current_coin_info(self, request) -> EndpointResult:
+    async def did_get_current_coin_info(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
             bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
         )
+
         did_coin_threeple = await did_wallet.get_info_for_recovery()
         assert my_did is not None
         assert did_coin_threeple is not None
@@ -2062,33 +2915,401 @@ class WalletRpcApi:
             "did_amount": did_coin_threeple[2],
         }
 
-    async def did_create_backup_file(self, request) -> EndpointResult:
+    async def did_create_backup_file(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         return {"wallet_id": wallet_id, "success": True, "backup_data": did_wallet.create_backup()}
 
-    async def did_transfer_did(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def did_transfer_did(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])
         did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
         async with self.service.wallet_state_manager.lock:
-            txs: TransactionRecord = await did_wallet.transfer_did(
-                puzzle_hash, uint64(request.get("fee", 0)), request.get("with_recovery_info", True)
+            await did_wallet.transfer_did(
+                puzzle_hash,
+                uint64(request.get("fee", 0)),
+                request.get("with_recovery_info", True),
+                action_scope,
+                extra_conditions=extra_conditions,
             )
 
         return {
             "success": True,
-            "transaction": txs.to_json_dict_convenience(self.service.config),
-            "transaction_id": txs.name,
+            "transaction": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+            "transaction_id": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    ##########################################################################################
+    # DAO Wallet
+    ##########################################################################################
+
+    async def dao_adjust_filter_level(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        await dao_wallet.adjust_filter_level(uint64(request["filter_level"]))
+        return {
+            "success": True,
+            "dao_info": dao_wallet.dao_info,
+        }
+
+    @tx_endpoint(push=True)
+    async def dao_add_funds_to_treasury(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        funding_wallet_id = uint32(request["funding_wallet_id"])
+        wallet_type = self.service.wallet_state_manager.wallets[funding_wallet_id].type()
+        amount = request.get("amount")
+        assert amount
+        if wallet_type not in {WalletType.STANDARD_WALLET, WalletType.CAT}:  # pragma: no cover
+            raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
+        await dao_wallet.create_add_funds_to_treasury_spend(
+            uint64(amount),
+            action_scope,
+            fee=uint64(request.get("fee", 0)),
+            funding_wallet_id=funding_wallet_id,
+            extra_conditions=extra_conditions,
+        )
+        return {
+            "success": True,
+            "tx_id": None,  # tx_endpoint wrapper will take care of this
+            "tx": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    async def dao_get_treasury_balance(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        asset_list = dao_wallet.dao_info.assets
+        balances = {}
+        for asset_id in asset_list:
+            balance = await dao_wallet.get_balance_by_asset_type(asset_id=asset_id)
+            if asset_id is None:
+                balances["xch"] = balance
+            else:
+                balances[asset_id.hex()] = balance
+        return {"success": True, "balances": balances}
+
+    async def dao_get_treasury_id(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        treasury_id = dao_wallet.dao_info.treasury_id
+        return {"treasury_id": treasury_id}
+
+    async def dao_get_rules(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        rules = dao_wallet.dao_rules
+        return {"rules": rules}
+
+    @tx_endpoint(push=True)
+    async def dao_send_to_lockup(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
+            id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
+        )
+        amount = uint64(request["amount"])
+        fee = uint64(request.get("fee", 0))
+        await dao_cat_wallet.enter_dao_cat_voting_mode(
+            amount,
+            action_scope,
+            fee=fee,
+            extra_conditions=extra_conditions,
+        )
+        return {
+            "success": True,
+            "tx_id": None,
+            "txs": None,
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    async def dao_get_proposals(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        include_closed = request.get("include_closed", True)
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        proposal_list = dao_wallet.dao_info.proposals_list
+        if not include_closed:
+            proposal_list = [prop for prop in proposal_list if not prop.closed]
+        dao_rules = get_treasury_rules_from_puzzle(dao_wallet.dao_info.current_treasury_innerpuz)
+        return {
+            "success": True,
+            "proposals": proposal_list,
+            "proposal_timelock": dao_rules.proposal_timelock,
+            "soft_close_length": dao_rules.soft_close_length,
+        }
+
+    async def dao_get_proposal_state(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        state = await dao_wallet.get_proposal_state(bytes32.from_hexstr(request["proposal_id"]))
+        return {"success": True, "state": state}
+
+    @tx_endpoint(push=True)
+    async def dao_exit_lockup(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
+            id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
+        )
+        assert dao_cat_wallet is not None
+        if request["coins"]:  # pragma: no cover
+            coin_list = [Coin.from_json_dict(coin) for coin in request["coins"]]
+            coins: list[LockedCoinInfo] = []
+            for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                if lci.coin in coin_list:
+                    coins.append(lci)
+        else:
+            coins = []
+            for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                if lci.active_votes == []:
+                    coins.append(lci)
+        fee = uint64(request.get("fee", 0))
+        if not coins:  # pragma: no cover
+            raise ValueError("There are not coins available to exit lockup")
+        await dao_cat_wallet.exit_vote_state(
+            coins,
+            action_scope,
+            fee=fee,
+            extra_conditions=extra_conditions,
+        )
+        return {
+            "success": True,
+            "tx_id": None,  # tx_endpoint wrapper will take care of this
+            "tx": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    @tx_endpoint(push=True)
+    async def dao_create_proposal(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+
+        if request["proposal_type"] == "spend":
+            amounts: list[uint64] = []
+            puzzle_hashes: list[bytes32] = []
+            asset_types: list[Optional[bytes32]] = []
+            additions: Optional[list[dict[str, Any]]] = request.get("additions")
+            if additions is not None:
+                for addition in additions:
+                    if "asset_id" in addition:
+                        asset_id = bytes32.from_hexstr(addition["asset_id"])
+                    else:
+                        asset_id = None
+                    receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
+                    amount = uint64(addition["amount"])
+                    amounts.append(amount)
+                    puzzle_hashes.append(receiver_ph)
+                    asset_types.append(asset_id)
+            else:  # pragma: no cover
+                amounts.append(uint64(request["amount"]))
+                puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
+                if request["asset_id"] is not None:
+                    asset_types.append(bytes32.from_hexstr(request["asset_id"]))
+                else:
+                    asset_types.append(None)
+            proposed_puzzle = generate_simple_proposal_innerpuz(
+                dao_wallet.dao_info.treasury_id, puzzle_hashes, amounts, asset_types
+            )
+
+        elif request["proposal_type"] == "update":
+            rules = dao_wallet.dao_rules
+            prop = request["new_dao_rules"]
+            new_rules = DAORules(
+                proposal_timelock=prop.get("proposal_timelock") or rules.proposal_timelock,
+                soft_close_length=prop.get("soft_close_length") or rules.soft_close_length,
+                attendance_required=prop.get("attendance_required") or rules.attendance_required,
+                proposal_minimum_amount=prop.get("proposal_minimum_amount") or rules.proposal_minimum_amount,
+                pass_percentage=prop.get("pass_percentage") or rules.pass_percentage,
+                self_destruct_length=prop.get("self_destruct_length") or rules.self_destruct_length,
+                oracle_spend_delay=prop.get("oracle_spend_delay") or rules.oracle_spend_delay,
+            )
+
+            current_innerpuz = dao_wallet.dao_info.current_treasury_innerpuz
+            assert current_innerpuz is not None
+            proposed_puzzle = await generate_update_proposal_innerpuz(current_innerpuz, new_rules)
+        elif request["proposal_type"] == "mint":
+            amount_of_cats = uint64(request["amount"])
+            mint_address = decode_puzzle_hash(request["cat_target_address"])
+            cat_wallet = self.service.wallet_state_manager.get_wallet(
+                id=dao_wallet.dao_info.cat_wallet_id, required_type=CATWallet
+            )
+            proposed_puzzle = await generate_mint_proposal_innerpuz(
+                dao_wallet.dao_info.treasury_id,
+                cat_wallet.cat_info.limitations_program_hash,
+                amount_of_cats,
+                mint_address,
+            )
+        else:  # pragma: no cover
+            return {"success": False, "error": "Unknown proposal type."}
+
+        vote_amount = request.get("vote_amount")
+        fee = uint64(request.get("fee", 0))
+        await dao_wallet.generate_new_proposal(
+            proposed_puzzle,
+            action_scope,
+            vote_amount=vote_amount,
+            fee=fee,
+            extra_conditions=extra_conditions,
+        )
+        async with action_scope.use() as interface:
+            found: bool = False
+            for tx in interface.side_effects.transactions:
+                for coin in tx.removals:
+                    if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
+                        proposal_id = coin.name()
+                        found = True
+                if found:
+                    break
+            else:  # pragma: no cover
+                raise ValueError("Could not find proposal ID in transaction")
+        return {
+            "success": True,
+            # Semantics guarantee proposal_id here
+            "proposal_id": proposal_id,
+            "tx_id": None,  # tx_endpoint wrapper will take care of this
+            "tx": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    @tx_endpoint(push=True)
+    async def dao_vote_on_proposal(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        vote_amount = None
+        if "vote_amount" in request:
+            vote_amount = uint64(request["vote_amount"])
+        fee = uint64(request.get("fee", 0))
+        await dao_wallet.generate_proposal_vote_spend(
+            bytes32.from_hexstr(request["proposal_id"]),
+            vote_amount,
+            request["is_yes_vote"],  # bool
+            action_scope,
+            fee,
+            extra_conditions=extra_conditions,
+        )
+        return {
+            "success": True,
+            "tx_id": None,  # tx_endpoint wrapper will take care of this
+            "tx": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    async def dao_parse_proposal(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        proposal_id = bytes32.from_hexstr(request["proposal_id"])
+        proposal_dictionary = await dao_wallet.parse_proposal(proposal_id)
+        assert proposal_dictionary is not None
+        return {"success": True, "proposal_dictionary": proposal_dictionary}
+
+    @tx_endpoint(push=True)
+    async def dao_close_proposal(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        fee = uint64(request.get("fee", 0))
+        if "genesis_id" in request:  # pragma: no cover
+            genesis_id = bytes32.from_hexstr(request["genesis_id"])
+        else:
+            genesis_id = None
+        self_destruct = request.get("self_destruct", None)
+        await dao_wallet.create_proposal_close_spend(
+            bytes32.from_hexstr(request["proposal_id"]),
+            action_scope,
+            genesis_id,
+            fee=fee,
+            self_destruct=self_destruct,
+            extra_conditions=extra_conditions,
+        )
+        return {
+            "success": True,
+            "tx_id": None,  # tx_endpoint wrapper will take care of this
+            "tx": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    @tx_endpoint(push=True)
+    async def dao_free_coins_from_finished_proposals(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        fee = uint64(request.get("fee", 0))
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        await dao_wallet.free_coins_from_finished_proposals(
+            action_scope,
+            fee=fee,
+            extra_conditions=extra_conditions,
+        )
+
+        return {
+            "success": True,
+            "tx_id": None,  # tx_endpoint wrapper will take care of this
+            "tx": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
         }
 
     ##########################################################################################
     # NFT Wallet
     ##########################################################################################
-
-    async def nft_mint_nft(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def nft_mint_nft(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         log.debug("Got minting RPC request: %s", request)
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
@@ -2100,14 +3321,18 @@ class WalletRpcApi:
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
-            royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+            royalty_puzhash = await nft_wallet.standard_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         else:
             royalty_puzhash = royalty_address
         target_address = request.get("target_address")
         if isinstance(target_address, str):
             target_puzhash = decode_puzzle_hash(target_address)
         elif target_address is None:
-            target_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+            target_puzhash = await nft_wallet.standard_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         else:
             target_puzhash = target_address
         if "uris" not in request:
@@ -2135,51 +3360,75 @@ class WalletRpcApi:
         did_id = request.get("did_id", None)
         if did_id is not None:
             if did_id == "":
-                did_id = bytes()
+                did_id = b""
             else:
                 did_id = decode_puzzle_hash(did_id)
-        spend_bundle = await nft_wallet.generate_new_nft(
+
+        nft_id = await nft_wallet.generate_new_nft(
             metadata,
+            action_scope,
             target_puzhash,
             royalty_puzhash,
             royalty_amount,
             did_id,
             fee,
+            extra_conditions=extra_conditions,
         )
-        nft_id = None
-        assert spend_bundle is not None
-        for cs in spend_bundle.coin_spends:
-            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
-                nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle, "nft_id": nft_id}
+        nft_id_bech32 = encode_puzzle_hash(nft_id, AddressType.NFT.hrp(self.service.config))
+        return {
+            "wallet_id": wallet_id,
+            "success": True,
+            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+            "nft_id": nft_id_bech32,
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
 
-    async def nft_get_nfts(self, request) -> EndpointResult:
+    async def nft_count_nfts(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = request.get("wallet_id", None)
-        nfts: List[NFTCoinInfo] = []
+        count = 0
+        if wallet_id is not None:
+            try:
+                nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+            except KeyError:
+                # wallet not found
+                return {"success": False, "error": f"Wallet {wallet_id} not found."}
+            count = await nft_wallet.get_nft_count()
+        else:
+            count = await self.service.wallet_state_manager.nft_store.count()
+        return {"wallet_id": wallet_id, "success": True, "count": count}
+
+    async def nft_get_nfts(self, request: dict[str, Any]) -> EndpointResult:
+        wallet_id = request.get("wallet_id", None)
+        nfts: list[NFTCoinInfo] = []
         if wallet_id is not None:
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-            nfts = await nft_wallet.get_current_nfts()
         else:
-            for wallet in self.service.wallet_state_manager.wallets.values():
-                if wallet.type() == WalletType.NFT.value:
-                    assert isinstance(wallet, NFTWallet)
-                    nfts.extend(await wallet.get_current_nfts())
-        start_index = request.get("start_index", 0)
-        num = request.get("num", len(nfts))
+            nft_wallet = None
+        try:
+            start_index = int(request.get("start_index", 0))
+        except (TypeError, ValueError):
+            start_index = 0
+        try:
+            count = int(request.get("num", 50))
+        except (TypeError, ValueError):
+            count = 50
         nft_info_list = []
-        count = 0
+        if nft_wallet is not None:
+            nfts = await nft_wallet.get_current_nfts(start_index=start_index, count=count)
+        else:
+            nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(start_index=start_index, count=count)
         for nft in nfts:
-            if count >= start_index and count - start_index < num:
-                nft_info = await nft_puzzles.get_nft_info_from_puzzle(
-                    nft,
-                    self.service.wallet_state_manager.config,
-                    request.get("ignore_size_limit", False),
-                )
-                nft_info_list.append(nft_info)
-            count += 1
+            nft_info = await nft_puzzles.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
+            nft_info_list.append(nft_info)
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
-    async def nft_set_nft_did(self, request):
+    @tx_endpoint(push=True)
+    async def nft_set_nft_did(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
         did_id = request.get("did_id", b"")
@@ -2190,11 +3439,29 @@ class WalletRpcApi:
             await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
             return {"success": False, "error": "The NFT doesn't support setting a DID."}
-        fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
-    async def nft_set_bulk_nft_did(self, request):
+        fee = uint64(request.get("fee", 0))
+        await nft_wallet.set_nft_did(
+            nft_coin_info,
+            did_id,
+            action_scope,
+            fee=fee,
+            extra_conditions=extra_conditions,
+        )
+        return {
+            "wallet_id": wallet_id,
+            "success": True,
+            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    @tx_endpoint(push=True)
+    async def nft_set_did_bulk(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         """
         Bulk set DID for NFTs across different wallets.
         accepted `request` dict keys:
@@ -2209,18 +3476,18 @@ class WalletRpcApi:
         did_id = request.get("did_id", b"")
         if did_id != b"":
             did_id = decode_puzzle_hash(did_id)
-        nft_dict: Dict[uint32, List[NFTCoinInfo]] = {}
-        tx_list: List[TransactionRecord] = []
+        nft_dict: dict[uint32, list[NFTCoinInfo]] = {}
         coin_ids = []
         nft_ids = []
         fee = uint64(request.get("fee", 0))
+
+        nft_wallet: NFTWallet
         for nft_coin in request["nft_coin_list"]:
             if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
                 log.error(f"Cannot set DID for NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
                 continue
             wallet_id = uint32(nft_coin["wallet_id"])
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             nft_coin_id = nft_coin["nft_coin_id"]
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_id = decode_puzzle_hash(nft_coin_id)
@@ -2240,49 +3507,116 @@ class WalletRpcApi:
                 nft_dict[wallet_id] = [nft_coin_info]
             nft_ids.append(nft_coin_info.nft_id)
         first = True
-        nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
-                tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id))
+                await nft_wallet.set_bulk_nft_did(nft_list, did_id, action_scope, extra_conditions=extra_conditions)
             else:
-                tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id, fee, nft_ids))
+                await nft_wallet.set_bulk_nft_did(
+                    nft_list, did_id, action_scope, fee, nft_ids, extra_conditions=extra_conditions
+                )
             for coin in nft_list:
                 coin_ids.append(coin.coin.name())
             first = False
-        spend_bundles: List[SpendBundle] = []
-        refined_tx_list: List[TransactionRecord] = []
-        for tx in tx_list:
-            if tx.spend_bundle is not None:
-                spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
-        if len(spend_bundles) > 0:
-            spend_bundle = SpendBundle.aggregate(spend_bundles)
-            # Add all spend bundles to the first tx
-            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+        for id in coin_ids:
+            await nft_wallet.update_coin_status(id, True)
+        for wallet_id in nft_dict.keys():
+            self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
 
-            for tx in refined_tx_list:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
-            for coin in coin_ids:
-                await nft_wallet.update_coin_status(coin, True)
-            for wallet_id in nft_dict.keys():
-                self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": nft_dict.keys(), "success": True, "spend_bundle": spend_bundle}
+        async with action_scope.use() as interface:
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": None,  # Backwards compat code in @tx_endpoint wrapper will fix this
+                "tx_num": len(interface.side_effects.transactions),
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
+
+    @tx_endpoint(push=True)
+    async def nft_transfer_bulk(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        """
+        Bulk transfer NFTs to an address.
+        accepted `request` dict keys:
+         - required `nft_coin_list`: [{"nft_coin_id": COIN_ID/NFT_ID, "wallet_id": WALLET_ID},....]
+         - required `target_address`, Transfer NFTs to this address
+         - optional `fee`, in mojos, defaults to 0
+        :param request:
+        :return:
+        """
+        if len(request["nft_coin_list"]) > MAX_NFT_CHUNK_SIZE:
+            return {"success": False, "error": f"You can only transfer {MAX_NFT_CHUNK_SIZE} NFTs at once"}
+        address = request["target_address"]
+        if isinstance(address, str):
+            puzzle_hash = decode_puzzle_hash(address)
         else:
-            raise ValueError("Couldn't set DID on given NFT")
+            return dict(success=False, error="target_address parameter missing")
+        nft_dict: dict[uint32, list[NFTCoinInfo]] = {}
+        coin_ids = []
+        fee = uint64(request.get("fee", 0))
 
-    async def nft_get_by_did(self, request) -> EndpointResult:
+        nft_wallet: NFTWallet
+        for nft_coin in request["nft_coin_list"]:
+            if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
+                log.error(f"Cannot transfer NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
+                continue
+            wallet_id = uint32(nft_coin["wallet_id"])
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+            nft_coin_id = nft_coin["nft_coin_id"]
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+                nft_id = decode_puzzle_hash(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft(nft_id)
+            else:
+                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            assert nft_coin_info is not None
+            if wallet_id in nft_dict:
+                nft_dict[wallet_id].append(nft_coin_info)
+            else:
+                nft_dict[wallet_id] = [nft_coin_info]
+        first = True
+        for wallet_id, nft_list in nft_dict.items():
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+            if not first:
+                await nft_wallet.bulk_transfer_nft(
+                    nft_list, puzzle_hash, action_scope, extra_conditions=extra_conditions
+                )
+            else:
+                await nft_wallet.bulk_transfer_nft(
+                    nft_list, puzzle_hash, action_scope, fee, extra_conditions=extra_conditions
+                )
+            for coin in nft_list:
+                coin_ids.append(coin.coin.name())
+            first = False
+
+        for id in coin_ids:
+            await nft_wallet.update_coin_status(id, True)
+        for wallet_id in nft_dict.keys():
+            self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
+        async with action_scope.use() as interface:
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+                "tx_num": len(interface.side_effects.transactions),
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
+
+    async def nft_get_by_did(self, request: dict[str, Any]) -> EndpointResult:
         did_id: Optional[bytes32] = None
-        if "did_id" in request:
+        if request.get("did_id", None) is not None:
             did_id = decode_puzzle_hash(request["did_id"])
         for wallet in self.service.wallet_state_manager.wallets.values():
             if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
                 return {"wallet_id": wallet.wallet_id, "success": True}
         return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
 
-    async def nft_get_wallet_did(self, request) -> EndpointResult:
+    async def nft_get_wallet_did(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
         did_bytes: Optional[bytes32] = nft_wallet.get_did()
@@ -2291,17 +3625,17 @@ class WalletRpcApi:
             did_id = encode_puzzle_hash(did_bytes, AddressType.DID.hrp(self.service.config))
         return {"success": True, "did_id": None if len(did_id) == 0 else did_id}
 
-    async def nft_get_wallets_with_dids(self, request) -> EndpointResult:
+    async def nft_get_wallets_with_dids(self, request: dict[str, Any]) -> EndpointResult:
         all_wallets = self.service.wallet_state_manager.wallets.values()
-        did_wallets_by_did_id: Dict[bytes32, uint32] = {}
+        did_wallets_by_did_id: dict[bytes32, uint32] = {}
 
         for wallet in all_wallets:
-            if wallet.type() == uint8(WalletType.DECENTRALIZED_ID):
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 assert isinstance(wallet, DIDWallet)
                 if wallet.did_info.origin_coin is not None:
                     did_wallets_by_did_id[wallet.did_info.origin_coin.name()] = wallet.id()
 
-        did_nft_wallets: List[Dict] = []
+        did_nft_wallets: list[dict[str, Any]] = []
         for wallet in all_wallets:
             if isinstance(wallet, NFTWallet):
                 nft_wallet_did: Optional[bytes32] = wallet.get_did()
@@ -2319,7 +3653,7 @@ class WalletRpcApi:
                         )
         return {"success": True, "nft_wallets": did_nft_wallets}
 
-    async def nft_set_nft_status(self, request) -> EndpointResult:
+    async def nft_set_nft_status(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id: uint32 = uint32(request["wallet_id"])
         coin_id: bytes32 = bytes32.from_hexstr(request["coin_id"])
         status: bool = request["in_transaction"]
@@ -2328,7 +3662,13 @@ class WalletRpcApi:
         await nft_wallet.update_coin_status(coin_id, status)
         return {"success": True}
 
-    async def nft_transfer_nft(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def nft_transfer_nft(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         address = request["target_address"]
         if isinstance(address, str):
@@ -2345,37 +3685,42 @@ class WalletRpcApi:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
                 nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             assert nft_coin_info is not None
+
             fee = uint64(request.get("fee", 0))
-            txs = await nft_wallet.generate_signed_transaction(
+            await nft_wallet.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
                 [puzzle_hash],
+                action_scope,
                 coins={nft_coin_info.coin},
                 fee=fee,
                 new_owner=b"",
                 new_did_inner_hash=b"",
+                extra_conditions=extra_conditions,
             )
-            spend_bundle: Optional[SpendBundle] = None
-            for tx in txs:
-                if tx.spend_bundle is not None:
-                    spend_bundle = tx.spend_bundle
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
             await nft_wallet.update_coin_status(nft_coin_info.coin.name(), True)
-            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+            return {
+                "wallet_id": wallet_id,
+                "success": True,
+                "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
             return {"success": False, "error": str(e)}
 
-    async def nft_get_info(self, request: Dict) -> EndpointResult:
+    async def nft_get_info(self, request: dict[str, Any]) -> EndpointResult:
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
         coin_id = request["coin_id"]
         if coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(coin_id)
         else:
-            coin_id = bytes32.from_hexstr(coin_id)
+            try:
+                coin_id = bytes32.from_hexstr(coin_id)
+            except ValueError:
+                return {"success": False, "error": f"Invalid Coin ID format for 'coin_id': {request['coin_id']!r}"}
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        assert peer is not None
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         # convert to NFTInfo
         # Check if the metadata is updated
@@ -2398,12 +3743,12 @@ class WalletRpcApi:
         full_puzzle = nft_puzzles.create_full_puzzle(
             uncurried_nft.singleton_launcher_id,
             metadata,
-            uncurried_nft.metadata_updater_hash,
+            bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
             inner_puzzle,
         )
 
         # Get launcher coin
-        launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+        launcher_coin: list[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [uncurried_nft.singleton_launcher_id], peer=peer
         )
         if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
@@ -2424,13 +3769,18 @@ class WalletRpcApi:
                 uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
             ),
             self.service.wallet_state_manager.config,
-            request.get("ignore_size_limit", False),
         )
         # This is a bit hacky, it should just come out like this, but this works for this RPC
         nft_info = dataclasses.replace(nft_info, p2_address=p2_puzzle_hash)
         return {"success": True, "nft_info": nft_info}
 
-    async def nft_add_uri(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def nft_add_uri(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         # Note metadata updater can only add one uri for one field per spend.
         # If you want to add multiple uris for one field, you need to spend multiple times.
@@ -2443,11 +3793,19 @@ class WalletRpcApi:
         else:
             nft_coin_id = bytes32.from_hexstr(nft_coin_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
-        fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
-    async def nft_calculate_royalties(self, request) -> EndpointResult:
+        fee = uint64(request.get("fee", 0))
+        await nft_wallet.update_metadata(
+            nft_coin_info, key, uri, action_scope, fee=fee, extra_conditions=extra_conditions
+        )
+        return {
+            "wallet_id": wallet_id,
+            "success": True,
+            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    async def nft_calculate_royalties(self, request: dict[str, Any]) -> EndpointResult:
         return NFTWallet.royalty_calculation(
             {
                 asset["asset"]: (asset["royalty_address"], uint16(asset["royalty_percentage"]))
@@ -2456,7 +3814,15 @@ class WalletRpcApi:
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
 
-    async def nft_mint_bulk(self, request) -> EndpointResult:
+    @tx_endpoint(push=False)
+    async def nft_mint_bulk(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        if action_scope.config.push:
+            raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])
@@ -2464,7 +3830,7 @@ class WalletRpcApi:
         royalty_address = request.get("royalty_address", None)
         if isinstance(royalty_address, str) and royalty_address != "":
             royalty_puzhash = decode_puzzle_hash(royalty_address)
-        elif royalty_address in [None, ""]:
+        elif royalty_address in {None, ""}:
             royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
         else:
             royalty_puzhash = bytes32.from_hexstr(royalty_address)
@@ -2512,13 +3878,13 @@ class WalletRpcApi:
         xch_coin_list = request.get("xch_coins", None)
         xch_coins = None
         if xch_coin_list:
-            xch_coins = set([Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list])
+            xch_coins = {Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list}
         xch_change_target = request.get("xch_change_target", None)
         if xch_change_target is not None:
             if xch_change_target[:2] == "xch":
                 xch_change_ph = decode_puzzle_hash(xch_change_target)
             else:
-                xch_change_ph = bytes32(hexstr_to_bytes(xch_change_target))
+                xch_change_ph = bytes32.from_hexstr(xch_change_target)
         else:
             xch_change_ph = None
         new_innerpuzhash = request.get("new_innerpuzhash", None)
@@ -2530,13 +3896,14 @@ class WalletRpcApi:
             did_coin = None
         did_lineage_parent_hex = request.get("did_lineage_parent", None)
         if did_lineage_parent_hex:
-            did_lineage_parent = bytes32(hexstr_to_bytes(did_lineage_parent_hex))
+            did_lineage_parent = bytes32.from_hexstr(did_lineage_parent_hex)
         else:
             did_lineage_parent = None
         mint_from_did = request.get("mint_from_did", False)
         fee = uint64(request.get("fee", 0))
+
         if mint_from_did:
-            sb = await nft_wallet.mint_from_did(
+            await nft_wallet.mint_from_did(
                 metadata_list,
                 mint_number_start=mint_number_start,
                 mint_total=mint_total,
@@ -2548,9 +3915,11 @@ class WalletRpcApi:
                 did_coin=did_coin,
                 did_lineage_parent=did_lineage_parent,
                 fee=fee,
+                action_scope=action_scope,
+                extra_conditions=extra_conditions,
             )
         else:
-            sb = await nft_wallet.mint_from_xch(
+            await nft_wallet.mint_from_xch(
                 metadata_list,
                 mint_number_start=mint_number_start,
                 mint_total=mint_total,
@@ -2558,28 +3927,79 @@ class WalletRpcApi:
                 xch_coins=xch_coins,
                 xch_change_ph=xch_change_ph,
                 fee=fee,
+                action_scope=action_scope,
+                extra_conditions=extra_conditions,
+            )
+        async with action_scope.use() as interface:
+            sb = WalletSpendBundle.aggregate(
+                [tx.spend_bundle for tx in interface.side_effects.transactions if tx.spend_bundle is not None]
             )
         nft_id_list = []
         for cs in sb.coin_spends:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
                 nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
+
         return {
             "success": True,
-            "spend_bundle": sb,
+            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
             "nft_id_list": nft_id_list,
+            "transactions": None,  # tx_endpoint wrapper will take care of this
         }
 
-    async def get_farmed_amount(self, request) -> EndpointResult:
-        tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
+    async def get_coin_records(self, request: dict[str, Any]) -> EndpointResult:
+        parsed_request = GetCoinRecords.from_json_dict(request)
+
+        if parsed_request.limit != uint32.MAXIMUM and parsed_request.limit > self.max_get_coin_records_limit:
+            raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
+
+        for filter_name, filter in {
+            "coin_id_filter": parsed_request.coin_id_filter,
+            "puzzle_hash_filter": parsed_request.puzzle_hash_filter,
+            "parent_coin_id_filter": parsed_request.parent_coin_id_filter,
+            "amount_filter": parsed_request.amount_filter,
+        }.items():
+            if filter is None:
+                continue
+            if len(filter.values) > self.max_get_coin_records_filter_items:
+                raise ValueError(
+                    f"{filter_name} max items {self.max_get_coin_records_filter_items} exceeded: {len(filter.values)}"
+                )
+
+        result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+            offset=parsed_request.offset,
+            limit=parsed_request.limit,
+            wallet_id=parsed_request.wallet_id,
+            wallet_type=None if parsed_request.wallet_type is None else WalletType(parsed_request.wallet_type),
+            coin_type=None if parsed_request.coin_type is None else CoinType(parsed_request.coin_type),
+            coin_id_filter=parsed_request.coin_id_filter,
+            puzzle_hash_filter=parsed_request.puzzle_hash_filter,
+            parent_coin_id_filter=parsed_request.parent_coin_id_filter,
+            amount_filter=parsed_request.amount_filter,
+            amount_range=parsed_request.amount_range,
+            confirmed_range=parsed_request.confirmed_range,
+            spent_range=parsed_request.spent_range,
+            order=CoinRecordOrder(parsed_request.order),
+            reverse=parsed_request.reverse,
+            include_total_count=parsed_request.include_total_count,
+        )
+
+        return {
+            "coin_records": [coin_record.to_json_dict_parsed_metadata() for coin_record in result.records],
+            "total_count": result.total_count,
+        }
+
+    async def get_farmed_amount(self, request: dict[str, Any]) -> EndpointResult:
+        tx_records: list[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
         amount = 0
         pool_reward_amount = 0
         farmer_reward_amount = 0
         fee_amount = 0
-        last_height_farmed = 0
+        blocks_won = 0
+        last_height_farmed = uint32(0)
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
-            if record.type == TransactionType.COINBASE_REWARD:
+            if record.type == TransactionType.COINBASE_REWARD.value:
                 if self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET:
                     # Don't add pool rewards for pool wallets.
                     continue
@@ -2588,15 +4008,19 @@ class WalletRpcApi:
             # .get_farming_rewards() above queries for only confirmed records.  This
             # could be hinted by making TransactionRecord generic but streamable can't
             # handle that presently.  Existing code would have raised an exception
-            # anyways if this were to fail and we already have an assert below.
+            # anyway if this were to fail and we already have an assert below.
             assert height is not None
-            if record.type == TransactionType.FEE_REWARD:
-                fee_amount += record.amount - calculate_base_farmer_reward(height)
-                farmer_reward_amount += calculate_base_farmer_reward(height)
-            if height > last_height_farmed:
-                last_height_farmed = height
+            if record.type == TransactionType.FEE_REWARD.value:
+                base_farmer_reward = calculate_base_farmer_reward(height)
+                fee_amount += record.amount - base_farmer_reward
+                farmer_reward_amount += base_farmer_reward
+                blocks_won += 1
+            last_height_farmed = max(last_height_farmed, height)
             amount += record.amount
 
+        last_time_farmed = uint64(
+            await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
+        )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
@@ -2604,9 +4028,18 @@ class WalletRpcApi:
             "farmer_reward_amount": farmer_reward_amount,
             "fee_amount": fee_amount,
             "last_height_farmed": last_height_farmed,
+            "last_time_farmed": last_time_farmed,
+            "blocks_won": blocks_won,
         }
 
-    async def create_signed_transaction(self, request, hold_lock=True) -> EndpointResult:
+    @tx_endpoint(push=False)
+    async def create_signed_transaction(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        hold_lock: bool = True,
+    ) -> EndpointResult:
         if "wallet_id" in request:
             wallet_id = uint32(request["wallet_id"])
             wallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -2614,13 +4047,13 @@ class WalletRpcApi:
             wallet = self.service.wallet_state_manager.main_wallet
 
         assert isinstance(
-            wallet, (Wallet, CATWallet)
+            wallet, (Wallet, CATWallet, CRCATWallet)
         ), "create_signed_transaction only works for standard and CAT wallets"
 
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")
 
-        additions: List[Dict] = request["additions"]
+        additions: list[dict[str, Any]] = request["additions"]
         amount_0: uint64 = uint64(additions[0]["amount"])
         assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
         puzzle_hash_0 = bytes32.from_hexstr(additions[0]["puzzle_hash"])
@@ -2629,7 +4062,7 @@ class WalletRpcApi:
 
         memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
 
-        additional_outputs: List[AmountWithPuzzlehash] = []
+        additional_outputs: list[Payment] = []
         for addition in additions[1:]:
             receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
@@ -2638,100 +4071,91 @@ class WalletRpcApi:
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
-            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
+            additional_outputs.append(Payment(receiver_ph, amount, memos))
 
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
-        if exclude_coin_amounts is not None:
-            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
-            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
-
-        exclude_coins = None
-        if "exclude_coins" in request and len(request["exclude_coins"]) > 0:
-            exclude_coins = set([Coin.from_json_dict(coin_json) for coin_json in request["exclude_coins"]])
-
-        coin_announcements: Optional[Set[Announcement]] = None
-        if (
-            "coin_announcements" in request
-            and request["coin_announcements"] is not None
-            and len(request["coin_announcements"]) > 0
-        ):
-            coin_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["coin_id"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["coin_announcements"]
-            }
-
-        puzzle_announcements: Optional[Set[Announcement]] = None
-        if (
-            "puzzle_announcements" in request
-            and request["puzzle_announcements"] is not None
-            and len(request["puzzle_announcements"]) > 0
-        ):
-            puzzle_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["puzzle_hash"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["puzzle_announcements"]
-            }
+            coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
 
         async def _generate_signed_transaction() -> EndpointResult:
             if isinstance(wallet, Wallet):
-                tx = await wallet.generate_signed_transaction(
+                await wallet.generate_signed_transaction(
                     amount_0,
                     bytes32(puzzle_hash_0),
+                    action_scope,
                     fee,
                     coins=coins,
-                    exclude_coins=exclude_coins,
-                    ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    min_coin_amount=min_coin_amount,
-                    max_coin_amount=max_coin_amount,
-                    exclude_coin_amounts=exclude_coin_amounts,
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=(
+                                    hexstr_to_bytes(ca["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
+                                ),
+                            )
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=(
+                                    hexstr_to_bytes(pa["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
+                                ),
+                            )
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
-                signed_tx = tx.to_json_dict_convenience(self.service.config)
-
-                return {"signed_txs": [signed_tx], "signed_tx": signed_tx}
+                # tx_endpoint wrapper will take care of this
+                return {"signed_txs": None, "signed_tx": None, "transactions": None}
 
             else:
                 assert isinstance(wallet, CATWallet)
 
-                txs = await wallet.generate_signed_transaction(
-                    [amount_0] + [output["amount"] for output in additional_outputs],
-                    [bytes32(puzzle_hash_0)] + [output["puzzlehash"] for output in additional_outputs],
+                await wallet.generate_signed_transaction(
+                    [amount_0] + [output.amount for output in additional_outputs],
+                    [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
+                    action_scope,
                     fee,
                     coins=coins,
-                    exclude_cat_coins=exclude_coins,
-                    ignore_max_send_amount=True,
-                    memos=[memos_0] + [output["memos"] for output in additional_outputs],
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    min_coin_amount=min_coin_amount,
-                    max_coin_amount=max_coin_amount,
-                    exclude_coin_amounts=exclude_coin_amounts,
+                    memos=[memos_0] + [output.memos for output in additional_outputs],
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=(
+                                    hexstr_to_bytes(ca["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
+                                ),
+                            )
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=(
+                                    hexstr_to_bytes(pa["message"])
+                                    if request.get("morph_bytes") is None
+                                    else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
+                                ),
+                            )
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
-                signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
-
-                return {"signed_txs": signed_txs, "signed_tx": signed_txs[0]}
+                # tx_endpoint wrapper will take care of this
+                return {"signed_txs": None, "signed_tx": None, "transactions": None}
 
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
@@ -2742,7 +4166,13 @@ class WalletRpcApi:
     ##########################################################################################
     # Pool Wallet
     ##########################################################################################
-    async def pw_join_pool(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def pw_join_pool(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
@@ -2755,7 +4185,7 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
 
         if "target_puzzlehash" in request:
-            target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
+            target_puzzlehash = bytes32.from_hexstr(request["target_puzzlehash"])
         assert target_puzzlehash is not None
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
@@ -2764,11 +4194,23 @@ class WalletRpcApi:
             request["pool_url"],
             uint32(request["relative_lock_height"]),
         )
-        async with self.service.wallet_state_manager.lock:
-            total_fee, tx, fee_tx = await wallet.join_pool(new_target_state, fee)
-            return {"total_fee": total_fee, "transaction": tx, "fee_transaction": fee_tx}
 
-    async def pw_self_pool(self, request) -> EndpointResult:
+        async with self.service.wallet_state_manager.lock:
+            total_fee = await wallet.join_pool(new_target_state, fee, action_scope)
+            return {
+                "total_fee": total_fee,
+                "transaction": None,  # tx_endpoint wrapper will take care of this
+                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
+
+    @tx_endpoint(push=True)
+    async def pw_self_pool(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
@@ -2780,10 +4222,21 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
 
         async with self.service.wallet_state_manager.lock:
-            total_fee, tx, fee_tx = await wallet.self_pool(fee)
-            return {"total_fee": total_fee, "transaction": tx, "fee_transaction": fee_tx}
+            total_fee = await wallet.self_pool(fee, action_scope)
+            return {
+                "total_fee": total_fee,
+                "transaction": None,  # tx_endpoint wrapper will take care of this
+                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
 
-    async def pw_absorb_rewards(self, request) -> EndpointResult:
+    @tx_endpoint(push=True)
+    async def pw_absorb_rewards(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
@@ -2794,18 +4247,23 @@ class WalletRpcApi:
 
         assert isinstance(wallet, PoolWallet)
         async with self.service.wallet_state_manager.lock:
-            transaction, fee_tx = await wallet.claim_pool_rewards(fee, max_spends_in_tx)
+            await wallet.claim_pool_rewards(fee, max_spends_in_tx, action_scope)
             state: PoolWalletInfo = await wallet.get_current_state()
-        return {"state": state.to_json_dict(), "transaction": transaction, "fee_transaction": fee_tx}
+            return {
+                "state": state.to_json_dict(),
+                "transaction": None,  # tx_endpoint wrapper will take care of this
+                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
 
-    async def pw_status(self, request) -> EndpointResult:
+    async def pw_status(self, request: dict[str, Any]) -> EndpointResult:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)
         state: PoolWalletInfo = await wallet.get_current_state()
-        unconfirmed_transactions: List[TransactionRecord] = await wallet.get_unconfirmed_transactions()
+        unconfirmed_transactions: list[TransactionRecord] = await wallet.get_unconfirmed_transactions()
         return {
             "state": state.to_json_dict(),
             "unconfirmed_transactions": unconfirmed_transactions,
@@ -2814,271 +4272,480 @@ class WalletRpcApi:
     ##########################################################################################
     # DataLayer Wallet
     ##########################################################################################
-    async def create_new_dl(self, request) -> Dict:
+    @tx_endpoint(push=True)
+    async def create_new_dl(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        dl_wallet: DataLayerWallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                dl_wallet = wallet
-                break
-        else:
+        try:
+            dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        except ValueError:
             async with self.service.wallet_state_manager.lock:
-                dl_wallet = await DataLayerWallet.create_new_dl_wallet(
-                    self.service.wallet_state_manager,
-                    self.service.wallet_state_manager.main_wallet,
-                )
+                dl_wallet = await DataLayerWallet.create_new_dl_wallet(self.service.wallet_state_manager)
 
         try:
             async with self.service.wallet_state_manager.lock:
-                dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
-                    bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
+                launcher_id = await dl_wallet.generate_new_reporter(
+                    bytes32.from_hexstr(request["root"]),
+                    action_scope,
+                    fee=request.get("fee", uint64(0)),
+                    extra_conditions=extra_conditions,
                 )
-                await self.service.wallet_state_manager.add_pending_transaction(dl_tx)
-                await self.service.wallet_state_manager.add_pending_transaction(std_tx)
         except ValueError as e:
             log.error(f"Error while generating new reporter {e}")
             return {"success": False, "error": str(e)}
 
         return {
-            "success": True,
-            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)],
+            "transactions": None,  # tx_endpoint wrapper will take care of this
             "launcher_id": launcher_id,
         }
 
-    async def dl_track_new(self, request) -> Dict:
+    async def dl_track_new(self, request: dict[str, Any]) -> EndpointResult:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
-
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
-
-        dl_wallet: DataLayerWallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                dl_wallet = wallet
-                break
-        else:
+        try:
+            dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        except ValueError:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
-                    self.service.wallet_state_manager.main_wallet,
                 )
-        await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]), peer)
+        peer_list = self.service.get_full_node_peers_in_order()
+        peer_length = len(peer_list)
+        for i, peer in enumerate(peer_list):
+            try:
+                await dl_wallet.track_new_launcher_id(
+                    bytes32.from_hexstr(request["launcher_id"]),
+                    peer,
+                )
+            except LauncherCoinNotFoundError as e:
+                if i == peer_length - 1:
+                    raise e  # raise the error if we've tried all peers
+                continue  # try some other peers, maybe someone has it
         return {}
 
-    async def dl_stop_tracking(self, request) -> Dict:
+    async def dl_stop_tracking(self, request: dict[str, Any]) -> EndpointResult:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-        if dl_wallet is None:
-            raise ValueError("The DataLayer wallet has not been initialized")
-
         await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
         return {}
 
-    async def dl_latest_singleton(self, request) -> Dict:
+    async def dl_latest_singleton(self, request: dict[str, Any]) -> EndpointResult:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                only_confirmed = request.get("only_confirmed")
-                if only_confirmed is None:
-                    only_confirmed = False
-                record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
-                return {"singleton": None if record is None else record.to_json_dict()}
+        only_confirmed = request.get("only_confirmed")
+        if only_confirmed is None:
+            only_confirmed = False
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
+        return {"singleton": None if record is None else record.to_json_dict()}
 
-        raise ValueError("No DataLayer wallet has been initialized")
-
-    async def dl_singletons_by_root(self, request) -> Dict:
+    async def dl_singletons_by_root(self, request: dict[str, Any]) -> EndpointResult:
         """Get the singleton records that contain the specified root"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for wallet in self.service.wallet_state_manager.wallets.values():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                records = await wallet.get_singletons_by_root(
-                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
-                )
-                records_json = [rec.to_json_dict() for rec in records]
-                return {"singletons": records_json}
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        records = await wallet.get_singletons_by_root(
+            bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
+        )
+        records_json = [rec.to_json_dict() for rec in records]
+        return {"singletons": records_json}
 
-        raise ValueError("No DataLayer wallet has been initialized")
-
-    async def dl_update_root(self, request) -> Dict:
+    @tx_endpoint(push=True)
+    async def dl_update_root(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                async with self.service.wallet_state_manager.lock:
-                    records = await wallet.create_update_state_spend(
-                        bytes32.from_hexstr(request["launcher_id"]),
-                        bytes32.from_hexstr(request["new_root"]),
-                        fee=uint64(request.get("fee", 0)),
-                    )
-                    for record in records:
-                        await self.service.wallet_state_manager.add_pending_transaction(record)
-                    return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        async with self.service.wallet_state_manager.lock:
+            await wallet.create_update_state_spend(
+                bytes32.from_hexstr(request["launcher_id"]),
+                bytes32.from_hexstr(request["new_root"]),
+                action_scope,
+                fee=uint64(request.get("fee", 0)),
+                extra_conditions=extra_conditions,
+            )
 
-        raise ValueError("No DataLayer wallet has been initialized")
+        return {
+            "tx_record": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
 
-    async def dl_update_multiple(self, request) -> Dict:
+    @tx_endpoint(push=True)
+    async def dl_update_multiple(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         """Update multiple singletons with new merkle roots"""
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                async with self.service.wallet_state_manager.lock:
-                    # TODO: This method should optionally link the singletons with announcements.
-                    #       Otherwise spends are vulnerable to signature subtraction.
-                    tx_records: List[TransactionRecord] = []
-                    for launcher, root in request["updates"].items():
-                        records = await wallet.create_update_state_spend(
-                            bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
-                        )
-                        tx_records.extend(records)
-                    # Now that we have all the txs, we need to aggregate them all into just one spend
-                    modified_txs: List[TransactionRecord] = []
-                    aggregate_spend = SpendBundle([], G2Element())
-                    for tx in tx_records:
-                        if tx.spend_bundle is not None:
-                            aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
-                            modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
-                    modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
-                    for tx in modified_txs:
-                        await self.service.wallet_state_manager.add_pending_transaction(tx)
-                    return {"tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs]}
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        async with self.service.wallet_state_manager.lock:
+            # TODO: This method should optionally link the singletons with announcements.
+            #       Otherwise spends are vulnerable to signature subtraction.
+            fee_per_launcher = uint64(request.get("fee", 0) // len(request["updates"]))
+            for launcher, root in request["updates"].items():
+                await wallet.create_update_state_spend(
+                    bytes32.from_hexstr(launcher),
+                    bytes32.from_hexstr(root),
+                    action_scope,
+                    fee=fee_per_launcher,
+                    extra_conditions=extra_conditions,
+                )
 
-        raise ValueError("No DataLayer wallet has been initialized")
+            return {
+                "transactions": None,  # tx_endpoint wrapper will take care of this
+            }
 
-    async def dl_history(self, request) -> Dict:
+    async def dl_history(self, request: dict[str, Any]) -> EndpointResult:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                additional_kwargs = {}
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        additional_kwargs = {}
 
-                if "min_generation" in request:
-                    additional_kwargs["min_generation"] = uint32(request["min_generation"])
-                if "max_generation" in request:
-                    additional_kwargs["max_generation"] = uint32(request["max_generation"])
-                if "num_results" in request:
-                    additional_kwargs["num_results"] = uint32(request["num_results"])
+        if "min_generation" in request:
+            additional_kwargs["min_generation"] = uint32(request["min_generation"])
+        if "max_generation" in request:
+            additional_kwargs["max_generation"] = uint32(request["max_generation"])
+        if "num_results" in request:
+            additional_kwargs["num_results"] = uint32(request["num_results"])
 
-                history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]), **additional_kwargs)
-                history_json = [rec.to_json_dict() for rec in history]
-                return {"history": history_json, "count": len(history_json)}
+        history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]), **additional_kwargs)
+        history_json = [rec.to_json_dict() for rec in history]
+        return {"history": history_json, "count": len(history_json)}
 
-        raise ValueError("No DataLayer wallet has been initialized")
-
-    async def dl_owned_singletons(self, request) -> Dict:
+    async def dl_owned_singletons(self, request: dict[str, Any]) -> EndpointResult:
         """Get all owned singleton records"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
+        try:
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
+        except ValueError:
+            return {"success": False, "error": "no DataLayer wallet available"}
 
-        assert isinstance(wallet, DataLayerWallet)
         singletons = await wallet.get_owned_singletons()
         singletons_json = [singleton.to_json_dict() for singleton in singletons]
 
         return {"singletons": singletons_json, "count": len(singletons_json)}
 
-    async def dl_get_mirrors(self, request) -> Dict:
+    async def dl_get_mirrors(self, request: dict[str, Any]) -> EndpointResult:
         """Get all of the mirrors for a specific singleton"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
-
-        assert isinstance(wallet, DataLayerWallet)
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
         mirrors_json = []
         for mirror in await wallet.get_mirrors_for_launcher(bytes32.from_hexstr(request["launcher_id"])):
             mirrors_json.append(mirror.to_json_dict())
 
         return {"mirrors": mirrors_json}
 
-    async def dl_new_mirror(self, request) -> Dict:
+    @tx_endpoint(push=True)
+    async def dl_new_mirror(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         """Add a new on chain message for a specific singleton"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                dl_wallet = wallet
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
-
-        assert isinstance(dl_wallet, DataLayerWallet)
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
-            txs = await dl_wallet.create_new_mirror(
+            await dl_wallet.create_new_mirror(
                 bytes32.from_hexstr(request["launcher_id"]),
                 request["amount"],
                 [bytes(url, "utf8") for url in request["urls"]],
+                action_scope,
                 fee=request.get("fee", uint64(0)),
+                extra_conditions=extra_conditions,
             )
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
 
         return {
-            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+            "transactions": None,  # tx_endpoint wrapper will take care of this
         }
 
-    async def dl_delete_mirror(self, request) -> Dict:
+    @tx_endpoint(push=True)
+    async def dl_delete_mirror(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
         """Remove an existing mirror for a specific singleton"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
-
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                dl_wallet: DataLayerWallet = wallet
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
 
         async with self.service.wallet_state_manager.lock:
-            txs = await dl_wallet.delete_mirror(
+            await dl_wallet.delete_mirror(
                 bytes32.from_hexstr(request["coin_id"]),
-                peer,
+                self.service.get_full_node_peer(),
+                action_scope,
                 fee=request.get("fee", uint64(0)),
+                extra_conditions=extra_conditions,
             )
-            for tx in txs:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
 
         return {
-            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+            "transactions": None,  # tx_endpoint wrapper will take care of this
         }
+
+    async def dl_verify_proof(
+        self,
+        request: dict[str, Any],
+    ) -> EndpointResult:
+        """Verify a proof of inclusion for a DL singleton"""
+        res = await dl_verify_proof(
+            request,
+            peer=self.service.get_full_node_peer(),
+            wallet_node=self.service.wallet_state_manager.wallet_node,
+        )
+
+        return res
+
+    ##########################################################################################
+    # Verified Credential
+    ##########################################################################################
+    @tx_endpoint(push=True)
+    @marshal
+    async def vc_mint(
+        self,
+        request: VCMint,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> VCMintResponse:
+        """
+        Mint a verified credential using the assigned DID
+        :param request: We require 'did_id' that will be minting the VC and options for a new 'target_address' as well
+        as a 'fee' for the mint tx
+        :return: a 'vc_record' containing all the information of the soon-to-be-confirmed vc as well as any relevant
+        'transactions'
+        """
+        did_id = decode_puzzle_hash(request.did_id)
+        puzhash: Optional[bytes32] = None
+        if request.target_address is not None:
+            puzhash = decode_puzzle_hash(request.target_address)
+
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+        vc_record = await vc_wallet.launch_new_vc(
+            did_id, action_scope, puzhash, request.fee, extra_conditions=extra_conditions
+        )
+        return VCMintResponse([], [], vc_record)
+
+    @marshal
+    async def vc_get(self, request: VCGet) -> VCGetResponse:
+        """
+        Given a launcher ID get the verified credential
+        :param request: the 'vc_id' launcher id of a verifiable credential
+        :return: the 'vc_record' representing the specified verifiable credential
+        """
+        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(request.vc_id)
+        return VCGetResponse(vc_record)
+
+    @marshal
+    async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
+        """
+        Get a list of verified credentials
+        :param request: optional parameters for pagination 'start' and 'count'
+        :return: all 'vc_records' in the specified range and any 'proofs' associated with the roots contained within
+        """
+
+        vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(request.start, request.end)
+        return VCGetListResponse(
+            [VCRecordWithCoinID.from_vc_record(vc) for vc in vc_list],
+            [
+                VCProofWithHash(
+                    rec.vc.proof_hash, None if fetched_proof is None else VCProofsRPC.from_vc_proofs(fetched_proof)
+                )
+                for rec in vc_list
+                if rec.vc.proof_hash is not None
+                for fetched_proof in (
+                    await self.service.wallet_state_manager.vc_store.get_proofs_for_root(rec.vc.proof_hash),
+                )
+            ],
+        )
+
+    @tx_endpoint(push=True)
+    @marshal
+    async def vc_spend(
+        self,
+        request: VCSpend,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> VCSpendResponse:
+        """
+        Spend a verified credential
+        :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional parameters for a 'new_puzhash'
+        for the vc to end up at and 'new_proof_hash' & 'provider_inner_puzhash' which can be used to update the vc's
+        proofs. Also standard 'fee' & 'reuse_puzhash' parameters for the transaction.
+        :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
+        """
+
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+
+        await vc_wallet.generate_signed_transaction(
+            request.vc_id,
+            action_scope,
+            request.fee,
+            request.new_puzhash,
+            new_proof_hash=request.new_proof_hash,
+            provider_inner_puzhash=request.provider_inner_puzhash,
+            extra_conditions=extra_conditions,
+        )
+
+        return VCSpendResponse([], [])  # tx_endpoint takes care of filling this out
+
+    @marshal
+    async def vc_add_proofs(self, request: VCAddProofs) -> Empty:
+        """
+        Add a set of proofs to the DB that can be used when spending a VC. VCs are near useless until their proofs have
+        been added.
+        :param request: 'proofs' is a dictionary of key/value pairs
+        :return:
+        """
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+
+        await vc_wallet.store.add_vc_proofs(request.to_vc_proofs())
+
+        return Empty()
+
+    @marshal
+    async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
+        """
+        Given a specified vc root, get any proofs associated with that root.
+        :param request: must specify 'root' representing the tree hash of some set of proofs
+        :return: a dictionary of root hashes mapped to dictionaries of key value pairs of 'proofs'
+        """
+
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+
+        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(request.root)
+        if vc_proofs is None:
+            raise ValueError("no proofs found for specified root")  # pragma: no cover
+        return VCGetProofsForRootResponse.from_vc_proofs(vc_proofs)
+
+    @tx_endpoint(push=True)
+    @marshal
+    async def vc_revoke(
+        self,
+        request: VCRevoke,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> VCRevokeResponse:
+        """
+        Revoke an on chain VC provided the correct DID is available
+        :param request: required 'vc_parent_id' for the VC coin. Standard transaction params 'fee' & 'reuse_puzhash'.
+        :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
+        """
+
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+
+        await vc_wallet.revoke_vc(
+            request.vc_parent_id,
+            self.service.get_full_node_peer(),
+            action_scope,
+            request.fee,
+            extra_conditions=extra_conditions,
+        )
+
+        return VCRevokeResponse([], [])  # tx_endpoint takes care of filling this out
+
+    @tx_endpoint(push=True)
+    async def crcat_approve_pending(
+        self,
+        request: dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        """
+        Moving any "pending approval" CR-CATs into the spendable balance of the wallet
+        :param request: Required 'wallet_id'. Optional 'min_amount_to_claim' (default: full balance).
+        Standard transaction params 'fee' & 'reuse_puzhash'.
+        :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates:
+        (CRCAT TX + fee TX)
+        """
+
+        @streamable
+        @dataclasses.dataclass(frozen=True)
+        class CRCATApprovePending(Streamable):
+            wallet_id: uint32
+            min_amount_to_claim: uint64
+            fee: uint64 = uint64(0)
+
+        parsed_request = CRCATApprovePending.from_json_dict(request)
+        cr_cat_wallet = self.service.wallet_state_manager.wallets[parsed_request.wallet_id]
+        assert isinstance(cr_cat_wallet, CRCATWallet)
+
+        await cr_cat_wallet.claim_pending_approval_balance(
+            parsed_request.min_amount_to_claim,
+            action_scope,
+            fee=parsed_request.fee,
+            extra_conditions=extra_conditions,
+        )
+
+        return {
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+
+    @marshal
+    async def gather_signing_info(
+        self,
+        request: GatherSigningInfo,
+    ) -> GatherSigningInfoResponse:
+        return GatherSigningInfoResponse(await self.service.wallet_state_manager.gather_signing_info(request.spends))
+
+    @marshal
+    async def apply_signatures(
+        self,
+        request: ApplySignatures,
+    ) -> ApplySignaturesResponse:
+        return ApplySignaturesResponse(
+            [await self.service.wallet_state_manager.apply_signatures(request.spends, request.signing_responses)]
+        )
+
+    @marshal
+    async def submit_transactions(
+        self,
+        request: SubmitTransactions,
+    ) -> SubmitTransactionsResponse:
+        return SubmitTransactionsResponse(
+            await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
+        )
+
+    @marshal
+    async def execute_signing_instructions(
+        self,
+        request: ExecuteSigningInstructions,
+    ) -> ExecuteSigningInstructionsResponse:
+        return ExecuteSigningInstructionsResponse(
+            await self.service.wallet_state_manager.execute_signing_instructions(
+                request.signing_instructions, request.partial_allowed
+            )
+        )

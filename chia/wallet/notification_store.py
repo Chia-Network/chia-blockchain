@@ -3,16 +3,18 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
+from chia.util.streamable import Streamable, streamable
 
 
+@streamable
 @dataclasses.dataclass(frozen=True)
-class Notification:
-    coin_id: bytes32
+class Notification(Streamable):
+    id: bytes32
     message: bytes
     amount: uint64
     height: uint32
@@ -30,7 +32,7 @@ class NotificationStore:
     @classmethod
     async def create(
         cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
-    ) -> "NotificationStore":
+    ) -> NotificationStore:
         self = cls()
 
         if name:
@@ -43,8 +45,10 @@ class NotificationStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
+                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY, msg blob, amount blob)"
             )
+
+            await conn.execute("CREATE TABLE IF NOT EXISTS all_notification_ids(coin_id blob PRIMARY KEY)")
 
             try:
                 await conn.execute("ALTER TABLE notifications ADD COLUMN height bigint DEFAULT 0")
@@ -66,17 +70,21 @@ class NotificationStore:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount, height) " "VALUES(?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO notifications (coin_id, msg, amount, height) VALUES(?, ?, ?, ?)",
                 (
-                    notification.coin_id,
+                    notification.id,
                     notification.message,
-                    bytes(notification.amount),
+                    notification.amount.stream_to_bytes(),
                     notification.height,
                 ),
             )
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO all_notification_ids (coin_id) VALUES(?)",
+                (notification.id,),
+            )
             await cursor.close()
 
-    async def get_notifications(self, coin_ids: List[bytes32]) -> List[Notification]:
+    async def get_notifications(self, coin_ids: list[bytes32]) -> list[Notification]:
         """
         Checks DB for Notification with id: id and returns it.
         """
@@ -103,25 +111,32 @@ class NotificationStore:
         ]
 
     async def get_all_notifications(
-        self, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
-    ) -> List[Notification]:
+        self, pagination: Optional[tuple[Optional[int], Optional[int]]] = None
+    ) -> list[Notification]:
         """
         Checks DB for Notification with id: id and returns it.
         """
         if pagination is not None:
             if pagination[1] is not None and pagination[0] is not None:
-                pagination_str = f" LIMIT {pagination[0]}, {pagination[1] - pagination[0]}"
+                pagination_str = " LIMIT ?, ?"
+                pagination_params: tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
             elif pagination[1] is None and pagination[0] is not None:
-                pagination_str = f" LIMIT {pagination[0]}, (SELECT COUNT(*) from notifications)"
+                pagination_str = " LIMIT ?, (SELECT COUNT(*) from notifications)"
+                pagination_params = (pagination[0],)
             elif pagination[1] is not None and pagination[0] is None:
-                pagination_str = f" LIMIT {pagination[1]}"
+                pagination_str = " LIMIT ?"
+                pagination_params = (pagination[1],)
             else:
                 pagination_str = ""
+                pagination_params = tuple()
         else:
             pagination_str = ""
+            pagination_params = tuple()
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(f"SELECT * from notifications ORDER BY amount DESC{pagination_str}")
+            rows = await conn.execute_fetchall(
+                f"SELECT * from notifications ORDER BY amount DESC{pagination_str}", pagination_params
+            )
 
         return [
             Notification(
@@ -133,8 +148,7 @@ class NotificationStore:
             for row in rows
         ]
 
-    async def delete_notifications(self, coin_ids: List[bytes32]) -> None:
-
+    async def delete_notifications(self, coin_ids: list[bytes32]) -> None:
         coin_ids_str_list = "("
         for _ in coin_ids:
             coin_ids_str_list += "?"
@@ -152,3 +166,13 @@ class NotificationStore:
             # Delete from storage
             cursor = await conn.execute("DELETE FROM notifications")
             await cursor.close()
+
+    async def notification_exists(self, id: bytes32) -> bool:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)", (id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                assert row is not None
+                exists: bool = row[0] > 0
+                return exists

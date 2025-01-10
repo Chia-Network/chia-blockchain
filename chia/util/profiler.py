@@ -1,3 +1,5 @@
+# Package: utils
+
 from __future__ import annotations
 
 import asyncio
@@ -5,7 +7,10 @@ import cProfile
 import logging
 import pathlib
 import tracemalloc
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Optional
 
 from chia.util.path import path_from_root
 
@@ -24,9 +29,8 @@ from chia.util.path import path_from_root
 
 
 async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
-
     profile_dir = path_from_root(root_path, f"profile-{service}")
-    log.info("Starting profiler. saving to %s" % profile_dir)
+    log.info("Starting profiler. saving to %s", profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     counter = 0
@@ -37,8 +41,8 @@ async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logge
         # this will throw CancelledError when we're exiting
         await asyncio.sleep(1)
         pr.create_stats()
-        pr.dump_stats(profile_dir / ("slot-%05d.profile" % counter))
-        log.debug("saving profile %05d" % counter)
+        pr.dump_stats(profile_dir / f"slot-{counter:05}.profile")
+        log.debug("saving profile %05d", counter)
         counter += 1
 
 
@@ -53,12 +57,12 @@ if __name__ == "__main__":
     profile_dir = pathlib.Path(sys.argv[1])
     init(strip=False)
 
-    def analyze_cpu_usage(profile_dir: pathlib.Path):
+    def analyze_cpu_usage(profile_dir: pathlib.Path) -> None:
         counter = 0
         try:
             while True:
                 f = io.StringIO()
-                st = pstats.Stats(str(profile_dir / ("slot-%05d.profile" % counter)), stream=f)
+                st = pstats.Stats(str(profile_dir / f"slot-{counter:05}.profile"), stream=f)
                 st.strip_dirs()
                 st.sort_stats(pstats.SortKey.CUMULATIVE)
                 st.print_stats()
@@ -70,7 +74,6 @@ if __name__ == "__main__":
                 # ncalls  tottime  percall  cumtime  percall filename:lineno(function)
                 # 1    0.000    0.000    0.000    0.000 <function>
                 for line in f:
-
                     if " function calls " in line and " in " in line and " seconds":
                         # 304307 function calls (291692 primitive calls) in 1.031 seconds
                         assert total == 0
@@ -118,29 +121,29 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
 
-    def analyze_slot_range(profile_dir: pathlib.Path, first: int, last: int):
+    def analyze_slot_range(profile_dir: pathlib.Path, first: int, last: int) -> None:
         if last < first:
             print("ERROR: first must be <= last when specifying slot range")
             return
 
         files = []
         for i in range(first, last + 1):
-            files.append(str(profile_dir / ("slot-%05d.profile" % i)))
+            files.append(str(profile_dir / f"slot-{i:05}.profile"))
 
-        output_file = "chia-hotspot-%d" % first
+        output_file = f"chia-hotspot-{first}"
         if first < last:
-            output_file += "-%d" % last
+            output_file += f"-{last}"
 
-        print("generating call tree for slot(s) [%d, %d]" % (first, last))
-        check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot"] + files)
+        print(f"generating call tree for slot(s) [{first}, {last}]")
+        check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot", *files])
         with open(output_file + ".png", "w+") as f:
             check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
-        print("output written to: %s.png" % output_file)
+        print(f"output written to: {output_file}.png")
 
     if len(sys.argv) == 2:
         # this analyzes the CPU usage at all slots saved to the profiler directory
         analyze_cpu_usage(profile_dir)
-    elif len(sys.argv) in [3, 4]:
+    elif len(sys.argv) in {3, 4}:
         # the additional arguments are interpreted as either one slot, or a
         # slot range (first and last) to analyze
         first = int(sys.argv[2])
@@ -160,9 +163,8 @@ profiler.py <profile-directory> <first-slot> <last-slot>
 
 
 async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
-
-    profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    log.info("Starting memory profiler. saving to %s" % profile_dir)
+    profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log.info("Starting memory profiler. saving to %s", profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -175,7 +177,21 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
             await asyncio.sleep(60)
             snapshot = tracemalloc.take_snapshot()
             snapshot.dump(str(profile_dir / f"heap-{counter:05d}.profile"))
-            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0]/1000000:0.3f} MB profile {counter:05d}")
+            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0] / 1000000:0.3f} MB profile {counter:05d}")
             counter += 1
     finally:
         tracemalloc.stop()
+
+
+@asynccontextmanager
+async def enable_profiler(profile: bool) -> AsyncIterator[Optional[cProfile.Profile]]:
+    if not profile:
+        yield None
+        return
+
+    # this is not covered by any unit tests as it's essentially test code
+    # itself. It's exercised manually when investigating performance issues
+    with cProfile.Profile() as pr:  # pragma: no cover
+        pr.enable()
+        yield pr
+        pr.disable()

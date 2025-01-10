@@ -7,12 +7,14 @@ import os
 import signal
 import subprocess
 import sys
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, TextIO
+from typing import Optional, TextIO
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia.util.chia_version import chia_short_version
 from chia.util.config import lock_and_load_config
+from chia.util.task_referencer import create_referenced_task
 
 
 @contextlib.contextmanager
@@ -21,7 +23,7 @@ def get_optional_beta_plot_log_file(root_path: Path, plotter: str) -> Iterator[O
     with lock_and_load_config(root_path, "config.yaml") as config:
         if config.get("beta", {}).get("enabled", False):
             file_name = f"{plotter}_{datetime.now().strftime('%m_%d_%Y__%H_%M_%S')}.log"
-            beta_log_path = Path(config["beta"]["path"]) / chia_full_version_str() / "plotting" / file_name
+            beta_log_path = Path(config["beta"]["path"]) / chia_short_version() / "plotting" / file_name
             beta_log_path.parent.mkdir(parents=True, exist_ok=True)
     if beta_log_path is not None:
         with open(beta_log_path, "w") as file:
@@ -59,7 +61,7 @@ async def run_plotter(root_path, plotter, args, progress_dict):
         process.terminate()
 
     # For Windows, we'll install a SIGINT handler to catch Ctrl-C (KeyboardInterrupt isn't raised)
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         signal.signal(signal.SIGINT, sigint_handler)
         installed_sigint_handler = True
 
@@ -82,13 +84,17 @@ async def run_plotter(root_path, plotter, args, progress_dict):
         try:
             await asyncio.wait(
                 [
-                    _read_stream(
-                        process.stdout,
-                        process_stdout_line,
+                    create_referenced_task(
+                        _read_stream(
+                            process.stdout,
+                            process_stdout_line,
+                        )
                     ),
-                    _read_stream(
-                        process.stderr,
-                        process_stderr_line,
+                    create_referenced_task(
+                        _read_stream(
+                            process.stderr,
+                            process_stderr_line,
+                        )
                     ),
                 ]
             )

@@ -3,9 +3,9 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
-import pkg_resources
+import importlib_resources
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -15,7 +15,7 @@ from cryptography.x509.oid import NameOID
 
 from chia.util.ssl_check import DEFAULT_PERMISSIONS_CERT_FILE, DEFAULT_PERMISSIONS_KEY_FILE
 
-_all_private_node_names: List[str] = [
+_all_private_node_names: list[str] = [
     "full_node",
     "wallet",
     "farmer",
@@ -25,12 +25,13 @@ _all_private_node_names: List[str] = [
     "data_layer",
     "daemon",
 ]
-_all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
+_all_public_node_names: list[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 
 
-def get_chia_ca_crt_key() -> Tuple[Any, Any]:
-    crt = pkg_resources.resource_string(__name__, "chia_ca.crt")
-    key = pkg_resources.resource_string(__name__, "chia_ca.key")
+def get_chia_ca_crt_key() -> tuple[Any, Any]:
+    here = importlib_resources.files(__name__.rpartition(".")[0])
+    crt = here.joinpath("chia_ca.crt").read_bytes()
+    key = here.joinpath("chia_ca.key").read_bytes()
     return crt, key
 
 
@@ -56,11 +57,11 @@ def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, ke
             f.write(data)  # lgtm [py/clear-text-storage-sensitive-data]
 
 
-def ensure_ssl_dirs(dirs: List[Path]):
+def ensure_ssl_dirs(dirs: list[Path]):
     """Create SSL dirs with a default 755 mode if necessary"""
     for dir in dirs:
         if not dir.exists():
-            dir.mkdir(mode=0o755)
+            dir.mkdir(mode=0o755, parents=True)
 
 
 def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
@@ -95,7 +96,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
     key_pem = cert_key.private_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
 
@@ -117,8 +118,8 @@ def make_ca_cert(cert_path: Path, key_path: Path):
         .issuer_name(issuer)
         .public_key(root_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=3650))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3650))
         .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
         .sign(root_key, hashes.SHA256(), default_backend())
     )
@@ -126,7 +127,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     cert_pem = root_cert.public_bytes(encoding=serialization.Encoding.PEM)
     key_pem = root_key.private_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
 
@@ -136,10 +137,10 @@ def make_ca_cert(cert_path: Path, key_path: Path):
 def create_all_ssl(
     root_path: Path,
     *,
-    private_ca_crt_and_key: Optional[Tuple[bytes, bytes]] = None,
-    node_certs_and_keys: Optional[Dict[str, Dict]] = None,
-    private_node_names: List[str] = _all_private_node_names,
-    public_node_names: List[str] = _all_public_node_names,
+    private_ca_crt_and_key: Optional[tuple[bytes, bytes]] = None,
+    node_certs_and_keys: Optional[dict[str, dict]] = None,
+    private_node_names: list[str] = _all_private_node_names,
+    public_node_names: list[str] = _all_public_node_names,
     overwrite: bool = True,
 ):
     # remove old key and crt
@@ -218,9 +219,9 @@ def generate_ssl_for_nodes(
     ca_key: bytes,
     *,
     prefix: str,
-    nodes: List[str],
+    nodes: list[str],
     overwrite: bool = True,
-    node_certs_and_keys: Optional[Dict[str, Dict]] = None,
+    node_certs_and_keys: Optional[dict[str, dict]] = None,
 ):
     for node_name in nodes:
         node_dir = ssl_dir / node_name

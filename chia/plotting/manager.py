@@ -6,27 +6,34 @@ import time
 import traceback
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Optional
 
-from blspy import G1Element
-from chiapos import DiskProver
+from chia_rs import G1Element
+from chiapos import DiskProver, decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
-from chia.util.generator_tools import list_to_batches
+from chia.plotting.util import (
+    HarvestingMode,
+    PlotInfo,
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    get_plot_filenames,
+)
+from chia.util.batches import to_batches
 
 log = logging.getLogger(__name__)
 
 
 class PlotManager:
-    plots: Dict[Path, PlotInfo]
-    plot_filename_paths: Dict[str, Tuple[str, Set[str]]]
+    plots: dict[Path, PlotInfo]
+    plot_filename_paths: dict[str, tuple[str, set[str]]]
     plot_filename_paths_lock: threading.Lock
-    failed_to_open_filenames: Dict[Path, int]
-    no_key_filenames: Set[Path]
-    farmer_public_keys: List[G1Element]
-    pool_public_keys: List[G1Element]
+    failed_to_open_filenames: dict[Path, int]
+    no_key_filenames: set[Path]
+    farmer_public_keys: list[G1Element]
+    pool_public_keys: list[G1Element]
     cache: Cache
     match_str: Optional[str]
     open_no_key_filenames: bool
@@ -38,6 +45,8 @@ class PlotManager:
     _refreshing_enabled: bool
     _refresh_callback: Callable
     _initial: bool
+    max_compression_level_allowed: int
+    context_count: int
 
     def __init__(
         self,
@@ -55,7 +64,11 @@ class PlotManager:
         self.no_key_filenames = set()
         self.farmer_public_keys = []
         self.pool_public_keys = []
-        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager.dat")
+        # Since `compression_level` property was added to Cache structure,
+        # previous cache file formats needs to be reset
+        # When user downgrades harvester, it looks 'plot_manager.dat` while
+        # latest harvester reads/writes 'plot_manager_v2.dat`
+        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager_v2.dat")
         self.match_str = match_str
         self.open_no_key_filenames = open_no_key_filenames
         self.last_refresh_time = 0
@@ -66,6 +79,8 @@ class PlotManager:
         self._refreshing_enabled = False
         self._refresh_callback = refresh_callback
         self._initial = True
+        self.max_compression_level_allowed = 0
+        self.context_count = 0
 
     def __enter__(self):
         self._lock.acquire()
@@ -73,7 +88,44 @@ class PlotManager:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
 
-    def reset(self):
+    def configure_decompressor(
+        self,
+        context_count: int,
+        thread_count: int,
+        disable_cpu_affinity: bool,
+        max_compression_level_allowed: int,
+        use_gpu_harvesting: bool,
+        gpu_index: int,
+        enforce_gpu_index: bool,
+        decompressor_timeout: int,
+    ) -> HarvestingMode:
+        if max_compression_level_allowed > 7:
+            log.error(
+                "Currently only compression levels up to 7 are allowed, "
+                f"while {max_compression_level_allowed} was specified."
+                "Setting max_compression_level_allowed to 7."
+            )
+            max_compression_level_allowed = 7
+        is_using_gpu = decompressor_context_queue.init(
+            context_count,
+            thread_count,
+            disable_cpu_affinity,
+            max_compression_level_allowed,
+            use_gpu_harvesting,
+            gpu_index,
+            enforce_gpu_index,
+            decompressor_timeout,
+        )
+        if not is_using_gpu and use_gpu_harvesting:
+            log.error(
+                "GPU harvesting failed initialization. "
+                f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
+            )
+        self.max_compression_level_allowed = max_compression_level_allowed
+        self.context_count = context_count
+        return HarvestingMode.GPU if is_using_gpu else HarvestingMode.CPU
+
+    def reset(self) -> None:
         with self:
             self.last_refresh_time = time.time()
             self.plots.clear()
@@ -85,21 +137,21 @@ class PlotManager:
     def set_refresh_callback(self, callback: Callable):
         self._refresh_callback = callback
 
-    def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
+    def set_public_keys(self, farmer_public_keys: list[G1Element], pool_public_keys: list[G1Element]):
         self.farmer_public_keys = farmer_public_keys
         self.pool_public_keys = pool_public_keys
 
-    def initial_refresh(self):
+    def initial_refresh(self) -> bool:
         return self._initial
 
-    def public_keys_available(self):
-        return len(self.farmer_public_keys) and len(self.pool_public_keys)
+    def public_keys_available(self) -> bool:
+        return len(self.farmer_public_keys) > 0 and len(self.pool_public_keys) > 0
 
     def plot_count(self) -> int:
         with self:
             return len(self.plots)
 
-    def get_duplicates(self) -> List[Path]:
+    def get_duplicates(self) -> list[Path]:
         result = []
         for plot_filename, paths_entry in self.plot_filename_paths.items():
             _, duplicated_paths = paths_entry
@@ -136,9 +188,9 @@ class PlotManager:
                 if not self._refreshing_enabled:
                     return
 
-                plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
-                plot_directories: Set[Path] = set(plot_filenames.keys())
-                plot_paths: Set[Path] = set()
+                plot_filenames: dict[Path, list[Path]] = get_plot_filenames(self.root_path)
+                plot_directories: set[Path] = set(plot_filenames.keys())
+                plot_paths: set[Path] = set()
                 for paths in plot_filenames.values():
                     plot_paths.update(paths)
 
@@ -156,7 +208,7 @@ class PlotManager:
                     if path not in plot_paths:
                         self.no_key_filenames.remove(path)
 
-                filenames_to_remove: List[str] = []
+                filenames_to_remove: list[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
                     loaded_path, duplicated_paths = paths_entry
                     loaded_plot = Path(loaded_path) / Path(plot_filename)
@@ -169,7 +221,7 @@ class PlotManager:
                         # No need to check the duplicates here since we drop the whole entry
                         continue
 
-                    paths_to_remove: List[str] = []
+                    paths_to_remove: list[str] = []
                     for path_str in duplicated_paths:
                         loaded_plot = Path(path_str) / Path(plot_filename)
                         if loaded_plot not in plot_paths:
@@ -180,19 +232,19 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
-                for remaining, batch in list_to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
-                    batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
+                for batch in to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
+                    batch_result: PlotRefreshResult = self.refresh_batch(batch.entries, plot_directories)
                     if not self._refreshing_enabled:
                         self.log.debug("refresh_plots: Aborted")
                         break
                     # Set the remaining files since `refresh_batch()` doesn't know them but we want to report it
-                    batch_result.remaining = remaining
+                    batch_result.remaining = batch.remaining
                     total_result.loaded += batch_result.loaded
                     total_result.processed += batch_result.processed
                     total_result.duration += batch_result.duration
 
                     self._refresh_callback(PlotRefreshEvents.batch_processed, batch_result)
-                    if remaining == 0:
+                    if batch.remaining == 0:
                         break
                     batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
                     self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
@@ -206,7 +258,7 @@ class PlotManager:
 
                 # Cleanup unused cache
                 self.log.debug(f"_refresh_task: cached entries before cleanup: {len(self.cache)}")
-                remove_paths: List[Path] = []
+                remove_paths: list[Path] = []
                 for path, cache_entry in self.cache.items():
                     if cache_entry.expired(Cache.expiry_seconds) and path not in self.plots:
                         remove_paths.append(path)
@@ -229,7 +281,7 @@ class PlotManager:
                 log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
                 self.reset()
 
-    def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
+    def refresh_batch(self, plot_paths: list[Path], plot_directories: set[Path]) -> PlotRefreshResult:
         start_time: float = time.time()
         result: PlotRefreshResult = PlotRefreshResult(processed=len(plot_paths))
         counter_lock = threading.Lock()
@@ -256,11 +308,11 @@ class PlotManager:
             if file_path in self.plots:
                 return self.plots[file_path]
 
-            entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
+            entry: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
             if entry is not None:
-                loaded_parent, duplicates = entry
+                _loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
-                    log.debug(f"Skip duplicated plot {str(file_path)}")
+                    log.debug(f"Skip duplicated plot {file_path!s}")
                     return None
             try:
                 if not file_path.exists():
@@ -273,24 +325,45 @@ class PlotManager:
                 if not cache_hit:
                     prover = DiskProver(str(file_path))
 
-                    log.debug(f"process_file {str(file_path)}")
+                    log.debug(f"process_file {file_path!s}")
 
                     expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
 
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                        log.warning(
-                            f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024 ** 3)} GiB, but expected"
-                            f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
-                        )
-                        return None
+                    level = prover.get_compression_level()
+                    if level == 0:
+                        if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                            log.warning(
+                                f"Not farming plot {file_path}. "
+                                f"Size is {stat_info.st_size / (1024 ** 3)} GiB, "
+                                f"but expected at least: {expected_size / (1024 ** 3)} GiB. "
+                                "We assume the file is being copied."
+                            )
+                            return None
 
                     cache_entry = CacheEntry.from_disk_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
+
+                level = cache_entry.prover.get_compression_level()
+                if level > self.max_compression_level_allowed:
+                    log.warning(
+                        f"Not farming plot {file_path}. Plot compression level: {level}, "
+                        f"max compression level allowed: {self.max_compression_level_allowed}."
+                    )
+                    return None
+
+                if level > 0 and self.context_count == 0:
+                    log.warning(
+                        f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
+                        f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
+                        " to start harvesting compressed plots."
+                    )
+                    return None
+
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
                     log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
@@ -310,7 +383,7 @@ class PlotManager:
                     self.no_key_filenames.remove(file_path)
 
                 with self.plot_filename_paths_lock:
-                    paths: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
+                    paths: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
                     if paths is None:
                         paths = (str(Path(cache_entry.prover.get_filename()).parent), set())
                         self.plot_filename_paths[file_path.name] = paths
@@ -346,7 +419,7 @@ class PlotManager:
             return new_plot_info
 
         with self, ThreadPoolExecutor() as executor:
-            plots_refreshed: Dict[Path, PlotInfo] = {}
+            plots_refreshed: dict[Path, PlotInfo] = {}
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:
                     plots_refreshed[Path(new_plot.prover.get_filename())] = new_plot

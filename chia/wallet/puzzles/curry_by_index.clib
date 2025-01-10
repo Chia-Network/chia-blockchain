@@ -1,0 +1,16 @@
+(
+  (defun recurry_by_index_ordered (
+      index_value_pairs_list  ; MUST BE ORDERED
+      current_position  ; must be 0 on initial call
+      CURRENT_PARAMS  ; current list of curry params
+    )
+    (if index_value_pairs_list
+        (if (= (f (f index_value_pairs_list)) current_position)
+            (c (r (f index_value_pairs_list)) (recurry_by_index_ordered (r index_value_pairs_list) (+ current_position 1) (r CURRENT_PARAMS)))
+            (c (f CURRENT_PARAMS) (recurry_by_index_ordered index_value_pairs_list (+ current_position 1) (r CURRENT_PARAMS)))
+        )
+        ()
+    )
+  )
+
+)

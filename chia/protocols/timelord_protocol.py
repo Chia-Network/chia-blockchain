@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.types.blockchain_format.foliage import Foliage
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
@@ -28,7 +28,7 @@ class NewPeakTimelord(Streamable):
     sub_epoch_summary: Optional[
         SubEpochSummary
     ]  # If NewPeak is the last slot in epoch, the next slot should include this
-    previous_reward_challenges: List[Tuple[bytes32, uint128]]
+    previous_reward_challenges: list[tuple[bytes32, uint128]]
     last_challenge_sb_or_eos_total_iters: uint128
     passes_ses_height_but_not_yet_included: bool
 

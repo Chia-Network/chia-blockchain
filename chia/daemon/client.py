@@ -3,13 +3,16 @@ from __future__ import annotations
 import asyncio
 import json
 import ssl
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, Optional
 
 import aiohttp
 
+from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -22,32 +25,42 @@ class DaemonProxy:
         max_message_size: int = 50 * 1000 * 1000,
     ):
         self._uri = uri
-        self._request_dict: Dict[str, asyncio.Event] = {}
-        self.response_dict: Dict[str, WsRpcMessage] = {}
+        self._request_dict: dict[str, asyncio.Event] = {}
+        self.response_dict: dict[str, WsRpcMessage] = {}
         self.ssl_context = ssl_context
         self.heartbeat = heartbeat
         self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
         self.max_message_size = max_message_size
 
-    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+    def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
         request = create_payload_dict(command, data, "client", "daemon")
         return request
 
-    async def start(self) -> None:
-        try:
-            self.client_session = aiohttp.ClientSession()
-            self.websocket = await self.client_session.ws_connect(
-                self._uri,
-                autoclose=True,
-                autoping=True,
-                heartbeat=self.heartbeat,
-                ssl_context=self.ssl_context,
-                max_msg_size=self.max_message_size,
-            )
-        except Exception:
+    async def start(self, wait_for_start: bool = False) -> None:
+        self.client_session = aiohttp.ClientSession()
+
+        connect_backoff = 2
+        while (self.websocket is None or self.websocket.closed) and connect_backoff <= 60:
+            try:
+                self.websocket = await self.client_session.ws_connect(
+                    self._uri,
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=self.heartbeat,
+                    ssl=self.ssl_context if self.ssl_context is not None else True,
+                    max_msg_size=self.max_message_size,
+                )
+                break
+            except aiohttp.ClientError:
+                if not wait_for_start:
+                    break
+                await asyncio.sleep(connect_backoff)
+                connect_backoff *= 2
+
+        if self.websocket is None or self.websocket.closed:
             await self.close()
-            raise
+            raise Exception("Failed to connect to daemon")
 
         async def listener_task() -> None:
             try:
@@ -55,7 +68,7 @@ class DaemonProxy:
             finally:
                 await self.close()
 
-        asyncio.create_task(listener_task())
+        create_referenced_task(listener_task(), known_unreferenced=True)
         await asyncio.sleep(1)
 
     async def listener(self) -> None:
@@ -79,7 +92,7 @@ class DaemonProxy:
         string = dict_to_json_str(request)
         if self.websocket is None or self.websocket.closed:
             raise Exception("Websocket is not connected")
-        asyncio.create_task(self.websocket.send_str(string))
+        create_referenced_task(self.websocket.send_str(string), known_unreferenced=True)
         try:
             await asyncio.wait_for(self._request_dict[request_id].wait(), timeout=30)
             self._request_dict.pop(request_id)
@@ -91,8 +104,14 @@ class DaemonProxy:
             raise Exception(f"No response from daemon for request_id: {request_id}")
 
     async def get_version(self) -> WsRpcMessage:
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
         request = self.format_request("get_version", data)
+        response = await self._get(request)
+        return response
+
+    async def get_network_info(self) -> WsRpcMessage:
+        data: dict[str, Any] = {}
+        request = self.format_request("get_network_info", data)
         response = await self._get(request)
         return response
 
@@ -117,7 +136,7 @@ class DaemonProxy:
         return False
 
     async def is_keyring_locked(self) -> bool:
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
         request = self.format_request("is_keyring_locked", data)
         response = await self._get(request)
         if "is_keyring_locked" in response["data"]:
@@ -145,9 +164,20 @@ class DaemonProxy:
         request = self.format_request("exit", {})
         return await self._get(request)
 
+    async def get_keys_for_plotting(self, fingerprints: Optional[list[uint32]] = None) -> WsRpcMessage:
+        data = {"fingerprints": fingerprints} if fingerprints else {}
+        request = self.format_request("get_keys_for_plotting", data)
+        response = await self._get(request)
+        return response
+
 
 async def connect_to_daemon(
-    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext, heartbeat: int
+    self_hostname: str,
+    daemon_port: int,
+    max_message_size: int,
+    ssl_context: ssl.SSLContext,
+    heartbeat: int,
+    wait_for_start: bool = False,
 ) -> DaemonProxy:
     """
     Connect to the local daemon.
@@ -159,12 +189,13 @@ async def connect_to_daemon(
         max_message_size=max_message_size,
         heartbeat=heartbeat,
     )
-    await client.start()
+
+    await client.start(wait_for_start=wait_for_start)
     return client
 
 
 async def connect_to_daemon_and_validate(
-    root_path: Path, config: Dict[str, Any], quiet: bool = False
+    root_path: Path, config: dict[str, Any], quiet: bool = False, wait_for_start: bool = False
 ) -> Optional[DaemonProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
@@ -186,6 +217,7 @@ async def connect_to_daemon_and_validate(
             max_message_size=daemon_max_message_size,
             ssl_context=ssl_context,
             heartbeat=daemon_heartbeat,
+            wait_for_start=wait_for_start,
         )
         r = await connection.ping()
 
@@ -200,7 +232,7 @@ async def connect_to_daemon_and_validate(
 
 @asynccontextmanager
 async def acquire_connection_to_daemon(
-    root_path: Path, config: Dict[str, Any], quiet: bool = False
+    root_path: Path, config: dict[str, Any], quiet: bool = False
 ) -> AsyncIterator[Optional[DaemonProxy]]:
     """
     Asynchronous context manager which attempts to create a connection to the daemon.
@@ -215,6 +247,6 @@ async def acquire_connection_to_daemon(
         yield daemon  # <----
     except Exception as e:
         print(f"Exception occurred while communicating with the daemon: {e}")
-
-    if daemon is not None:
-        await daemon.close()
+    finally:
+        if daemon is not None:
+            await daemon.close()

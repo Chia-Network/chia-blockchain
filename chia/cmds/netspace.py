@@ -4,8 +4,10 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 
-@click.command("netspace", short_help="Estimate total farmed space on the network")
+
+@click.command("netspace", help="Estimate total farmed space on the network")
 @click.option(
     "-p",
     "--rpc-port",
@@ -36,12 +38,13 @@ import click
     type=str,
     default="",
 )
-def netspace_cmd(rpc_port: Optional[int], delta_block_height: str, start: str) -> None:
+@click.pass_context
+def netspace_cmd(ctx: click.Context, rpc_port: Optional[int], delta_block_height: str, start: str) -> None:
     """
     Calculates the estimated space on the network given two block header hashes.
     """
     import asyncio
 
-    from .netspace_funcs import netstorge_async
+    from chia.cmds.netspace_funcs import netstorge_async
 
-    asyncio.run(netstorge_async(rpc_port, delta_block_height, start))
+    asyncio.run(netstorge_async(ChiaCliContext.set_default(ctx).root_path, rpc_port, delta_block_height, start))

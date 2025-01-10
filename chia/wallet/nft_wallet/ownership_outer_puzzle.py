@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 from clvm_tools.binutils import disassemble
 
@@ -11,10 +11,12 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
-OWNERSHIP_LAYER_MOD = load_clvm_maybe_recompile("nft_ownership_layer.clvm")
+OWNERSHIP_LAYER_MOD = load_clvm_maybe_recompile(
+    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 
 
-def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
     if puzzle.mod == OWNERSHIP_LAYER_MOD:
         return True, list(puzzle.args.as_iter())
     return False, []
@@ -27,7 +29,7 @@ def puzzle_for_ownership_layer(
 
 
 def solution_for_ownership_layer(inner_solution: Program) -> Program:
-    return Program.to([inner_solution])  # type: ignore
+    return Program.to([inner_solution])
 
 
 @dataclass(frozen=True)

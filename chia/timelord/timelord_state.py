@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import timelord_protocol
@@ -44,12 +44,12 @@ class LastState:
         self.last_peak_challenge: bytes32 = constants.GENESIS_CHALLENGE
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
-        self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
+        self.reward_challenge_cache: list[tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
         self.new_epoch = False
         self.passed_ses_height_but_not_yet_included = False
         self.infused_ses = False
 
-    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
+    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]) -> None:
         if isinstance(state, timelord_protocol.NewPeakTimelord):
             self.state_type = StateType.PEAK
             self.peak = state
@@ -59,6 +59,7 @@ class LastState:
                 state.reward_chain_block,
                 state.sub_slot_iters,
                 state.difficulty,
+                state.reward_chain_block.height,
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
@@ -109,7 +110,7 @@ class LastState:
         reward_challenge: Optional[bytes32] = self.get_challenge(Chain.REWARD_CHAIN)
         assert reward_challenge is not None  # Reward chain always has VDFs
         self.reward_challenge_cache.append((reward_challenge, self.total_iters))
-        log.info(f"Updated timelord peak to {reward_challenge}, total iters: {self.total_iters}")
+        log.info(f"Updated timelord peak to {reward_challenge.hex()}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 
@@ -120,7 +121,7 @@ class LastState:
         if overflow and self.new_epoch:
             # No overflows in new epoch
             return False
-        if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.END_OF_SUB_SLOT:
+        if self.state_type in {StateType.FIRST_SUB_SLOT, StateType.END_OF_SUB_SLOT}:
             return True
         ss_start_iters = self.get_total_iters() - self.get_last_ip()
         already_infused_count: int = 0
@@ -159,7 +160,7 @@ class LastState:
         return self.state_type == StateType.END_OF_SUB_SLOT and self.infused_ses
 
     def get_next_sub_epoch_summary(self) -> Optional[SubEpochSummary]:
-        if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.END_OF_SUB_SLOT:
+        if self.state_type in {StateType.FIRST_SUB_SLOT, StateType.END_OF_SUB_SLOT}:
             # Can only infuse SES after a peak (in an end of sub slot)
             return None
         assert self.peak is not None
@@ -232,7 +233,7 @@ class LastState:
                 else:
                     return None
         elif self.state_type == StateType.END_OF_SUB_SLOT:
-            if chain == Chain.CHALLENGE_CHAIN or chain == Chain.REWARD_CHAIN:
+            if chain in {Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN}:
                 return ClassgroupElement.get_default_element()
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 assert self.subslot_end is not None
