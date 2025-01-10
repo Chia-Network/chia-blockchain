@@ -636,9 +636,13 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    success, state_change_summary = await self.add_block_batch(
-                        response.blocks, peer_info, fork_info, vs
-                    )
+
+                    # Wrap add_block_batch with writer to ensure all writes and reads are on same connection.
+                    async with self.block_store.db_wrapper.writer() as conn:
+                        success, state_change_summary = await self.add_block_batch(
+                            response.blocks, peer_info, fork_info, vs
+                        )
+
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1351,16 +1355,20 @@ class FullNode:
                     block_rate_height = start_height
 
                 pre_validation_results = list(await asyncio.gather(*futures))
-                # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
-                # call will update it
-                state_change_summary, err = await self.add_prevalidated_blocks(
-                    blockchain,
-                    blocks,
-                    pre_validation_results,
-                    fork_info,
-                    peer.peer_info,
-                    vs,
-                )
+
+                # Wrap add_prevalidated_blocks with writer to ensure all writes and reads are on same connection.
+                async with self.block_store.db_wrapper.writer() as conn:
+                    # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
+                    # call will update it
+                    state_change_summary, err = await self.add_prevalidated_blocks(
+                        blockchain,
+                        blocks,
+                        pre_validation_results,
+                        fork_info,
+                        peer.peer_info,
+                        vs,
+                    )
+
                 if err is not None:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
@@ -2088,6 +2096,8 @@ class FullNode:
         ppp_result: Optional[PeakPostProcessingResult] = None
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
+            # Wrap with writer to ensure all writes and reads are on same connection.
+            self.block_store.db_wrapper.writer(),
             enable_profiler(self.profile_block_validation) as pr,
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
