@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, ClassVar, NewType, Optional, Protocol, TypeVar, cast, final
+from typing import TYPE_CHECKING, ClassVar, NewType, Optional, Protocol, Type, TypeVar, cast, final
 
 from chia.data_layer.data_layer_util import InternalNode, ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -48,6 +48,62 @@ class MerkleBlob:
         self.key_to_index = self.get_keys_indexes()
         self.last_allocated_index = TreeIndex(len(self.blob) // spacing)
         self.free_indexes = self.get_free_indexes()
+
+    @classmethod
+    def from_node_list(
+        cls: Type["MerkleBlob"],
+        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
+        terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
+        root_hash: Optional[bytes32],
+    ) -> "MerkleBlob":
+        merkle_blob = cls(blob=bytearray())
+
+        if root_hash is None:
+            if internal_nodes or terminal_nodes:
+                raise Exception("Nodes must be empty when root_hash is None")
+        else:
+            merkle_blob.build_blob_from_node_list(internal_nodes, terminal_nodes, root_hash)
+
+        return merkle_blob
+
+    def build_blob_from_node_list(
+        self,
+        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
+        terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
+        node_hash: bytes32,
+    ) -> TreeIndex:
+        if node_hash not in terminal_nodes and node_hash not in internal_nodes:
+            raise Exception(f"Unknown hash {node_hash.hex()}")
+
+        index = self.get_new_index()
+        if node_hash in terminal_nodes:
+            kid, vid = terminal_nodes[node_hash]
+            self.insert_entry_to_blob(
+                index,
+                NodeMetadata(type=NodeType.leaf, dirty=False).pack()
+                + pack_raw_node(RawLeafMerkleNode(node_hash, null_parent, kid, vid)),
+            )
+        elif node_hash in internal_nodes:
+            self.insert_entry_to_blob(
+                index,
+                NodeMetadata(type=NodeType.internal, dirty=False).pack()
+                + pack_raw_node(
+                    RawInternalMerkleNode(
+                        node_hash,
+                        null_parent,
+                        undefined_index,
+                        undefined_index,
+                    )
+                ),
+            )
+            left_hash, right_hash = internal_nodes[node_hash]
+            left_index = self.build_blob_from_node_list(internal_nodes, terminal_nodes, left_hash)
+            right_index = self.build_blob_from_node_list(internal_nodes, terminal_nodes, right_hash)
+            for child_index in (left_index, right_index):
+                self.update_entry(index=child_index, parent=index)
+            self.update_entry(index=index, left=left_index, right=right_index)
+
+        return TreeIndex(index)
 
     def get_new_index(self) -> TreeIndex:
         if len(self.free_indexes) == 0:

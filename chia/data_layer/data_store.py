@@ -48,11 +48,7 @@ from chia.data_layer.util.merkle_blob import (
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     TreeIndex,
-    null_parent,
-    pack_raw_node,
-    undefined_index,
 )
-from chia.data_layer.util.merkle_blob import NodeType as NodeTypeMerkleBlob
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.lru_cache import LRUCache
@@ -267,10 +263,7 @@ class DataStore:
                     elif isinstance(node, RawInternalMerkleNode):
                         internal_nodes[bytes32(node.hash)] = (index_to_hash[node.left], index_to_hash[node.right])
 
-        merkle_blob = MerkleBlob(blob=bytearray())
-        if root_hash is not None:
-            await self.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob, store_id)
-
+        merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
         await self.add_node_hashes(store_id)
 
@@ -561,51 +554,6 @@ class DataStore:
         for hash, index in hash_to_index.items():
             if hash not in existing_hashes:
                 await self.add_node_hash(store_id, hash, root.node_hash, root.generation, index)
-
-    async def build_blob_from_nodes(
-        self,
-        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
-        terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
-        node_hash: bytes32,
-        merkle_blob: MerkleBlob,
-        store_id: bytes32,
-    ) -> TreeIndex:
-        if node_hash not in terminal_nodes and node_hash not in internal_nodes:
-            raise Exception(f"Unknown hash {node_hash.hex()}")
-
-        index = merkle_blob.get_new_index()
-        if node_hash in terminal_nodes:
-            kid, vid = terminal_nodes[node_hash]
-            merkle_blob.insert_entry_to_blob(
-                index,
-                NodeMetadata(type=NodeTypeMerkleBlob.leaf, dirty=False).pack()
-                + pack_raw_node(RawLeafMerkleNode(node_hash, null_parent, kid, vid)),
-            )
-        elif node_hash in internal_nodes:
-            merkle_blob.insert_entry_to_blob(
-                index,
-                NodeMetadata(type=NodeTypeMerkleBlob.internal, dirty=False).pack()
-                + pack_raw_node(
-                    RawInternalMerkleNode(
-                        node_hash,
-                        null_parent,
-                        undefined_index,
-                        undefined_index,
-                    )
-                ),
-            )
-            left_hash, right_hash = internal_nodes[node_hash]
-            left_index = await self.build_blob_from_nodes(
-                internal_nodes, terminal_nodes, left_hash, merkle_blob, store_id
-            )
-            right_index = await self.build_blob_from_nodes(
-                internal_nodes, terminal_nodes, right_hash, merkle_blob, store_id
-            )
-            for child_index in (left_index, right_index):
-                merkle_blob.update_entry(index=child_index, parent=index)
-            merkle_blob.update_entry(index=index, left=left_index, right=right_index)
-
-        return TreeIndex(index)
 
     async def _insert_root(
         self,
