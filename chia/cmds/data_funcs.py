@@ -348,6 +348,7 @@ async def clear_pending_roots(
     root_path: Optional[Path] = None,
     fingerprint: Optional[int] = None,
 ) -> dict[str, Any]:
+    result = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         result = await client.clear_pending_roots(store_id=store_id)
         print(json.dumps(result, indent=2, sort_keys=True))
