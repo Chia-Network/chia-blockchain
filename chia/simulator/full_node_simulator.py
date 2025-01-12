@@ -133,7 +133,10 @@ class FullNodeSimulator(FullNodeAPI):
         While reorgs are preferred, this is also an option
         Note: This does not broadcast the changes, and all wallets will need to be wiped.
         """
-        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        async with (
+            self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
+            self.block_store.db_wrapper.writer(),
+        ):
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
                 raise ValueError("We can't revert without any blocks.")
@@ -170,7 +173,10 @@ class FullNodeSimulator(FullNodeAPI):
     ) -> FullBlock:
         ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         diff = self.full_node.constants.DIFFICULTY_STARTING
-        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        async with (
+            self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
+            self.block_store.db_wrapper.writer(),
+        ):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -231,7 +237,10 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
         ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         diff = self.full_node.constants.DIFFICULTY_STARTING
-        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        async with (
+            self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
+            self.block_store.db_wrapper.writer(),
+        ):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
