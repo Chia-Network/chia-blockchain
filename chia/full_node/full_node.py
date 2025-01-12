@@ -2160,7 +2160,9 @@ class FullNode:
                         return None
                     elif added == AddBlockResult.INVALID_BLOCK:
                         assert error_code is not None
-                        self.log.error(f"Block {header_hash} at height {block.height} is invalid with code {error_code}.")
+                        self.log.error(
+                            f"Block {header_hash} at height {block.height} is invalid with code {error_code}."
+                        )
                         raise ConsensusError(error_code, [header_hash])
                     elif added == AddBlockResult.DISCONNECTED_BLOCK:
                         self.log.info(f"Disconnected block {header_hash} at height {block.height}")
