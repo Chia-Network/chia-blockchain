@@ -133,10 +133,7 @@ class FullNodeSimulator(FullNodeAPI):
         While reorgs are preferred, this is also an option
         Note: This does not broadcast the changes, and all wallets will need to be wiped.
         """
-        async with (
-            self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            self.full_node.block_store.db_wrapper.writer(),
-        ):
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
                 raise ValueError("We can't revert without any blocks.")
@@ -146,12 +143,13 @@ class FullNodeSimulator(FullNodeAPI):
                 raise ValueError("Cannot revert to a height less than 1.")
             block_record: BlockRecord = self.full_node.blockchain.height_to_block_record(new_height)
             # remove enough data to allow a bunch of blocks to be wiped.
-            # set coinstore
-            await self.full_node.coin_store.rollback_to_block(new_height)
-            # set blockstore to new height
-            await self.full_node.block_store.rollback(new_height)
-            await self.full_node.block_store.set_peak(block_record.header_hash)
-            self.full_node.blockchain._peak_height = new_height
+            async with self.full_node.block_store.db_wrapper.writer():
+                # set coinstore
+                await self.full_node.coin_store.rollback_to_block(new_height)
+                # set blockstore to new height
+                await self.full_node.block_store.rollback(new_height)
+                await self.full_node.block_store.set_peak(block_record.header_hash)
+                self.full_node.blockchain._peak_height = new_height
         # reload mempool
         await self.full_node.mempool_manager.new_peak(block_record, None)
 
@@ -172,10 +170,7 @@ class FullNodeSimulator(FullNodeAPI):
     ) -> FullBlock:
         ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         diff = self.full_node.constants.DIFFICULTY_STARTING
-        async with (
-            self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            self.full_node.block_store.db_wrapper.writer(),
-        ):
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -236,10 +231,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
         ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         diff = self.full_node.constants.DIFFICULTY_STARTING
-        async with (
-            self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            self.full_node.block_store.db_wrapper.writer(),
-        ):
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
