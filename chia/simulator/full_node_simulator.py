@@ -135,7 +135,7 @@ class FullNodeSimulator(FullNodeAPI):
         """
         async with (
             self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            self.block_store.db_wrapper.writer(),
+            self.full_node.block_store.db_wrapper.writer(),
         ):
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
@@ -146,13 +146,12 @@ class FullNodeSimulator(FullNodeAPI):
                 raise ValueError("Cannot revert to a height less than 1.")
             block_record: BlockRecord = self.full_node.blockchain.height_to_block_record(new_height)
             # remove enough data to allow a bunch of blocks to be wiped.
-            async with self.full_node.block_store.db_wrapper.writer():
-                # set coinstore
-                await self.full_node.coin_store.rollback_to_block(new_height)
-                # set blockstore to new height
-                await self.full_node.block_store.rollback(new_height)
-                await self.full_node.block_store.set_peak(block_record.header_hash)
-                self.full_node.blockchain._peak_height = new_height
+            # set coinstore
+            await self.full_node.coin_store.rollback_to_block(new_height)
+            # set blockstore to new height
+            await self.full_node.block_store.rollback(new_height)
+            await self.full_node.block_store.set_peak(block_record.header_hash)
+            self.full_node.blockchain._peak_height = new_height
         # reload mempool
         await self.full_node.mempool_manager.new_peak(block_record, None)
 
@@ -175,7 +174,7 @@ class FullNodeSimulator(FullNodeAPI):
         diff = self.full_node.constants.DIFFICULTY_STARTING
         async with (
             self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            self.block_store.db_wrapper.writer(),
+            self.full_node.block_store.db_wrapper.writer(),
         ):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -239,7 +238,7 @@ class FullNodeSimulator(FullNodeAPI):
         diff = self.full_node.constants.DIFFICULTY_STARTING
         async with (
             self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            self.block_store.db_wrapper.writer(),
+            self.full_node.block_store.db_wrapper.writer(),
         ):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
