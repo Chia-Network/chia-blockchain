@@ -419,7 +419,7 @@ class Blockchain:
         try:
             # Always add the block to the database
             # This call should be wrapped with a writer to force all coin reads to the same connection.
-            async with self.block_store.db_wrapper.writer():
+            async with self.block_store.db_wrapper.writer_maybe_transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
