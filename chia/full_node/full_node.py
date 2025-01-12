@@ -2137,7 +2137,7 @@ class FullNode:
             pre_validation_time = time.monotonic() - validation_start
 
             # Wrap with writer to ensure all writes and reads are on same connection.
-            async with self.block_store.db_wrapper.writer() as conn:
+            async with self.block_store.db_wrapper.writer():
                 try:
                     if pre_validation_result.error is not None:
                         if Err(pre_validation_result.error) == Err.INVALID_PREV_BLOCK_HASH:
