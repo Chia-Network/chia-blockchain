@@ -2099,10 +2099,8 @@ class FullNode:
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
             # Wrap with writer to ensure all writes and reads are on same connection.
-            self.block_store.db_wrapper.writer() as conn,
             enable_profiler(self.profile_block_validation) as pr,
         ):
-            self.log.info(f"add_block writer {conn}")
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 if fork_info is not None:
