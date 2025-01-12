@@ -2098,7 +2098,6 @@ class FullNode:
         ppp_result: Optional[PeakPostProcessingResult] = None
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            # Wrap with writer to ensure all writes and reads are on same connection.
             enable_profiler(self.profile_block_validation) as pr,
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
@@ -2136,63 +2135,66 @@ class FullNode:
             pre_validation_result = await future
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.monotonic() - validation_start
-            try:
-                if pre_validation_result.error is not None:
-                    if Err(pre_validation_result.error) == Err.INVALID_PREV_BLOCK_HASH:
-                        added = AddBlockResult.DISCONNECTED_BLOCK
-                        error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
-                    elif Err(pre_validation_result.error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
-                        raise TimestampError()
-                    else:
-                        raise ValueError(
-                            f"Failed to validate block {header_hash} height "
-                            f"{block.height}: {Err(pre_validation_result.error).name}"
-                        )
-                else:
-                    if fork_info is None:
-                        fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-                    (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, pre_validation_result, ssi, fork_info
-                    )
-                if added == AddBlockResult.ALREADY_HAVE_BLOCK:
-                    return None
-                elif added == AddBlockResult.INVALID_BLOCK:
-                    assert error_code is not None
-                    self.log.error(f"Block {header_hash} at height {block.height} is invalid with code {error_code}.")
-                    raise ConsensusError(error_code, [header_hash])
-                elif added == AddBlockResult.DISCONNECTED_BLOCK:
-                    self.log.info(f"Disconnected block {header_hash} at height {block.height}")
-                    if raise_on_disconnected:
-                        raise RuntimeError("Expected block to be added, received disconnected block.")
-                    return None
-                elif added == AddBlockResult.NEW_PEAK:
-                    # Evict any related BLS cache entries as we no longer need them
-                    if bls_cache is not None and pre_validation_result.conds is not None:
-                        pairs_pks, pairs_msgs = pkm_pairs(
-                            pre_validation_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                        )
-                        bls_cache.evict(pairs_pks, pairs_msgs)
-                    # Only propagate blocks which extend the blockchain (becomes one of the heads)
-                    assert state_change_summary is not None
-                    post_process_time = time.monotonic()
-                    ppp_result = await self.peak_post_processing(block, state_change_summary, peer)
-                    post_process_time = time.monotonic() - post_process_time
 
-                elif added == AddBlockResult.ADDED_AS_ORPHAN:
-                    self.log.info(
-                        f"Received orphan block of height {block.height} rh {block.reward_chain_block.get_hash()}"
-                    )
-                    post_process_time = 0
-                else:
-                    # Should never reach here, all the cases are covered
-                    raise RuntimeError(f"Invalid result from add_block {added}")
-            except asyncio.CancelledError:
-                # We need to make sure to always call this method even when we get a cancel exception, to make sure
-                # the node stays in sync
-                if added == AddBlockResult.NEW_PEAK:
-                    assert state_change_summary is not None
-                    await self.peak_post_processing(block, state_change_summary, peer)
-                raise
+            # Wrap with writer to ensure all writes and reads are on same connection.
+            async with self.block_store.db_wrapper.writer() as conn:
+                try:
+                    if pre_validation_result.error is not None:
+                        if Err(pre_validation_result.error) == Err.INVALID_PREV_BLOCK_HASH:
+                            added = AddBlockResult.DISCONNECTED_BLOCK
+                            error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
+                        elif Err(pre_validation_result.error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
+                            raise TimestampError()
+                        else:
+                            raise ValueError(
+                                f"Failed to validate block {header_hash} height "
+                                f"{block.height}: {Err(pre_validation_result.error).name}"
+                            )
+                    else:
+                        if fork_info is None:
+                            fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+                        (added, error_code, state_change_summary) = await self.blockchain.add_block(
+                            block, pre_validation_result, ssi, fork_info
+                        )
+                    if added == AddBlockResult.ALREADY_HAVE_BLOCK:
+                        return None
+                    elif added == AddBlockResult.INVALID_BLOCK:
+                        assert error_code is not None
+                        self.log.error(f"Block {header_hash} at height {block.height} is invalid with code {error_code}.")
+                        raise ConsensusError(error_code, [header_hash])
+                    elif added == AddBlockResult.DISCONNECTED_BLOCK:
+                        self.log.info(f"Disconnected block {header_hash} at height {block.height}")
+                        if raise_on_disconnected:
+                            raise RuntimeError("Expected block to be added, received disconnected block.")
+                        return None
+                    elif added == AddBlockResult.NEW_PEAK:
+                        # Evict any related BLS cache entries as we no longer need them
+                        if bls_cache is not None and pre_validation_result.conds is not None:
+                            pairs_pks, pairs_msgs = pkm_pairs(
+                                pre_validation_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                            )
+                            bls_cache.evict(pairs_pks, pairs_msgs)
+                        # Only propagate blocks which extend the blockchain (becomes one of the heads)
+                        assert state_change_summary is not None
+                        post_process_time = time.monotonic()
+                        ppp_result = await self.peak_post_processing(block, state_change_summary, peer)
+                        post_process_time = time.monotonic() - post_process_time
+
+                    elif added == AddBlockResult.ADDED_AS_ORPHAN:
+                        self.log.info(
+                            f"Received orphan block of height {block.height} rh {block.reward_chain_block.get_hash()}"
+                        )
+                        post_process_time = 0
+                    else:
+                        # Should never reach here, all the cases are covered
+                        raise RuntimeError(f"Invalid result from add_block {added}")
+                except asyncio.CancelledError:
+                    # We need to make sure to always call this method even when we get a cancel exception, to make sure
+                    # the node stays in sync
+                    if added == AddBlockResult.NEW_PEAK:
+                        assert state_change_summary is not None
+                        await self.peak_post_processing(block, state_change_summary, peer)
+                    raise
 
             validation_time = time.monotonic() - validation_start
 
