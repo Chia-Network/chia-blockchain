@@ -639,9 +639,7 @@ class FullNode:
 
                     # Wrap add_block_batch with writer to ensure all writes and reads are on same connection.
                     async with self.block_store.db_wrapper.writer() as conn:
-                        self.log.info(
-                            f"short_sync_batch writer {conn}"
-                        )
+                        self.log.info(f"short_sync_batch writer {conn}")
                         success, state_change_summary = await self.add_block_batch(
                             response.blocks, peer_info, fork_info, vs
                         )
@@ -1361,9 +1359,7 @@ class FullNode:
 
                 # Wrap add_prevalidated_blocks with writer to ensure all writes and reads are on same connection.
                 async with self.block_store.db_wrapper.writer() as conn:
-                    self.log.info(
-                        f"ingest_blocks writer {conn}"
-                    )
+                    self.log.info(f"ingest_blocks writer {conn}")
                     # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
                     # call will update it
                     state_change_summary, err = await self.add_prevalidated_blocks(
@@ -2106,9 +2102,7 @@ class FullNode:
             self.block_store.db_wrapper.writer() as conn,
             enable_profiler(self.profile_block_validation) as pr,
         ):
-            self.log.info(
-                f"add_block writer {conn}"
-            )
+            self.log.info(f"add_block writer {conn}")
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 if fork_info is not None:
