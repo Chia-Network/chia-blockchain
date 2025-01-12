@@ -638,7 +638,7 @@ class FullNode:
                     vs = ValidationState(ssi, diff, None)
 
                     # Wrap add_block_batch with writer to ensure all writes and reads are on same connection.
-                    async with self.block_store.db_wrapper.writer() as conn:
+                    async with self.block_store.db_wrapper.writer_maybe_transaction() as conn:
                         self.log.info(f"short_sync_batch writer {conn}")
                         success, state_change_summary = await self.add_block_batch(
                             response.blocks, peer_info, fork_info, vs
@@ -1358,7 +1358,7 @@ class FullNode:
                 pre_validation_results = list(await asyncio.gather(*futures))
 
                 # Wrap add_prevalidated_blocks with writer to ensure all writes and reads are on same connection.
-                async with self.block_store.db_wrapper.writer() as conn:
+                async with self.block_store.db_wrapper.writer_maybe_transaction() as conn:
                     self.log.info(f"ingest_blocks writer {conn}")
                     # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
                     # call will update it
@@ -2099,7 +2099,7 @@ class FullNode:
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
             # Wrap with writer to ensure all writes and reads are on same connection.
-            self.block_store.db_wrapper.writer() as conn,
+            self.block_store.db_wrapper.writer_maybe_transaction() as conn,
             enable_profiler(self.profile_block_validation) as pr,
         ):
             self.log.info(f"add_block writer {conn}")
