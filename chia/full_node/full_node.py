@@ -2096,8 +2096,6 @@ class FullNode:
         ppp_result: Optional[PeakPostProcessingResult] = None
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
-            # Wrap with writer to ensure all writes and reads are on same connection.
-            self.block_store.db_wrapper.writer(),
             enable_profiler(self.profile_block_validation) as pr,
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
@@ -2150,9 +2148,13 @@ class FullNode:
                 else:
                     if fork_info is None:
                         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-                    (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, pre_validation_result, ssi, fork_info
-                    )
+
+                    # Wrap with writer to ensure all writes and reads are on same connection.
+                    async with self.block_store.db_wrapper.writer():
+                        (added, error_code, state_change_summary) = await self.blockchain.add_block(
+                            block, pre_validation_result, ssi, fork_info
+                        )
+
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None
                 elif added == AddBlockResult.INVALID_BLOCK:
