@@ -2387,20 +2387,21 @@ class WalletStateManager:
                     trade_coins_removed = set()
                     trades = []
                     for removed_coin in coins_removed:
-                        trade = await self.trade_manager.get_trade_by_coin(removed_coin)
-                        if trade is not None and trade.status in {
-                            TradeStatus.PENDING_CONFIRM.value,
-                            TradeStatus.PENDING_ACCEPT.value,
-                            TradeStatus.PENDING_CANCEL.value,
-                        }:
-                            if trade not in trades:
-                                trades.append(trade)
-                            # offer was tied to these coins, lets subscribe to them to get a confirmation to
-                            # cancel it if it's confirmed
-                            # we send transactions to multiple peers, and in cases when mempool gets
-                            # fragmented, it's safest to wait for confirmation from blockchain before setting
-                            # offer to failed
-                            trade_coins_removed.add(removed_coin.name())
+                        trades_by_coin = await self.trade_manager.get_trades_by_coin(removed_coin)
+                        for trade in trades_by_coin:
+                            if trade is not None and trade.status in {
+                                TradeStatus.PENDING_CONFIRM.value,
+                                TradeStatus.PENDING_ACCEPT.value,
+                                TradeStatus.PENDING_CANCEL.value,
+                            }:
+                                if trade not in trades:
+                                    trades.append(trade)
+                                # offer was tied to these coins, lets subscribe to them to get a confirmation to
+                                # cancel it if it's confirmed
+                                # we send transactions to multiple peers, and in cases when mempool gets
+                                # fragmented, it's safest to wait for confirmation from blockchain before setting
+                                # offer to failed
+                                trade_coins_removed.add(removed_coin.name())
                     if trades != [] and trade_coins_removed != set():
                         if not tx.is_valid():
                             # we've tried to send this transaction to a full node multiple times

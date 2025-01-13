@@ -132,14 +132,15 @@ class TradeManager:
         )
         return coin_ids
 
-    async def get_trade_by_coin(self, coin: Coin) -> Optional[TradeRecord]:
+    async def get_trades_by_coin(self, coin: Coin) -> list[TradeRecord]:
         all_trades = await self.get_all_trades()
+        trades_by_coin = []
         for trade in all_trades:
             if trade.status == TradeStatus.CANCELLED.value:
                 continue
             if coin in trade.coins_of_interest:
-                return trade
-        return None
+                trades_by_coin.append(trade)
+        return trades_by_coin
 
     async def coins_of_interest_farmed(
         self, coin_state: CoinState, fork_height: Optional[uint32], peer: WSChiaConnection
@@ -151,62 +152,63 @@ class TradeManager:
         If our coins got farmed but coins from other side didn't, we successfully canceled trade by spending inputs.
         """
         self.log.info(f"coins_of_interest_farmed: {coin_state}")
-        trade = await self.get_trade_by_coin(coin_state.coin)
-        if trade is None:
-            self.log.error(f"Coin: {coin_state.coin}, not in any trade")
-            return
-        if coin_state.spent_height is None:
-            self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
-        # Then let's filter the offer into coins that WE offered
-        if (
-            self.most_recently_deserialized_trade is not None
-            and trade.trade_id == self.most_recently_deserialized_trade[0]
-        ):
-            offer = self.most_recently_deserialized_trade[1]
-        else:
-            offer = Offer.from_bytes(trade.offer)
-            self.most_recently_deserialized_trade = (trade.trade_id, offer)
-        primary_coin_ids = [c.name() for c in offer.removals()]
-        # TODO: Add `WalletCoinStore.get_coins`.
-        result = await self.wallet_state_manager.coin_store.get_coin_records(
-            coin_id_filter=HashFilter.include(primary_coin_ids)
-        )
-        our_primary_coins: list[Coin] = [cr.coin for cr in result.records]
-        our_additions: list[Coin] = list(
-            filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
-        )
-        our_addition_ids: list[bytes32] = [c.name() for c in our_additions]
+        trades = await self.get_trades_by_coin(coin_state.coin)
+        for trade in trades:
+            if trade is None:
+                self.log.error(f"Coin: {coin_state.coin}, not in any trade")
+                continue
+            if coin_state.spent_height is None:
+                self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
+            # Then let's filter the offer into coins that WE offered
+            if (
+                self.most_recently_deserialized_trade is not None
+                and trade.trade_id == self.most_recently_deserialized_trade[0]
+            ):
+                offer = self.most_recently_deserialized_trade[1]
+            else:
+                offer = Offer.from_bytes(trade.offer)
+                self.most_recently_deserialized_trade = (trade.trade_id, offer)
+            primary_coin_ids = [c.name() for c in offer.removals()]
+            # TODO: Add `WalletCoinStore.get_coins`.
+            result = await self.wallet_state_manager.coin_store.get_coin_records(
+                coin_id_filter=HashFilter.include(primary_coin_ids)
+            )
+            our_primary_coins: list[Coin] = [cr.coin for cr in result.records]
+            our_additions: list[Coin] = list(
+                filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
+            )
+            our_addition_ids: list[bytes32] = [c.name() for c in our_additions]
 
-        # And get all relevant coin states
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
-            our_addition_ids,
-            peer=peer,
-            fork_height=fork_height,
-        )
-        assert coin_states is not None
-        coin_state_names: list[bytes32] = [cs.coin.name() for cs in coin_states]
-        # If any of our settlement_payments were spent, this offer was a success!
-        if set(our_addition_ids) == set(coin_state_names):
-            height = coin_state.spent_height
-            assert height is not None
-            await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index=height)
-            tx_records: list[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
-            for tx in tx_records:
-                if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
-                    await self.wallet_state_manager.add_transaction(
-                        dataclasses.replace(tx, confirmed_at_height=height, confirmed=True)
-                    )
+            # And get all relevant coin states
+            coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
+                our_addition_ids,
+                peer=peer,
+                fork_height=fork_height,
+            )
+            assert coin_states is not None
+            coin_state_names: list[bytes32] = [cs.coin.name() for cs in coin_states]
+            # If any of our settlement_payments were spent, this offer was a success!
+            if set(our_addition_ids) == set(coin_state_names):
+                height = coin_state.spent_height
+                assert height is not None
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index=height)
+                tx_records: list[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
+                for tx in tx_records:
+                    if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
+                        await self.wallet_state_manager.add_transaction(
+                            dataclasses.replace(tx, confirmed_at_height=height, confirmed=True)
+                        )
 
-            self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
-        else:
-            # In any other scenario this trade failed
-            await self.wallet_state_manager.delete_trade_transactions(trade.trade_id)
-            if trade.status == TradeStatus.PENDING_CANCEL.value:
-                await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
-                self.log.info(f"Trade with id: {trade.trade_id} canceled")
-            elif trade.status == TradeStatus.PENDING_CONFIRM.value:
-                await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
-                self.log.warning(f"Trade with id: {trade.trade_id} failed")
+                self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
+            else:
+                # In any other scenario this trade failed
+                await self.wallet_state_manager.delete_trade_transactions(trade.trade_id)
+                if trade.status == TradeStatus.PENDING_CANCEL.value:
+                    await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
+                    self.log.info(f"Trade with id: {trade.trade_id} canceled")
+                elif trade.status == TradeStatus.PENDING_CONFIRM.value:
+                    await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
+                    self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
     async def get_locked_coins(self) -> dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""
@@ -244,7 +246,7 @@ class TradeManager:
 
     async def cancel_pending_offers(
         self,
-        trades: list[bytes32],
+        trade_ids: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         secure: bool = True,  # Cancel with a transaction on chain
@@ -254,12 +256,12 @@ class TradeManager:
         """This will create a transaction that includes coins that were offered"""
 
         # Need to do some pre-figuring of announcements that will be need to be made
-        announcement_nonce: bytes32 = std_hash(b"".join(trades))
+        announcement_nonce: bytes32 = std_hash(b"".join(trade_ids))
         trade_records: list[TradeRecord] = []
         all_cancellation_coins: list[list[Coin]] = []
         announcement_creations: deque[CreateCoinAnnouncement] = deque()
         announcement_assertions: deque[AssertCoinAnnouncement] = deque()
-        for trade_id in trades:
+        for trade_id in trade_ids:
             if trade_id in trade_cache:
                 trade = trade_cache[trade_id]
             else:
@@ -294,6 +296,7 @@ class TradeManager:
 
             cancellation_additions: list[Coin] = []
             valid_times: ConditionValidTimes = parse_timelock_info(extra_conditions)
+            trades_to_cancel: list[TradeRecord] = []
             for coin in cancellation_coins:
                 wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
 
@@ -391,7 +394,14 @@ class TradeManager:
                 )
                 all_txs.append(incoming_tx)
 
+                # The statuses of trades which offer cancellation coin needs to be set to `PENDING_CANCEL`
+                trades_to_cancel.extend(await self.get_trades_by_coin(coin))
+
             await self.trade_store.set_status(trade.trade_id, TradeStatus.PENDING_CANCEL)
+            self.log.info(f"Cancelling trade: {trade.trade_id}")
+            for t in trades_to_cancel:
+                await self.trade_store.set_status(t.trade_id, TradeStatus.PENDING_CANCEL)
+                self.log.info(f"Cancelling trade: {t.trade_id} along with {trade.trade_id}")
 
         if secure:
             async with action_scope.use() as interface:
