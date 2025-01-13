@@ -1670,7 +1670,7 @@ class FullNodeAPI:
         return msg
 
     @metadata.request(peer_required=True)
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
         max_items = self.max_subscribe_response_items(peer)
