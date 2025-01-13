@@ -157,7 +157,7 @@ class CoinStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             if conn != self.db_wrapper._write_connection:
-                log.info(f"get_coin_records not using _current_writer {conn}")
+                log.info(f"get_coin_records not using _write_connection {conn}")
 
             cursors: list[Cursor] = []
             for batch in to_batches(names, SQLITE_MAX_VARIABLE_NUMBER):
