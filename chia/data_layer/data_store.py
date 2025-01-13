@@ -50,6 +50,7 @@ from chia.data_layer.util.merkle_blob import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.batches import to_batches
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -237,9 +238,8 @@ class DataStore:
         found_hashes: set[bytes32] = set()
 
         async with self.db_wrapper.reader() as reader:
-            for i in range(0, len(missing_hashes), batch_size):
-                batch = missing_hashes[i : i + batch_size]
-                placeholders = ",".join("?" for _ in batch)
+            for batch in to_batches(missing_hashes, batch_size):
+                placeholders = ",".join(["?"] * len(batch.entries))
                 query = f"""
                     SELECT hash, root_hash, idx
                     FROM nodes
@@ -247,7 +247,7 @@ class DataStore:
                     LIMIT {len(placeholders)}
                 """
 
-                async with reader.execute(query, (store_id, *batch)) as cursor:
+                async with reader.execute(query, (store_id, *batch.entries)) as cursor:
                     rows = await cursor.fetchall()
                     for row in rows:
                         node_hash = bytes32(row["hash"])
