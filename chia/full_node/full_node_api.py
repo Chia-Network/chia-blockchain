@@ -878,10 +878,17 @@ class FullNodeAPI:
                         # when the hard fork activates, block generators are
                         # allowed to be serialized with the improved CLVM
                         # serialization format, supporting back-references
+                        start_time = time.monotonic()
                         if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
                             block_generator = simple_solution_generator_backrefs(spend_bundle)
                         else:
                             block_generator = simple_solution_generator(spend_bundle)
+                        end_time = time.monotonic()
+                        duration = end_time - start_time
+                        self.log.log(
+                            logging.INFO if duration < 1 else logging.WARNING,
+                            f"serializing block generator took {duration:0.2f} seconds",
+                        )
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
