@@ -238,7 +238,7 @@ class DataStore:
 
         async with self.db_wrapper.reader() as reader:
             for i in range(0, len(missing_hashes), batch_size):
-                batch = missing_hashes[i:i + batch_size]
+                batch = missing_hashes[i : i + batch_size]
                 placeholders = ",".join("?" for _ in batch)
                 query = f"""
                     SELECT hash, root_hash, idx
