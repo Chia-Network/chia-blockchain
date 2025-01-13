@@ -49,8 +49,8 @@ from chia.data_layer.util.merkle_blob import (
     TreeIndex,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.batches import to_batches
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
