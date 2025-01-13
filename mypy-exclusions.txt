@@ -89,4 +89,3 @@ chia._tests.util.time_out_assert
 chia._tests.wallet.did_wallet.test_did
 chia._tests.wallet.rpc.test_wallet_rpc
 tools.analyze-chain
-tools.run_block
