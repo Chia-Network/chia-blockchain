@@ -2403,6 +2403,7 @@ class FullNode:
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             # TODO: pre-validate VDFs outside of lock
             validation_start = time.monotonic()
+            self.log.info("validate_unfinished_block")
             validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
             if validate_result.error is not None:
                 raise ConsensusError(Err(validate_result.error))
@@ -2775,6 +2776,7 @@ class FullNode:
                     return MempoolInclusionStatus.SUCCESS, None
                 if self.mempool_manager.peak is None:
                     return MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
+                self.log.info("add_spend_bundle")
                 info = await self.mempool_manager.add_spend_bundle(
                     transaction, cost_result, spend_name, self.mempool_manager.peak.height
                 )

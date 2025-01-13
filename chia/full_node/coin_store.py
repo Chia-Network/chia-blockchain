@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import logging
 import sqlite3
@@ -156,6 +157,13 @@ class CoinStore:
         coins: list[CoinRecord] = []
 
         async with self.db_wrapper.reader_no_transaction() as conn:
+
+            if conn!=self.db_wrapper._write_connection:
+                task=asyncio.current_task()
+                log.info(
+                    f"get_coin_records not using _current_writer {task.get_name()} {conn}"
+                )
+
             cursors: list[Cursor] = []
             for batch in to_batches(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: tuple[Any, ...] = tuple(batch.entries)
