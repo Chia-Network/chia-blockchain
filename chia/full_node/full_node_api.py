@@ -1686,7 +1686,7 @@ class FullNodeAPI:
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
-        msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
+        msg = make_msg(ProtocolMessageTypes.respond_to_coin_updates, response)
         return msg
 
     @metadata.request()
