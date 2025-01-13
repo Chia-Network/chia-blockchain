@@ -688,11 +688,11 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
     ) -> Optional[Message]:
         return make_msg(
-            ProtocolMessageTypes.respond_to_coin_update,
+            ProtocolMessageTypes.respond_to_coin_updates,
             wallet_protocol.RespondToCoinUpdates(
                 [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
             ),
@@ -704,7 +704,7 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     assert full_node_api.full_node._server is not None
     with patch_request_handler(
-        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_interest_in_coin
+        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_for_coin_updates
     ):
         monkeypatch.setattr(
             wallet_node,
