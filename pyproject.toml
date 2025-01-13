@@ -71,7 +71,7 @@ typing-extensions = ">=4.12.2"  # typing backports like Protocol and TypedDict
 watchdog = ">=4.0.1"  # Filesystem event watching - watches keyring.yaml
 zstd = [
 	{version=">=1.5.5.1", python = "<3.12"},
-	{version=">=1.5.5.1", python = "3.12", source="chia"},
+	{version=">=1.5.5.1", python = ">=3.12", source="chia"},
 ]
 importlib-resources = ">=6.4.5"
 hsms = ">=0.3.1"
