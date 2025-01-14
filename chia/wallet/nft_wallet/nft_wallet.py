@@ -924,8 +924,8 @@ class NFTWallet:
                     else:
                         payments = royalty_payments[asset] if asset in royalty_payments else []
                         await wallet.generate_signed_transaction(
-                            [abs(amount), sum(p.amount for _, p in payments)],
-                            [OFFER_MOD_HASH, OFFER_MOD_HASH],
+                            [abs(amount)] + ([sum(p.amount for _, p in payments)] if payments != [] else []),
+                            [OFFER_MOD_HASH] + ([OFFER_MOD_HASH] if payments != [] else []),
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=offered_coins_by_asset[asset],
