@@ -47,9 +47,7 @@ class AugmentedBlockchain:
 
     def remove_extra_block(self, hh: bytes32) -> None:
         if hh in self._extra_blocks:
-            block_record = self._extra_blocks.pop(hh)[1]
-            block_rec_from_underlyning = self._underlying.block_record(block_record.header_hash)
-            assert block_rec_from_underlyning is not None
+            self._extra_blocks.pop(hh)[1]
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:

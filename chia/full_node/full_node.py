@@ -742,7 +742,6 @@ class FullNode:
         """
 
         try:
-            self.log.info(f"adding {request.height}")
             seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
             # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
             # Limit to 3 refreshes.
