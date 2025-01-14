@@ -1614,7 +1614,7 @@ class FullNodeAPI:
         return None
 
     @metadata.request(peer_required=True)
-    async def register_interest_in_puzzle_hash(
+    async def register_for_ph_updates(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
         trusted = self.is_trusted(peer)
@@ -1673,11 +1673,11 @@ class FullNodeAPI:
             )
 
         response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
-        msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
+        msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 
     @metadata.request(peer_required=True)
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
         max_items = self.max_subscribe_response_items(peer)
@@ -1693,7 +1693,7 @@ class FullNodeAPI:
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
-        msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
+        msg = make_msg(ProtocolMessageTypes.respond_to_coin_updates, response)
         return msg
 
     @metadata.request()

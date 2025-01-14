@@ -1683,7 +1683,7 @@ class WalletNode:
         self, coin_names: list[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> list[CoinState]:
         msg = RegisterForCoinUpdates(coin_names, uint32(0))
-        coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_interest_in_coin, msg)
+        coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_for_coin_updates, msg)
         if coin_state is None or not isinstance(coin_state, RespondToCoinUpdates):
             raise PeerRequestException(f"Was not able to get states for {coin_names}")
 
