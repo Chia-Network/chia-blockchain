@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional, cast, final
 
-from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
