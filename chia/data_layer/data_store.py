@@ -49,6 +49,7 @@ from chia.data_layer.util.merkle_blob import (
     TreeIndex,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.lru_cache import LRUCache
 
@@ -233,23 +234,32 @@ class DataStore:
                 if node_hash not in internal_nodes and node_hash not in terminal_nodes:
                     missing_hashes.append(node_hash)
 
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+        found_hashes: set[bytes32] = set()
+
         async with self.db_wrapper.reader() as reader:
-            for node_hash in missing_hashes:
-                cursor = await reader.execute(
-                    "SELECT root_hash, idx FROM nodes WHERE hash = ? AND store_id = ?",
-                    (
-                        node_hash,
-                        store_id,
-                    ),
-                )
+            for batch in to_batches(missing_hashes, batch_size):
+                placeholders = ",".join(["?"] * len(batch.entries))
+                query = f"""
+                    SELECT hash, root_hash, idx
+                    FROM nodes
+                    WHERE store_id = ? AND hash IN ({placeholders})
+                    LIMIT {len(placeholders)}
+                """
 
-                row = await cursor.fetchone()
-                if row is None:
-                    raise Exception(f"Unknown hash {node_hash.hex()}")
+                async with reader.execute(query, (store_id, *batch.entries)) as cursor:
+                    rows = await cursor.fetchall()
+                    for row in rows:
+                        node_hash = bytes32(row["hash"])
+                        root_hash_blob = bytes32(row["root_hash"])
+                        index = row["idx"]
+                        if node_hash in found_hashes:
+                            raise Exception("Internal error: duplicate node_hash found in nodes table")
+                        merkle_blob_queries[root_hash_blob].append(index)
+                        found_hashes.add(node_hash)
 
-                root_hash_blob = row["root_hash"]
-                index = row["idx"]
-                merkle_blob_queries[bytes32(root_hash_blob)].append(index)
+        if found_hashes != set(missing_hashes):
+            raise Exception("Invalid delta file, cannot find all the required hashes")
 
         for root_hash_blob, indexes in merkle_blob_queries.items():
             merkle_blob = await self.get_merkle_blob(root_hash_blob, read_only=True)
