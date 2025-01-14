@@ -4319,7 +4319,8 @@ class WalletRpcApi:
                     action_scope,
                     fee,
                     coins=coins,
-                    memos=[memos_0] + [output.memos for output in additional_outputs if output.memos is not None],
+                    memos=[memos_0]
+                    + [output.memos if output.memos is not None else [] for output in additional_outputs],
                     extra_conditions=(
                         *extra_conditions,
                         *(
