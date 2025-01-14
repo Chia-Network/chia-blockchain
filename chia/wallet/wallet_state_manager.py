@@ -18,7 +18,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
-from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import DataLayerWallet, SingletonRecord
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import (
     SINGLETON_LAUNCHER_HASH,
@@ -2298,6 +2298,7 @@ class WalletStateManager:
         sign: Optional[bool] = None,
         additional_signing_responses: Optional[list[SigningResponse]] = None,
         extra_spends: Optional[list[WalletSpendBundle]] = None,
+        singleton_records: list[SingletonRecord] = [],
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2343,6 +2344,9 @@ class WalletStateManager:
                     await self.tx_store.add_transaction_record(tx_record)
                     all_coins_names.extend([coin.name() for coin in tx_record.additions])
                     all_coins_names.extend([coin.name() for coin in tx_record.removals])
+
+                for singleton_record in singleton_records:
+                    await self.dl_store.add_singleton_record(singleton_record)
 
             await self.add_interested_coin_ids(all_coins_names)
 

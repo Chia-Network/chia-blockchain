@@ -343,30 +343,31 @@ class DataLayerWallet:
             SerializedProgram.from_program(genesis_launcher_solution),
         )
         launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
+        launcher_id = launcher_coin.name()
 
         async with action_scope.use() as interface:
             interface.side_effects.extra_spends.append(launcher_sb)
+            interface.side_effects.singleton_records.append(
+                SingletonRecord(
+                    coin_id=Coin(launcher_id, full_puzzle.get_tree_hash(), uint64(1)).name(),
+                    launcher_id=launcher_id,
+                    root=initial_root,
+                    inner_puzzle_hash=inner_puzzle.get_tree_hash(),
+                    confirmed=False,
+                    confirmed_at_height=uint32(0),
+                    timestamp=uint64(0),
+                    lineage_proof=LineageProof(
+                        launcher_id,
+                        create_host_layer_puzzle(inner_puzzle, initial_root).get_tree_hash(),
+                        uint64(1),
+                    ),
+                    generation=uint32(0),
+                )
+            )
 
-        singleton_record = SingletonRecord(
-            coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
-            launcher_id=launcher_coin.name(),
-            root=initial_root,
-            inner_puzzle_hash=inner_puzzle.get_tree_hash(),
-            confirmed=False,
-            confirmed_at_height=uint32(0),
-            timestamp=uint64(0),
-            lineage_proof=LineageProof(
-                launcher_coin.name(),
-                create_host_layer_puzzle(inner_puzzle, initial_root).get_tree_hash(),
-                uint64(1),
-            ),
-            generation=uint32(0),
-        )
+        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
 
-        await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([singleton_record.launcher_id], [self.id()])
-
-        return launcher_coin.name()
+        return launcher_id
 
     async def create_tandem_xch_tx(
         self,
@@ -391,7 +392,6 @@ class DataLayerWallet:
         new_puz_hash: Optional[bytes32] = None,
         new_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
-        add_pending_singleton: bool = True,
         announce_new_state: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
@@ -592,17 +592,15 @@ class DataLayerWallet:
                 action_scope,
             )
 
-        if add_pending_singleton:
-            await self.wallet_state_manager.dl_store.add_singleton_record(
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(dl_tx)
+            interface.side_effects.singleton_records.append(
                 new_singleton_record,
             )
             if announce_new_state:
-                await self.wallet_state_manager.dl_store.add_singleton_record(
+                interface.side_effects.singleton_records.append(
                     second_singleton_record,
                 )
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(dl_tx)
 
     async def generate_signed_transaction(
         self,
@@ -617,7 +615,6 @@ class DataLayerWallet:
     ) -> None:
         launcher_id: Optional[bytes32] = kwargs.get("launcher_id", None)
         new_root_hash: Optional[bytes32] = kwargs.get("new_root_hash", None)
-        add_pending_singleton: bool = kwargs.get("add_pending_singleton", True)
         announce_new_state: bool = kwargs.get("announce_new_state", False)
         # Figure out the launcher ID
         if len(coins) == 0:
@@ -643,7 +640,6 @@ class DataLayerWallet:
             puzzle_hashes[0],
             amounts[0],
             fee,
-            add_pending_singleton,
             announce_new_state,
             extra_conditions,
         )
@@ -1058,7 +1054,6 @@ class DataLayerWallet:
                     fee=fee_left_to_pay,
                     launcher_id=launcher,
                     new_root_hash=new_root,
-                    add_pending_singleton=False,
                     announce_new_state=True,
                     extra_conditions=extra_conditions,
                 )
