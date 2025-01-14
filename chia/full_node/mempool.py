@@ -504,7 +504,7 @@ class Mempool:
 
             current_time = monotonic()
             if current_time - bundle_creation_start > 1:
-                log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
+                log.warning(f"Exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
                 break
             if not item_inclusion_filter(name):
                 continue
@@ -582,8 +582,5 @@ class Mempool:
         agg = SpendBundle(coin_spends, aggregated_signature)
         bundle_creation_end = monotonic()
         duration = bundle_creation_end - bundle_creation_start
-        log.log(
-            logging.INFO if duration < 1 else logging.WARNING,
-            f"create_bundle_from_mempool_items took {duration:0.4f} seconds",
-        )
+        log.info(f"create_bundle_from_mempool_items took {duration:0.4f} seconds")
         return agg, additions
