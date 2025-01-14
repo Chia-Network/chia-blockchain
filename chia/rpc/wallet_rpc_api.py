@@ -101,6 +101,7 @@ from chia.wallet.conditions import (
     AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     conditions_from_json_dicts,
@@ -138,7 +139,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
@@ -1341,7 +1341,7 @@ class WalletRpcApi:
             raise ValueError("Cannot split coins from non-fungible wallet types")
 
         outputs = [
-            Payment(
+            CreateCoin(
                 await wallet.get_puzzle_hash(new=True)
                 if isinstance(wallet, Wallet)
                 else await wallet.standard_wallet.get_puzzle_hash(new=True),
@@ -4254,7 +4254,7 @@ class WalletRpcApi:
 
         memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
 
-        additional_outputs: list[Payment] = []
+        additional_outputs: list[CreateCoin] = []
         for addition in additions[1:]:
             receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
@@ -4263,7 +4263,7 @@ class WalletRpcApi:
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
-            additional_outputs.append(Payment(receiver_ph, amount, memos))
+            additional_outputs.append(CreateCoin(receiver_ph, amount, memos))
 
         fee: uint64 = uint64(request.get("fee", 0))
 
@@ -4319,7 +4319,7 @@ class WalletRpcApi:
                     action_scope,
                     fee,
                     coins=coins,
-                    memos=[memos_0] + [output.memos for output in additional_outputs],
+                    memos=[memos_0] + [output.memos for output in additional_outputs if output.memos is not None],
                     extra_conditions=(
                         *extra_conditions,
                         *(
