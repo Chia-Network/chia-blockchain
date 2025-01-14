@@ -91,11 +91,11 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def test_pre_validation_result() -> None:
-    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True)
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0)
     results = PreValidationResult(None, uint64(1), conds, uint32(0))
     assert results.validated_signature is True
 
-    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False)
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0)
     results = PreValidationResult(None, uint64(1), conds, uint32(0))
     assert results.validated_signature is False
 
