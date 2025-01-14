@@ -153,9 +153,7 @@ class DataStore:
                         kid INTEGER,
                         vid INTEGER,
                         store_id BLOB NOT NULL CHECK(length(store_id) == 32),
-                        PRIMARY KEY(store_id, hash),
-                        FOREIGN KEY (kid) REFERENCES ids(kv_id),
-                        FOREIGN KEY (vid) REFERENCES ids(kv_id)
+                        PRIMARY KEY(store_id, hash)
                     )
                     """
                 )
