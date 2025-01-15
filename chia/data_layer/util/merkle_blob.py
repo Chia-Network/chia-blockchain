@@ -14,9 +14,11 @@ from chia.util.streamable import Streamable, streamable
 dirty_hash = bytes32(b"\x00" * 32)
 
 if TYPE_CHECKING:
+    # for mypy
     TreeIndex = NewType("TreeIndex", uint32)
     KVId = NewType("KVId", int64)
 else:
+    # for streamable
     TreeIndex = uint32
     KVId = int64
 
@@ -122,8 +124,7 @@ class MerkleBlob:
         return self.free_indexes.pop()
 
     def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
-        # TODO: maybe restore the upper limit check?
-        if index is None or index < 0:
+        if index is None or index < 0 or undefined_index <= index:
             raise InvalidIndexError(index=index)
 
         metadata_start = index * spacing
@@ -153,8 +154,7 @@ class MerkleBlob:
         return bytes32(node.hash)
 
     def get_metadata(self, index: TreeIndex) -> NodeMetadata:
-        # TODO: maybe restore the upper limit check?
-        if index is None or index < 0:
+        if index is None or index < 0 or undefined_index <= index:
             raise InvalidIndexError(index=index)
 
         metadata_start = index * spacing
@@ -226,9 +226,7 @@ class MerkleBlob:
     def get_lineage_with_indexes(self, index: TreeIndex) -> list[tuple[TreeIndex, RawMerkleNodeProtocol]]:
         node = self.get_raw_node(index=index)
         lineage = [(index, node)]
-        while True:
-            if node.parent is None:
-                break
+        while node.parent is not None:
             index = node.parent
             node = self.get_raw_node(index)
             lineage.append((index, node))
@@ -632,9 +630,6 @@ class MerkleBlob:
             self.insert_from_leaf(self.key_to_index[min_height_leaf.key], indexes[0])
 
 
-TP = TypeVar("TP", bound="RawMerkleNodeProtocol")
-
-
 class RawMerkleNodeProtocol(Protocol):
     type: ClassVar[NodeType]
 
@@ -646,6 +641,7 @@ class RawMerkleNodeProtocol(Protocol):
     @property
     def hash(self) -> bytes32: ...
 
+    # TODO: didn't get this hinting figured out
     # @classmethod
     # def from_bytes(cls: type[TP], blob: bytes) -> TP: ...
 
@@ -673,7 +669,7 @@ def unpack_raw_node(index: TreeIndex, metadata: NodeMetadata, data: bytes) -> Ra
     assert len(data) == data_size
     cls = raw_node_type_to_class[metadata.type]
 
-    # avoiding the assert in Streamable.from_bytes() since we have padded blocks
+    # avoiding the EOF assert in Streamable.from_bytes() since we have padded blocks
     f = io.BytesIO(data)
     return cls.parse(f)  # type: ignore[attr-defined, no-any-return]
 

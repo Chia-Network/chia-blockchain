@@ -475,7 +475,7 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
 
 
 def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
-    HASH = bytes32(range(12, 44))
+    HASH = bytes32(range(12, 12 + 32))
 
     import pathlib
 
