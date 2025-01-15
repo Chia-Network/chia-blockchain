@@ -774,7 +774,7 @@ class DIDWallet:
         )
         uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
         assert uncurried is not None
-        p2_puzzle, id_list, num_of_backup_ids_needed, _, metadata = uncurried
+        p2_puzzle, id_list_hash, num_of_backup_ids_needed, _, metadata = uncurried
         # Quote message puzzle & solution
         if action_scope.config.tx_config.reuse_puzhash:
             new_innerpuzzle_hash = innerpuz.get_tree_hash()
@@ -783,7 +783,7 @@ class DIDWallet:
             p2_ph = await self.standard_wallet.get_puzzle_hash(new=True)
             new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
                 p2_puzhash=p2_ph,
-                recovery_list=[bytes32(id.as_atom()) for id in id_list.as_iter()],
+                recovery_list_hash=bytes32(id_list_hash.as_atom()),
                 num_of_backup_ids_needed=uint64(num_of_backup_ids_needed.as_int()),
                 launcher_id=self.did_info.origin_coin.name(),
                 metadata=metadata,
