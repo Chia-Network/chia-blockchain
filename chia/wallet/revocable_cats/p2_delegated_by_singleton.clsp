@@ -3,6 +3,7 @@
 (mod (
     SINGLETON_MOD_HASH
     SINGLETON_STRUCT_HASH ; The hash of (SINGLETON_MOD_HASH . (LAUNCHER_ID . SINGLETON_LAUNCHER_HASH))
+    NONCE
     singleton_inner_puzzle_hash
     delegated_puzzle
     delegated_solution

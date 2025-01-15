@@ -1,0 +1,43 @@
+; This is a "limitations_program" for use with cat.clsp.
+; It allows an issuer vault to mint and a melter vault to melt this CAT.
+(mod (
+    SINGLETON_MOD_HASH
+    LAUNCHER_PUZZLE_HASH
+    ISSUER_LAUNCHER_ID
+    MELTER_LAUNCHER_ID
+    NONCE
+    Truths
+    parent_is_cat
+    lineage_proof
+    delta
+    inner_conditions
+    (  ; solution
+      singleton_inner_puzzle_hash
+    )
+  )
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree SINGLETON_STRUCT)
+    )
+  )
+
+  (defun-inline authorize_via_singleton (SINGLETON_STRUCT singleton_inner_puzzle_hash delta)
+    (list
+      (list RECEIVE_MESSAGE 23 delta (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_inner_puzzle_hash))
+    )
+  )
+
+  (defun-inline singleton_struct_for_delta (ISSUER_LAUNCHER_ID MELTER_LAUNCHER_ID delta)
+    (if (> 0 delta)
+      (c SINGLETON_MOD_HASH (c MELTER_LAUNCHER_ID LAUNCHER_PUZZLE_HASH)) ; delta is negative, so we melt
+      (c SINGLETON_MOD_HASH (c ISSUER_LAUNCHER_ID LAUNCHER_PUZZLE_HASH)) ; delta is positive or 0, so we mint
+    )
+  )
+
+  (authorize_via_singleton (singleton_struct_for_delta ISSUER_LAUNCHER_ID MELTER_LAUNCHER_ID delta) singleton_inner_puzzle_hash delta)
+)

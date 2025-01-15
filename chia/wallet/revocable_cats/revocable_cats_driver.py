@@ -34,7 +34,9 @@ P2_DELEGATED_BY_SINGLETON: Program = load_clvm_maybe_recompile(
 
 
 # Basic drivers
-def construct_p2_delegated_by_singleton(issuer_launcher_id: bytes32) -> Program:
+def construct_p2_delegated_by_singleton(
+    issuer_launcher_id: bytes32, nonce=0
+) -> Program:
     singleton_struct: Program = Program.to(
         (
             SINGLETON_TOP_LAYER_MOD_HASH,
@@ -42,7 +44,9 @@ def construct_p2_delegated_by_singleton(issuer_launcher_id: bytes32) -> Program:
         )
     )
     return P2_DELEGATED_BY_SINGLETON.curry(
-        SINGLETON_TOP_LAYER_MOD_HASH, singleton_struct.get_tree_hash()
+        SINGLETON_TOP_LAYER_MOD_HASH,
+        singleton_struct.get_tree_hash(),
+        Program.to(nonce),
     )
 
 
