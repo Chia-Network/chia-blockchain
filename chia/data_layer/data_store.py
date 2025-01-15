@@ -1200,7 +1200,7 @@ class DataStore:
                 last_action[hash] = change["action"]
 
             batch_keys_values: list[tuple[KVId, KVId]] = []
-            batch_hashes: list[bytes] = []
+            batch_hashes: list[bytes32] = []
 
             for change in changelist:
                 if change["action"] == "insert":
