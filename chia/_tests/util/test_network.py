@@ -18,7 +18,9 @@ async def test_resolve4() -> None:
     assert await resolve("127.0.0.1", prefer_ipv6=prefer_ipv6) == IPAddress.create("127.0.0.1")
     assert await resolve("10.11.12.13", prefer_ipv6=prefer_ipv6) == IPAddress.create("10.11.12.13")
     assert await resolve("localhost", prefer_ipv6=prefer_ipv6) == IPAddress.create("127.0.0.1")
-    assert await resolve("example.net", prefer_ipv6=prefer_ipv6) == IPAddress.create("93.184.215.14")
+    example = await resolve("example.net", prefer_ipv6=prefer_ipv6)
+    assert example.is_v4
+    assert not example.is_private
 
 
 @pytest.mark.anyio
@@ -35,9 +37,9 @@ async def test_resolve6() -> None:
     # on some systems.  Just test neither here.
     # assert await resolve("ip6-localhost", prefer_ipv6=prefer_ipv6) == IPAddress.create("::1")
     # assert await resolve("localhost", prefer_ipv6=prefer_ipv6) == IPAddress.create("::1")
-    assert await resolve("example.net", prefer_ipv6=prefer_ipv6) == IPAddress.create(
-        "2606:2800:21f:cb07:6820:80da:af6b:8b2c"
-    )
+    example = await resolve("example.net", prefer_ipv6=prefer_ipv6)
+    assert example.is_v6
+    assert not example.is_private
 
 
 @pytest.mark.parametrize(
