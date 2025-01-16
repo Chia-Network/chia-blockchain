@@ -153,7 +153,7 @@ class MerkleBlob:
         node = self.get_raw_node(index=TreeIndex(uint32(0)))
         return bytes32(node.hash)
 
-    def get_metadata(self, index: TreeIndex) -> NodeMetadata:
+    def _get_metadata(self, index: TreeIndex) -> NodeMetadata:
         if index is None or index < 0 or undefined_index <= index:
             raise InvalidIndexError(index=index)
 
@@ -166,7 +166,7 @@ class MerkleBlob:
         return NodeMetadata.unpack(self.blob[metadata_start:data_start])
 
     def update_metadata(self, index: TreeIndex, type: Optional[NodeType] = None, dirty: Optional[bool] = None) -> None:
-        metadata = self.get_metadata(index)
+        metadata = self._get_metadata(index)
         new_type = type if type is not None else metadata.type
         new_dirty = dirty if dirty is not None else metadata.dirty
 
@@ -178,7 +178,7 @@ class MerkleBlob:
         index_: Optional[TreeIndex] = index
         del index
         while index_ is not None:
-            metadata = self.get_metadata(index_)
+            metadata = self._get_metadata(index_)
             if metadata.dirty:
                 break
             self.update_metadata(index_, dirty=True)
@@ -186,7 +186,7 @@ class MerkleBlob:
             index_ = node.parent
 
     def calculate_lazy_hashes(self, index: TreeIndex = TreeIndex(uint32(0))) -> bytes32:
-        metadata = self.get_metadata(index)
+        metadata = self._get_metadata(index)
         node = self.get_raw_node(index)
         if not metadata.dirty:
             return bytes32(node.hash)
@@ -502,7 +502,7 @@ class MerkleBlob:
         grandparent_index = parent.parent
         if grandparent_index is None:
             sibling = self.get_raw_node(sibling_index)
-            metadata = self.get_metadata(sibling_index)
+            metadata = self._get_metadata(sibling_index)
             if isinstance(sibling, RawLeafMerkleNode):
                 node_type = NodeType.leaf
             else:

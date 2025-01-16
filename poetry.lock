@@ -750,8 +750,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
-reference = "long_lived/initial_datalayer"
-resolved_reference = "a28081c1f9afebd0b4af4b77b6aae62a5ce4fcdc"
+reference = "datalayer_exceptions_for_python"
+resolved_reference = "1ad1b00b2862c23ae10192f13fc66b5145bc2390"
 subdirectory = "wheel/"
 
 [[package]]
@@ -3301,4 +3301,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "41834212d9ddb8af1ded66ec217bf559cf19d2c4a9cc9f375e4ee701e5531452"
+content-hash = "05327ddc00e212c84ea67e808475cc04697a0fe37e688a02249c0f7bfc2df97c"

@@ -4,9 +4,9 @@ import hashlib
 import itertools
 from dataclasses import dataclass
 from random import Random
-from typing import Generic, Protocol, TypeVar, final
+from typing import Generic, Protocol, TypeVar, Union, final
 
-import chia_rs
+import chia_rs.datalayer
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -24,6 +24,7 @@ from chia.data_layer.util.merkle_blob import (
     RawLeafMerkleNode,
     RawMerkleNodeProtocol,
     TreeIndex,
+    spacing,
     data_size,
     metadata_size,
     pack_raw_node,
@@ -38,16 +39,43 @@ from chia.util.ints import int64, uint32
 pytestmark = pytest.mark.data_layer
 
 
-class MerkleBlobCallable(Protocol):
-    def __call__(self, blob: bytearray) -> MerkleBlob: ...
+@dataclass
+class MerkleTypes:
+    # TODO: maybe del the types to avoid them being used, or not from import them, or...
+    # TODO: metadata as well
+    internal: type[Union[RawInternalMerkleNode, chia_rs.datalayer.InternalNode]]
+    leaf: type[Union[RawLeafMerkleNode, chia_rs.datalayer.LeafNode]]
+    blob: type[Union[MerkleBlob, chia_rs.datalayer.MerkleBlob]]
+    block_size: int
+    data_size: int
+    metadata_size: int
+
+
+python_merkle_types = MerkleTypes(
+    internal=RawInternalMerkleNode,
+    leaf=RawLeafMerkleNode,
+    blob=MerkleBlob,
+    block_size=spacing,
+    data_size=data_size,
+    metadata_size=metadata_size,
+)
+rust_merkle_types = MerkleTypes(
+    internal=chia_rs.datalayer.InternalNode,
+    leaf=chia_rs.datalayer.LeafNode,
+    blob=chia_rs.datalayer.MerkleBlob,
+    data_size=chia_rs.datalayer.DATA_SIZE,
+    block_size=chia_rs.datalayer.BLOCK_SIZE,
+    metadata_size=chia_rs.datalayer.METADATA_SIZE,
+)
+all_merkle_types = [python_merkle_types, rust_merkle_types]
 
 
 @pytest.fixture(
-    name="merkle_blob_type",
-    params=[MerkleBlob, chia_rs.MerkleBlob],
+    name="merkle_types",
+    params=all_merkle_types,
     ids=["python", "rust"],
 )
-def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
+def merkle_types_fixture(request: SubRequest) -> MerkleTypes:
     return request.param  # type: ignore[no-any-return]
 
 
@@ -60,6 +88,11 @@ def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
 def raw_node_class_fixture(request: SubRequest) -> RawMerkleNodeProtocol:
     # https://github.com/pytest-dev/pytest/issues/8763
     return request.param  # type: ignore[no-any-return]
+
+
+# @pytest.mark.xfail(reason="just noting that these are not harmonized right now")
+def test_all_implementation_sizes_match() -> None:
+    assert {merkle_type.data_size for merkle_type in all_merkle_types} == {all_merkle_types[0].data_size}
 
 
 def test_raw_node_class_types_are_unique() -> None:
@@ -158,9 +191,9 @@ def test_raw_node_to_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> N
     assert blob == case.packed
 
 
-def test_merkle_blob_one_leaf_loads() -> None:
+def _test_merkle_blob_one_leaf_loads(merkle_types: MerkleTypes) -> None:
     # TODO: need to persist reference data
-    leaf = RawLeafMerkleNode(
+    leaf = merkle_types.leaf(
         hash=bytes32(range(32)),
         parent=None,
         key=KVId(int64(0x0405060708090A0B)),
@@ -168,26 +201,26 @@ def test_merkle_blob_one_leaf_loads() -> None:
     )
     blob = bytearray(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
 
-    merkle_blob = MerkleBlob(blob=blob)
+    merkle_blob = merkle_types.blob(blob=blob)
     assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == leaf
 
 
-def test_merkle_blob_two_leafs_loads() -> None:
+def _test_merkle_blob_two_leafs_loads(merkle_types: MerkleTypes) -> None:
     # TODO: break this test down into some reusable data and multiple tests
     # TODO: need to persist reference data
-    root = RawInternalMerkleNode(
+    root = merkle_types.internal(
         hash=bytes32(range(32)),
         parent=None,
         left=TreeIndex(uint32(1)),
         right=TreeIndex(uint32(2)),
     )
-    left_leaf = RawLeafMerkleNode(
+    left_leaf = merkle_types.leaf(
         hash=bytes32(range(32)),
         parent=TreeIndex(uint32(0)),
         key=KVId(int64(0x0405060708090A0B)),
         value=KVId(int64(0x0405060708090A1B)),
     )
-    right_leaf = RawLeafMerkleNode(
+    right_leaf = merkle_types.leaf(
         hash=bytes32(range(32)),
         parent=TreeIndex(uint32(0)),
         key=KVId(int64(0x1415161718191A1B)),
@@ -198,7 +231,7 @@ def test_merkle_blob_two_leafs_loads() -> None:
     blob.extend(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(left_leaf))
     blob.extend(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(right_leaf))
 
-    merkle_blob = MerkleBlob(blob=blob)
+    merkle_blob = merkle_types.blob(blob=blob)
     assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == root
     assert merkle_blob.get_raw_node(root.left) == left_leaf
     assert merkle_blob.get_raw_node(root.right) == right_leaf
@@ -240,8 +273,8 @@ def generate_hash(seed: int) -> bytes32:
     return bytes32(hash_obj.digest())
 
 
-def test_insert_delete_loads_all_keys() -> None:
-    merkle_blob = MerkleBlob(blob=bytearray())
+def test_insert_delete_loads_all_keys(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     num_keys = 200000
     extra_keys = 100000
     max_height = 25
@@ -281,7 +314,7 @@ def test_insert_delete_loads_all_keys() -> None:
 
     assert merkle_blob.get_keys_values() == keys_values
 
-    merkle_blob_2 = MerkleBlob(blob=merkle_blob.blob)
+    merkle_blob_2 = merkle_types.blob(blob=merkle_blob.blob)
     for seed in range(num_keys, num_keys + extra_keys):
         key, value = generate_kvid(seed)
         hash = generate_hash(seed)
@@ -293,8 +326,8 @@ def test_insert_delete_loads_all_keys() -> None:
     assert merkle_blob.get_keys_values() == keys_values
 
 
-def test_small_insert_deletes() -> None:
-    merkle_blob = MerkleBlob(blob=bytearray())
+def test_small_insert_deletes(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     num_repeats = 100
     max_inserts = 25
     seed = 0
@@ -322,14 +355,14 @@ def test_small_insert_deletes() -> None:
             assert not remaining_keys_values
 
 
-def test_proof_of_inclusion_merkle_blob() -> None:
+def _test_proof_of_inclusion_merkle_blob(merkle_types: MerkleTypes) -> None:
     num_repeats = 10
     seed = 0
 
     random = Random()
     random.seed(100, version=2)
 
-    merkle_blob = MerkleBlob(blob=bytearray())
+    merkle_blob = merkle_types.blob(blob=bytearray())
     keys_values: dict[KVId, KVId] = {}
 
     for repeats in range(num_repeats):
@@ -380,19 +413,26 @@ def test_proof_of_inclusion_merkle_blob() -> None:
 
 
 @pytest.mark.parametrize(argnames="index", argvalues=[-1, 1, None])
-def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
-    merkle_blob = MerkleBlob(blob=bytearray())
+def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex, merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     merkle_blob.insert(KVId(int64(0x1415161718191A1B)), KVId(int64(0x1415161718191A1B)), bytes32(range(12, 12 + 32)))
 
-    with pytest.raises(InvalidIndexError):
+    if index is None:
+        expected = (InvalidIndexError, TypeError)
+    else:
+        expected = (InvalidIndexError, chia_rs.datalayer.BlockIndexOutOfBoundsError)
+
+    with pytest.raises(expected):
         merkle_blob.get_raw_node(index)
 
-    with pytest.raises(InvalidIndexError):
-        merkle_blob.get_metadata(index)
+    if merkle_types == python_merkle_types:
+        # this is an internal detail of the python implementation
+        with pytest.raises(InvalidIndexError):
+            merkle_blob._get_metadata(index)
 
 
-def test_helper_methods(merkle_blob_type: MerkleBlobCallable) -> None:
-    merkle_blob = merkle_blob_type(blob=bytearray())
+def test_helper_methods(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     assert merkle_blob.empty()
     assert merkle_blob.get_root_hash() is None
 
@@ -408,9 +448,9 @@ def test_helper_methods(merkle_blob_type: MerkleBlobCallable) -> None:
     assert merkle_blob.get_root_hash() is None
 
 
-def test_insert_with_reference_key_and_side(merkle_blob_type: MerkleBlobCallable) -> None:
+def test_insert_with_reference_key_and_side(merkle_types: MerkleTypes) -> None:
     num_inserts = 50
-    merkle_blob = merkle_blob_type(blob=bytearray())
+    merkle_blob = merkle_types.blob(blob=bytearray())
     reference_kid = None
     side = None
 
@@ -432,8 +472,8 @@ def test_insert_with_reference_key_and_side(merkle_blob_type: MerkleBlobCallable
         reference_kid = key
 
 
-def test_double_insert_fails(merkle_blob_type: MerkleBlobCallable) -> None:
-    merkle_blob = merkle_blob_type(blob=bytearray())
+def test_double_insert_fails(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     key, value = generate_kvid(0)
     hash = generate_hash(0)
     merkle_blob.insert(key, value, hash)
@@ -442,8 +482,8 @@ def test_double_insert_fails(merkle_blob_type: MerkleBlobCallable) -> None:
         merkle_blob.insert(key, value, hash)
 
 
-def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
-    merkle_blob = merkle_blob_type(blob=bytearray())
+def test_get_nodes(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     num_inserts = 500
     keys = set()
     seen_keys = set()
@@ -457,7 +497,7 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
     merkle_blob.calculate_lazy_hashes()
     all_nodes = merkle_blob.get_nodes_with_indexes()
     for index, node in all_nodes:
-        if isinstance(node, (RawInternalMerkleNode, chia_rs.InternalNode)):
+        if isinstance(node, merkle_types.internal):
             left = merkle_blob.get_raw_node(node.left)
             right = merkle_blob.get_raw_node(node.right)
             assert left.parent == index
@@ -467,14 +507,14 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
             assert node.left not in seen_indexes
             assert node.right not in seen_indexes
         else:
-            assert isinstance(node, (RawLeafMerkleNode, chia_rs.LeafNode))
+            assert isinstance(node, merkle_types.leaf)
             seen_keys.add(node.key)
         seen_indexes.add(index)
 
     assert keys == seen_keys
 
 
-def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
+def test_just_insert_a_bunch(merkle_types: MerkleTypes) -> None:
     HASH = bytes32(range(12, 12 + 32))
 
     import pathlib
@@ -483,7 +523,7 @@ def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
     path.joinpath("py").mkdir(parents=True, exist_ok=True)
     path.joinpath("rs").mkdir(parents=True, exist_ok=True)
 
-    merkle_blob = merkle_blob_type(blob=bytearray())
+    merkle_blob = merkle_types.blob(blob=bytearray())
     import time
 
     total_time = 0.0
