@@ -281,7 +281,7 @@ def test_insert_delete_loads_all_keys() -> None:
 
     assert merkle_blob.get_keys_values() == keys_values
 
-    merkle_blob_2 = MerkleBlob(blob=bytes(merkle_blob.blob))
+    merkle_blob_2 = MerkleBlob(blob=bytearray(merkle_blob.blob))
     for seed in range(num_keys, num_keys + extra_keys):
         key, value = generate_kvid(seed)
         hash = generate_hash(seed)
