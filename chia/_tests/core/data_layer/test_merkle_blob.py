@@ -281,7 +281,7 @@ def test_insert_delete_loads_all_keys() -> None:
 
     assert merkle_blob.get_keys_values() == keys_values
 
-    merkle_blob_2 = MerkleBlob(blob=merkle_blob.blob)
+    merkle_blob_2 = MerkleBlob(blob=bytes(merkle_blob.blob))
     for seed in range(num_keys, num_keys + extra_keys):
         key, value = generate_kvid(seed)
         hash = generate_hash(seed)
@@ -290,7 +290,7 @@ def test_insert_delete_loads_all_keys() -> None:
         lineage = merkle_blob_2.get_lineage_with_indexes(TreeIndex(key_index))
         assert len(lineage) <= max_height
         keys_values[key] = value
-    assert merkle_blob.get_keys_values() == keys_values
+    assert merkle_blob_2.get_keys_values() == keys_values
 
 
 def test_small_insert_deletes() -> None:
