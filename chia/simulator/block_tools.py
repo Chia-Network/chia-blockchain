@@ -17,8 +17,9 @@ from random import Random
 from typing import Any, Callable, Optional
 
 import anyio
+from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import MEMPOOL_MODE, AugSchemeMPL, G1Element, G2Element, PrivateKey, solution_generator
-from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSRAP_GENERATOR
+
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
