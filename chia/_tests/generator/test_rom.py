@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from clvm.CLVMObject import CLVMStorage
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
@@ -13,16 +14,13 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendConditions
 from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm_maybe_recompile
+
+DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
+
+GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSTRAP_GENERATOR)
 
 MAX_COST = 10**15
 COST_PER_BYTE = 12000
-
-
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles")
-GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
-    "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
-)
 
 
 GENERATOR_CODE = """

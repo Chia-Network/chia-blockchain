@@ -3,6 +3,21 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Optional
 
+from chia_puzzles_py.programs import (
+    P2_SINGLETON,
+    P2_SINGLETON_HASH,
+    P2_SINGLETON_OR_DELAYED_PUZHASH,
+    P2_SINGLETON_OR_DELAYED_PUZHASH_HASH,
+    SINGLETON_TOP_LAYER,
+    SINGLETON_TOP_LAYER_HASH,
+)
+from chia_puzzles_py.programs import (
+    SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES,
+)
+from chia_puzzles_py.programs import (
+    SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES,
+)
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -11,14 +26,15 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
-SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer.clsp")
-SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton.clsp")
-P2_SINGLETON_OR_DELAYED_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
-SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+SINGLETON_MOD = Program.from_bytes(SINGLETON_TOP_LAYER)
+SINGLETON_MOD_HASH = bytes32(SINGLETON_TOP_LAYER_HASH)
+P2_SINGLETON_MOD = Program.from_bytes(P2_SINGLETON)
+P2_SINGLETON_MOD_HASH = bytes32(P2_SINGLETON_HASH)
+P2_SINGLETON_OR_DELAYED_MOD = Program.from_bytes(P2_SINGLETON_OR_DELAYED_PUZHASH)
+P2_SINGLETON_OR_DELAYED_MOD_HASH = bytes32(P2_SINGLETON_OR_DELAYED_PUZHASH_HASH)
+SINGLETON_LAUNCHER = Program.from_bytes(SINGLETON_LAUNCHER_BYTES)
+SINGLETON_LAUNCHER_HASH = bytes32(SINGLETON_LAUNCHER_HASH_BYTES)
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 

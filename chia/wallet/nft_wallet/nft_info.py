@@ -9,9 +9,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH
 
-LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
 
@@ -85,7 +84,7 @@ class NFTInfo(Streamable):
     minter_did: Optional[bytes32] = None
     """DID of the NFT minter"""
 
-    launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()
+    launcher_puzhash: bytes32 = SINGLETON_LAUNCHER_PUZZLE_HASH
     """Puzzle hash of the singleton launcher in hex"""
 
     off_chain_metadata: Optional[str] = None
