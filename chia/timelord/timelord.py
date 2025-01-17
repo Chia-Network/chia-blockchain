@@ -218,18 +218,17 @@ class Timelord:
 
     async def _stop_chain(self, chain: Chain) -> None:
         try:
-            _, _, stop_writer = self.chain_type_to_stream[chain]
+            _, _, stop_writer = self.chain_type_to_stream.pop(chain)
+            if chain not in self.unspawned_chains:
+                self.unspawned_chains.append(chain)
             if chain in self.allows_iters:
+                self.allows_iters.remove(chain)
                 stop_writer.write(b"010")
                 await stop_writer.drain()
-                self.allows_iters.remove(chain)
             else:
                 log.error(f"Trying to stop {chain} before its initialization.")
                 stop_writer.close()
                 await stop_writer.wait_closed()
-            if chain not in self.unspawned_chains:
-                self.unspawned_chains.append(chain)
-            del self.chain_type_to_stream[chain]
         except ConnectionResetError as e:
             log.error(f"{e}")
         except Exception as e:
@@ -338,6 +337,11 @@ class Timelord:
                     self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
+
+        # remove overflow blocks that were moved to unfinished cache
+        for block in new_unfinished_blocks:
+            if block in self.overflow_blocks:
+                self.overflow_blocks.remove(block)
         # Signage points.
         if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0
@@ -1094,6 +1098,8 @@ class Timelord:
 
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")
+        except Exception:
+            log.exception("VDF client communication terminated abruptly")
 
     async def _manage_discriminant_queue_sanitizer(self) -> None:
         while not self._shut_down:

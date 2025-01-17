@@ -56,10 +56,10 @@ async def subscribe_to_phs(
     """
     msg = RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
     all_coins_state: Optional[RespondToPhUpdates] = await peer.call_api(
-        FullNodeAPI.register_interest_in_puzzle_hash, msg, timeout=300
+        FullNodeAPI.register_for_ph_updates, msg, timeout=300
     )
     if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_info.host} for register_interest_in_puzzle_hash")
+        raise ValueError(f"None response from peer {peer.peer_info.host} for register_for_ph_updates")
     return all_coins_state.coin_states
 
 
@@ -73,11 +73,11 @@ async def subscribe_to_coin_updates(
     """
     msg = RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
     all_coins_state: Optional[RespondToCoinUpdates] = await peer.call_api(
-        FullNodeAPI.register_interest_in_coin, msg, timeout=300
+        FullNodeAPI.register_for_coin_updates, msg, timeout=300
     )
 
     if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_info.host} for register_interest_in_coin")
+        raise ValueError(f"None response from peer {peer.peer_info.host} for register_for_coin_updates")
     return all_coins_state.coin_states
 
 

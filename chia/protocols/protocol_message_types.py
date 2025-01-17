@@ -100,10 +100,10 @@ class ProtocolMessageTypes(Enum):
 
     # More wallet protocol
     coin_state_update = 69
-    register_interest_in_puzzle_hash = 70
-    respond_to_ph_update = 71
-    register_interest_in_coin = 72
-    respond_to_coin_update = 73
+    register_for_ph_updates = 70
+    respond_to_ph_updates = 71
+    register_for_coin_updates = 72
+    respond_to_coin_updates = 73
     request_children = 74
     respond_children = 75
     request_ses_hashes = 76

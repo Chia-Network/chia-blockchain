@@ -4184,3 +4184,19 @@ async def get_fork_info(blockchain: Blockchain, block: FullBlock, peak: BlockRec
     )
 
     return fork_info
+
+
+@pytest.mark.anyio
+async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    """
+    Covers the case of calling `get_header_blocks_in_range`, requesting
+    transactions filter, on a non transaction block.
+    """
+    b = empty_blockchain
+    blocks = bt.get_consecutive_blocks(2)
+    for block in blocks:
+        await _validate_and_add_block(b, block)
+    non_tx_block = next(block for block in blocks if not block.is_transaction_block())
+    blocks_with_filter = await b.get_header_blocks_in_range(0, 42, tx_filter=True)
+    empty_tx_filter = b"\x00"
+    assert blocks_with_filter[non_tx_block.header_hash].transactions_filter == empty_tx_filter

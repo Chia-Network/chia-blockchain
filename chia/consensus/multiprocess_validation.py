@@ -5,7 +5,7 @@ import copy
 import logging
 import time
 import traceback
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Optional
@@ -94,12 +94,11 @@ def _pre_validate_block(
 
     try:
         validation_start = time.monotonic()
-        tx_additions: list[Coin] = []
-        removals: list[bytes32] = []
+        removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None
         if conds is not None:
             assert conds.validated_signature is True
             assert block.transactions_generator is not None
-            removals, tx_additions = tx_removals_and_additions(conds)
+            removals_and_additions = tx_removals_and_additions(conds)
         elif block.transactions_generator is not None:
             assert prev_generators is not None
             assert block.transactions_info is not None
@@ -118,10 +117,13 @@ def _pre_validate_block(
                 return PreValidationResult(uint16(err), None, None, uint32(validation_time * 1000))
             assert conds is not None
             assert conds.validated_signature is True
-            removals, tx_additions = tx_removals_and_additions(conds)
+            removals_and_additions = tx_removals_and_additions(conds)
+        elif block.is_transaction_block():
+            # This is a transaction block with just reward coins.
+            removals_and_additions = ([], [])
 
         assert conds is None or conds.validated_signature is True
-        header_block = get_block_header(block, (tx_additions, removals))
+        header_block = get_block_header(block, removals_and_additions)
         required_iters, error = validate_finished_header_block(
             constants,
             blockchain,

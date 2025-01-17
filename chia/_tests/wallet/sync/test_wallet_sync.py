@@ -116,12 +116,17 @@ async def test_request_block_headers(
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
+@pytest.mark.parametrize("rewards_only_tx_block", [True, False])
 async def test_request_block_headers_transactions_filter(
-    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], rewards_only_tx_block: bool
 ) -> None:
     """
     Tests that `request_block_headers` returns a transactions filter that
         correctly reflects the blocks transactions.
+
+    We use `rewards_only_tx_block` to control whether the test transaction
+        block contains our test spend as well, or just the reward coins.
+
     For completeness, we're also comparing the outcome of
         `request_block_headers` in this regard, to `request_header_blocks` as
         well as `request_block_header`.
@@ -130,28 +135,36 @@ async def test_request_block_headers_transactions_filter(
     ph = SerializedProgram.to(1).get_tree_hash()
     for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    # Generate a block with our test spend
-    coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
-    [parent_coin] = [c.coin for c in coins if c.coin.amount == 250_000_000_000]
-    sb = SpendBundle(
-        [
-            make_spend(
-                parent_coin, SerializedProgram.to(1), SerializedProgram.to([[ConditionOpcode.CREATE_COIN, ph, 42]])
-            )
-        ],
-        G2Element(),
-    )
+    if rewards_only_tx_block:
+        # Generate a transaction block without any spends
+        sb = None
+    else:
+        # Generate a transaction block with our test spend
+        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+        [parent_coin] = [c.coin for c in coins if c.coin.amount == 250_000_000_000]
+        sb = SpendBundle(
+            [
+                make_spend(
+                    parent_coin, SerializedProgram.to(1), SerializedProgram.to([[ConditionOpcode.CREATE_COIN, ph, 42]])
+                )
+            ],
+            G2Element(),
+        )
     blocks = await full_node_api.get_all_full_blocks()
     blocks = bt.get_consecutive_blocks(1, blocks, guarantee_transaction_block=True, transaction_data=sb)
     new_block = blocks[-1]
     await full_node_api.full_node.add_block(new_block)
     # Compute the expected transactions filter
-    [test_spend] = sb.additions()
-    byte_array_tx = (
-        [bytearray(test_spend.puzzle_hash)]
-        + [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
-        + [bytearray(parent_coin.name())]
-    )
+    if rewards_only_tx_block:
+        byte_array_tx = [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
+    else:
+        assert sb is not None
+        [test_spend] = sb.additions()
+        byte_array_tx = (
+            [bytearray(test_spend.puzzle_hash)]
+            + [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
+            + [bytearray(parent_coin.name())]
+        )
     expected_transactions_filter = bytes(PyBIP158(byte_array_tx).GetEncoded())
     # Perform the request and check the transactions filter
     msg = await full_node_api.request_block_headers(
@@ -1560,7 +1573,7 @@ async def test_long_sync_untrusted_break(
 
     sync_canceled = False
 
-    async def register_interest_in_puzzle_hash(
+    async def register_for_ph_updates(
         self: object,
         request: wallet_protocol.RegisterForPhUpdates,
         peer: WSChiaConnection,
@@ -1591,7 +1604,7 @@ async def test_long_sync_untrusted_break(
 
     await add_blocks_in_batches(default_1000_blocks[:400], untrusted_full_node_api.full_node)
 
-    with patch_request_handler(api=untrusted_full_node_api, handler=register_interest_in_puzzle_hash):
+    with patch_request_handler(api=untrusted_full_node_api, handler=register_for_ph_updates):
         # Connect to the untrusted peer and wait until the long sync started
         await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
         await time_out_assert(30, wallet_syncing)

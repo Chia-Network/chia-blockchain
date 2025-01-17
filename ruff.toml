@@ -56,14 +56,22 @@ ignore = [
     # flake8-implicit-str-concat
     "ISC003", # explicit-string-concatenation
 
+    # pyupgrade
+    # Should probably fix these
+    "UP006", # non-pep585-annotation
+
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.
     # Its purpose is to prevent accidenatally assigning mutable defaults. However, this is a bit overkill for that.
     # That being said, it would be nice to add some way to actually guard against that specific mutable default behavior.
     "RUF009", # function-call-in-dataclass-default-argument
+    "RUF056", # falsy-dict-get-fallback
     # Should probably fix this
-    "RUF029",
+    "RUF029", # unused-async
+    "RUF043", # pytest-raises-ambiguous-pattern
+    "RUF046", # unnecessary-cast-to-int
+    "RUF052", # used-dummy-variable
 ]
 
 
