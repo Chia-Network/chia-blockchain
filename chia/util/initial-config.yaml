@@ -440,6 +440,7 @@ full_node:
     - "seeder.dexie.space"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
+    - "seeder.xchseeder.com"
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444

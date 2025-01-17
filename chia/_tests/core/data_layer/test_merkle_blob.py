@@ -6,7 +6,7 @@ from dataclasses import astuple, dataclass
 from random import Random
 from typing import Generic, Protocol, TypeVar, final
 
-import chia_rs
+import chia_rs.datalayer
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -44,7 +44,7 @@ class MerkleBlobCallable(Protocol):
 
 @pytest.fixture(
     name="merkle_blob_type",
-    params=[MerkleBlob, chia_rs.MerkleBlob],
+    params=[MerkleBlob, chia_rs.datalayer.MerkleBlob],
     ids=["python", "rust"],
 )
 def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
@@ -465,7 +465,7 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
     merkle_blob.calculate_lazy_hashes()
     all_nodes = merkle_blob.get_nodes_with_indexes()
     for index, node in all_nodes:
-        if isinstance(node, (RawInternalMerkleNode, chia_rs.InternalNode)):
+        if isinstance(node, (RawInternalMerkleNode, chia_rs.datalayer.InternalNode)):
             left = merkle_blob.get_raw_node(node.left)
             right = merkle_blob.get_raw_node(node.right)
             assert left.parent == index
@@ -475,7 +475,7 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
             assert node.left not in seen_indexes
             assert node.right not in seen_indexes
         else:
-            assert isinstance(node, (RawLeafMerkleNode, chia_rs.LeafNode))
+            assert isinstance(node, (RawLeafMerkleNode, chia_rs.datalayer.LeafNode))
             seen_keys.add(node.key)
         seen_indexes.add(index)
 
