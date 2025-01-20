@@ -218,7 +218,7 @@ async def run_sync_test(
                                 peer_info,
                                 ForkInfo(fork_height, fork_height, header_hash),
                                 ValidationState(ssi, diff, None),
-                                blockchain
+                                blockchain,
                             )
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
