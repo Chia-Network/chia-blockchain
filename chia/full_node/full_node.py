@@ -620,6 +620,7 @@ class FullNode:
                 fork_hash = self.constants.GENESIS_CHALLENGE
             assert fork_hash
             fork_info = ForkInfo(start_height - 1, start_height - 1, fork_hash)
+            blockchain = AugmentedBlockchain(self.blockchain)
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
@@ -638,7 +639,7 @@ class FullNode:
                     )
                     vs = ValidationState(ssi, diff, None)
                     success, state_change_summary = await self.add_block_batch(
-                        response.blocks, peer_info, fork_info, vs
+                        response.blocks, peer_info, fork_info, vs, blockchain
                     )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
@@ -1478,13 +1479,13 @@ class FullNode:
         peer_info: PeerInfo,
         fork_info: ForkInfo,
         vs: ValidationState,  # in-out parameter
+        blockchain: AugmentedBlockchain,
         wp_summaries: Optional[list[SubEpochSummary]] = None,
     ) -> tuple[bool, Optional[StateChangeSummary]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
         pre_validate_start = time.monotonic()
-        blockchain = AugmentedBlockchain(self.blockchain)
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
 
         if len(blocks_to_validate) == 0:
@@ -1547,7 +1548,7 @@ class FullNode:
             # we have already validated this block once, no need to do it again.
             # however, if this block is not part of the main chain, we need to
             # update the fork context with its additions and removals
-            if blockchain.height_to_hash(block.height) == header_hash:
+            if self.blockchain.height_to_hash(block.height) == header_hash:
                 # we're on the main chain, just fast-forward the fork height
                 fork_info.reset(block.height, header_hash)
             else:
@@ -1628,6 +1629,8 @@ class FullNode:
                     vs.ssi = cc_sub_slot.new_sub_slot_iters
                     assert cc_sub_slot.new_difficulty is not None
                     vs.difficulty = cc_sub_slot.new_difficulty
+                    if expected_sub_slot_iters != vs.ssi:
+                        self.log.info(f"block {block.height} fails")
                     assert expected_sub_slot_iters == vs.ssi
                     assert expected_difficulty == vs.difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
