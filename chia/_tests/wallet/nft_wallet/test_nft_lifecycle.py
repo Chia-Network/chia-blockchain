@@ -12,13 +12,12 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertPuzzleAnnouncement
-from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_METADATA_UPDATER,
-    NFT_TRANSFER_PROGRAM_DEFAULT,
+from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
     create_nft_layer_puzzle_with_curry_params,
     metadata_to_program,
 )
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, NFT_TRANSFER_PROGRAM_DEFAULT
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)

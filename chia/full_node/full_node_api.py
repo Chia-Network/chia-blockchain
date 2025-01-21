@@ -878,10 +878,17 @@ class FullNodeAPI:
                         # when the hard fork activates, block generators are
                         # allowed to be serialized with the improved CLVM
                         # serialization format, supporting back-references
+                        start_time = time.monotonic()
                         if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
                             block_generator = simple_solution_generator_backrefs(spend_bundle)
                         else:
                             block_generator = simple_solution_generator(spend_bundle)
+                        end_time = time.monotonic()
+                        duration = end_time - start_time
+                        self.log.log(
+                            logging.INFO if duration < 1 else logging.WARNING,
+                            f"serializing block generator took {duration:0.2f} seconds",
+                        )
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1607,7 +1614,7 @@ class FullNodeAPI:
         return None
 
     @metadata.request(peer_required=True)
-    async def register_interest_in_puzzle_hash(
+    async def register_for_ph_updates(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
         trusted = self.is_trusted(peer)
@@ -1666,11 +1673,11 @@ class FullNodeAPI:
             )
 
         response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
-        msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
+        msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 
     @metadata.request(peer_required=True)
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
         max_items = self.max_subscribe_response_items(peer)
@@ -1686,7 +1693,7 @@ class FullNodeAPI:
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
-        msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
+        msg = make_msg(ProtocolMessageTypes.respond_to_coin_updates, response)
         return msg
 
     @metadata.request()

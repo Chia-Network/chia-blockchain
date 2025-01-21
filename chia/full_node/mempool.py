@@ -501,6 +501,11 @@ class Mempool:
             name = bytes32(row[0])
             fee = int(row[1])
             item = self._items[name]
+
+            current_time = monotonic()
+            if current_time - bundle_creation_start > 1:
+                log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
+                break
             if not item_inclusion_filter(name):
                 continue
             try:

@@ -6,26 +6,21 @@ from typing import Callable, Optional
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
+from chia.wallet.nft_wallet.nft_puzzles import NFT_TRANSFER_PROGRAM_DEFAULT
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-TRANSFER_PROGRAM_MOD = load_clvm_maybe_recompile(
-    "nft_ownership_transfer_program_one_way_claim_with_royalties.clsp",
-    package_or_requirement="chia.wallet.nft_wallet.puzzles",
-)
-
 
 def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
-    if puzzle.mod == TRANSFER_PROGRAM_MOD:
+    if puzzle.mod == NFT_TRANSFER_PROGRAM_DEFAULT:
         return True, list(puzzle.args.as_iter())
     return False, []
 
 
 def puzzle_for_transfer_program(launcher_id: bytes32, royalty_puzzle_hash: bytes32, percentage: uint16) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_HASH)))
-    return TRANSFER_PROGRAM_MOD.curry(
+    return NFT_TRANSFER_PROGRAM_DEFAULT.curry(
         singleton_struct,
         royalty_puzzle_hash,
         percentage,
