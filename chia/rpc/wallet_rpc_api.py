@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-import zlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
 
@@ -2317,25 +2316,6 @@ class WalletRpcApi:
     async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
 
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-        # There's also temp code in test_wallet_rpc.py
-        from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
-
-        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
-        if data is None:
-            raise ValueError("Invalid Offer")
-        decoded = convertbits(list(data), 5, 8, False)
-        decoded_bytes = bytes(decoded)
-        try:
-            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except zlib.error:
-            decompressed_bytes = decoded_bytes
-        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
-            raise ValueError("Old offer format is no longer supported")
-        ###
-
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos, valid_times = offer.summary()
 
@@ -2396,25 +2376,6 @@ class WalletRpcApi:
     async def check_offer_validity(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
 
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-        # There's also temp code in test_wallet_rpc.py
-        from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
-
-        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
-        if data is None:
-            raise ValueError("Invalid Offer")  # pragma: no cover
-        decoded = convertbits(list(data), 5, 8, False)
-        decoded_bytes = bytes(decoded)
-        try:
-            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except zlib.error:
-            decompressed_bytes = decoded_bytes
-        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
-            raise ValueError("Old offer format is no longer supported")
-        ###
-
         offer = Offer.from_bech32(offer_hex)
         peer = self.service.get_full_node_peer()
         return {
@@ -2430,25 +2391,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         offer_hex: str = request["offer"]
-
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-        # There's also temp code in test_wallet_rpc.py
-        from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
-
-        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
-        if data is None:
-            raise ValueError("Invalid Offer")  # pragma: no cover
-        decoded = convertbits(list(data), 5, 8, False)
-        decoded_bytes = bytes(decoded)
-        try:
-            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except zlib.error:
-            decompressed_bytes = decoded_bytes
-        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
-            raise ValueError("Old offer format is no longer supported")
-        ###
 
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
