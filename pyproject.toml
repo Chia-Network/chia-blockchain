@@ -46,6 +46,7 @@ bitstring = ">=4.1.4"  # Binary data management library
 boto3 = ">=1.35.43"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.1"  # bip158-style wallet filters
 chiapos = ">=2.0.7"  # proof of space
+chia-puzzles-py = ">=0.20.1"
 chia_rs = ">=0.18.0"
 chiavdf = ">=1.1.8"  # timelord and vdf verification
 click = ">=8.1.7"  # For the CLI
@@ -101,8 +102,6 @@ miniupnpc = { version = ">=2.2.2", source = "chia", optional = true }
 # 	{version="<=1.24.4", python = "<3.9", optional = true},
 # 	{version=">=1.26.4", python = ">=3.9", optional = true}]
 ruff = { version = ">=0.8.1", optional = true }
-chia-puzzles-py = "^0.20.1"
-
 
 [tool.poetry.extras]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "lxml"]
