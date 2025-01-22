@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Optional, Union
 
+from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH, NFT_INTERMEDIATE_LAUNCHER
 from chia_rs import G1Element
 
 from chia.types.blockchain_format.coin import Coin
@@ -11,7 +12,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH,
@@ -29,14 +29,10 @@ from chia.wallet.util.curry_and_treehash import (
     shatree_pair,
 )
 
-DID_INNERPUZ_MOD = load_clvm_maybe_recompile(
-    "did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles"
-)
-DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
+DID_INNERPUZ_MOD = Program.from_bytes(DID_INNERPUZ)
+DID_INNERPUZ_MOD_HASH = bytes32(DID_INNERPUZ_HASH)
 DID_INNERPUZ_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
-INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
-    "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
+INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
 
 
 def create_innerpuz(
