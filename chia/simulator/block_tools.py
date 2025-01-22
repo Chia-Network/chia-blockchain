@@ -17,6 +17,7 @@ from random import Random
 from typing import Any, Callable, Optional
 
 import anyio
+from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import MEMPOOL_MODE, AugSchemeMPL, G1Element, G2Element, PrivateKey, solution_generator
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
@@ -113,15 +114,10 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 
-GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
-    "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
-)
+DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
-DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
-    "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
-)
+GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSTRAP_GENERATOR)
 
 test_constants = DEFAULT_CONSTANTS.replace(
     MIN_PLOT_SIZE=uint8(18),

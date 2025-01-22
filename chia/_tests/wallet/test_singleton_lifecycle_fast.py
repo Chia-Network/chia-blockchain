@@ -8,6 +8,8 @@ from clvm_tools import binutils
 
 from chia._tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.pools.pool_puzzles import POOL_MEMBER_MOD
+from chia.pools.pool_puzzles import POOL_WAITING_ROOM_MOD as POOL_WAITINGROOM_MOD
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -16,19 +18,16 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.singleton_top_layer import (
+    P2_SINGLETON_OR_DELAYED_MOD as P2_SINGLETON_MOD,
+)
+from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_OR_DELAYED_MOD_HASH as P2_SINGLETON_MOD_HASH
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER, SINGLETON_MOD, SINGLETON_MOD_HASH
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH as LAUNCHER_PUZZLE_HASH
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clsp")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-
-LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
-SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
+LAUNCHER_PUZZLE = SINGLETON_LAUNCHER
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
 ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()
@@ -386,7 +385,7 @@ def claim_p2_singleton(
         p2_singleton_puzzle,
         p2_singleton_spend_type="claim-p2-nft",
         singleton_inner_puzzle_hash=inner_puzzle_hash,
-        p2_singleton_coin_name=p2_singleton_coin_name,
+        p2_singleton_coin_name=bytes32(p2_singleton_coin_name),
     )
     p2_singleton_coin_spend = make_spend(
         p2_singleton_coin, SerializedProgram.from_program(p2_singleton_puzzle), p2_singleton_solution

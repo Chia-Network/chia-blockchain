@@ -5,6 +5,75 @@ from collections.abc import Iterator
 from itertools import chain
 from typing import Any, Optional, Union
 
+from chia_puzzles_py.programs import (
+    DAO_CAT_EVE as DAO_CAT_EVE_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_CAT_LAUNCHER as DAO_CAT_LAUNCHER_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_FINISHED_STATE as DAO_FINISHED_STATE_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_FINISHED_STATE_HASH as DAO_FINISHED_STATE_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_LOCKUP as DAO_LOCKUP_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_LOCKUP_HASH as DAO_LOCKUP_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_PROPOSAL as DAO_PROPOSAL_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_HASH as DAO_PROPOSAL_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_TIMER as DAO_PROPOSAL_TIMER_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_TIMER_HASH as DAO_PROPOSAL_TIMER_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_VALIDATOR as DAO_PROPOSAL_VALIDATOR_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_PROPOSAL_VALIDATOR_HASH as DAO_PROPOSAL_VALIDATOR_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_SPEND_P2_SINGLETON as SPEND_P2_SINGLETON_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_SPEND_P2_SINGLETON_HASH as SPEND_P2_SINGLETON_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_TREASURY as DAO_TREASURY_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_TREASURY_HASH as DAO_TREASURY_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_UPDATE_PROPOSAL as DAO_UPDATE_PROPOSAL_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    DAO_UPDATE_PROPOSAL_HASH as DAO_UPDATE_PROPOSAL_MOD_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    GENESIS_BY_COIN_ID_OR_SINGLETON as DAO_CAT_TAIL_BYTES,
+)
+from chia_puzzles_py.programs import (
+    GENESIS_BY_COIN_ID_OR_SINGLETON_HASH as DAO_CAT_TAIL_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_SINGLETON_AGGREGATOR as P2_SINGLETON_AGGREGATOR_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_SINGLETON_VIA_DELEGATED_PUZZLE as P2_SINGLETON_MOD_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_SINGLETON_VIA_DELEGATED_PUZZLE_HASH as P2_SINGLETON_MOD_HASH_BYTES,
+)
 from clvm.EvalError import EvalError
 
 from chia.types.blockchain_format.coin import Coin
@@ -13,40 +82,54 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules, ProposalType
-from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH,
+)
+from chia.wallet.singleton import (
+    SINGLETON_TOP_LAYER_MOD as SINGLETON_MOD,
+)
+from chia.wallet.singleton import (
+    SINGLETON_TOP_LAYER_MOD_HASH as SINGLETON_MOD_HASH,
+)
 from chia.wallet.singleton import get_singleton_struct_for_id
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
-SINGLETON_MOD_HASH: bytes32 = SINGLETON_MOD.get_tree_hash()
-SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
-SINGLETON_LAUNCHER_HASH: bytes32 = SINGLETON_LAUNCHER.get_tree_hash()
-DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clsp")
-DAO_LOCKUP_MOD_HASH: bytes32 = DAO_LOCKUP_MOD.get_tree_hash()
-DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clsp")
-DAO_PROPOSAL_TIMER_MOD_HASH: bytes32 = DAO_PROPOSAL_TIMER_MOD.get_tree_hash()
-DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clsp")
-DAO_PROPOSAL_MOD_HASH: bytes32 = DAO_PROPOSAL_MOD.get_tree_hash()
-DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clsp")
-DAO_PROPOSAL_VALIDATOR_MOD_HASH: bytes32 = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
-DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clsp")
-DAO_TREASURY_MOD_HASH: bytes32 = DAO_TREASURY_MOD.get_tree_hash()
-SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clsp")
-SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
-DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clsp")
-DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
-DAO_CAT_TAIL: Program = load_clvm(
-    "genesis_by_coin_id_or_singleton.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
-)
-DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
-DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clsp")
-P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
-P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
-DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
-DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
-DAO_CAT_EVE: Program = load_clvm("dao_cat_eve.clsp")
-P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
+DAO_LOCKUP_MOD = Program.from_bytes(DAO_LOCKUP_MOD_BYTES)
+DAO_LOCKUP_MOD_HASH = bytes32(DAO_LOCKUP_MOD_HASH_BYTES)
+
+DAO_PROPOSAL_TIMER_MOD = Program.from_bytes(DAO_PROPOSAL_TIMER_MOD_BYTES)
+DAO_PROPOSAL_TIMER_MOD_HASH = bytes32(DAO_PROPOSAL_TIMER_MOD_HASH_BYTES)
+
+DAO_PROPOSAL_MOD = Program.from_bytes(DAO_PROPOSAL_MOD_BYTES)
+DAO_PROPOSAL_MOD_HASH = bytes32(DAO_PROPOSAL_MOD_HASH_BYTES)
+
+DAO_PROPOSAL_VALIDATOR_MOD = Program.from_bytes(DAO_PROPOSAL_VALIDATOR_MOD_BYTES)
+DAO_PROPOSAL_VALIDATOR_MOD_HASH = bytes32(DAO_PROPOSAL_VALIDATOR_MOD_HASH_BYTES)
+
+DAO_TREASURY_MOD = Program.from_bytes(DAO_TREASURY_MOD_BYTES)
+DAO_TREASURY_MOD_HASH = bytes32(DAO_TREASURY_MOD_HASH_BYTES)
+
+SPEND_P2_SINGLETON_MOD = Program.from_bytes(SPEND_P2_SINGLETON_MOD_BYTES)
+SPEND_P2_SINGLETON_MOD_HASH = bytes32(SPEND_P2_SINGLETON_MOD_HASH_BYTES)
+
+DAO_FINISHED_STATE = Program.from_bytes(DAO_FINISHED_STATE_BYTES)
+DAO_FINISHED_STATE_HASH = bytes32(DAO_FINISHED_STATE_HASH_BYTES)
+
+DAO_CAT_TAIL = Program.from_bytes(DAO_CAT_TAIL_BYTES)
+DAO_CAT_TAIL_HASH = bytes32(DAO_CAT_TAIL_HASH_BYTES)
+
+DAO_CAT_LAUNCHER = Program.from_bytes(DAO_CAT_LAUNCHER_BYTES)
+
+P2_SINGLETON_MOD = Program.from_bytes(P2_SINGLETON_MOD_BYTES)
+P2_SINGLETON_MOD_HASH = bytes32(P2_SINGLETON_MOD_HASH_BYTES)
+
+DAO_UPDATE_PROPOSAL_MOD = Program.from_bytes(DAO_UPDATE_PROPOSAL_MOD_BYTES)
+DAO_UPDATE_PROPOSAL_MOD_HASH = bytes32(DAO_UPDATE_PROPOSAL_MOD_HASH_BYTES)
+
+DAO_CAT_EVE = Program.from_bytes(DAO_CAT_EVE_BYTES)
+
+P2_SINGLETON_AGGREGATOR_MOD = Program.from_bytes(P2_SINGLETON_AGGREGATOR_MOD_BYTES)
 
 log = logging.Logger(__name__)
 

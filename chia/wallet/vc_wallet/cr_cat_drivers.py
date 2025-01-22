@@ -6,6 +6,16 @@ from dataclasses import dataclass, replace
 from enum import IntEnum
 from typing import Optional, TypeVar
 
+from chia_puzzles_py.programs import (
+    CONDITIONS_W_FEE_ANNOUNCE,
+    FLAG_PROOFS_CHECKER,
+)
+from chia_puzzles_py.programs import (
+    CREDENTIAL_RESTRICTION as CREDENTIAL_RESTRICTION_BYTES,
+)
+from chia_puzzles_py.programs import (
+    CREDENTIAL_RESTRICTION_HASH as CREDENTIAL_RESTRICTION_HASH_BYTES,
+)
 from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -19,7 +29,6 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
@@ -35,22 +44,10 @@ from chia.wallet.vc_wallet.vc_drivers import (
 
 # Mods
 
-CREDENTIAL_RESTRICTION: Program = load_clvm_maybe_recompile(
-    "credential_restriction.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
-    include_standard_libraries=True,
-)
-CREDENTIAL_RESTRICTION_HASH: bytes32 = CREDENTIAL_RESTRICTION.get_tree_hash()
-PROOF_FLAGS_CHECKER: Program = load_clvm_maybe_recompile(
-    "flag_proofs_checker.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
-    include_standard_libraries=True,
-)
-PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
-    "conditions_w_fee_announce.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
-    include_standard_libraries=True,
-)
+CREDENTIAL_RESTRICTION: Program = Program.from_bytes(CREDENTIAL_RESTRICTION_BYTES)
+CREDENTIAL_RESTRICTION_HASH: bytes32 = bytes32(CREDENTIAL_RESTRICTION_HASH_BYTES)
+PROOF_FLAGS_CHECKER: Program = Program.from_bytes(FLAG_PROOFS_CHECKER)
+PENDING_VC_ANNOUNCEMENT: Program = Program.from_bytes(CONDITIONS_W_FEE_ANNOUNCE)
 CREDENTIAL_STRUCT: Program = Program.to(
     (
         (

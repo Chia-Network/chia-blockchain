@@ -124,14 +124,14 @@ jobs:
           {
             echo "SM_HOST=${{ secrets.SM_HOST }}"
             echo "SM_API_KEY=${{ secrets.SM_API_KEY }}"
-            echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12"
+            echo "SM_CLIENT_CERT_FILE=D:/Certificate_pkcs12.p12"
             echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}"
             echo "SM_CODE_SIGNING_CERT_SHA1_HASH=${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}"
           } >> "$GITHUB_ENV"
           {
-            echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit"
-            echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools"
-            echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools"
+            echo "C:/Program Files (x86)/Windows Kits/10/App Certification Kit"
+            echo "C:/Program Files (x86)/Microsoft SDKs/Windows/v10.0A/bin/NETFX 4.8 Tools"
+            echo "C:/Program Files/DigiCert/DigiCert One Signing Manager Tools"
           } >> "$GITHUB_PATH"
 
       - name: Setup SSM KSP on windows latest
