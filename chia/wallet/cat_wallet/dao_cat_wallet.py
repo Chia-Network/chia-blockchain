@@ -32,7 +32,6 @@ from chia.wallet.dao_wallet.dao_utils import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
@@ -45,10 +44,6 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
-
-CAT_MOD_HASH = CAT_MOD.get_tree_hash()
-CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
-QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
 class DAOCATWallet:

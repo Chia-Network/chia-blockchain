@@ -316,14 +316,16 @@ class FullNode:
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
-                assert len(pending_tx.items) == 0  # no pending transactions when starting up
+                    assert len(pending_tx.items) == 0  # no pending transactions when starting up
 
-                full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
-                assert full_peak is not None
-                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
-                ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                    full_peak, state_change_summary, None
-                )
+                    full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
+                    assert full_peak is not None
+                    state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
+                    # Must be called under priority_mutex
+                    ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                        full_peak, state_change_summary, None
+                    )
+                # Can be called outside of priority_mutex
                 await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
             if self.config["send_uncompact_interval"] != 0:
                 sanitize_weight_proof_only = False
@@ -648,7 +650,6 @@ class FullNode:
                                 state_change_summary,
                                 peer,
                             )
-                            await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
                         except Exception:
                             # Still do post processing after cancel (or exception)
                             peak_fb = await self.blockchain.get_full_peak()
@@ -657,6 +658,9 @@ class FullNode:
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
+                if state_change_summary is not None and peak_fb is not None:
+                    # Call outside of priority_mutex to encourage concurrency
+                    await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
         finally:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
@@ -1308,7 +1312,6 @@ class FullNode:
                             await self.prevalidate_blocks(
                                 blockchain,
                                 [block],
-                                peer.peer_info,
                                 vs,
                                 summaries,
                             )
@@ -1489,7 +1492,6 @@ class FullNode:
         futures = await self.prevalidate_blocks(
             blockchain,
             blocks_to_validate,
-            peer_info,
             copy.copy(vs),
             wp_summaries,
         )
@@ -1558,7 +1560,6 @@ class FullNode:
         self,
         blockchain: AugmentedBlockchain,
         blocks_to_validate: list[FullBlock],
-        peer_info: PeerInfo,
         vs: ValidationState,
         wp_summaries: Optional[list[SubEpochSummary]] = None,
     ) -> Sequence[Awaitable[PreValidationResult]]:
@@ -1568,7 +1569,6 @@ class FullNode:
         Args:
             blockchain:
             blocks_to_validate:
-            peer_info:
             vs: The ValidationState for the first block in the batch. This is an in-out
                 parameter. It will be updated to be the validation state for the next
                 batch of blocks.
@@ -1626,8 +1626,14 @@ class FullNode:
                     vs.difficulty = cc_sub_slot.new_difficulty
                     assert expected_sub_slot_iters == vs.ssi
                     assert expected_difficulty == vs.difficulty
+            block_rec = blockchain.block_record(block.header_hash)
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], vs.ssi, fork_info, prev_ses_block=vs.prev_ses_block
+                block,
+                pre_validation_results[i],
+                vs.ssi,
+                fork_info,
+                prev_ses_block=vs.prev_ses_block,
+                block_record=block_rec,
             )
             if error is None:
                 blockchain.remove_extra_block(header_hash)
@@ -1727,7 +1733,10 @@ class FullNode:
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                     peak_fb, state_change_summary, None
                 )
-                await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
+
+        if peak_fb is not None:
+            # Call outside of priority_mutex to encourage concurrency
+            await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)

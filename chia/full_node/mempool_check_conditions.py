@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
 from chia_rs import (
     get_flags_for_height_and_constants,
     run_chia_program,
@@ -20,11 +21,9 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
-from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 
-DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
-    "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
-)
+DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
+
 
 log = logging.getLogger(__name__)
 

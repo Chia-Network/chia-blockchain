@@ -24,6 +24,8 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
+    CAT_MOD_HASH_HASH,
+    QUOTED_CAT_MOD_HASH,
     SpendableCAT,
     construct_cat_puzzle,
     match_cat_puzzle,
@@ -48,7 +50,7 @@ from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
@@ -61,12 +63,6 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
-
-# This should probably not live in this file but it's for experimental right now
-
-CAT_MOD_HASH = CAT_MOD.get_tree_hash()
-CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
-QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
 def not_ephemeral_additions(sp: WalletSpendBundle) -> list[Coin]:
@@ -433,7 +429,9 @@ class CATWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle_hash = self.standard_wallet.puzzle_hash_for_pk(pubkey)
         limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
-        return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
+        return curry_and_treehash(
+            QUOTED_CAT_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash
+        )
 
     async def get_cat_puzzle_hash(self, new: bool) -> bytes32:
         if new:

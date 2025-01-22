@@ -4,7 +4,7 @@ import hashlib
 import itertools
 from dataclasses import dataclass
 from random import Random
-from typing import Generic, Protocol, TypeVar, Union, final
+from typing import Generic, TypeVar, Union, final
 
 import chia_rs.datalayer
 import pytest
@@ -24,7 +24,6 @@ from chia.data_layer.util.merkle_blob import (
     RawLeafMerkleNode,
     RawMerkleNodeProtocol,
     TreeIndex,
-    spacing,
     data_size,
     metadata_size,
     pack_raw_node,
@@ -314,7 +313,7 @@ def test_insert_delete_loads_all_keys(merkle_types: MerkleTypes) -> None:
 
     assert merkle_blob.get_keys_values() == keys_values
 
-    merkle_blob_2 = merkle_types.blob(blob=merkle_blob.blob)
+    merkle_blob_2 = merkle_types.blob(blob=bytearray(merkle_blob.blob))
     for seed in range(num_keys, num_keys + extra_keys):
         key, value = generate_kvid(seed)
         hash = generate_hash(seed)
@@ -323,7 +322,7 @@ def test_insert_delete_loads_all_keys(merkle_types: MerkleTypes) -> None:
         lineage = merkle_blob_2.get_lineage_with_indexes(TreeIndex(key_index))
         assert len(lineage) <= max_height
         keys_values[key] = value
-    assert merkle_blob.get_keys_values() == keys_values
+    assert merkle_blob_2.get_keys_values() == keys_values
 
 
 def test_small_insert_deletes(merkle_types: MerkleTypes) -> None:
@@ -497,7 +496,7 @@ def test_get_nodes(merkle_types: MerkleTypes) -> None:
     merkle_blob.calculate_lazy_hashes()
     all_nodes = merkle_blob.get_nodes_with_indexes()
     for index, node in all_nodes:
-        if isinstance(node, merkle_types.internal):
+        if isinstance(node, (RawInternalMerkleNode, chia_rs.datalayer.InternalNode)):
             left = merkle_blob.get_raw_node(node.left)
             right = merkle_blob.get_raw_node(node.right)
             assert left.parent == index
@@ -507,7 +506,7 @@ def test_get_nodes(merkle_types: MerkleTypes) -> None:
             assert node.left not in seen_indexes
             assert node.right not in seen_indexes
         else:
-            assert isinstance(node, merkle_types.leaf)
+            assert isinstance(node, (RawLeafMerkleNode, chia_rs.datalayer.LeafNode))
             seen_keys.add(node.key)
         seen_indexes.add(index)
 

@@ -3,6 +3,14 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from chia_puzzles_py.programs import (
+    P2_SINGLETON_OR_DELAYED_PUZHASH,
+    P2_SINGLETON_OR_DELAYED_PUZHASH_HASH,
+    POOL_MEMBER_INNERPUZ,
+    POOL_MEMBER_INNERPUZ_HASH,
+    POOL_WAITINGROOM_INNERPUZ,
+    POOL_WAITINGROOM_INNERPUZ_HASH,
+)
 from chia_rs import G1Element
 from clvm.casts import int_to_bytes
 
@@ -15,29 +23,27 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint32, uint64
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
+from chia.wallet.puzzles.singleton_top_layer import (
+    SINGLETON_LAUNCHER_HASH,
+    SINGLETON_MOD,
+    SINGLETON_MOD_HASH,
+    puzzle_for_singleton,
+)
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
-SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer.clsp")
-POOL_WAITING_ROOM_MOD = load_clvm_maybe_recompile(
-    "pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles"
-)
-POOL_MEMBER_MOD = load_clvm_maybe_recompile("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
+POOL_WAITING_ROOM_MOD = Program.from_bytes(POOL_WAITINGROOM_INNERPUZ)
+POOL_MEMBER_MOD = Program.from_bytes(POOL_MEMBER_INNERPUZ)
+P2_SINGLETON_MOD = Program.from_bytes(P2_SINGLETON_OR_DELAYED_PUZHASH)
 POOL_OUTER_MOD = SINGLETON_MOD
 
-POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()
-POOL_WAITING_ROOM_HASH = POOL_WAITING_ROOM_MOD.get_tree_hash()
-P2_SINGLETON_HASH = P2_SINGLETON_MOD.get_tree_hash()
+POOL_MEMBER_HASH = bytes32(POOL_MEMBER_INNERPUZ_HASH)
+POOL_WAITING_ROOM_HASH = bytes32(POOL_WAITINGROOM_INNERPUZ_HASH)
+P2_SINGLETON_HASH = bytes32(P2_SINGLETON_OR_DELAYED_PUZHASH_HASH)
 P2_SINGLETON_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_SINGLETON_HASH)
-POOL_OUTER_MOD_HASH = POOL_OUTER_MOD.get_tree_hash()
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
-SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+POOL_OUTER_MOD_HASH = SINGLETON_MOD_HASH
 SINGLETON_LAUNCHER_HASH_TREE_HASH = shatree_atom(SINGLETON_LAUNCHER_HASH)
-SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
 
 SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 

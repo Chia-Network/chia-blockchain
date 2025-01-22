@@ -726,7 +726,7 @@ macOS 11 (Big Sur) is deprecated. This release (2.4.0) will be the last release 
 - Only subscribe to inner wallet puzzle hashes
 - Rpc: Fix and test `WalletRpcApi.get_coin_records_by_names`
 - Full_node: `uint32.MAXIMUM_EXCLUSIVE` -> `uint32.MAXIMUM`
-- Full_node: Don't send duplicates in `register_interest_in_puzzle_hash`
+- Full_node: Don't send duplicates in `register_for_ph_updates`
 - Wallet: Deduplicate coin states from peers
 - Build: include `puzzles` packages (#15508)
 - Handle VC syncing exceptions better

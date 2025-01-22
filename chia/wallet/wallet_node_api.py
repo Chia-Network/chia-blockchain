@@ -187,11 +187,11 @@ class WalletNodeAPI:
     #       subclass, as you might expect it wouldn't be.  Maybe we can get the
     #       protocol working right back at the api.request definition.
     @metadata.request()  # type: ignore[type-var]
-    async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):
+    async def respond_to_ph_updates(self, request: wallet_protocol.RespondToPhUpdates):
         pass
 
     @metadata.request()
-    async def respond_to_coin_update(self, request: wallet_protocol.RespondToCoinUpdates):
+    async def respond_to_coin_updates(self, request: wallet_protocol.RespondToCoinUpdates):
         pass
 
     @metadata.request()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
-from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, run_chia_program, tree_hash
+from chia_rs import MEMPOOL_MODE, run_chia_program, tree_hash
 from clvm.casts import int_from_bytes
 from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
@@ -45,7 +45,7 @@ class Program(SExp):
             b"\x01",
             blob,
             50,
-            ALLOW_BACKREFS,
+            0,
         )
         return cls.to(ret)
 
