@@ -11,7 +11,7 @@ from collections.abc import Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Optional
+from typing import Any, BinaryIO, Callable, Optional
 
 import aiohttp
 import pytest
@@ -41,7 +41,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
-from chia.data_layer.util.merkle_blob import RawInternalMerkleNode, RawLeafMerkleNode
+from chia.data_layer.util.merkle_blob import MerkleBlob, RawInternalMerkleNode, RawLeafMerkleNode, TreeIndex
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -1362,11 +1362,9 @@ async def test_data_server_files(
             root = await data_store_server.get_tree_root(store_id)
             await data_store_server.add_node_hashes(store_id)
             if test_delta == "old":
-                filename = get_delta_filename_path(
-                    tmp_path, store_id, root.node_hash, root.generation, group_files_by_store
-                )
-                filename.parent.mkdir(parents=True, exist_ok=True)
                 node_hash = root.node_hash if root.node_hash is not None else bytes32.zeros
+                filename = get_delta_filename_path(tmp_path, store_id, node_hash, root.generation, group_files_by_store)
+                filename.parent.mkdir(parents=True, exist_ok=True)
                 with open(filename, "xb") as writer:
                     await write_tree_to_file_old_format(data_store_server, root, node_hash, store_id, writer)
             else:
