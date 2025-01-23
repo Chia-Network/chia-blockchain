@@ -27,6 +27,7 @@ from chia.data_layer.data_layer_util import (
     ProofOfInclusion,
     ProofOfInclusionLayer,
     Root,
+    SerializedNode,
     ServerInfo,
     Side,
     Status,
@@ -40,7 +41,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
-from chia.data_layer.util.merkle_blob import RawLeafMerkleNode
+from chia.data_layer.util.merkle_blob import RawInternalMerkleNode, RawLeafMerkleNode
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -1279,16 +1280,55 @@ async def test_server_http_ban(
     assert sinfo.ignore_till == start_timestamp  # we don't increase on second failure
 
 
-@pytest.mark.parametrize(
-    "test_delta",
-    [True, False],
-)
+async def write_tree_to_file_old_format(
+    data_store: DataStore,
+    root: Root,
+    node_hash: bytes32,
+    store_id: bytes32,
+    writer: BinaryIO,
+    merkle_blob: Optional[MerkleBlob] = None,
+    hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
+) -> None:
+    if node_hash == bytes32.zeros:
+        return
+
+    if merkle_blob is None:
+        merkle_blob = await data_store.get_merkle_blob(root.node_hash)
+    if hash_to_index is None:
+        hash_to_index = merkle_blob.get_hashes_indexes()
+
+    generation = await data_store.get_first_generation(node_hash, store_id)
+    # Root's generation is not the first time we see this hash, so it's not a new delta.
+    if root.generation != generation:
+        return
+
+    raw_index = hash_to_index[node_hash]
+    raw_node = merkle_blob.get_raw_node(raw_index)
+
+    to_write = b""
+    if isinstance(raw_node, RawInternalMerkleNode):
+        left_hash = merkle_blob.get_hash_at_index(raw_node.left)
+        right_hash = merkle_blob.get_hash_at_index(raw_node.right)
+        await write_tree_to_file_old_format(data_store, root, left_hash, store_id, writer, merkle_blob, hash_to_index)
+        await write_tree_to_file_old_format(data_store, root, right_hash, store_id, writer, merkle_blob, hash_to_index)
+        to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
+    elif isinstance(raw_node, RawLeafMerkleNode):
+        node = await data_store.get_terminal_node(raw_node.key, raw_node.value, store_id)
+        to_write = bytes(SerializedNode(True, node.key, node.value))
+    else:
+        raise Exception(f"Node is neither InternalNode nor TerminalNode: {raw_node}")
+
+    writer.write(len(to_write).to_bytes(4, byteorder="big"))
+    writer.write(to_write)
+
+
+@pytest.mark.parametrize(argnames="test_delta", argvalues=["full", "delta", "old"])
 @boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
 @pytest.mark.anyio
 async def test_data_server_files(
     data_store: DataStore,
     store_id: bytes32,
-    test_delta: bool,
+    test_delta: str,
     group_files_by_store: bool,
     tmp_path: Path,
 ) -> None:
@@ -1321,16 +1361,25 @@ async def test_data_server_files(
             await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(store_id)
             await data_store_server.add_node_hashes(store_id)
-            await write_files_for_root(
-                data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
-            )
+            if test_delta == "old":
+                filename = get_delta_filename_path(
+                    tmp_path, store_id, root.node_hash, root.generation, group_files_by_store
+                )
+                filename.parent.mkdir(parents=True, exist_ok=True)
+                node_hash = root.node_hash if root.node_hash is not None else bytes32.zeros
+                with open(filename, "xb") as writer:
+                    await write_tree_to_file_old_format(data_store_server, root, node_hash, store_id, writer)
+            else:
+                await write_files_for_root(
+                    data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
+                )
             roots.append(root)
 
     generation = 1
     assert len(roots) == num_batches
     for root in roots:
         assert root.node_hash is not None
-        if not test_delta:
+        if test_delta == "full":
             filename = get_full_tree_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
             assert filename.exists()
         else:
