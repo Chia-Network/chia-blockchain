@@ -44,6 +44,7 @@ class MerkleTypes:
     # TODO: metadata as well
     internal: type[Union[RawInternalMerkleNode, chia_rs.datalayer.InternalNode]]
     leaf: type[Union[RawLeafMerkleNode, chia_rs.datalayer.LeafNode]]
+    # metadata: type[Union[NodeMetadata, chia_rs.datalayer.NodeMetadata]]
     blob: type[Union[MerkleBlob, chia_rs.datalayer.MerkleBlob]]
     block_size: int
     data_size: int
@@ -190,7 +191,7 @@ def test_raw_node_to_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> N
     assert blob == case.packed
 
 
-def _test_merkle_blob_one_leaf_loads(merkle_types: MerkleTypes) -> None:
+def test_merkle_blob_one_leaf_loads(merkle_types: MerkleTypes) -> None:
     # TODO: need to persist reference data
     leaf = merkle_types.leaf(
         hash=bytes32(range(32)),
@@ -198,13 +199,17 @@ def _test_merkle_blob_one_leaf_loads(merkle_types: MerkleTypes) -> None:
         key=KVId(int64(0x0405060708090A0B)),
         value=KVId(int64(0x0405060708090A1B)),
     )
-    blob = bytearray(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
+
+    # TODO: building the metadata from python regardless, don't do this
+    metadata = NodeMetadata(type=NodeType.leaf, dirty=False)
+
+    blob = bytearray(bytes(metadata) + bytes(leaf))
 
     merkle_blob = merkle_types.blob(blob=blob)
     assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == leaf
 
 
-def _test_merkle_blob_two_leafs_loads(merkle_types: MerkleTypes) -> None:
+def test_merkle_blob_two_leafs_loads(merkle_types: MerkleTypes) -> None:
     # TODO: break this test down into some reusable data and multiple tests
     # TODO: need to persist reference data
     root = merkle_types.internal(
@@ -226,25 +231,27 @@ def _test_merkle_blob_two_leafs_loads(merkle_types: MerkleTypes) -> None:
         value=KVId(int64(0x1415161718191A2B)),
     )
     blob = bytearray()
-    blob.extend(NodeMetadata(type=NodeType.internal, dirty=True).pack() + pack_raw_node(root))
-    blob.extend(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(left_leaf))
-    blob.extend(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(right_leaf))
+
+    # TODO: building the metadata from python regardless, don't do this
+    blob.extend(bytes(NodeMetadata(type=NodeType.internal, dirty=True)) + bytes(root))
+    blob.extend(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + bytes(left_leaf))
+    blob.extend(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + bytes(right_leaf))
 
     merkle_blob = merkle_types.blob(blob=blob)
     assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == root
-    assert merkle_blob.get_raw_node(root.left) == left_leaf
-    assert merkle_blob.get_raw_node(root.right) == right_leaf
+    assert merkle_blob.get_raw_node(TreeIndex(root.left)) == left_leaf
+    assert merkle_blob.get_raw_node(TreeIndex(root.right)) == right_leaf
     assert left_leaf.parent is not None
-    assert merkle_blob.get_raw_node(left_leaf.parent) == root
+    assert merkle_blob.get_raw_node(TreeIndex(left_leaf.parent)) == root
     assert right_leaf.parent is not None
-    assert merkle_blob.get_raw_node(right_leaf.parent) == root
+    assert merkle_blob.get_raw_node(TreeIndex(right_leaf.parent)) == root
 
     assert merkle_blob.get_lineage_with_indexes(TreeIndex(uint32(0))) == [(0, root)]
     expected: list[tuple[TreeIndex, RawMerkleNodeProtocol]] = [
         (TreeIndex(uint32(1)), left_leaf),
         (TreeIndex(uint32(0)), root),
     ]
-    assert merkle_blob.get_lineage_with_indexes(root.left) == expected
+    assert merkle_blob.get_lineage_with_indexes(TreeIndex(root.left)) == expected
 
     merkle_blob.calculate_lazy_hashes()
     son_hash = bytes32(range(32))
@@ -354,7 +361,7 @@ def test_small_insert_deletes(merkle_types: MerkleTypes) -> None:
             assert not remaining_keys_values
 
 
-def _test_proof_of_inclusion_merkle_blob(merkle_types: MerkleTypes) -> None:
+def test_proof_of_inclusion_merkle_blob(merkle_types: MerkleTypes) -> None:
     num_repeats = 10
     seed = 0
 
@@ -497,8 +504,8 @@ def test_get_nodes(merkle_types: MerkleTypes) -> None:
     all_nodes = merkle_blob.get_nodes_with_indexes()
     for index, node in all_nodes:
         if isinstance(node, (RawInternalMerkleNode, chia_rs.datalayer.InternalNode)):
-            left = merkle_blob.get_raw_node(node.left)
-            right = merkle_blob.get_raw_node(node.right)
+            left = merkle_blob.get_raw_node(TreeIndex(node.left))
+            right = merkle_blob.get_raw_node(TreeIndex(node.right))
             assert left.parent == index
             assert right.parent == index
             assert bytes32(node.hash) == internal_hash(bytes32(left.hash), bytes32(right.hash))
