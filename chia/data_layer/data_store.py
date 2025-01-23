@@ -256,7 +256,8 @@ class DataStore:
         if missing_hashes:
             async with self.db_wrapper.reader() as reader:
                 cursor = await reader.execute(
-                    "SELECT MAX(generation) FROM nodes WHERE store_id = ?", (store_id,),
+                    "SELECT MAX(generation) FROM nodes WHERE store_id = ?",
+                    (store_id,),
                 )
                 row = await cursor.fetchone()
                 if row is None or row[0] is None:
