@@ -174,6 +174,11 @@ class DataStore:
                     CREATE INDEX IF NOT EXISTS ids_blob_index ON ids(blob, store_id)
                     """
                 )
+                await writer.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS nodes_generation_index ON nodes(generation)
+                    """
+                )
 
             yield self
 
@@ -232,18 +237,46 @@ class DataStore:
                 if node_hash not in internal_nodes and node_hash not in terminal_nodes:
                     missing_hashes.append(node_hash)
 
-        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
-        found_hashes: set[bytes32] = set()
+        root = await self.get_tree_root(store_id=store_id)
+        latest_blob = await self.get_merkle_blob(root.node_hash, read_only=True)
+        known_hashes = {}
+        if not latest_blob.empty():
+            nodes = latest_blob.get_nodes_with_indexes()
+            known_hashes = {node.hash: index for index, node in nodes}
 
-        async with self.db_wrapper.reader() as reader:
-            for batch in to_batches(missing_hashes, batch_size):
-                placeholders = ",".join(["?"] * len(batch.entries))
-                query = f"""
-                    SELECT hash, root_hash, idx
-                    FROM nodes
-                    WHERE store_id = ? AND hash IN ({placeholders})
-                    LIMIT {len(placeholders)}
-                """
+        new_missing_hashes: list[bytes32] = []
+        for hash in missing_hashes:
+            if hash in known_hashes:
+                assert root.node_hash is not None
+                merkle_blob_queries[root.node_hash].append(known_hashes[hash])
+            else:
+                new_missing_hashes.append(hash)
+
+        missing_hashes = new_missing_hashes
+        if missing_hashes:
+            async with self.db_wrapper.reader() as reader:
+                cursor = await reader.execute(
+                    "SELECT MAX(generation) FROM nodes WHERE store_id = ?", (store_id,),
+                )
+                row = await cursor.fetchone()
+                if row is None or row[0] is None:
+                    current_generation = 0
+                else:
+                    current_generation = row[0]
+
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+
+        while missing_hashes:
+            found_hashes: set[bytes32] = set()
+            async with self.db_wrapper.reader() as reader:
+                for batch in to_batches(missing_hashes, batch_size):
+                    placeholders = ",".join(["?"] * len(batch.entries))
+                    query = f"""
+                        SELECT hash, root_hash, idx
+                        FROM nodes
+                        WHERE store_id = ? AND hash IN ({placeholders})
+                        LIMIT {len(placeholders)}
+                    """
 
                 async with reader.execute(query, (store_id, *batch.entries)) as cursor:
                     rows = await cursor.fetchall()
@@ -256,8 +289,15 @@ class DataStore:
                         merkle_blob_queries[root_hash_blob].append(index)
                         found_hashes.add(node_hash)
 
-        if found_hashes != set(missing_hashes):
-            raise Exception("Invalid delta file, cannot find all the required hashes")
+            missing_hashes = [hash for hash in missing_hashes if hash not in found_hashes]
+            if missing_hashes:
+                if current_generation < root.generation:
+                    current_generation += 1
+                else:
+                    raise Exception("Invalid delta file, cannot find all the required hashes")
+
+                await self.add_node_hashes(store_id, current_generation)
+                log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
         for root_hash_blob, indexes in merkle_blob_queries.items():
             merkle_blob = await self.get_merkle_blob(root_hash_blob, read_only=True)
@@ -272,7 +312,6 @@ class DataStore:
 
         merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
-        await self.add_node_hashes(store_id)
 
     async def migrate_db(self, server_files_location: Path) -> None:
         async with self.db_wrapper.reader() as reader:
@@ -355,7 +394,12 @@ class DataStore:
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
 
-    async def get_merkle_blob(self, root_hash: Optional[bytes32], read_only: bool = False) -> MerkleBlob:
+    async def get_merkle_blob(
+        self,
+        root_hash: Optional[bytes32],
+        read_only: bool = False,
+        skip_cache: bool = False,
+    ) -> MerkleBlob:
         if root_hash is None:
             return MerkleBlob(blob=bytearray())
 
@@ -377,7 +421,10 @@ class DataStore:
                 raise MerkleBlobNotFoundError(root_hash=root_hash)
 
             merkle_blob = MerkleBlob(blob=bytearray(row["blob"]))
-            self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+
+            if not skip_cache:
+                self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+
             return merkle_blob
 
     async def insert_root_from_merkle_blob(
@@ -549,12 +596,12 @@ class DataStore:
                 (store_id, hash, root_hash, generation, index),
             )
 
-    async def add_node_hashes(self, store_id: bytes32) -> None:
-        root = await self.get_tree_root(store_id=store_id)
+    async def add_node_hashes(self, store_id: bytes32, generation: Optional[int] = None) -> None:
+        root = await self.get_tree_root(store_id=store_id, generation=generation)
         if root.node_hash is None:
             return
 
-        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash, read_only=True, skip_cache=True)
         hash_to_index = merkle_blob.get_hashes_indexes()
 
         existing_hashes = await self.get_existing_hashes(list(hash_to_index.keys()), store_id)
@@ -657,8 +704,6 @@ class DataStore:
                     root.generation,
                 ),
             )
-            if root.node_hash is not None and status == Status.COMMITTED:
-                await self.add_node_hashes(root.store_id)
 
     async def check(self) -> None:
         for check in self._checks:
@@ -1401,6 +1446,7 @@ class DataStore:
         writer: BinaryIO,
         merkle_blob: Optional[MerkleBlob] = None,
         hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
+        existing_hashes: Optional[set[bytes32]] = None,
     ) -> None:
         if node_hash == bytes32.zeros:
             return
@@ -1409,11 +1455,15 @@ class DataStore:
             merkle_blob = await self.get_merkle_blob(root.node_hash)
         if hash_to_index is None:
             hash_to_index = merkle_blob.get_hashes_indexes()
+        if existing_hashes is None:
+            previous_generation = max(0, root.generation - 1)
+            previous_root = await self.get_tree_root(store_id=store_id, generation=previous_generation)
+            previous_merkle_blob = await self.get_merkle_blob(previous_root.node_hash)
+            previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
+            existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
 
         if deltas_only:
-            generation = await self.get_first_generation(node_hash, store_id)
-            # Root's generation is not the first time we see this hash, so it's not a new delta.
-            if root.generation != generation:
+            if node_hash in existing_hashes:
                 return
 
         raw_index = hash_to_index[node_hash]
@@ -1423,8 +1473,12 @@ class DataStore:
         if isinstance(raw_node, RawInternalMerkleNode):
             left_hash = merkle_blob.get_hash_at_index(raw_node.left)
             right_hash = merkle_blob.get_hash_at_index(raw_node.right)
-            await self.write_tree_to_file(root, left_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index)
-            await self.write_tree_to_file(root, right_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index)
+            await self.write_tree_to_file(
+                root, left_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index, existing_hashes
+            )
+            await self.write_tree_to_file(
+                root, right_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index, existing_hashes
+            )
             to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
         elif isinstance(raw_node, RawLeafMerkleNode):
             node = await self.get_terminal_node(raw_node.key, raw_node.value, store_id)
