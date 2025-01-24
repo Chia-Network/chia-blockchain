@@ -4,6 +4,7 @@ import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -69,13 +70,18 @@ def add_block(
     )
 
 
+default_config: dict[str, Any] = {
+    "full_node": {"selected_network": "local", "network_overrides": {"constants": {"local": {}}}}
+}
+
+
 def test_db_validate_wrong_version() -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 3)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
         assert "Database has the wrong version (3 expected 2)" in str(execinfo.value)
 
 
@@ -85,7 +91,7 @@ def test_db_validate_missing_peak_table() -> None:
             make_version(conn, 2)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
         assert "Database is missing current_peak table" in str(execinfo.value)
 
 
@@ -98,7 +104,7 @@ def test_db_validate_missing_peak_block() -> None:
             make_block_table(conn)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
         assert "Database is missing the peak block" in str(execinfo.value)
 
 
@@ -122,10 +128,10 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
 
         if invalid_in_chain:
             with pytest.raises(RuntimeError) as execinfo:
-                validate_v2(db_file, validate_blocks=False)
+                validate_v2(db_file, config=default_config, validate_blocks=False)
             assert " (height: 96) is orphaned, but in_main_chain is set" in str(execinfo.value)
         else:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
 
 
 async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
@@ -158,5 +164,11 @@ async def test_db_validate_default_1000_blocks(default_1000_blocks: list[FullBlo
         # we expect everything to be valid except this is a test chain, so it
         # doesn't have the correct genesis challenge
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=True)
+            validate_v2(db_file, config=default_config, validate_blocks=True)
         assert "Blockchain has invalid genesis challenge" in str(execinfo.value)
+
+        new_config = default_config.copy()
+        new_config["full_node"]["network_overrides"]["constants"]["local"]["AGG_SIG_ME_ADDITIONAL_DATA"] = (
+            default_1000_blocks[0].foliage.prev_block_hash.hex()
+        )
+        validate_v2(db_file, config=new_config, validate_blocks=True)
