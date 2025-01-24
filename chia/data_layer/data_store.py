@@ -42,11 +42,13 @@ from chia.data_layer.data_layer_util import (
     unspecified,
 )
 from chia.data_layer.util.merkle_blob import (
-    KVId,
+    KeyId,
+    KeyOrValueId,
     MerkleBlob,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     TreeIndex,
+    ValueId,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
@@ -191,7 +193,7 @@ class DataStore:
         filename: Path,
     ) -> None:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
-        terminal_nodes: dict[bytes32, tuple[KVId, KVId]] = {}
+        terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
 
         with open(filename, "rb") as reader:
             while True:
@@ -409,7 +411,7 @@ class DataStore:
 
         return await self._insert_root(store_id, root_hash, status)
 
-    async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KVId]:
+    async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT kv_id FROM ids WHERE blob = ? AND store_id = ?",
@@ -423,9 +425,9 @@ class DataStore:
             if row is None:
                 return None
 
-            return KVId(row[0])
+            return KeyId(row[0])
 
-    async def get_blob_from_kvid(self, kv_id: KVId, store_id: bytes32) -> Optional[bytes]:
+    async def get_blob_from_kvid(self, kv_id: Union[KeyId, ValueId], store_id: bytes32) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT blob FROM ids WHERE kv_id = ? AND store_id = ?",
@@ -441,7 +443,7 @@ class DataStore:
 
             return bytes(row[0])
 
-    async def get_terminal_node(self, kid: KVId, vid: KVId, store_id: bytes32) -> TerminalNode:
+    async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid, store_id)
         value = await self.get_blob_from_kvid(vid, store_id)
         if key is None or value is None:
@@ -449,7 +451,7 @@ class DataStore:
 
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
-    async def add_kvid(self, blob: bytes, store_id: bytes32) -> KVId:
+    async def add_kvid(self, blob: bytes, store_id: bytes32) -> KeyOrValueId:
         kv_id = await self.get_kvid(blob, store_id)
         if kv_id is not None:
             return kv_id
@@ -468,9 +470,9 @@ class DataStore:
             raise Exception("Internal error")
         return kv_id
 
-    async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> tuple[KVId, KVId]:
-        kid = await self.add_kvid(key, store_id)
-        vid = await self.add_kvid(value, store_id)
+    async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> tuple[KeyId, ValueId]:
+        kid = KeyId(await self.add_kvid(key, store_id))
+        vid = ValueId(await self.add_kvid(value, store_id))
         hash = leaf_hash(key, value)
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
@@ -484,7 +486,7 @@ class DataStore:
             )
         return (kid, vid)
 
-    async def get_node_by_hash(self, hash: bytes32, store_id: bytes32) -> tuple[KVId, KVId]:
+    async def get_node_by_hash(self, hash: bytes32, store_id: bytes32) -> tuple[KeyId, ValueId]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT * FROM hashes WHERE hash = ? AND store_id = ?",
@@ -499,8 +501,8 @@ class DataStore:
             if row is None:
                 raise Exception(f"Cannot find node by hash {hash.hex()}")
 
-            kid = KVId(row["kid"])
-            vid = KVId(row["vid"])
+            kid = KeyId(row["kid"])
+            vid = ValueId(row["vid"])
             return (kid, vid)
 
     async def get_terminal_node_by_hash(self, node_hash: bytes32, store_id: bytes32) -> TerminalNode:
@@ -1057,19 +1059,19 @@ class DataStore:
             for kid in kv_ids.keys():
                 key = await self.get_blob_from_kvid(kid, store_id)
                 if key is None:
-                    raise Exception(f"Unknown key corresponding to KVId: {kid}")
+                    raise Exception(f"Unknown key corresponding to KeyId: {kid}")
                 keys.append(key)
 
         return keys
 
-    def get_reference_kid_side(self, merkle_blob: MerkleBlob, seed: bytes32) -> tuple[KVId, Side]:
+    def get_reference_kid_side(self, merkle_blob: MerkleBlob, seed: bytes32) -> tuple[KeyId, Side]:
         side_seed = bytes(seed)[0]
         side = Side.LEFT if side_seed < 128 else Side.RIGHT
         reference_node = merkle_blob.get_random_leaf_node(seed)
         kid = reference_node.key
         return (kid, side)
 
-    async def get_terminal_node_from_kid(self, merkle_blob: MerkleBlob, kid: KVId, store_id: bytes32) -> TerminalNode:
+    async def get_terminal_node_from_kid(self, merkle_blob: MerkleBlob, kid: KeyId, store_id: bytes32) -> TerminalNode:
         index = merkle_blob.key_to_index[kid]
         raw_node = merkle_blob.get_raw_node(index)
         assert isinstance(raw_node, RawLeafMerkleNode)
@@ -1139,7 +1141,7 @@ class DataStore:
 
             kid = await self.get_kvid(key, store_id)
             if kid is not None:
-                merkle_blob.delete(kid)
+                merkle_blob.delete(KeyId(kid))
 
             new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status)
 
@@ -1199,7 +1201,7 @@ class DataStore:
                     first_action[hash] = change["action"]
                 last_action[hash] = change["action"]
 
-            batch_keys_values: list[tuple[KVId, KVId]] = []
+            batch_keys_values: list[tuple[KeyId, ValueId]] = []
             batch_hashes: list[bytes] = []
 
             for change in changelist:
@@ -1209,7 +1211,7 @@ class DataStore:
 
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
-                    reference_kid: Optional[KVId] = None
+                    reference_kid: Optional[KeyId] = None
                     if reference_node_hash is not None:
                         reference_kid, _ = await self.get_node_by_hash(reference_node_hash, store_id)
 
@@ -1236,7 +1238,7 @@ class DataStore:
                     key = change["key"]
                     deletion_kid = await self.get_kvid(key, store_id)
                     if deletion_kid is not None:
-                        merkle_blob.delete(deletion_kid)
+                        merkle_blob.delete(KeyId(deletion_kid))
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
@@ -1324,9 +1326,10 @@ class DataStore:
             except MerkleBlobNotFoundError:
                 raise KeyNotFoundError(key=key)
 
-            kid = await self.get_kvid(key, store_id)
-            if kid is None:
+            kvid = await self.get_kvid(key, store_id)
+            if kvid is None:
                 raise KeyNotFoundError(key=key)
+            kid = KeyId(kvid)
             if not merkle_blob.key_exists(kid):
                 raise KeyNotFoundError(key=key)
             return await self.get_terminal_node_from_kid(merkle_blob, kid, store_id)
@@ -1389,9 +1392,10 @@ class DataStore:
     ) -> ProofOfInclusion:
         root = await self.get_tree_root(store_id=store_id)
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
-        kid = await self.get_kvid(key, store_id)
-        if kid is None:
+        kvid = await self.get_kvid(key, store_id)
+        if kvid is None:
             raise Exception(f"Cannot find key: {key.hex()}")
+        kid = KeyId(kvid)
         return merkle_blob.get_proof_of_inclusion(kid)
 
     async def write_tree_to_file(
