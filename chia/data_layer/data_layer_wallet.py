@@ -1272,7 +1272,7 @@ def verify_offer(
                 raise OfferIntegrityError("maker: invalid proof of inclusion found")
 
         # TODO: verify each kv hash to the proof's node hash
-        roots = {proof.root_hash for proof in proofs}
+        roots = {proof.root_hash() for proof in proofs}
         if len(roots) > 1:
             raise OfferIntegrityError("maker: multiple roots referenced for a single store id")
         if len(roots) < 1:
