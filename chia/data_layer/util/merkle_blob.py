@@ -560,7 +560,7 @@ class MerkleBlob:
 
         return this + left_nodes + right_nodes
 
-    def batch_insert(self, keys_values: list[tuple[KVId, KVId]], hashes: list[bytes]) -> None:
+    def batch_insert(self, keys_values: list[tuple[KVId, KVId]], hashes: list[bytes32]) -> None:
         indexes: list[TreeIndex] = []
 
         if len(self.key_to_index) <= 1:
