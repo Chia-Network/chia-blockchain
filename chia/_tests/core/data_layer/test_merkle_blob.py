@@ -4,7 +4,7 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import Generic, Protocol, TypeVar, final
+from typing import Generic, TypeVar, Union, final
 
 import chia_rs.datalayer
 import pytest
@@ -38,16 +38,44 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 pytestmark = pytest.mark.data_layer
 
 
-class MerkleBlobCallable(Protocol):
-    def __call__(self, blob: bytearray) -> MerkleBlob: ...
+@dataclass
+class MerkleTypes:
+    # TODO: maybe del the types to avoid them being used, or not from import them, or...
+    # TODO: metadata as well
+    internal: type[Union[RawInternalMerkleNode, chia_rs.datalayer.InternalNode]]
+    leaf: type[Union[RawLeafMerkleNode, chia_rs.datalayer.LeafNode]]
+    # metadata: type[Union[NodeMetadata, chia_rs.datalayer.NodeMetadata]]
+    blob: type[Union[MerkleBlob, chia_rs.datalayer.MerkleBlob]]
+    block_size: int
+    data_size: int
+    metadata_size: int
+
+
+python_merkle_types = MerkleTypes(
+    internal=RawInternalMerkleNode,
+    leaf=RawLeafMerkleNode,
+    blob=MerkleBlob,
+    block_size=spacing,
+    data_size=data_size,
+    metadata_size=metadata_size,
+)
+rust_merkle_types = MerkleTypes(
+    internal=chia_rs.datalayer.InternalNode,
+    leaf=chia_rs.datalayer.LeafNode,
+    blob=chia_rs.datalayer.MerkleBlob,
+    data_size=chia_rs.datalayer.DATA_SIZE,
+    block_size=chia_rs.datalayer.BLOCK_SIZE,
+    metadata_size=chia_rs.datalayer.METADATA_SIZE,
+)
+all_merkle_types = [python_merkle_types, rust_merkle_types]
 
 
 @pytest.fixture(
-    name="merkle_blob_type",
-    params=[MerkleBlob, chia_rs.datalayer.MerkleBlob],
+    name="merkle_types",
+    params=all_merkle_types,
     ids=["python", "rust"],
 )
-def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
+def merkle_types_fixture(request: SubRequest) -> MerkleTypes:
     return request.param  # type: ignore[no-any-return]
 
 
@@ -399,8 +427,8 @@ def test_as_tuple_matches_dataclasses_astuple(cls: type[RawMerkleNodeProtocol], 
     assert raw_node.as_tuple() == astuple(raw_node)  # type: ignore[call-overload]
 
 
-def test_helper_methods(merkle_blob_type: MerkleBlobCallable) -> None:
-    merkle_blob = merkle_blob_type(blob=bytearray())
+def test_helper_methods(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     assert merkle_blob.empty()
     assert merkle_blob.get_root_hash() is None
 
@@ -416,9 +444,9 @@ def test_helper_methods(merkle_blob_type: MerkleBlobCallable) -> None:
     assert merkle_blob.get_root_hash() is None
 
 
-def test_insert_with_reference_key_and_side(merkle_blob_type: MerkleBlobCallable) -> None:
+def test_insert_with_reference_key_and_side(merkle_types: MerkleTypes) -> None:
     num_inserts = 50
-    merkle_blob = merkle_blob_type(blob=bytearray())
+    merkle_blob = merkle_types.blob(blob=bytearray())
     reference_kid = None
     side = None
 
@@ -440,8 +468,8 @@ def test_insert_with_reference_key_and_side(merkle_blob_type: MerkleBlobCallable
         reference_kid = key
 
 
-def test_double_insert_fails(merkle_blob_type: MerkleBlobCallable) -> None:
-    merkle_blob = merkle_blob_type(blob=bytearray())
+def test_double_insert_fails(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     key, value = generate_kvid(0)
     hash = generate_hash(0)
     merkle_blob.insert(key, value, hash)
@@ -450,8 +478,8 @@ def test_double_insert_fails(merkle_blob_type: MerkleBlobCallable) -> None:
         merkle_blob.insert(key, value, hash)
 
 
-def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
-    merkle_blob = merkle_blob_type(blob=bytearray())
+def test_get_nodes(merkle_types: MerkleTypes) -> None:
+    merkle_blob = merkle_types.blob(blob=bytearray())
     num_inserts = 500
     keys = set()
     seen_keys = set()
@@ -482,7 +510,7 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
     assert keys == seen_keys
 
 
-def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
+def test_just_insert_a_bunch(merkle_types: MerkleTypes) -> None:
     HASH = bytes(range(12, 44))
 
     import pathlib
@@ -491,7 +519,7 @@ def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
     path.joinpath("py").mkdir(parents=True, exist_ok=True)
     path.joinpath("rs").mkdir(parents=True, exist_ok=True)
 
-    merkle_blob = merkle_blob_type(blob=bytearray())
+    merkle_blob = merkle_types.blob(blob=bytearray())
     import time
 
     total_time = 0.0
