@@ -425,9 +425,9 @@ class DataStore:
             if row is None:
                 return None
 
-            return KeyId(row[0])
+            return KeyOrValueId(row[0])
 
-    async def get_blob_from_kvid(self, kv_id: Union[KeyId, ValueId], store_id: bytes32) -> Optional[bytes]:
+    async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT blob FROM ids WHERE kv_id = ? AND store_id = ?",
