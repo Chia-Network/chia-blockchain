@@ -234,10 +234,10 @@ def generate_kvid(seed: int) -> tuple[KVId, KVId]:
     return kv_ids[0], kv_ids[1]
 
 
-def generate_hash(seed: int) -> bytes:
+def generate_hash(seed: int) -> bytes32:
     seed_bytes = seed.to_bytes(8, byteorder="big", signed=True)
     hash_obj = hashlib.sha256(seed_bytes)
-    return hash_obj.digest()
+    return bytes32(hash_obj.digest())
 
 
 def test_insert_delete_loads_all_keys() -> None:
@@ -337,7 +337,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
         num_deletes = 1 + repeats * 10
 
         kv_ids: list[tuple[KVId, KVId]] = []
-        hashes: list[bytes] = []
+        hashes: list[bytes32] = []
         for _ in range(num_inserts):
             seed += 1
             key, value = generate_kvid(seed)
