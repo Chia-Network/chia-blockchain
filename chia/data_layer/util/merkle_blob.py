@@ -56,6 +56,8 @@ class MerkleBlob:
     last_allocated_index: TreeIndex = TreeIndex(uint32(0))
 
     def __post_init__(self) -> None:
+        blocks, remainder = divmod(len(self.blob), spacing)
+        assert remainder == 0, f"unexpected remainder after {blocks} full blocks: {remainder}"
         self.key_to_index = self.get_keys_indexes()
         self.last_allocated_index = TreeIndex(uint32(len(self.blob) // spacing))
         self.free_indexes = self.get_free_indexes()
