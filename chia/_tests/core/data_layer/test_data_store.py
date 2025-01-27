@@ -1344,44 +1344,55 @@ async def test_data_server_files(
 
         keys: list[bytes] = []
         counter = 0
+        num_repeats = 2
 
-        for batch in range(num_batches):
-            changelist: list[dict[str, Any]] = []
-            for operation in range(num_ops_per_batch):
-                if random.randint(0, 4) > 0 or len(keys) == 0:
-                    key = counter.to_bytes(4, byteorder="big")
-                    value = (2 * counter).to_bytes(4, byteorder="big")
-                    keys.append(key)
-                    changelist.append({"action": "insert", "key": key, "value": value})
+        for _ in range(num_repeats):
+            for batch in range(num_batches):
+                changelist: list[dict[str, Any]] = []
+                if batch == num_batches - 1:
+                    for key in keys:
+                        changelist.append({"action": "delete", "key": key})
+                    keys = []
+                    counter = 0
                 else:
-                    key = random.choice(keys)
-                    keys.remove(key)
-                    changelist.append({"action": "delete", "key": key})
-                counter += 1
-            await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
-            root = await data_store_server.get_tree_root(store_id)
-            await data_store_server.add_node_hashes(store_id)
-            if test_delta == "old":
-                node_hash = root.node_hash if root.node_hash is not None else bytes32.zeros
-                filename = get_delta_filename_path(tmp_path, store_id, node_hash, root.generation, group_files_by_store)
-                filename.parent.mkdir(parents=True, exist_ok=True)
-                with open(filename, "xb") as writer:
-                    await write_tree_to_file_old_format(data_store_server, root, node_hash, store_id, writer)
-            else:
-                await write_files_for_root(
-                    data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
-                )
-            roots.append(root)
+                    for operation in range(num_ops_per_batch):
+                        if random.randint(0, 4) > 0 or len(keys) == 0:
+                            key = counter.to_bytes(4, byteorder="big")
+                            value = (2 * counter).to_bytes(4, byteorder="big")
+                            keys.append(key)
+                            changelist.append({"action": "insert", "key": key, "value": value})
+                        else:
+                            key = random.choice(keys)
+                            keys.remove(key)
+                            changelist.append({"action": "delete", "key": key})
+                        counter += 1
+
+                await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
+                root = await data_store_server.get_tree_root(store_id)
+                await data_store_server.add_node_hashes(store_id)
+                if test_delta == "old":
+                    node_hash = root.node_hash if root.node_hash is not None else bytes32.zeros
+                    filename = get_delta_filename_path(
+                        tmp_path, store_id, node_hash, root.generation, group_files_by_store
+                    )
+                    filename.parent.mkdir(parents=True, exist_ok=True)
+                    with open(filename, "xb") as writer:
+                        await write_tree_to_file_old_format(data_store_server, root, node_hash, store_id, writer)
+                else:
+                    await write_files_for_root(
+                        data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
+                    )
+                roots.append(root)
 
     generation = 1
-    assert len(roots) == num_batches
+    assert len(roots) == num_batches * num_repeats
     for root in roots:
-        assert root.node_hash is not None
+        node_hash = root.node_hash if root.node_hash is not None else bytes32.zeros
         if test_delta == "full":
-            filename = get_full_tree_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
+            filename = get_full_tree_filename_path(tmp_path, store_id, node_hash, generation, group_files_by_store)
             assert filename.exists()
         else:
-            filename = get_delta_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
+            filename = get_delta_filename_path(tmp_path, store_id, node_hash, generation, group_files_by_store)
             assert filename.exists()
         await data_store.insert_into_data_store_from_file(store_id, root.node_hash, tmp_path.joinpath(filename))
         current_root = await data_store.get_tree_root(store_id=store_id)
