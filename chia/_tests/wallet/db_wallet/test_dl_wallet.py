@@ -307,43 +307,67 @@ class TestDLWallet:
         await time_out_assert(15, do_tips_match, True)
 
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "wallet_environments",
+        [
+            {
+                "num_environments": 2,
+                "blocks_needed": [1, 1],
+            }
+        ],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes
     @pytest.mark.anyio
-    async def test_lifecycle(
-        self, self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, trusted: bool
-    ) -> None:
-        full_nodes, wallets, _ = simulator_and_wallet
-        full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
-        wallet_node_0, server_0 = wallets[0]
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    async def test_lifecycle(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        env.wallet_aliases = {
+            "xch": 1,
+            "dl": 2,
+        }
 
-        if trusted:
-            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-
-        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-        funds = await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_0)
-
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
-
-        async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
+        dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        async with dl_wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
             launcher_id = await dl_wallet.generate_new_reporter(current_root, action_scope)
 
         assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "xch": {
+                            "unconfirmed_wallet_balance": -1,
+                            "<=#spendable_balance": -1,
+                            "<=#max_send_amount": -1,
+                            ">=#pending_change": 1,
+                            "pending_coin_removal_count": 1,  # creation + launcher
+                        },
+                        "dl": {
+                            "init": True,
+                        },
+                    },
+                    post_block_balance_updates={
+                        "xch": {
+                            "confirmed_wallet_balance": -1,
+                            ">=#spendable_balance": 0,
+                            ">=#max_send_amount": 0,
+                            "<=#pending_change": -1,
+                            "pending_coin_removal_count": -1,
+                        },
+                        "dl": {
+                            "unspent_coin_count": 1,
+                        },
+                    },
+                ),
+            ]
+        )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
 
@@ -353,19 +377,23 @@ class TestDLWallet:
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
 
-        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        fee = uint64(1999999999999)
+
+        async with dl_wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
             await dl_wallet.generate_signed_transaction(
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
                 action_scope,
                 launcher_id=previous_record.launcher_id,
                 new_root_hash=new_root,
-                fee=uint64(1999999999999),
+                fee=fee,
             )
         assert action_scope.side_effects.transactions[0].spend_bundle is not None
         with pytest.raises(ValueError, match="is currently pending"):
             async with dl_wallet.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG, push=False
+                wallet_environments.tx_config, push=False
             ) as failed_action_scope:
                 await dl_wallet.generate_signed_transaction(
                     [previous_record.lineage_proof.amount],
@@ -378,7 +406,7 @@ class TestDLWallet:
                             if rem.amount == 1
                         )
                     },
-                    fee=uint64(1999999999999),
+                    fee=fee,
                 )
 
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
@@ -386,12 +414,38 @@ class TestDLWallet:
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "xch": {
+                            "unconfirmed_wallet_balance": -fee,
+                            # these match exactly because of our change from the creation
+                            "spendable_balance": -fee,
+                            "max_send_amount": -fee,
+                            "pending_coin_removal_count": 2,
+                        },
+                        "dl": {
+                            "pending_coin_removal_count": 1,
+                        },
+                    },
+                    post_block_balance_updates={
+                        "xch": {
+                            "confirmed_wallet_balance": -fee,
+                            "spendable_balance": 0,
+                            "max_send_amount": 0,
+                            "pending_coin_removal_count": -2,
+                            "unspent_coin_count": -2,
+                        },
+                        "dl": {
+                            "pending_coin_removal_count": -1,
+                        },
+                    },
+                ),
+            ]
+        )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds - 2000000000000)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, funds - 2000000000000)
-        await asyncio.sleep(0.5)
 
         dl_coin_record = await dl_wallet.wallet_state_manager.coin_store.get_coin_record(new_record.coin_id)
         assert dl_coin_record is not None
@@ -400,17 +454,33 @@ class TestDLWallet:
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
-        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        async with dl_wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
             await dl_wallet.create_update_state_spend(launcher_id, new_root, action_scope)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert new_record is not None
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "dl": {
+                            "pending_coin_removal_count": 1,
+                        },
+                    },
+                    post_block_balance_updates={
+                        "dl": {
+                            "pending_coin_removal_count": -1,
+                        },
+                    },
+                ),
+            ]
+        )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
-        await asyncio.sleep(0.5)
 
     @pytest.mark.skip(reason="maybe no longer relevant, needs to be rewritten at least")
     @pytest.mark.parametrize(
