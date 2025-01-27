@@ -197,15 +197,7 @@ class WalletBlockchain:
         True if we have already added this block to the chain. This may return false for orphan blocks
         that we have added but no longer keep in memory.
         """
-        if height is None:
-            block_rec = self.try_block_record(header_hash)
-            if block_rec is None:
-                return False
-            height = block_rec.height
-        block_hash_from_hh = self.height_to_hash(height)
-        if block_hash_from_hh is None or block_hash_from_hh != header_hash:
-            return False
-        return True
+        return header_hash in self._block_records
 
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
