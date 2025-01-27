@@ -16,11 +16,15 @@ dirty_hash = bytes32(b"\x00" * 32)
 if TYPE_CHECKING:
     # for mypy
     TreeIndex = NewType("TreeIndex", uint32)
-    KVId = NewType("KVId", int64)
+    KeyOrValueId = int64
+    KeyId = NewType("KeyId", KeyOrValueId)
+    ValueId = NewType("ValueId", KeyOrValueId)
 else:
     # for streamable
     TreeIndex = uint32
-    KVId = int64
+    KeyOrValueId = int64
+    KeyId = KeyOrValueId
+    ValueId = KeyOrValueId
 
 
 T = TypeVar("T")
@@ -51,7 +55,7 @@ unspecified = Unspecified()
 @dataclass(frozen=False)
 class MerkleBlob:
     blob: bytearray
-    key_to_index: dict[KVId, TreeIndex] = field(default_factory=dict)
+    key_to_index: dict[KeyId, TreeIndex] = field(default_factory=dict)
     free_indexes: list[TreeIndex] = field(default_factory=list)
     last_allocated_index: TreeIndex = TreeIndex(uint32(0))
 
@@ -66,7 +70,7 @@ class MerkleBlob:
     def from_node_list(
         cls: type[MerkleBlob],
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
-        terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
+        terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]],
         root_hash: Optional[bytes32],
     ) -> MerkleBlob:
         merkle_blob = cls(blob=bytearray())
@@ -82,7 +86,7 @@ class MerkleBlob:
     def build_blob_from_node_list(
         self,
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
-        terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
+        terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]],
         node_hash: bytes32,
     ) -> TreeIndex:
         if node_hash not in terminal_nodes and node_hash not in internal_nodes:
@@ -201,11 +205,11 @@ class MerkleBlob:
         self.update_metadata(index, dirty=False)
         return internal_node_hash
 
-    def get_proof_of_inclusion(self, kvID: KVId) -> ProofOfInclusion:
-        if kvID not in self.key_to_index:
-            raise Exception(f"Key {kvID} not present in the store")
+    def get_proof_of_inclusion(self, key_id: KeyId) -> ProofOfInclusion:
+        if key_id not in self.key_to_index:
+            raise Exception(f"Key {key_id} not present in the store")
 
-        index = self.key_to_index[kvID]
+        index = self.key_to_index[key_id]
         node = self.get_raw_node(index)
         assert isinstance(node, RawLeafMerkleNode)
 
@@ -234,8 +238,8 @@ class MerkleBlob:
             lineage.append((index, node))
         return lineage
 
-    def get_lineage_by_key_id(self, kid: KVId) -> list[InternalNode]:
-        index = self.key_to_index[kid]
+    def get_lineage_by_key_id(self, key_id: KeyId) -> list[InternalNode]:
+        index = self.key_to_index[key_id]
         lineage = self.get_lineage_with_indexes(index)
         internal_nodes: list[InternalNode] = []
         for _, node in lineage[1:]:
@@ -253,8 +257,8 @@ class MerkleBlob:
         left: Union[TreeIndex, Unspecified] = unspecified,
         right: Union[TreeIndex, Unspecified] = unspecified,
         hash: Union[bytes32, Unspecified] = unspecified,
-        key: Union[KVId, Unspecified] = unspecified,
-        value: Union[KVId, Unspecified] = unspecified,
+        key: Union[KeyId, Unspecified] = unspecified,
+        value: Union[ValueId, Unspecified] = unspecified,
     ) -> None:
         node = self.get_raw_node(index)
         new_parent = parent if not isinstance(parent, Unspecified) else node.parent
@@ -292,11 +296,11 @@ class MerkleBlob:
 
         raise Exception("Cannot find leaf from seed")
 
-    def get_keys_indexes(self) -> dict[KVId, TreeIndex]:
+    def get_keys_indexes(self) -> dict[KeyId, TreeIndex]:
         if len(self.blob) == 0:
             return {}
 
-        key_to_index: dict[KVId, TreeIndex] = {}
+        key_to_index: dict[KeyId, TreeIndex] = {}
         queue: list[TreeIndex] = [TreeIndex(uint32(0))]
         while len(queue) > 0:
             node_index = queue.pop()
@@ -326,11 +330,11 @@ class MerkleBlob:
 
         return hash_to_index
 
-    def get_keys_values(self) -> dict[KVId, KVId]:
+    def get_keys_values(self) -> dict[KeyId, ValueId]:
         if len(self.blob) == 0:
             return {}
 
-        keys_values: dict[KVId, KVId] = {}
+        keys_values: dict[KeyId, ValueId] = {}
         queue: list[TreeIndex] = [TreeIndex(uint32(0))]
         while len(queue) > 0:
             node_index = queue.pop()
@@ -413,15 +417,15 @@ class MerkleBlob:
         if isinstance(new_node, RawLeafMerkleNode):
             self.key_to_index[new_node.key] = new_index
 
-    def key_exists(self, key: KVId) -> bool:
+    def key_exists(self, key: KeyId) -> bool:
         return key in self.key_to_index
 
     def insert(
         self,
-        key: KVId,
-        value: KVId,
+        key: KeyId,
+        value: ValueId,
         hash: bytes32,
-        reference_kid: Optional[KVId] = None,
+        reference_kid: Optional[KeyId] = None,
         side: Optional[Side] = None,
     ) -> None:
         if key in self.key_to_index:
@@ -483,7 +487,7 @@ class MerkleBlob:
         )
         self.insert_from_leaf(old_leaf_index, new_leaf_index, side)
 
-    def delete(self, key: KVId) -> None:
+    def delete(self, key: KeyId) -> None:
         leaf_index = self.key_to_index[key]
         leaf = self.get_raw_node(leaf_index)
         assert isinstance(leaf, RawLeafMerkleNode)
@@ -533,7 +537,7 @@ class MerkleBlob:
             self.update_entry(grandparent_index, right=sibling_index)
         self.mark_lineage_as_dirty(grandparent_index)
 
-    def upsert(self, key: KVId, value: KVId, hash: bytes32) -> None:
+    def upsert(self, key: KeyId, value: ValueId, hash: bytes32) -> None:
         if key not in self.key_to_index:
             self.insert(key, value, hash)
             return
@@ -577,7 +581,7 @@ class MerkleBlob:
 
         return this + left_nodes + right_nodes
 
-    def batch_insert(self, keys_values: list[tuple[KVId, KVId]], hashes: list[bytes32]) -> None:
+    def batch_insert(self, keys_values: list[tuple[KeyId, ValueId]], hashes: list[bytes32]) -> None:
         indexes: list[TreeIndex] = []
 
         if len(self.key_to_index) <= 1:
@@ -736,8 +740,8 @@ class RawLeafMerkleNode(Streamable):
     hash: bytes32
     parent: Optional[TreeIndex]
     # TODO: how/where are these mapping?  maybe a kv table row id?
-    key: KVId
-    value: KVId
+    key: KeyId
+    value: ValueId
 
 
 metadata_size = 2  # NodeMetadata.struct.size

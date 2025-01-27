@@ -286,7 +286,6 @@ class ProofOfInclusion:
     # children before parents
     layers: list[ProofOfInclusionLayer]
 
-    @property
     def root_hash(self) -> bytes32:
         if len(self.layers) == 0:
             return self.node_hash
@@ -315,7 +314,7 @@ class ProofOfInclusion:
 
             existing_hash = calculated_hash
 
-        if existing_hash != self.root_hash:
+        if existing_hash != self.root_hash():
             return False
 
         return True

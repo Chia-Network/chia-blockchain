@@ -16,7 +16,8 @@ from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.data_layer.data_layer_util import InternalNode, Side, internal_hash
 from chia.data_layer.util.merkle_blob import (
     InvalidIndexError,
-    KVId,
+    KeyId,
+    KeyOrValueId,
     MerkleBlob,
     NodeMetadata,
     NodeType,
@@ -24,6 +25,7 @@ from chia.data_layer.util.merkle_blob import (
     RawLeafMerkleNode,
     RawMerkleNodeProtocol,
     TreeIndex,
+    ValueId,
     data_size,
     metadata_size,
     pack_raw_node,
@@ -133,8 +135,8 @@ reference_raw_nodes: list[DataCase] = [
         raw=RawLeafMerkleNode(
             hash=bytes32(range(32)),
             parent=TreeIndex(uint32(0x20212223)),
-            key=KVId(int64(0x2425262728292A2B)),
-            value=KVId(int64(0x2C2D2E2F30313233)),
+            key=KeyId(KeyOrValueId(int64(0x2425262728292A2B))),
+            value=ValueId(KeyOrValueId(int64(0x2C2D2E2F30313233))),
         ),
         packed=leaf_reference_blob,
     ),
@@ -163,8 +165,8 @@ def test_merkle_blob_one_leaf_loads() -> None:
     leaf = RawLeafMerkleNode(
         hash=bytes32(range(32)),
         parent=None,
-        key=KVId(int64(0x0405060708090A0B)),
-        value=KVId(int64(0x0405060708090A1B)),
+        key=KeyId(KeyOrValueId(int64(0x0405060708090A0B))),
+        value=ValueId(KeyOrValueId(int64(0x0405060708090A1B))),
     )
     blob = bytearray(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + pack_raw_node(leaf))
 
@@ -184,14 +186,14 @@ def test_merkle_blob_two_leafs_loads() -> None:
     left_leaf = RawLeafMerkleNode(
         hash=bytes32(range(32)),
         parent=TreeIndex(uint32(0)),
-        key=KVId(int64(0x0405060708090A0B)),
-        value=KVId(int64(0x0405060708090A1B)),
+        key=KeyId(KeyOrValueId(int64(0x0405060708090A0B))),
+        value=ValueId(KeyOrValueId(int64(0x0405060708090A1B))),
     )
     right_leaf = RawLeafMerkleNode(
         hash=bytes32(range(32)),
         parent=TreeIndex(uint32(0)),
-        key=KVId(int64(0x1415161718191A1B)),
-        value=KVId(int64(0x1415161718191A2B)),
+        key=KeyId(KeyOrValueId(int64(0x1415161718191A1B))),
+        value=ValueId(KeyOrValueId(int64(0x1415161718191A2B))),
     )
     blob = bytearray()
     blob.extend(bytes(NodeMetadata(type=NodeType.internal, dirty=True)) + pack_raw_node(root))
@@ -218,20 +220,20 @@ def test_merkle_blob_two_leafs_loads() -> None:
     son_hash = bytes32(range(32))
     root_hash = internal_hash(son_hash, son_hash)
     expected_node = InternalNode(root_hash, son_hash, son_hash)
-    assert merkle_blob.get_lineage_by_key_id(KVId(int64(0x0405060708090A0B))) == [expected_node]
-    assert merkle_blob.get_lineage_by_key_id(KVId(int64(0x1415161718191A1B))) == [expected_node]
+    assert merkle_blob.get_lineage_by_key_id(KeyId(KeyOrValueId(int64(0x0405060708090A0B)))) == [expected_node]
+    assert merkle_blob.get_lineage_by_key_id(KeyId(KeyOrValueId(int64(0x1415161718191A1B)))) == [expected_node]
 
 
-def generate_kvid(seed: int) -> tuple[KVId, KVId]:
-    kv_ids: list[KVId] = []
+def generate_kvid(seed: int) -> tuple[KeyId, ValueId]:
+    kv_ids: list[KeyOrValueId] = []
 
     for offset in range(2):
         seed_bytes = (2 * seed + offset).to_bytes(8, byteorder="big", signed=True)
         hash_obj = hashlib.sha256(seed_bytes)
         hash_int = int64.from_bytes(hash_obj.digest()[:8])
-        kv_ids.append(KVId(hash_int))
+        kv_ids.append(KeyOrValueId(hash_int))
 
-    return kv_ids[0], kv_ids[1]
+    return KeyId(kv_ids[0]), ValueId(kv_ids[1])
 
 
 def generate_hash(seed: int) -> bytes32:
@@ -245,7 +247,7 @@ def test_insert_delete_loads_all_keys() -> None:
     num_keys = 200000
     extra_keys = 100000
     max_height = 25
-    keys_values: dict[KVId, KVId] = {}
+    keys_values: dict[KeyId, ValueId] = {}
 
     random = Random()
     random.seed(100, version=2)
@@ -304,7 +306,7 @@ def test_small_insert_deletes() -> None:
 
     for repeats in range(num_repeats):
         for num_inserts in range(1, max_inserts):
-            keys_values: dict[KVId, KVId] = {}
+            keys_values: dict[KeyId, ValueId] = {}
             for inserts in range(num_inserts):
                 seed += 1
                 key, value = generate_kvid(seed)
@@ -330,13 +332,13 @@ def test_proof_of_inclusion_merkle_blob() -> None:
     random.seed(100, version=2)
 
     merkle_blob = MerkleBlob(blob=bytearray())
-    keys_values: dict[KVId, KVId] = {}
+    keys_values: dict[KeyId, ValueId] = {}
 
     for repeats in range(num_repeats):
         num_inserts = 1 + repeats * 100
         num_deletes = 1 + repeats * 10
 
-        kv_ids: list[tuple[KVId, KVId]] = []
+        kv_ids: list[tuple[KeyId, ValueId]] = []
         hashes: list[bytes32] = []
         for _ in range(num_inserts):
             seed += 1
@@ -363,7 +365,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             with pytest.raises(Exception, match=f"Key {kv_id} not present in the store"):
                 merkle_blob.get_proof_of_inclusion(kv_id)
 
-        new_keys_values: dict[KVId, KVId] = {}
+        new_keys_values: dict[KeyId, ValueId] = {}
         for old_kv in keys_values.keys():
             seed += 1
             _, value = generate_kvid(seed)
@@ -382,7 +384,11 @@ def test_proof_of_inclusion_merkle_blob() -> None:
 @pytest.mark.parametrize(argnames="index", argvalues=[-1, 1, None])
 def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
     merkle_blob = MerkleBlob(blob=bytearray())
-    merkle_blob.insert(KVId(int64(0x1415161718191A1B)), KVId(int64(0x1415161718191A1B)), bytes32(range(12, 12 + 32)))
+    merkle_blob.insert(
+        KeyId(KeyOrValueId(int64(0x1415161718191A1B))),
+        ValueId(KeyOrValueId(int64(0x1415161718191A1B))),
+        bytes32(range(12, 12 + 32)),
+    )
 
     if index is None:
         expected = (InvalidIndexError, TypeError)
@@ -494,6 +500,6 @@ def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
     total_time = 0.0
     for i in range(100000):
         start = time.monotonic()
-        merkle_blob.insert(KVId(int64(i)), KVId(int64(i)), HASH)
+        merkle_blob.insert(KeyId(KeyOrValueId(int64(i))), ValueId(KeyOrValueId(int64(i))), HASH)
         end = time.monotonic()
         total_time += end - start
