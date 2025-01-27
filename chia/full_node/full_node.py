@@ -636,9 +636,13 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    success, state_change_summary = await self.add_block_batch(
-                        response.blocks, peer_info, fork_info, vs
-                    )
+
+                    # Wrap add_block_batch with writer to ensure all writes and reads are on same connection.
+                    async with self.block_store.db_wrapper.writer():
+                        success, state_change_summary = await self.add_block_batch(
+                            response.blocks, peer_info, fork_info, vs
+                        )
+
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1351,16 +1355,20 @@ class FullNode:
                     block_rate_height = start_height
 
                 pre_validation_results = list(await asyncio.gather(*futures))
-                # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
-                # call will update it
-                state_change_summary, err = await self.add_prevalidated_blocks(
-                    blockchain,
-                    blocks,
-                    pre_validation_results,
-                    fork_info,
-                    peer.peer_info,
-                    vs,
-                )
+
+                # Wrap add_prevalidated_blocks with writer to ensure all writes and reads are on same connection.
+                async with self.block_store.db_wrapper.writer():
+                    # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
+                    # call will update it
+                    state_change_summary, err = await self.add_prevalidated_blocks(
+                        blockchain,
+                        blocks,
+                        pre_validation_results,
+                        fork_info,
+                        peer.peer_info,
+                        vs,
+                    )
+
                 if err is not None:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
@@ -2140,9 +2148,13 @@ class FullNode:
                 else:
                     if fork_info is None:
                         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-                    (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, pre_validation_result, ssi, fork_info
-                    )
+
+                    # Wrap with writer to ensure all writes and reads are on same connection.
+                    async with self.block_store.db_wrapper.writer():
+                        (added, error_code, state_change_summary) = await self.blockchain.add_block(
+                            block, pre_validation_result, ssi, fork_info
+                        )
+
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None
                 elif added == AddBlockResult.INVALID_BLOCK:
@@ -2391,6 +2403,7 @@ class FullNode:
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             # TODO: pre-validate VDFs outside of lock
             validation_start = time.monotonic()
+            self.log.info("validate_unfinished_block")
             validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
             if validate_result.error is not None:
                 raise ConsensusError(Err(validate_result.error))
@@ -2763,6 +2776,7 @@ class FullNode:
                     return MempoolInclusionStatus.SUCCESS, None
                 if self.mempool_manager.peak is None:
                     return MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
+                self.log.info("add_spend_bundle")
                 info = await self.mempool_manager.add_spend_bundle(
                     transaction, cost_result, spend_name, self.mempool_manager.peak.height
                 )
