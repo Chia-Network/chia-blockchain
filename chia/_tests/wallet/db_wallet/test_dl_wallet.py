@@ -1,24 +1,20 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 from typing import Any
 
 import pytest
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64
-from chia.util.timing import adjusted_timeout
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -481,205 +477,6 @@ class TestDLWallet:
         )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
-
-    @pytest.mark.skip(reason="maybe no longer relevant, needs to be rewritten at least")
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
-    @pytest.mark.anyio
-    async def test_rebase(
-        self,
-        self_hostname: str,
-        two_wallet_nodes: OldSimulatorsAndWallets,
-        trusted: bool,
-    ) -> None:  # pragma: no cover
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
-        wallet_node_0, server_0 = wallets[0]
-        wallet_node_1, server_1 = wallets[1]
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-
-        if trusted:
-            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
-
-        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-        await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-        funds = await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_0)
-        await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_1)
-
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet_1.get_unconfirmed_balance, funds)
-        await time_out_assert(10, wallet_1.get_confirmed_balance, funds)
-
-        async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet_0 = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
-
-        async with wallet_node_1.wallet_state_manager.lock:
-            dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wallet_node_1.wallet_state_manager)
-
-        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
-        current_tree = MerkleTree(nodes)
-        current_root = current_tree.calculate_root()
-
-        async def is_singleton_confirmed(wallet: DataLayerWallet, lid: bytes32) -> bool:
-            latest_singleton = await wallet.get_latest_singleton(lid)
-            if latest_singleton is None:
-                return False
-            return latest_singleton.confirmed
-
-        async with dl_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-            launcher_id = await dl_wallet_0.generate_new_reporter(current_root, action_scope)
-
-        initial_record = await dl_wallet_0.get_latest_singleton(launcher_id)
-        assert initial_record is not None
-
-        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions(
-            action_scope.side_effects.transactions
-        )
-        await asyncio.wait_for(
-            full_node_api.process_transaction_records(records=[std_record]),
-            timeout=adjusted_timeout(timeout=15),
-        )
-
-        await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
-        await asyncio.sleep(0.5)
-
-        peer = wallet_node_1.get_full_node_peer()
-        await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
-        await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
-        current_record = await dl_wallet_1.get_latest_singleton(launcher_id)
-        assert current_record is not None
-        await asyncio.sleep(0.5)
-
-        # Because these have the same fee, the one that gets pushed first will win
-        async with dl_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await dl_wallet_1.create_update_state_spend(
-                launcher_id, current_record.root, action_scope, fee=uint64(2000000000000)
-            )
-        report_txs = action_scope.side_effects.transactions
-        record_1 = await dl_wallet_1.get_latest_singleton(launcher_id)
-        assert record_1 is not None
-        assert current_record != record_1
-        async with dl_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await dl_wallet_0.create_update_state_spend(
-                launcher_id, bytes32.zeros, action_scope, fee=uint64(2000000000000)
-            )
-        update_txs = action_scope.side_effects.transactions
-        record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
-        assert record_0 is not None
-        assert initial_record != record_0
-        assert record_0 != record_1
-
-        report_txs = await wallet_node_1.wallet_state_manager.add_pending_transactions(report_txs)
-
-        await asyncio.wait_for(
-            full_node_api.wait_transaction_records_entered_mempool(records=report_txs),
-            timeout=adjusted_timeout(timeout=15),
-        )
-
-        update_txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs)
-
-        await asyncio.wait_for(
-            full_node_api.process_transaction_records(records=report_txs), timeout=adjusted_timeout(timeout=15)
-        )
-
-        funds -= 2000000000001
-
-        async def is_singleton_generation(wallet: DataLayerWallet, launcher_id: bytes32, generation: int) -> bool:
-            latest = await wallet.get_latest_singleton(launcher_id)
-            if latest is not None and latest.generation == generation:
-                return True
-            return False
-
-        next_generation = current_record.generation + 2
-        await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
-
-        for i in range(0, 2):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-            await asyncio.sleep(0.5)
-
-        await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
-        await time_out_assert(15, is_singleton_generation, True, dl_wallet_1, launcher_id, next_generation)
-        latest = await dl_wallet_0.get_latest_singleton(launcher_id)
-        assert latest is not None
-        assert latest == (await dl_wallet_1.get_latest_singleton(launcher_id))
-        await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
-        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds)
-        assert (
-            len(
-                await dl_wallet_0.get_history(
-                    launcher_id, min_generation=uint32(next_generation - 1), max_generation=uint32(next_generation - 1)
-                )
-            )
-            == 1
-        )
-        for tx in update_txs:
-            assert await wallet_node_0.wallet_state_manager.tx_store.get_transaction_record(tx.name) is None
-        assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
-
-        async with dl_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-            await dl_wallet_0.create_update_state_spend(
-                launcher_id, bytes32([1] * 32), action_scope, fee=uint64(2000000000000)
-            )
-        record_1 = await dl_wallet_0.get_latest_singleton(launcher_id)
-        assert record_1 is not None
-        update_txs_1 = await wallet_node_0.wallet_state_manager.add_pending_transactions(
-            action_scope.side_effects.transactions
-        )
-        await full_node_api.wait_transaction_records_entered_mempool(update_txs_1)
-
-        # Delete any trace of that update
-        await wallet_node_0.wallet_state_manager.dl_store.delete_singleton_record(record_1.coin_id)
-        for tx in update_txs_1:
-            await wallet_node_0.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
-
-        async with dl_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-            await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([2] * 32), action_scope)
-        record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
-        assert record_0 is not None
-        assert record_0 != record_1
-
-        update_txs_0 = await wallet_node_0.wallet_state_manager.add_pending_transactions(
-            action_scope.side_effects.transactions
-        )
-
-        await asyncio.wait_for(
-            full_node_api.process_transaction_records(records=update_txs_1), timeout=adjusted_timeout(timeout=15)
-        )
-
-        async def does_singleton_have_root(wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
-            latest_singleton = await wallet.get_latest_singleton(lid)
-            if latest_singleton is None:
-                return False
-            return latest_singleton.root == root
-
-        funds -= 2000000000000
-
-        next_generation += 1
-        await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
-        await time_out_assert(15, does_singleton_have_root, True, dl_wallet_0, launcher_id, bytes32([1] * 32))
-        await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
-        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds)
-        assert (
-            len(
-                await dl_wallet_0.get_history(
-                    launcher_id, min_generation=uint32(next_generation), max_generation=uint32(next_generation)
-                )
-            )
-            == 1
-        )
-        for tx in update_txs_0:
-            assert await wallet_node_0.wallet_state_manager.tx_store.get_transaction_record(tx.name) is None
-        assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
 
 
 async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
