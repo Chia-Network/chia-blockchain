@@ -166,10 +166,7 @@ def test_merkle_blob_one_leaf_loads() -> None:
         key=KVId(int64(0x0405060708090A0B)),
         value=KVId(int64(0x0405060708090A1B)),
     )
-
-    metadata = NodeMetadata(type=NodeType.leaf, dirty=False)
-
-    blob = bytearray(bytes(metadata) + pack_raw_node(leaf))
+    blob = bytearray(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + pack_raw_node(leaf))
 
     merkle_blob = MerkleBlob(blob=blob)
     assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == leaf
@@ -197,7 +194,6 @@ def test_merkle_blob_two_leafs_loads() -> None:
         value=KVId(int64(0x1415161718191A2B)),
     )
     blob = bytearray()
-
     blob.extend(bytes(NodeMetadata(type=NodeType.internal, dirty=True)) + pack_raw_node(root))
     blob.extend(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + pack_raw_node(left_leaf))
     blob.extend(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + pack_raw_node(right_leaf))
