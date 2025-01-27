@@ -1626,8 +1626,6 @@ class FullNode:
                     vs.ssi = cc_sub_slot.new_sub_slot_iters
                     assert cc_sub_slot.new_difficulty is not None
                     vs.difficulty = cc_sub_slot.new_difficulty
-                    if expected_sub_slot_iters != vs.ssi:
-                        self.log.info(f"block {block.height} fails")
                     assert expected_sub_slot_iters == vs.ssi
                     assert expected_difficulty == vs.difficulty
             block_rec = blockchain.block_record(block.header_hash)
