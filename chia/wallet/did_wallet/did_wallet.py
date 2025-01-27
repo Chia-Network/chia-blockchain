@@ -765,20 +765,28 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
         innerpuz: Program = self.did_info.current_inner
+        assert (
+            create_singleton_puzzle(
+                innerpuz,
+                self.did_info.origin_coin.name(),
+            ).get_tree_hash()
+            == coin.puzzle_hash
+        )
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
+        assert uncurried is not None
+        p2_puzzle, id_list_hash, num_of_backup_ids_needed, _, metadata = uncurried
         # Quote message puzzle & solution
         if action_scope.config.tx_config.reuse_puzhash:
             new_innerpuzzle_hash = innerpuz.get_tree_hash()
-            uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
-            assert uncurried is not None
-            p2_ph = uncurried[0].get_tree_hash()
+            p2_ph = p2_puzzle.get_tree_hash()
         else:
             p2_ph = await self.standard_wallet.get_puzzle_hash(new=True)
             new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
                 p2_puzhash=p2_ph,
-                recovery_list=self.did_info.backup_ids,
-                num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+                recovery_list_hash=bytes32(id_list_hash.as_atom()),
+                num_of_backup_ids_needed=uint64(num_of_backup_ids_needed.as_int()),
                 launcher_id=self.did_info.origin_coin.name(),
-                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                metadata=metadata,
             )
         p2_solution = self.standard_wallet.make_solution(
             primaries=[CreateCoin(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
