@@ -7,6 +7,7 @@ import pytest
 from chia_rs import G2Element
 
 from chia._tests.cmds.wallet.test_consts import STD_TX
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -36,7 +37,15 @@ def test_back_and_forth_serialization() -> None:
 @dataclass
 class MockWalletStateManager:
     most_recent_call: Optional[
-        tuple[list[TransactionRecord], bool, bool, bool, list[SigningResponse], list[WalletSpendBundle]]
+        tuple[
+            list[TransactionRecord],
+            bool,
+            bool,
+            bool,
+            list[SigningResponse],
+            list[WalletSpendBundle],
+            list[SingletonRecord],
+        ],
     ] = None
 
     async def add_pending_transactions(
@@ -47,8 +56,17 @@ class MockWalletStateManager:
         sign: bool,
         additional_signing_responses: list[SigningResponse],
         extra_spends: list[WalletSpendBundle],
+        singleton_records: list[SingletonRecord],
     ) -> list[TransactionRecord]:
-        self.most_recent_call = (txs, push, merge_spends, sign, additional_signing_responses, extra_spends)
+        self.most_recent_call = (
+            txs,
+            push,
+            merge_spends,
+            sign,
+            additional_signing_responses,
+            extra_spends,
+            singleton_records,
+        )
         return txs
 
 
@@ -73,7 +91,7 @@ async def test_wallet_action_scope() -> None:
             action_scope.side_effects
 
     assert action_scope.side_effects.transactions == [STD_TX]
-    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [])
+    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [])
 
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
         DEFAULT_TX_CONFIG, push=False, merge_spends=True, sign=True, additional_signing_responses=[], extra_spends=[]
@@ -82,4 +100,4 @@ async def test_wallet_action_scope() -> None:
             interface.side_effects.transactions = []
 
     assert action_scope.side_effects.transactions == []
-    assert wsm.most_recent_call == ([], False, True, True, [], [])
+    assert wsm.most_recent_call == ([], False, True, True, [], [], [])
