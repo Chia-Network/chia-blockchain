@@ -21,6 +21,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     parse_timelock_info,
 )
@@ -29,7 +30,6 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -583,7 +583,7 @@ class DIDWallet:
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                Payment(
+                CreateCoin(
                     puzzle_hash=new_inner_puzzle.get_tree_hash(),
                     amount=uint64(coin.amount),
                     memos=[p2_puzzle.get_tree_hash()],
@@ -695,7 +695,7 @@ class DIDWallet:
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
+            primaries=[CreateCoin(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -781,7 +781,7 @@ class DIDWallet:
                 metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
+            primaries=[CreateCoin(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
             conditions=extra_conditions,
         )
         # innerpuz solution is (mode p2_solution)
@@ -916,8 +916,8 @@ class DIDWallet:
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
-                Payment(innermessage, uint64(0)),
+                CreateCoin(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
+                CreateCoin(innermessage, uint64(0)),
             ],
             conditions=extra_conditions,
         )
@@ -1309,7 +1309,7 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
+            primaries=[CreateCoin(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             conditions=extra_conditions,
         )
         innersol = Program.to([1, p2_solution])

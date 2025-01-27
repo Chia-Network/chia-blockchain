@@ -27,6 +27,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
     Condition,
+    CreateCoin,
     CreateCoinAnnouncement,
     UnknownCondition,
     parse_timelock_info,
@@ -47,7 +48,6 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import NotarizedPayment, Offer
@@ -504,7 +504,7 @@ class DataLayerWallet:
 
         # Create the solution
         primaries = [
-            Payment(
+            CreateCoin(
                 announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
                 singleton_record.lineage_proof.amount if new_amount is None else new_amount,
                 [
@@ -729,7 +729,7 @@ class DataLayerWallet:
         )
         excess_fee: int = fee - mirror_coin.amount
         inner_sol: Program = self.standard_wallet.make_solution(
-            primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
+            primaries=[CreateCoin(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if excess_fee > 0 else extra_conditions,
         )
         mirror_spend = CoinSpend(

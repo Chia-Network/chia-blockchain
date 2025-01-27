@@ -23,9 +23,8 @@ from chia.types.spend_bundle import estimate_fees
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import Err
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import ConditionValidTimes, CreateCoin
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.query_filter import TransactionTypeFilter
@@ -1580,7 +1579,7 @@ class TestWalletSimulator:
         wallet = env.xch_wallet
 
         ph = await wallet.get_puzzle_hash(False)
-        primaries = [Payment(ph, uint64(1000000000 + i)) for i in range(int(wallet.max_send_quantity) + 1)]
+        primaries = [CreateCoin(ph, uint64(1000000000 + i)) for i in range(int(wallet.max_send_quantity) + 1)]
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(uint64(1), ph, action_scope, uint64(0), primaries=primaries)
 

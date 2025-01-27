@@ -15,8 +15,8 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.payment import Payment
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     launch_conditions_and_coinsol,
     puzzle_for_singleton,
@@ -615,7 +615,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             AUTHORIZED_PROVIDERS: list[bytes32] = [launcher_id]
             dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
                 cr_coin_1,
-                Payment(ACS_PH, uint64(cr_coin_1.amount), []),
+                CreateCoin(ACS_PH, uint64(cr_coin_1.amount)),
                 Program.to(None),
                 Program.to(None),
                 AUTHORIZED_PROVIDERS,
@@ -623,7 +623,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             )
             dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
                 cr_coin_2,
-                Payment(ACS_PH, uint64(cr_coin_2.amount), []),
+                CreateCoin(ACS_PH, uint64(cr_coin_2.amount)),
                 Program.to(None),
                 Program.to(None),
                 AUTHORIZED_PROVIDERS,

@@ -57,8 +57,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -665,11 +665,11 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    payees: list[Payment] = []
+    payees: list[CreateCoin] = []
     for i in range(10):
         payee_ph = await wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(i + 100)))
-        payees.append(Payment(payee_ph, uint64(i + 200)))
+        payees.append(CreateCoin(payee_ph, uint64(i + 100)))
+        payees.append(CreateCoin(payee_ph, uint64(i + 200)))
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
@@ -880,9 +880,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Part 1: create a single dust coin
-    payees: list[Payment] = []
+    payees: list[CreateCoin] = []
     payee_ph = await dust_wallet.get_new_puzzlehash()
-    payees.append(Payment(payee_ph, uint64(dust_value)))
+    payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -939,7 +939,7 @@ async def test_dusted_wallet(
 
     while dust_remaining > 0:
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(dust_value)))
+        payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
         # After every 100 (at most) coins added, push the tx and advance the chain
         # This greatly speeds up the overall process
@@ -1007,7 +1007,7 @@ async def test_dusted_wallet(
 
     for _ in range(large_coins):
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
+        payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1046,7 +1046,7 @@ async def test_dusted_wallet(
     payees = []
 
     payee_ph = await dust_wallet.get_new_puzzlehash()
-    payees.append(Payment(payee_ph, uint64(dust_value)))
+    payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1090,7 +1090,7 @@ async def test_dusted_wallet(
         payee_ph = await dust_wallet.get_new_puzzlehash()
 
         # Create a large coin and add on the appropriate balance.
-        payees.append(Payment(payee_ph, uint64(xch_spam_amount + i)))
+        payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount + i)))
         large_coins += 1
         large_coin_balance += xch_spam_amount + i
 
@@ -1098,9 +1098,9 @@ async def test_dusted_wallet(
 
         # Make sure we are always creating coins with a positive value.
         if xch_spam_amount - dust_value - i > 0:
-            payees.append(Payment(payee_ph, uint64(xch_spam_amount - dust_value - i)))
+            payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount - dust_value - i)))
         else:
-            payees.append(Payment(payee_ph, uint64(dust_value)))
+            payees.append(CreateCoin(payee_ph, uint64(dust_value)))
         # In cases where xch_spam_amount is sufficiently low,
         # the new dust should be considered a large coina and not be filtered.
         if xch_spam_amount <= dust_value:
@@ -1141,7 +1141,7 @@ async def test_dusted_wallet(
     # Send 1 mojo from the dust wallet. The dust wallet should receive a change coin valued at "xch_spam_amount-1".
 
     payee_ph = await farm_wallet.get_new_puzzlehash()
-    payees = [Payment(payee_ph, uint64(balance))]
+    payees = [CreateCoin(payee_ph, uint64(balance))]
 
     # construct and send tx
     async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1182,7 +1182,7 @@ async def test_dusted_wallet(
 
     while coins_remaining > 0:
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(coin_value)))
+        payees.append(CreateCoin(payee_ph, uint64(coin_value)))
 
         # After every 100 (at most) coins added, push the tx and advance the chain
         # This greatly speeds up the overall process
@@ -1230,7 +1230,7 @@ async def test_dusted_wallet(
 
     # Send a 1 mojo coin from the dust wallet to the farm wallet
     payee_ph = await farm_wallet.get_new_puzzlehash()
-    payees = [Payment(payee_ph, uint64(1))]
+    payees = [CreateCoin(payee_ph, uint64(1))]
 
     # construct and send tx
     async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
