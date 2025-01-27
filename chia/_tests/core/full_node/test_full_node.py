@@ -1624,7 +1624,7 @@ async def test_request_unfinished_block2(wallet_nodes, self_hostname):
         if best_unf is None:
             best_unf = unf
         elif (
-            unf.foliage.foliage_transaction_block_hash is not None
+            best_unf.foliage.foliage_transaction_block_hash is not None
             and unf.foliage.foliage_transaction_block_hash < best_unf.foliage.foliage_transaction_block_hash
         ):
             best_unf = unf
