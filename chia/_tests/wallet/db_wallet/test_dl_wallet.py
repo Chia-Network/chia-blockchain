@@ -38,59 +38,75 @@ async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bo
 
 class TestDLWallet:
     @pytest.mark.parametrize(
-        "trusted,reuse_puzhash",
+        "wallet_environments",
         [
-            (True, True),
-            (True, False),
-            (False, False),
+            {
+                "num_environments": 1,
+                "blocks_needed": [2],
+            }
         ],
+        indirect=True,
     )
+    @pytest.mark.limit_consensus_modes
     @pytest.mark.anyio
-    async def test_initial_creation(
-        self, self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, trusted: bool, reuse_puzhash: bool
-    ) -> None:
-        full_nodes, wallets, _ = simulator_and_wallet
-        full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
-        wallet_node_0, server_0 = wallets[0]
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    async def test_initial_creation(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        env.wallet_aliases = {
+            "xch": 1,
+            "dl": 2,
+        }
 
-        if trusted:
-            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-
-        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-        funds = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet_0)
-
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
-
-        async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
+        dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
+        fee = uint64(1999999999999)
+
         for i in range(0, 2):
             async with dl_wallet.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash), push=True
+                wallet_environments.tx_config, push=True
             ) as action_scope:
                 launcher_id = await dl_wallet.generate_new_reporter(
                     current_root,
                     action_scope,
-                    fee=uint64(1999999999999),
+                    fee=fee,
                 )
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+
+            await wallet_environments.process_pending_states(
+                [
+                    WalletStateTransition(
+                        pre_block_balance_updates={
+                            "xch": {
+                                "unconfirmed_wallet_balance": -fee - 1,
+                                "spendable_balance": -fee - 1,
+                                "max_send_amount": -fee - 1,
+                                "pending_coin_removal_count": 2,  # creation + launcher
+                            },
+                            "dl": {
+                                **({"init": True} if i == 0 else {}),
+                            },
+                        },
+                        post_block_balance_updates={
+                            "xch": {
+                                "confirmed_wallet_balance": -fee - 1,
+                                "spendable_balance": 0,
+                                "max_send_amount": 0,
+                                "pending_coin_removal_count": -2,
+                                "unspent_coin_count": -2,
+                            },
+                            "dl": {
+                                "unspent_coin_count": 1,
+                            },
+                        },
+                    ),
+                ]
+            )
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
-
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, 0)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, 0)
 
         new_puz = await dl_wallet.get_new_puzzle()
         assert new_puz
