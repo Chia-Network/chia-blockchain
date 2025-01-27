@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Optional, Union
 
+from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH, NFT_INTERMEDIATE_LAUNCHER
 from chia_rs import G1Element
 
 from chia.types.blockchain_format.coin import Coin
@@ -11,7 +12,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH,
@@ -29,14 +29,10 @@ from chia.wallet.util.curry_and_treehash import (
     shatree_pair,
 )
 
-DID_INNERPUZ_MOD = load_clvm_maybe_recompile(
-    "did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles"
-)
-DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
+DID_INNERPUZ_MOD = Program.from_bytes(DID_INNERPUZ)
+DID_INNERPUZ_MOD_HASH = bytes32(DID_INNERPUZ_HASH)
 DID_INNERPUZ_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
-INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
-    "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
+INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
 
 
 def create_innerpuz(
@@ -70,10 +66,11 @@ def create_innerpuz(
 
 def get_inner_puzhash_by_p2(
     p2_puzhash: bytes32,
-    recovery_list: list[bytes32],
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
+    recovery_list: Optional[list[bytes32]] = None,
+    recovery_list_hash: Optional[bytes32] = None,
 ) -> bytes32:
     """
     Calculate DID inner puzzle hash based on a P2 puzzle hash
@@ -85,7 +82,16 @@ def get_inner_puzhash_by_p2(
     :return: DID inner puzzle hash
     """
 
-    backup_ids_hash = shatree_atom_list(recovery_list)
+    if recovery_list is None and recovery_list_hash is None:
+        raise ValueError("Cannot construct DID inner puzzle without information about recovery list")
+    if recovery_list is not None and recovery_list_hash is not None:
+        raise ValueError("Must only specify recovery information a single way to construct DID inner puzzle")
+
+    if recovery_list is not None:
+        backup_ids_hash = shatree_atom_list(recovery_list)
+    else:
+        assert recovery_list_hash is not None
+        backup_ids_hash = recovery_list_hash
 
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     singleton_struct = shatree_pair(

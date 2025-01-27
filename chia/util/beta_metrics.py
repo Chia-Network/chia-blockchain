@@ -12,6 +12,7 @@ import psutil
 
 from chia.util.config import load_config
 from chia.util.cpu import available_logical_cores
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger("beta")
 
@@ -84,7 +85,7 @@ class BetaMetricsLogger:
         if self.task is not None:
             raise RuntimeError("Already started")
         self.stop_task = False
-        self.task = asyncio.create_task(self.run())
+        self.task = create_referenced_task(self.run())
 
     async def stop_logging(self) -> None:
         log.debug("stop_logging")

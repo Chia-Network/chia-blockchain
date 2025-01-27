@@ -27,6 +27,7 @@ from chia.util.ints import uint16, uint64
 from chia.util.ip_address import IPAddress
 from chia.util.network import resolve
 from chia.util.safe_cancel_task import cancel_task_safe
+from chia.util.task_referencer import create_referenced_task
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -98,9 +99,9 @@ class FullNodeDiscovery:
 
     async def start_tasks(self) -> None:
         random = Random()
-        self.connect_peers_task = asyncio.create_task(self._connect_to_peers(random))
-        self.serialize_task = asyncio.create_task(self._periodically_serialize(random))
-        self.cleanup_task = asyncio.create_task(self._periodically_cleanup())
+        self.connect_peers_task = create_referenced_task(self._connect_to_peers(random))
+        self.serialize_task = create_referenced_task(self._periodically_serialize(random))
+        self.cleanup_task = create_referenced_task(self._periodically_cleanup())
 
     async def _close_common(self) -> None:
         self.is_closed = True
@@ -397,7 +398,7 @@ class FullNodeDiscovery:
                         self.log.debug("Max concurrent outbound connections reached. waiting")
                         await asyncio.wait(self.pending_tasks, return_when=asyncio.FIRST_COMPLETED)
                     self.pending_tasks.add(
-                        asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
+                        create_referenced_task(self.start_client_async(addr, disconnect_after_handshake))
                     )
 
                 await asyncio.sleep(connect_peer_interval)
@@ -522,8 +523,8 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def start(self) -> None:
         await self.initialize_address_manager()
-        self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
-        self.address_relay_task = asyncio.create_task(self._address_relay())
+        self.self_advertise_task = create_referenced_task(self._periodically_self_advertise_and_clean_data())
+        self.address_relay_task = create_referenced_task(self._address_relay())
         await self.start_tasks()
 
     async def close(self) -> None:

@@ -20,8 +20,8 @@ from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_puzzles import (
-    SINGLETON_LAUNCHER_HASH,
     get_most_recent_singleton_coin_from_coin_spend,
     solution_to_pool_state,
 )
@@ -56,6 +56,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     parse_timelock_info,
 )
@@ -83,12 +84,11 @@ from chia.wallet.did_wallet.did_info import DIDCoinData
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
+from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
@@ -104,6 +104,7 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH
 from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.offer import Offer
@@ -972,7 +973,7 @@ class WalletStateManager:
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[
-                        Payment(
+                        CreateCoin(
                             derivation_record.puzzle_hash,
                             uint64(coin.amount),
                             memos,  # Forward memo of the first coin
@@ -2298,6 +2299,7 @@ class WalletStateManager:
         sign: Optional[bool] = None,
         additional_signing_responses: Optional[list[SigningResponse]] = None,
         extra_spends: Optional[list[WalletSpendBundle]] = None,
+        singleton_records: list[SingletonRecord] = [],
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2344,6 +2346,9 @@ class WalletStateManager:
                     all_coins_names.extend([coin.name() for coin in tx_record.additions])
                     all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
+                for singleton_record in singleton_records:
+                    await self.dl_store.add_singleton_record(singleton_record)
+
             await self.add_interested_coin_ids(all_coins_names)
 
             if actual_spend_involved:
@@ -2387,20 +2392,21 @@ class WalletStateManager:
                     trade_coins_removed = set()
                     trades = []
                     for removed_coin in coins_removed:
-                        trade = await self.trade_manager.get_trade_by_coin(removed_coin)
-                        if trade is not None and trade.status in {
-                            TradeStatus.PENDING_CONFIRM.value,
-                            TradeStatus.PENDING_ACCEPT.value,
-                            TradeStatus.PENDING_CANCEL.value,
-                        }:
-                            if trade not in trades:
-                                trades.append(trade)
-                            # offer was tied to these coins, lets subscribe to them to get a confirmation to
-                            # cancel it if it's confirmed
-                            # we send transactions to multiple peers, and in cases when mempool gets
-                            # fragmented, it's safest to wait for confirmation from blockchain before setting
-                            # offer to failed
-                            trade_coins_removed.add(removed_coin.name())
+                        trades_by_coin = await self.trade_manager.get_trades_by_coin(removed_coin)
+                        for trade in trades_by_coin:
+                            if trade is not None and trade.status in {
+                                TradeStatus.PENDING_CONFIRM.value,
+                                TradeStatus.PENDING_ACCEPT.value,
+                                TradeStatus.PENDING_CANCEL.value,
+                            }:
+                                if trade not in trades:
+                                    trades.append(trade)
+                                # offer was tied to these coins, lets subscribe to them to get a confirmation to
+                                # cancel it if it's confirmed
+                                # we send transactions to multiple peers, and in cases when mempool gets
+                                # fragmented, it's safest to wait for confirmation from blockchain before setting
+                                # offer to failed
+                                trade_coins_removed.add(removed_coin.name())
                     if trades != [] and trade_coins_removed != set():
                         if not tx.is_valid():
                             # we've tried to send this transaction to a full node multiple times

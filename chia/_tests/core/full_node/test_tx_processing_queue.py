@@ -11,6 +11,7 @@ import pytest
 from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueFull
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.transaction_queue_entry import TransactionQueueEntry
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ async def test_one_peer_and_await(seeded_random: random.Random) -> None:
             assert list_txs[i - 20] == resulting_txs[i]
 
     # now we validate that the pop command is blocking
-    task = asyncio.create_task(transaction_queue.pop())
+    task = create_referenced_task(transaction_queue.pop())
     with pytest.raises(asyncio.InvalidStateError):  # task is not done, so we expect an error when getting result
         task.result()
     # add a tx to test task completion

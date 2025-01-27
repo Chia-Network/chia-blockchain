@@ -44,7 +44,7 @@ from chia.data_layer.data_layer_util import (
     leaf_hash,
     unspecified,
 )
-from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
     delete_full_file_if_exists,
@@ -53,6 +53,7 @@ from chia.data_layer.download_data import (
     insert_from_delta_file,
     write_files_for_root,
 )
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -63,6 +64,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.async_pool import Job, QueuedAsyncPool
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
@@ -200,7 +202,7 @@ class DataLayer:
             self._wallet_rpc = await self.wallet_rpc_init
 
             await self._data_store.migrate_db()
-            self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
+            self.periodically_manage_data_task = create_referenced_task(self.periodically_manage_data())
             try:
                 yield
             finally:

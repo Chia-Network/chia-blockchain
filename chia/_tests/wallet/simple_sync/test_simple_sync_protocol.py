@@ -53,9 +53,9 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     junk_ph = bytes32(32 * b"\a")
     fake_wallet_peer = fn_server.all_connections[peer_id]
     msg = wallet_protocol.RegisterForPhUpdates([zero_ph], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
+    msg_response = await full_node_api.register_for_ph_updates(msg, fake_wallet_peer)
 
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     data_response = RespondToCoinUpdates.from_bytes(msg_response.data)
     assert data_response.coin_states == []
 
@@ -68,8 +68,8 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
 
     msg = wallet_protocol.RegisterForPhUpdates([zero_ph], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    msg_response = await full_node_api.register_for_ph_updates(msg, fake_wallet_peer)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     data_response = RespondToCoinUpdates.from_bytes(msg_response.data)
     # we have already subscribed to this puzzle hash, it will be ignored
     # we still receive the updates (see below)
@@ -101,7 +101,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     # Test subscribing to more coins
     one_ph = bytes32(32 * b"\1")
     msg = wallet_protocol.RegisterForPhUpdates([one_ph], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
+    msg_response = await full_node_api.register_for_ph_updates(msg, fake_wallet_peer)
     peak = full_node_api.full_node.blockchain.get_peak()
 
     for i in range(num_blocks):
@@ -163,8 +163,8 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     assert funds == fn_amount
 
     msg_1 = wallet_protocol.RegisterForPhUpdates([puzzle_hash], uint32(0))
-    msg_response_1 = await full_node_api.register_interest_in_puzzle_hash(msg_1, fake_wallet_peer)
-    assert msg_response_1.type == ProtocolMessageTypes.respond_to_ph_update.value
+    msg_response_1 = await full_node_api.register_for_ph_updates(msg_1, fake_wallet_peer)
+    assert msg_response_1.type == ProtocolMessageTypes.respond_to_ph_updates.value
     data_response_1 = RespondToCoinUpdates.from_bytes(msg_response_1.data)
     assert len(data_response_1.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
 
@@ -244,9 +244,9 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     coin_to_spend = my_coins[0].coin
 
     msg = wallet_protocol.RegisterForCoinUpdates([coin_to_spend.name()], uint32(0))
-    msg_response = await full_node_api.register_interest_in_coin(msg, fake_wallet_peer)
+    msg_response = await full_node_api.register_for_coin_updates(msg, fake_wallet_peer)
     assert msg_response is not None
-    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_updates.value
     data_response = RespondToCoinUpdates.from_bytes(msg_response.data)
     assert data_response.coin_states[0].coin == coin_to_spend
 
@@ -286,9 +286,9 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     assert added_target is not None
 
     msg = wallet_protocol.RegisterForCoinUpdates([added_target.name()], uint32(0))
-    msg_response = await full_node_api.register_interest_in_coin(msg, fake_wallet_peer)
+    msg_response = await full_node_api.register_for_coin_updates(msg, fake_wallet_peer)
     assert msg_response is not None
-    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_updates.value
     data_response = RespondToCoinUpdates.from_bytes(msg_response.data)
     assert len(data_response.coin_states) == 0
 
@@ -338,7 +338,7 @@ async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWall
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
 
     msg = wallet_protocol.RegisterForPhUpdates([puzzle_hash], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
+    msg_response = await full_node_api.register_for_ph_updates(msg, fake_wallet_peer)
     assert msg_response is not None
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
@@ -425,7 +425,7 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
 
     for coin_rec in coin_records:
         msg = wallet_protocol.RegisterForCoinUpdates([coin_rec.name], uint32(0))
-        msg_response = await full_node_api.register_interest_in_coin(msg, fake_wallet_peer)
+        msg_response = await full_node_api.register_for_coin_updates(msg, fake_wallet_peer)
         assert msg_response is not None
 
     fork_height = uint32(expected_height - num_blocks - 5)
@@ -481,8 +481,8 @@ async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets,
 
     fake_wallet_peer = fn_server.all_connections[peer_id]
     msg = wallet_protocol.RegisterForPhUpdates([hint], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    msg_response = await full_node_api.register_for_ph_updates(msg, fake_wallet_peer)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     data_response = RespondToCoinUpdates.from_bytes(msg_response.data)
     assert len(data_response.coin_states) == 0
 
@@ -512,8 +512,8 @@ async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets,
     assert notified_state.items[0].coin == Coin(coin_spent.name(), hint_puzzle_hash, amount)
 
     msg = wallet_protocol.RegisterForPhUpdates([hint], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    msg_response = await full_node_api.register_for_ph_updates(msg, fake_wallet_peer)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     response = RespondToCoinUpdates.from_bytes(msg_response.data)
     # we have already subscribed to this puzzle hash. The full node will
     # ignore the duplicate
@@ -548,8 +548,8 @@ async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
     await full_node_api.process_spend_bundles(bundles=[tx])
     # Query the coin states and make sure it doesn't contain duplicated entries
     msg = wallet_protocol.RegisterForPhUpdates([ph], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, wallet_connection)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    msg_response = await full_node_api.register_for_ph_updates(msg, wallet_connection)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     response = RespondToCoinUpdates.from_bytes(msg_response.data)
     assert len(response.coin_states) > 0
     assert len(set(response.coin_states)) == len(response.coin_states)
@@ -586,10 +586,10 @@ async def test_subscribe_for_hint_long_sync(
     fake_wallet_peer = fn_server.all_connections[peer_id]
     fake_wallet_peer_1 = fn_server_1.all_connections[peer_id_1]
     msg = wallet_protocol.RegisterForPhUpdates([hint], uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
-    await full_node_api_1.register_interest_in_puzzle_hash(msg, fake_wallet_peer_1)
+    msg_response = await full_node_api.register_for_ph_updates(msg, fake_wallet_peer)
+    await full_node_api_1.register_for_ph_updates(msg, fake_wallet_peer_1)
 
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     data_response = RespondToCoinUpdates.from_bytes(msg_response.data)
     assert len(data_response.coin_states) == 0
 
@@ -655,8 +655,8 @@ async def test_ph_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets
     full_node_api.full_node.config["max_subscribe_items"] = 2
     assert full_node_api.is_trusted(con) is False
     msg = wallet_protocol.RegisterForPhUpdates(phs, uint32(0))
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    msg_response = await full_node_api.register_for_ph_updates(msg, con)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     s = full_node_api.full_node.subscriptions
     assert s.puzzle_subscription_count() == 2
     assert s.has_puzzle_subscription(phs[0])
@@ -666,8 +666,8 @@ async def test_ph_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets
     full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
     full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
     assert full_node_api.is_trusted(con) is True
-    msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+    msg_response = await full_node_api.register_for_ph_updates(msg, con)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_ph_updates.value
     assert s.puzzle_subscription_count() == 4
     assert s.has_puzzle_subscription(phs[0])
     assert s.has_puzzle_subscription(phs[1])
@@ -696,8 +696,8 @@ async def test_coin_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWalle
     full_node_api.full_node.config["max_subscribe_items"] = 2
     assert full_node_api.is_trusted(con) is False
     msg = wallet_protocol.RegisterForCoinUpdates(coins, uint32(0))
-    msg_response = await full_node_api.register_interest_in_coin(msg, con)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+    msg_response = await full_node_api.register_for_coin_updates(msg, con)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_updates.value
     s = full_node_api.full_node.subscriptions
     assert s.coin_subscription_count() == 2
     assert s.has_coin_subscription(coins[0])
@@ -707,8 +707,8 @@ async def test_coin_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWalle
     full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
     full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
     assert full_node_api.is_trusted(con) is True
-    msg_response = await full_node_api.register_interest_in_coin(msg, con)
-    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+    msg_response = await full_node_api.register_for_coin_updates(msg, con)
+    assert msg_response.type == ProtocolMessageTypes.respond_to_coin_updates.value
     assert s.coin_subscription_count() == 4
     assert s.has_coin_subscription(coins[0])
     assert s.has_coin_subscription(coins[1])

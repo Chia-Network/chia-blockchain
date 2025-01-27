@@ -3,11 +3,10 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-import zlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, Coin, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
@@ -18,7 +17,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.util import marshal, tx_endpoint
+from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.rpc.wallet_request_types import (
     AddKey,
     AddKeyResponse,
@@ -75,7 +74,7 @@ from chia.rpc.wallet_request_types import (
 )
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.coin import Coin, coin_as_list
+from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -100,9 +99,13 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
     Condition,
+    ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
+    conditions_from_json_dicts,
     parse_conditions_non_consensus,
+    parse_timelock_info,
 )
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import (
@@ -128,14 +131,13 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
     match_did_puzzle,
     metadata_to_program,
 )
-from chia.wallet.nft_wallet import nft_puzzles
+from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
+from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
@@ -151,6 +153,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
+from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
@@ -178,6 +181,194 @@ MAX_DERIVATION_INDEX_DELTA = 1000
 MAX_NFT_CHUNK_SIZE = 25
 
 log = logging.getLogger(__name__)
+
+
+def tx_endpoint(
+    push: bool = False,
+    merge_spends: bool = True,
+) -> Callable[[RpcEndpoint], RpcEndpoint]:
+    def _inner(func: RpcEndpoint) -> RpcEndpoint:
+        async def rpc_endpoint(
+            self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
+        ) -> EndpointResult:
+            assert self.service.logged_in_fingerprint is not None
+            tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
+
+            # Some backwards compat fill-ins
+            if tx_config_loader.excluded_coin_ids is None:
+                tx_config_loader = tx_config_loader.override(
+                    excluded_coin_ids=request.get("exclude_coin_ids"),
+                )
+            if tx_config_loader.excluded_coin_amounts is None:
+                tx_config_loader = tx_config_loader.override(
+                    excluded_coin_amounts=request.get("exclude_coin_amounts"),
+                )
+            if tx_config_loader.excluded_coin_ids is None:
+                excluded_coins: Optional[list[dict[str, Any]]] = request.get(
+                    "exclude_coins", request.get("excluded_coins")
+                )
+                if excluded_coins is not None:
+                    tx_config_loader = tx_config_loader.override(
+                        excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
+                    )
+
+            tx_config: TXConfig = tx_config_loader.autofill(
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
+            )
+
+            extra_conditions: tuple[Condition, ...] = tuple()
+            if "extra_conditions" in request:
+                extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
+            extra_conditions = (*extra_conditions, *ConditionValidTimes.from_json_dict(request).to_conditions())
+
+            valid_times: ConditionValidTimes = parse_timelock_info(extra_conditions)
+            if (
+                valid_times.max_secs_after_created is not None
+                or valid_times.min_secs_since_created is not None
+                or valid_times.max_blocks_after_created is not None
+                or valid_times.min_blocks_since_created is not None
+            ):
+                raise ValueError("Relative timelocks are not currently supported in the RPC")
+
+            async with self.service.wallet_state_manager.new_action_scope(
+                tx_config,
+                push=request.get("push", push),
+                merge_spends=request.get("merge_spends", merge_spends),
+                sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
+            ) as action_scope:
+                response: EndpointResult = await func(
+                    self,
+                    request,
+                    *args,
+                    action_scope,
+                    extra_conditions=extra_conditions,
+                    **kwargs,
+                )
+
+            if func.__name__ == "create_new_wallet" and "transactions" not in response:
+                # unfortunately, this API isn't solely a tx endpoint
+                return response
+
+            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
+                action_scope.side_effects.transactions
+            )
+
+            if request.get("CHIP-0029", False):
+                response["unsigned_transactions"] = [
+                    json_serialize_with_clvm_streamable(
+                        tx,
+                        translation_layer=(
+                            ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
+                        ),
+                    )
+                    for tx in unsigned_txs
+                ]
+            else:
+                response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
+
+            response["transactions"] = [
+                TransactionRecord.to_json_dict_convenience(tx, self.service.config)
+                for tx in action_scope.side_effects.transactions
+            ]
+
+            # Some backwards compatibility code here because transaction information being returned was not uniform
+            # until the "transactions" key was applied to all of them. Unfortunately, since .add_pending_transactions
+            # now applies transformations to the transactions, we have to special case edit all of the previous
+            # spots where the information was being surfaced outside of the knowledge of this wrapper.
+            new_txs = action_scope.side_effects.transactions
+            if "transaction" in response:
+                if (
+                    func.__name__ == "create_new_wallet" and request["wallet_type"] == "pool_wallet"
+                ) or func.__name__ in {"pw_join_pool", "pw_self_pool", "pw_absorb_rewards"}:
+                    # Theses RPCs return not "convenience" for some reason
+                    response["transaction"] = new_txs[-1].to_json_dict()
+                else:
+                    response["transaction"] = response["transactions"][0]
+            if "tx_record" in response:
+                response["tx_record"] = response["transactions"][0]
+            if "fee_transaction" in response:
+                # Theses RPCs return not "convenience" for some reason
+                fee_transactions = [tx for tx in new_txs if tx.wallet_id == 1]
+                if len(fee_transactions) == 0:
+                    response["fee_transaction"] = None
+                else:
+                    response["fee_transaction"] = fee_transactions[0].to_json_dict()
+            if "transaction_id" in response:
+                response["transaction_id"] = new_txs[0].name
+            if "transaction_ids" in response:
+                response["transaction_ids"] = [
+                    tx.name.hex() for tx in new_txs if tx.type == TransactionType.OUTGOING_CLAWBACK.value
+                ]
+            if "spend_bundle" in response:
+                response["spend_bundle"] = WalletSpendBundle.aggregate(
+                    [tx.spend_bundle for tx in new_txs if tx.spend_bundle is not None]
+                )
+            if "signed_txs" in response:
+                response["signed_txs"] = response["transactions"]
+            if "signed_tx" in response:
+                response["signed_tx"] = response["transactions"][0]
+            if "tx" in response:
+                if func.__name__ == "send_notification":
+                    response["tx"] = response["transactions"][0]
+                else:
+                    response["tx"] = new_txs[0].to_json_dict()
+            if "txs" in response:
+                response["txs"] = [tx.to_json_dict() for tx in new_txs]
+            if "tx_id" in response:
+                response["tx_id"] = new_txs[0].name
+            if "trade_record" in response:
+                old_offer: Offer = Offer.from_bech32(response["offer"])
+                signed_coin_spends: list[CoinSpend] = [
+                    coin_spend
+                    for tx in new_txs
+                    if tx.spend_bundle is not None
+                    for coin_spend in tx.spend_bundle.coin_spends
+                ]
+                involved_coins: list[Coin] = [spend.coin for spend in signed_coin_spends]
+                signed_coin_spends.extend(
+                    [spend for spend in old_offer._bundle.coin_spends if spend.coin not in involved_coins]
+                )
+                new_offer_bundle = WalletSpendBundle(
+                    signed_coin_spends,
+                    AugSchemeMPL.aggregate(
+                        [tx.spend_bundle.aggregated_signature for tx in new_txs if tx.spend_bundle is not None]
+                    ),
+                )
+                new_offer: Offer = Offer(old_offer.requested_payments, new_offer_bundle, old_offer.driver_dict)
+                response["offer"] = new_offer.to_bech32()
+                old_trade_record: TradeRecord = TradeRecord.from_json_dict_convenience(
+                    response["trade_record"], bytes(old_offer).hex()
+                )
+                new_trade: TradeRecord = dataclasses.replace(
+                    old_trade_record,
+                    offer=bytes(new_offer),
+                    trade_id=new_offer.name(),
+                )
+                response["trade_record"] = new_trade.to_json_dict_convenience()
+                if (
+                    await self.service.wallet_state_manager.trade_manager.trade_store.get_trade_record(
+                        old_trade_record.trade_id
+                    )
+                    is not None
+                ):
+                    await self.service.wallet_state_manager.trade_manager.trade_store.delete_trade_record(
+                        old_trade_record.trade_id
+                    )
+                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer)
+                for tx in await self.service.wallet_state_manager.tx_store.get_transactions_by_trade_id(
+                    old_trade_record.trade_id
+                ):
+                    await self.service.wallet_state_manager.tx_store.add_transaction_record(
+                        dataclasses.replace(tx, trade_id=new_trade.trade_id)
+                    )
+
+            return response
+
+        return rpc_endpoint
+
+    return _inner
 
 
 class WalletRpcApi:
@@ -1149,7 +1340,7 @@ class WalletRpcApi:
             raise ValueError("Cannot split coins from non-fungible wallet types")
 
         outputs = [
-            Payment(
+            CreateCoin(
                 await wallet.get_puzzle_hash(new=True)
                 if isinstance(wallet, Wallet)
                 else await wallet.standard_wallet.get_puzzle_hash(new=True),
@@ -2125,25 +2316,6 @@ class WalletRpcApi:
     async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
 
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-        # There's also temp code in test_wallet_rpc.py
-        from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
-
-        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
-        if data is None:
-            raise ValueError("Invalid Offer")
-        decoded = convertbits(list(data), 5, 8, False)
-        decoded_bytes = bytes(decoded)
-        try:
-            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except zlib.error:
-            decompressed_bytes = decoded_bytes
-        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
-            raise ValueError("Old offer format is no longer supported")
-        ###
-
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos, valid_times = offer.summary()
 
@@ -2204,25 +2376,6 @@ class WalletRpcApi:
     async def check_offer_validity(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
 
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-        # There's also temp code in test_wallet_rpc.py
-        from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
-
-        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
-        if data is None:
-            raise ValueError("Invalid Offer")  # pragma: no cover
-        decoded = convertbits(list(data), 5, 8, False)
-        decoded_bytes = bytes(decoded)
-        try:
-            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except zlib.error:
-            decompressed_bytes = decoded_bytes
-        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
-            raise ValueError("Old offer format is no longer supported")
-        ###
-
         offer = Offer.from_bech32(offer_hex)
         peer = self.service.get_full_node_peer()
         return {
@@ -2238,25 +2391,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         offer_hex: str = request["offer"]
-
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-        # There's also temp code in test_wallet_rpc.py
-        from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
-
-        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
-        if data is None:
-            raise ValueError("Invalid Offer")  # pragma: no cover
-        decoded = convertbits(list(data), 5, 8, False)
-        decoded_bytes = bytes(decoded)
-        try:
-            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except zlib.error:
-            decompressed_bytes = decoded_bytes
-        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
-            raise ValueError("Old offer format is no longer supported")
-        ###
 
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
@@ -2353,7 +2487,7 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
         async with self.service.wallet_state_manager.lock:
             await wsm.trade_manager.cancel_pending_offers(
-                [bytes32(trade_id)], action_scope, fee=fee, secure=secure, extra_conditions=extra_conditions
+                [trade_id], action_scope, fee=fee, secure=secure, extra_conditions=extra_conditions
             )
 
         return {"transactions": None}  # tx_endpoint wrapper will take care of this
@@ -3418,7 +3552,7 @@ class WalletRpcApi:
         else:
             nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(start_index=start_index, count=count)
         for nft in nfts:
-            nft_info = await nft_puzzles.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
+            nft_info = await nft_puzzle_utils.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
             nft_info_list.append(nft_info)
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
@@ -3436,7 +3570,7 @@ class WalletRpcApi:
             did_id = decode_puzzle_hash(did_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
         if not (
-            await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+            await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
             return {"success": False, "error": "The NFT doesn't support setting a DID."}
 
@@ -3497,7 +3631,7 @@ class WalletRpcApi:
                 nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             assert nft_coin_info is not None
             if not (
-                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+                await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
             ).supports_did:
                 log.warning(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
                 continue
@@ -3734,13 +3868,13 @@ class WalletRpcApi:
         # There is no way to rebuild the full puzzle in a different wallet.
         # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
         if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+            inner_puzzle = nft_puzzle_utils.recurry_nft_puzzle(
                 uncurried_nft, coin_spend.solution.to_program(), uncurried_nft.p2_puzzle
             )
         else:
             inner_puzzle = uncurried_nft.p2_puzzle
 
-        full_puzzle = nft_puzzles.create_full_puzzle(
+        full_puzzle = nft_puzzle_utils.create_full_puzzle(
             uncurried_nft.singleton_launcher_id,
             metadata,
             bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
@@ -3758,7 +3892,7 @@ class WalletRpcApi:
             }
         minter_did = await self.service.wallet_state_manager.get_minter_did(launcher_coin[0].coin, peer)
 
-        nft_info: NFTInfo = await nft_puzzles.get_nft_info_from_puzzle(
+        nft_info: NFTInfo = await nft_puzzle_utils.get_nft_info_from_puzzle(
             NFTCoinInfo(
                 uncurried_nft.singleton_launcher_id,
                 coin_state.coin,
@@ -3936,7 +4070,7 @@ class WalletRpcApi:
             )
         nft_id_list = []
         for cs in sb.coin_spends:
-            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
+            if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                 nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
 
         return {
@@ -4062,7 +4196,7 @@ class WalletRpcApi:
 
         memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
 
-        additional_outputs: list[Payment] = []
+        additional_outputs: list[CreateCoin] = []
         for addition in additions[1:]:
             receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
@@ -4071,7 +4205,7 @@ class WalletRpcApi:
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
-            additional_outputs.append(Payment(receiver_ph, amount, memos))
+            additional_outputs.append(CreateCoin(receiver_ph, amount, memos))
 
         fee: uint64 = uint64(request.get("fee", 0))
 
@@ -4127,7 +4261,8 @@ class WalletRpcApi:
                     action_scope,
                     fee,
                     coins=coins,
-                    memos=[memos_0] + [output.memos for output in additional_outputs],
+                    memos=[memos_0]
+                    + [output.memos if output.memos is not None else [] for output in additional_outputs],
                     extra_conditions=(
                         *extra_conditions,
                         *(

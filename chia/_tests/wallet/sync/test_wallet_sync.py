@@ -58,8 +58,8 @@ from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -117,12 +117,17 @@ async def test_request_block_headers(
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
+@pytest.mark.parametrize("rewards_only_tx_block", [True, False])
 async def test_request_block_headers_transactions_filter(
-    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], rewards_only_tx_block: bool
 ) -> None:
     """
     Tests that `request_block_headers` returns a transactions filter that
         correctly reflects the blocks transactions.
+
+    We use `rewards_only_tx_block` to control whether the test transaction
+        block contains our test spend as well, or just the reward coins.
+
     For completeness, we're also comparing the outcome of
         `request_block_headers` in this regard, to `request_header_blocks` as
         well as `request_block_header`.
@@ -131,28 +136,36 @@ async def test_request_block_headers_transactions_filter(
     ph = SerializedProgram.to(1).get_tree_hash()
     for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    # Generate a block with our test spend
-    coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
-    [parent_coin] = [c.coin for c in coins if c.coin.amount == 250_000_000_000]
-    sb = SpendBundle(
-        [
-            make_spend(
-                parent_coin, SerializedProgram.to(1), SerializedProgram.to([[ConditionOpcode.CREATE_COIN, ph, 42]])
-            )
-        ],
-        G2Element(),
-    )
+    if rewards_only_tx_block:
+        # Generate a transaction block without any spends
+        sb = None
+    else:
+        # Generate a transaction block with our test spend
+        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+        [parent_coin] = [c.coin for c in coins if c.coin.amount == 250_000_000_000]
+        sb = SpendBundle(
+            [
+                make_spend(
+                    parent_coin, SerializedProgram.to(1), SerializedProgram.to([[ConditionOpcode.CREATE_COIN, ph, 42]])
+                )
+            ],
+            G2Element(),
+        )
     blocks = await full_node_api.get_all_full_blocks()
     blocks = bt.get_consecutive_blocks(1, blocks, guarantee_transaction_block=True, transaction_data=sb)
     new_block = blocks[-1]
     await full_node_api.full_node.add_block(new_block)
     # Compute the expected transactions filter
-    [test_spend] = sb.additions()
-    byte_array_tx = (
-        [bytearray(test_spend.puzzle_hash)]
-        + [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
-        + [bytearray(parent_coin.name())]
-    )
+    if rewards_only_tx_block:
+        byte_array_tx = [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
+    else:
+        assert sb is not None
+        [test_spend] = sb.additions()
+        byte_array_tx = (
+            [bytearray(test_spend.puzzle_hash)]
+            + [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
+            + [bytearray(parent_coin.name())]
+        )
     expected_transactions_filter = bytes(PyBIP158(byte_array_tx).GetEncoded())
     # Perform the request and check the transactions filter
     msg = await full_node_api.request_block_headers(
@@ -657,11 +670,11 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    payees: list[Payment] = []
+    payees: list[CreateCoin] = []
     for i in range(10):
         payee_ph = await wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(i + 100)))
-        payees.append(Payment(payee_ph, uint64(i + 200)))
+        payees.append(CreateCoin(payee_ph, uint64(i + 100)))
+        payees.append(CreateCoin(payee_ph, uint64(i + 200)))
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
@@ -872,9 +885,9 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Part 1: create a single dust coin
-    payees: list[Payment] = []
+    payees: list[CreateCoin] = []
     payee_ph = await dust_wallet.get_new_puzzlehash()
-    payees.append(Payment(payee_ph, uint64(dust_value)))
+    payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -931,7 +944,7 @@ async def test_dusted_wallet(
 
     while dust_remaining > 0:
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(dust_value)))
+        payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
         # After every 100 (at most) coins added, push the tx and advance the chain
         # This greatly speeds up the overall process
@@ -999,7 +1012,7 @@ async def test_dusted_wallet(
 
     for _ in range(large_coins):
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
+        payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1038,7 +1051,7 @@ async def test_dusted_wallet(
     payees = []
 
     payee_ph = await dust_wallet.get_new_puzzlehash()
-    payees.append(Payment(payee_ph, uint64(dust_value)))
+    payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1082,7 +1095,7 @@ async def test_dusted_wallet(
         payee_ph = await dust_wallet.get_new_puzzlehash()
 
         # Create a large coin and add on the appropriate balance.
-        payees.append(Payment(payee_ph, uint64(xch_spam_amount + i)))
+        payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount + i)))
         large_coins += 1
         large_coin_balance += xch_spam_amount + i
 
@@ -1090,9 +1103,9 @@ async def test_dusted_wallet(
 
         # Make sure we are always creating coins with a positive value.
         if xch_spam_amount - dust_value - i > 0:
-            payees.append(Payment(payee_ph, uint64(xch_spam_amount - dust_value - i)))
+            payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount - dust_value - i)))
         else:
-            payees.append(Payment(payee_ph, uint64(dust_value)))
+            payees.append(CreateCoin(payee_ph, uint64(dust_value)))
         # In cases where xch_spam_amount is sufficiently low,
         # the new dust should be considered a large coina and not be filtered.
         if xch_spam_amount <= dust_value:
@@ -1133,7 +1146,7 @@ async def test_dusted_wallet(
     # Send 1 mojo from the dust wallet. The dust wallet should receive a change coin valued at "xch_spam_amount-1".
 
     payee_ph = await farm_wallet.get_new_puzzlehash()
-    payees = [Payment(payee_ph, uint64(balance))]
+    payees = [CreateCoin(payee_ph, uint64(balance))]
 
     # construct and send tx
     async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1174,7 +1187,7 @@ async def test_dusted_wallet(
 
     while coins_remaining > 0:
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(coin_value)))
+        payees.append(CreateCoin(payee_ph, uint64(coin_value)))
 
         # After every 100 (at most) coins added, push the tx and advance the chain
         # This greatly speeds up the overall process
@@ -1222,7 +1235,7 @@ async def test_dusted_wallet(
 
     # Send a 1 mojo coin from the dust wallet to the farm wallet
     payee_ph = await farm_wallet.get_new_puzzlehash()
-    payees = [Payment(payee_ph, uint64(1))]
+    payees = [CreateCoin(payee_ph, uint64(1))]
 
     # construct and send tx
     async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1565,7 +1578,7 @@ async def test_long_sync_untrusted_break(
 
     sync_canceled = False
 
-    async def register_interest_in_puzzle_hash(
+    async def register_for_ph_updates(
         self: object,
         request: wallet_protocol.RegisterForPhUpdates,
         peer: WSChiaConnection,
@@ -1596,7 +1609,7 @@ async def test_long_sync_untrusted_break(
 
     await add_blocks_in_batches(default_1000_blocks[:400], untrusted_full_node_api.full_node)
 
-    with patch_request_handler(api=untrusted_full_node_api, handler=register_interest_in_puzzle_hash):
+    with patch_request_handler(api=untrusted_full_node_api, handler=register_for_ph_updates):
         # Connect to the untrusted peer and wait until the long sync started
         await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
         await time_out_assert(30, wallet_syncing)

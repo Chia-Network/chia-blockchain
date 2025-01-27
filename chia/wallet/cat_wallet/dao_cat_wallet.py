@@ -21,7 +21,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.conditions import Condition, CreatePuzzleAnnouncement, parse_timelock_info
+from chia.wallet.conditions import Condition, CreateCoin, CreatePuzzleAnnouncement, parse_timelock_info
 from chia.wallet.dao_wallet.dao_utils import (
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
@@ -30,9 +30,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_lockup_puzzle,
 )
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
@@ -45,10 +43,6 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
-
-CAT_MOD_HASH = CAT_MOD.get_tree_hash()
-CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
-QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
 class DAOCATWallet:
@@ -290,7 +284,7 @@ class DAOCATWallet:
                 vote_amount = coin.amount
                 running_sum += coin.amount
                 primaries = [
-                    Payment(
+                    CreateCoin(
                         new_innerpuzzle.get_tree_hash(),
                         vote_amount,
                         [standard_inner_puz.get_tree_hash()],
@@ -305,7 +299,7 @@ class DAOCATWallet:
                 vote_amount = uint64(amount - running_sum)
                 running_sum += coin.amount
                 primaries = [
-                    Payment(
+                    CreateCoin(
                         new_innerpuzzle.get_tree_hash(),
                         vote_amount,
                         [standard_inner_puz.get_tree_hash()],
@@ -313,7 +307,7 @@ class DAOCATWallet:
                 ]
                 if change > 0:
                     primaries.append(
-                        Payment(
+                        CreateCoin(
                             lci.inner_puzzle.get_tree_hash(),
                             uint64(change),
                             [lci.inner_puzzle.get_tree_hash()],
@@ -412,7 +406,7 @@ class DAOCATWallet:
 
             # CREATE_COIN new_puzzle coin.amount
             primaries = [
-                Payment(
+                CreateCoin(
                     new_inner_puzhash,
                     uint64(coin.amount),
                     [new_inner_puzhash],
