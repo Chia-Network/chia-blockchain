@@ -41,7 +41,7 @@ python = ">=3.9, <4"
 aiofiles = ">=24.1.0"  # Async IO for files
 aiohttp = ">=3.10.4"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
-anyio = ">=4.6.2.post1"
+anyio = "==4.3.0"
 bitstring = ">=4.1.4"  # Binary data management library
 boto3 = ">=1.35.43"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.1"  # bip158-style wallet filters
@@ -53,13 +53,13 @@ clvm = ">=0.9.11"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
 clvm_tools_rs = ">=0.1.45"  # Rust implementation of clvm_tools' compiler
 colorama = ">=0.4.6"  # Colorizes terminal output
-colorlog = ">=6.9.0"  # Adds color to logs
+colorlog = "==6.8.2"  # Adds color to logs
 concurrent_log_handler = ">=0.9.25"  # Concurrently log and rotate logs
 cryptography = ">=43.0.1"  # Python cryptography library for TLS - keyring conflict
 dnslib = ">=0.9.25"  # dns lib
 dnspython = ">=2.6.1"  # Query DNS seeds
-filelock = ">=3.16.1"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-keyring = ">=25.5.0"  # Store keys in MacOS Keychain, Windows Credential Locker
+filelock = "==3.15.4"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+keyring = "==25.2.1"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = ">=24.0"
 pip = ">=24.2"
 psutil = ">=6.1.0"
