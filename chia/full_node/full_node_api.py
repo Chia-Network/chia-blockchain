@@ -25,7 +25,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -863,32 +862,16 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                        (
+                            block_generator,
+                            aggregate_signature,
+                            additions,
+                        ) = await self.full_node.mempool_manager.create_block_generator(
                             curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
                         )
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
-                        mempool_bundle = None
-                    if mempool_bundle is not None:
-                        spend_bundle, additions = mempool_bundle
-                        removals = spend_bundle.removals()
-                        self.full_node.log.info(f"Add rem: {len(additions)} {len(removals)}")
-                        aggregate_signature = spend_bundle.aggregated_signature
-                        # when the hard fork activates, block generators are
-                        # allowed to be serialized with the improved CLVM
-                        # serialization format, supporting back-references
-                        start_time = time.monotonic()
-                        if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
-                            block_generator = simple_solution_generator_backrefs(spend_bundle)
-                        else:
-                            block_generator = simple_solution_generator(spend_bundle)
-                        end_time = time.monotonic()
-                        duration = end_time - start_time
-                        self.log.log(
-                            logging.INFO if duration < 1 else logging.WARNING,
-                            f"serializing block generator took {duration:0.2f} seconds",
-                        )
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
