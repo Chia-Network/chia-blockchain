@@ -3,10 +3,14 @@ from __future__ import annotations
 from typing import Optional, Union
 
 from chia_rs import ConsensusConstants, RewardChainBlock, RewardChainBlockUnfinished
+from chia_rs import (
+    calculate_ip_iters,
+    calculate_sp_iters,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 
 
@@ -40,9 +44,10 @@ def iters_from_block(
         cc_sp,
     )
     return (
-        calculate_sp_iters(constants, sub_slot_iters, reward_chain_block.signage_point_index),
+        calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, reward_chain_block.signage_point_index),
         calculate_ip_iters(
-            constants,
+            constants.NUM_SPS_SUB_SLOT,
+            constants.NUM_SP_INTERVALS_EXTRA,
             sub_slot_iters,
             reward_chain_block.signage_point_index,
             required_iters,

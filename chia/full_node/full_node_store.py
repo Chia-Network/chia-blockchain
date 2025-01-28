@@ -9,13 +9,13 @@ from typing import Optional
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs import calculate_sp_interval_iters
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.consensus.pot_iterations import calculate_sp_interval_iters
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.server.outbound_message import Message
@@ -912,7 +912,7 @@ class FullNodeStore:
                 # If there was a reorg and a difficulty adjustment, just clear all the slots
                 self.clear_slots()
             else:
-                interval_iters = calculate_sp_interval_iters(self.constants, peak.sub_slot_iters)
+                interval_iters = calculate_sp_interval_iters(self.constants.NUM_SPS_SUB_SLOT, peak.sub_slot_iters)
                 # If it's not a reorg, or there is a reorg on the same difficulty, we can keep signage points
                 # that we had before, in the cache
                 for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
