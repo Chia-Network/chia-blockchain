@@ -37,6 +37,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     UnknownCondition,
     parse_timelock_info,
@@ -44,7 +45,6 @@ from chia.wallet.conditions import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
@@ -611,7 +611,7 @@ class CATWallet:
 
     async def generate_unsigned_spendbundle(
         self,
-        payments: list[Payment],
+        payments: list[CreateCoin],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
@@ -661,7 +661,7 @@ class CATWallet:
                         break
             else:
                 change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+            primaries.append(CreateCoin(change_puzhash, uint64(change), [change_puzhash]))
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
@@ -761,7 +761,7 @@ class CATWallet:
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
             memos_with_hint: list[bytes] = [puzhash]
             memos_with_hint.extend(memo_list)
-            payments.append(Payment(puzhash, amount, memos_with_hint))
+            payments.append(CreateCoin(puzhash, amount, memos_with_hint))
 
         payment_sum = sum(p.amount for p in payments)
         spend_bundle = await self.generate_unsigned_spendbundle(

@@ -26,9 +26,8 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.conditions import AssertCoinAnnouncement
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
-from chia.wallet.payment import Payment
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
@@ -183,7 +182,7 @@ class CRCAT:
         cls: type[_T_CRCAT],
         # General CAT launching info
         origin_coin: Coin,
-        payment: Payment,
+        payment: CreateCoin,
         tail: Program,
         tail_solution: Program,
         # CR Layer params
