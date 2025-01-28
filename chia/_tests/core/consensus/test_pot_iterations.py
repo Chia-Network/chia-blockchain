@@ -40,7 +40,9 @@ class TestPotIterations:
 
         with raises(ValueError):
             # Invalid signage point index
-            calculate_ip_iters(test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, ssi, uint8(123), uint64(100000))
+            calculate_ip_iters(
+                test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, ssi, uint8(123), uint64(100000)
+            )
 
         sp_iters = sp_interval_iters * 13
 

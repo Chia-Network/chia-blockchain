@@ -989,7 +989,11 @@ def validate_finished_header_block(
 
     # 31. Check infused challenge chain infusion point VDF
     if not genesis_block:
-        overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(
+            constants.NUM_SPS_SUB_SLOT,
+            constants.NUM_SP_INTERVALS_EXTRA,
+            header_block.reward_chain_block.signage_point_index,
+        )
         deficit = calculate_deficit(
             constants,
             header_block.height,
