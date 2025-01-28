@@ -208,14 +208,8 @@ class MempoolManager:
 
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        if item_inclusion_filter is None:
-
-            def always(bundle_name: bytes32) -> bool:
-                return True
-
-            item_inclusion_filter = always
         return await self.mempool.create_bundle_from_mempool_items(
-            item_inclusion_filter, get_unspent_lineage_info_for_puzzle_hash, self.constants, self.peak.height
+            get_unspent_lineage_info_for_puzzle_hash, self.constants, self.peak.height, item_inclusion_filter
         )
 
     def get_filter(self) -> bytes:
