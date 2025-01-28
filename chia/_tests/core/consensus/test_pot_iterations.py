@@ -6,10 +6,10 @@ from chia_rs import (
     calculate_sp_iters,
     is_overflow_block,
 )
+from chia_rs import expected_plot_size as _expected_plot_size
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
     calculate_iterations_quality,
 )

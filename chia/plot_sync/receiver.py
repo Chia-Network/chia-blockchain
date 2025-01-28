@@ -8,9 +8,10 @@ from typing import Any, Callable, Optional, Union
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint32, uint64
+from chia_rs import expected_plot_size as _expected_plot_size
 from typing_extensions import Protocol
 
-from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
     InvalidIdentifierError,

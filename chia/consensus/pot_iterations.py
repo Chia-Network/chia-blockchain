@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from chia.consensus.pos_quality import _expected_plot_size
+from chia_rs import expected_plot_size as _expected_plot_size
+
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint128
 
