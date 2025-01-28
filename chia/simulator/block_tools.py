@@ -83,6 +83,7 @@ from chia.simulator.ssl_certs import (
 )
 from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
+from chia.ssl.ssl_check import fix_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
@@ -111,7 +112,6 @@ from chia.util.config import (
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, bytes_to_mnemonic
-from chia.util.ssl_check import fix_ssl
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (

@@ -27,10 +27,10 @@ from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
+from chia.ssl.ssl_check import check_ssl
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, resolve_root_path
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
-from chia.util.ssl_check import check_ssl
 
 CONTEXT_SETTINGS = {
     "help_option_names": ["-h", "--help"],

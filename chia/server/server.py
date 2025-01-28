@@ -35,10 +35,10 @@ from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
+from chia.ssl.ssl_check import verify_ssl_certs_and_keys
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
-from chia.util.ssl_check import verify_ssl_certs_and_keys
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 
