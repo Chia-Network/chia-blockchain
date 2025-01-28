@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
 from clvm.casts import int_to_bytes
@@ -12,7 +12,6 @@ from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
@@ -61,7 +60,11 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_unfinished_block_headers()) == 0
         assert len(await client.get_block_records(0, 100)) == 0
         for block in blocks:
-            if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+            if is_overflow_block(
+                bt.constants.NUM_SPS_SUB_SLOT,
+                bt.constants.NUM_SP_INTERVAL_EXTRA,
+                block.reward_chain_block.signage_point_index,
+            ):
                 finished_ss = block.finished_sub_slots[:-1]
             else:
                 finished_ss = block.finished_sub_slots

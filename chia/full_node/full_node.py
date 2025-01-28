@@ -20,6 +20,7 @@ from chia_rs import (
     BLSCache,
     ConsensusConstants,
     PoolTarget,
+    calculate_sp_iters,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
@@ -37,7 +38,6 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
-from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
@@ -2598,7 +2598,7 @@ class FullNode:
         sp_total_iters = uint128(
             sub_slot_start_iters
             + calculate_sp_iters(
-                self.constants,
+                self.constants.NUM_SPS_SUB_SLOT,
                 sub_slot_iters,
                 unfinished_block.reward_chain_block.signage_point_index,
             )

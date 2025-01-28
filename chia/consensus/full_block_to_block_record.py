@@ -5,13 +5,13 @@ from typing import Optional, Union
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs import is_overflow_block
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.slots import ChallengeBlockInfo
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -35,7 +35,9 @@ def block_to_block_record(
         sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, blocks
         )
-    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, block.reward_chain_block.signage_point_index
+    )
     deficit = calculate_deficit(
         constants,
         block.height,

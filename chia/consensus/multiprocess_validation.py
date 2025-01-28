@@ -14,6 +14,7 @@ from chia_rs import (
     ConsensusConstants,
     SpendBundleConditions,
     get_flags_for_height_and_constants,
+    is_overflow_block,
     run_block_generator,
     run_block_generator2,
 )
@@ -26,7 +27,7 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -205,7 +206,9 @@ async def pre_validate_block(
             vs.difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
         if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
             vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, block.reward_chain_block.signage_point_index
+    )
     challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
     if block.reward_chain_block.challenge_chain_sp_vdf is None:
         cc_sp_hash: bytes32 = challenge

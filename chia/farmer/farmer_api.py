@@ -6,12 +6,12 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey, calculate_sp_interval_iters
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia import __version__
-from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -118,7 +118,7 @@ class FarmerAPI:
             )
 
             # If the iters are good enough to make a block, proceed with the block making flow
-            if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
+            if required_iters < calculate_sp_interval_iters(self.farmer.constants.NUM_SPS_SUB_SLOT, sp.sub_slot_iters):
                 if new_proof_of_space.farmer_reward_address_override is not None:
                     self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
 
@@ -224,7 +224,7 @@ class FarmerAPI:
                     new_proof_of_space.sp_hash,
                 )
                 if required_iters >= calculate_sp_interval_iters(
-                    self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
+                    self.farmer.constants.NUM_SPS_SUB_SLOT, self.farmer.constants.POOL_SUB_SLOT_ITERS
                 ):
                     self.farmer.log.info(
                         f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['current_difficulty']}"

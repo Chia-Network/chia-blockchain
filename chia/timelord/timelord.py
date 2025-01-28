@@ -18,6 +18,7 @@ from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 from chia_rs import ConsensusConstants, RewardChainBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
+from chia_rs import calculate_sp_iters, is_overflow_block
 from chiavdf import create_discriminant, prove
 
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
@@ -258,7 +259,11 @@ class Timelord:
             log.warning(f"Received invalid unfinished block: {e}.")
             return None
         block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
-        if is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
+        if is_overflow_block(
+            self.constants.NUM_SPS_SUB_SLOT,
+            self.constants.NUM_SP_INTERVALS_EXTRA,
+            block.reward_chain_block.signage_point_index,
+        ):
             block_sp_total_iters -= self.last_state.get_sub_slot_iters()
         found_index = -1
         for index, (rc, total_iters) in enumerate(self.last_state.reward_challenge_cache):
@@ -633,7 +638,7 @@ class Timelord:
                         ip_total_iters
                         - ip_iters
                         + calculate_sp_iters(
-                            self.constants,
+                            self.constants.NUM_SPS_SUB_SLOT,
                             block.sub_slot_iters,
                             block.reward_chain_block.signage_point_index,
                         )

@@ -1,49 +1,8 @@
 from __future__ import annotations
 
-from chia_rs import ConsensusConstants
-from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64, uint128
-
 from chia.consensus.pos_quality import _expected_plot_size
 from chia.util.hash import std_hash
-
-
-def is_overflow_block(constants: ConsensusConstants, signage_point_index: uint8) -> bool:
-    if signage_point_index >= constants.NUM_SPS_SUB_SLOT:
-        raise ValueError("SP index too high")
-    return signage_point_index >= constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA
-
-
-def calculate_sp_interval_iters(constants: ConsensusConstants, sub_slot_iters: uint64) -> uint64:
-    assert sub_slot_iters % constants.NUM_SPS_SUB_SLOT == 0
-    return uint64(sub_slot_iters // constants.NUM_SPS_SUB_SLOT)
-
-
-def calculate_sp_iters(constants: ConsensusConstants, sub_slot_iters: uint64, signage_point_index: uint8) -> uint64:
-    if signage_point_index >= constants.NUM_SPS_SUB_SLOT:
-        raise ValueError("SP index too high")
-    return uint64(calculate_sp_interval_iters(constants, sub_slot_iters) * signage_point_index)
-
-
-def calculate_ip_iters(
-    constants: ConsensusConstants,
-    sub_slot_iters: uint64,
-    signage_point_index: uint8,
-    required_iters: uint64,
-) -> uint64:
-    # Note that the SSI is for the block passed in, which might be in the previous epoch
-    sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
-    sp_interval_iters: uint64 = calculate_sp_interval_iters(constants, sub_slot_iters)
-    if sp_iters % sp_interval_iters != 0 or sp_iters >= sub_slot_iters:
-        raise ValueError(f"Invalid sp iters {sp_iters} for this ssi {sub_slot_iters}")
-
-    if required_iters >= sp_interval_iters or required_iters == 0:
-        raise ValueError(
-            f"Required iters {required_iters} is not below the sp interval iters {sp_interval_iters} "
-            f"{sub_slot_iters} or not >0."
-        )
-
-    return uint64((sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters)
+from chia.util.ints import uint64, uint128
 
 
 def calculate_iterations_quality(

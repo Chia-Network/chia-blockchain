@@ -7,6 +7,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import ConsensusConstants
+from chia_rs import is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -19,7 +20,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_store import FullNodeStore, UnfinishedBlockEntry, find_best_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
@@ -817,7 +817,9 @@ async def test_basic_store(
         sb.signage_point_index + custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
         custom_block_tools.constants.NUM_SPS_SUB_SLOT,
     ):
-        if is_overflow_block(custom_block_tools.constants, uint8(i)):
+        if is_overflow_block(
+            custom_block_tools.constants.NUM_SPS_SUB_SLOT, custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA, uint8(i)
+        ):
             finished_sub_slots = blocks_5[-1].finished_sub_slots
         else:
             finished_sub_slots = []
