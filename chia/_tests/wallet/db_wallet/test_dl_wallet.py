@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any
 
 import pytest
 
@@ -490,54 +489,132 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
 
 
 @pytest.mark.parametrize(
-    "trusted",
-    [True, False],
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [3, 1],
+        }
+    ],
+    indirect=True,
 )
+@pytest.mark.limit_consensus_modes
 @pytest.mark.anyio
-async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
-    (
-        [wallet_node_1, _],
-        [wallet_node_2, _],
-        full_node_api,
-    ) = wallets_prefarm
-    assert wallet_node_1.wallet_state_manager is not None
-    assert wallet_node_2.wallet_state_manager is not None
-    wsm_1 = wallet_node_1.wallet_state_manager
-    wsm_2 = wallet_node_2.wallet_state_manager
+async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
+    env_1 = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+    env_1.wallet_aliases = {
+        "xch": 1,
+        "dl": 2,
+    }
+    env_2.wallet_aliases = {
+        "xch": 1,
+        "dl": 2,
+    }
 
-    async with wsm_1.lock:
-        dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wsm_1)
-    async with wsm_2.lock:
-        dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2)
+    dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(env_1.wallet_state_manager)
+    dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(env_2.wallet_state_manager)
 
-    async with dl_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with dl_wallet_1.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32.zeros, action_scope)
-    assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32.zeros)
 
-    async with dl_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with dl_wallet_2.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32.zeros, action_scope)
+
+    assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
     assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1,
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,  # creation + launcher
+                    },
+                    "dl": {
+                        "init": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "dl": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
+        * 2
+    )
+
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32.zeros)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32.zeros)
 
-    peer_1 = wallet_node_1.get_full_node_peer()
+    peer_1 = env_1.node.get_full_node_peer()
     await dl_wallet_1.track_new_launcher_id(launcher_id_2, peer_1)
-    peer_2 = wallet_node_2.get_full_node_peer()
+    await env_1.change_balances({"dl": {"unspent_coin_count": 1}})
+    peer_2 = env_2.node.get_full_node_peer()
     await dl_wallet_2.track_new_launcher_id(launcher_id_1, peer_2)
+    await env_2.change_balances({"dl": {"unspent_coin_count": 1}})
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32.zeros)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32.zeros)
 
-    async with dl_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await dl_wallet_1.create_new_mirror(
-            launcher_id_2, uint64(3), [b"foo", b"bar"], action_scope, fee=uint64(1_999_999_999_999)
-        )
+    fee = uint64(1_999_999_999_999)
+    mirror_amount = uint64(3)
+
+    async with dl_wallet_1.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
+        await dl_wallet_1.create_new_mirror(launcher_id_2, mirror_amount, [b"foo", b"bar"], action_scope, fee=fee)
+
     additions: list[Coin] = []
     for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             additions.extend(tx.spend_bundle.additions())
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee - mirror_amount,
+                        # these match exactly because of our change from the creation
+                        "<=#spendable_balance": -fee - mirror_amount,
+                        "<=#max_send_amount": -fee - mirror_amount,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 3,
+                    },
+                    "dl": {},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee - mirror_amount,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -3,
+                        "unspent_coin_count": -2,
+                    },
+                    "dl": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
+    )
 
     mirror_coin: Coin = next(c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash())
     mirror = Mirror(
@@ -546,16 +623,52 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         uint64(mirror_coin.amount),
         [b"foo", b"bar"],
         True,
-        full_node_api.full_node.blockchain.get_peak_height(),
+        wallet_environments.full_node.full_node.blockchain.get_peak_height(),
     )
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [mirror], launcher_id_2)
     await time_out_assert(
         15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
     )
 
-    async with dl_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, action_scope, fee=uint64(2_000_000_000_000))
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+    fee = uint64(2_000_000_000_000)
+
+    async with dl_wallet_1.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
+        await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, action_scope, fee=fee)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee + mirror.amount,
+                        # these match exactly because of our change from the creation
+                        "<=#spendable_balance": -fee + mirror.amount,
+                        "<=#max_send_amount": -fee + mirror.amount,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 2,
+                    },
+                    "dl": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee + mirror.amount,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -2,
+                    },
+                    "dl": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": -1,
+                    },
+                },
+            ),
+        ]
+    )
 
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [], launcher_id_2)
     await time_out_assert(15, dl_wallet_2.get_mirrors_for_launcher, [], launcher_id_2)
