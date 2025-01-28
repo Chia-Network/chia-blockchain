@@ -3095,9 +3095,6 @@ def test_get_items_by_coin_ids(items: list[MempoolItem], coin_ids: list[bytes32]
 
 @pytest.mark.anyio
 async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
-    def always(_: bytes32) -> bool:
-        return True
-
     async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
         assert False  # pragma: no cover
 
@@ -3142,7 +3139,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
     result = await mempool.create_bundle_from_mempool_items(
-        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
     )
     assert result is not None
     agg, _ = result
@@ -3163,7 +3160,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
     result = await mempool.create_bundle_from_mempool_items(
-        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
     )
     assert result is not None
     agg, _ = result
