@@ -239,7 +239,7 @@ class DataStore:
 
         root = await self.get_tree_root(store_id=store_id)
         latest_blob = await self.get_merkle_blob(root.node_hash, read_only=True)
-        known_hashes = {}
+        known_hashes: dict[bytes32, TreeIndex] = {}
         if not latest_blob.empty():
             nodes = latest_blob.get_nodes_with_indexes()
             known_hashes = {node.hash: index for index, node in nodes}
@@ -247,7 +247,7 @@ class DataStore:
         new_missing_hashes: list[bytes32] = []
         for hash in missing_hashes:
             if hash in known_hashes:
-                assert root.node_hash is not None
+                assert root.node_hash is not None, "if root.node_hash were None then known_hashes would be empty"
                 merkle_blob_queries[root.node_hash].append(known_hashes[hash])
             else:
                 new_missing_hashes.append(hash)
