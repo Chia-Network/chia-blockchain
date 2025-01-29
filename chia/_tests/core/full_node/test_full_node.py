@@ -195,8 +195,8 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
     # Send a transaction to mempool
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            tx_size,
-            ph,
+            [tx_size],
+            [ph],
             action_scope,
         )
     [tr] = action_scope.side_effects.transactions
@@ -228,8 +228,8 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
     # Send another tx
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            20000,
-            ph,
+            [20000],
+            [ph],
             action_scope,
         )
     [tr] = action_scope.side_effects.transactions
@@ -268,8 +268,8 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
     # Send another 2 tx
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            30000,
-            ph,
+            [30000],
+            [ph],
             action_scope,
         )
     [tr] = action_scope.side_effects.transactions
@@ -281,22 +281,8 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
     )
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            40000,
-            ph,
-            action_scope,
-        )
-    [tr] = action_scope.side_effects.transactions
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
-
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            50000,
-            ph,
+            [40000],
+            [ph],
             action_scope,
         )
     [tr] = action_scope.side_effects.transactions
@@ -309,8 +295,22 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            3000000000000,
-            ph,
+            [50000],
+            [ph],
+            action_scope,
+        )
+    [tr] = action_scope.side_effects.transactions
+    await time_out_assert(
+        10,
+        full_node_2.full_node.mempool_manager.get_spendbundle,
+        tr.spend_bundle,
+        tr.name,
+    )
+
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            [3000000000000],
+            [ph],
             action_scope,
         )
     [tr] = action_scope.side_effects.transactions
@@ -341,8 +341,8 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
     # Creates a standard_transaction and an anyone-can-spend tx
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
         await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
+            [30000],
+            [Program.to(1).get_tree_hash()],
             action_scope,
         )
     [tr] = action_scope.side_effects.transactions
@@ -389,8 +389,8 @@ async def test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, t
     # Make a standard transaction and an anyone-can-spend transaction
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
         await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
+            [30000],
+            [Program.to(1).get_tree_hash()],
             action_scope,
         )
     [tr] = action_scope.side_effects.transactions

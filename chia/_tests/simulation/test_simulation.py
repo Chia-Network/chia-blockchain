@@ -214,8 +214,8 @@ class TestSimulation:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(10),
-                await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                [uint64(10)],
+                [await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()],
                 action_scope,
                 uint64(0),
             )
@@ -390,8 +390,8 @@ class TestSimulation:
         for coin in coins:
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
-                    amount=uint64(tx_amount),
-                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    amounts=[uint64(tx_amount)],
+                    puzzle_hashes=[await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()],
                     action_scope=action_scope,
                     coins={coin},
                 )
@@ -439,8 +439,8 @@ class TestSimulation:
             ) as action_scope:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
-                        amount=uint64(tx_amount),
-                        puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                        amounts=[uint64(tx_amount)],
+                        puzzle_hashes=[await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()],
                         action_scope=action_scope,
                         coins={coin},
                     )
