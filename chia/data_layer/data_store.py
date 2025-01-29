@@ -279,16 +279,16 @@ class DataStore:
                         LIMIT {len(placeholders)}
                     """
 
-                async with reader.execute(query, (store_id, *batch.entries)) as cursor:
-                    rows = await cursor.fetchall()
-                    for row in rows:
-                        node_hash = bytes32(row["hash"])
-                        root_hash_blob = bytes32(row["root_hash"])
-                        index = row["idx"]
-                        if node_hash in found_hashes:
-                            raise Exception("Internal error: duplicate node_hash found in nodes table")
-                        merkle_blob_queries[root_hash_blob].append(index)
-                        found_hashes.add(node_hash)
+                    async with reader.execute(query, (store_id, *batch.entries)) as cursor:
+                        rows = await cursor.fetchall()
+                        for row in rows:
+                            node_hash = bytes32(row["hash"])
+                            root_hash_blob = bytes32(row["root_hash"])
+                            index = row["idx"]
+                            if node_hash in found_hashes:
+                                raise Exception("Internal error: duplicate node_hash found in nodes table")
+                            merkle_blob_queries[root_hash_blob].append(index)
+                            found_hashes.add(node_hash)
 
             missing_hashes = [hash for hash in missing_hashes if hash not in found_hashes]
             if missing_hashes:
@@ -399,7 +399,7 @@ class DataStore:
         self,
         root_hash: Optional[bytes32],
         read_only: bool = False,
-        skip_cache: bool = False,
+        update_cache: bool = True,
     ) -> MerkleBlob:
         if root_hash is None:
             return MerkleBlob(blob=bytearray())
@@ -423,7 +423,7 @@ class DataStore:
 
             merkle_blob = MerkleBlob(blob=bytearray(row["blob"]))
 
-            if not skip_cache:
+            if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
             return merkle_blob
@@ -602,7 +602,7 @@ class DataStore:
         if root.node_hash is None:
             return
 
-        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash, read_only=True, skip_cache=True)
+        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash, read_only=True, update_cache=False)
         hash_to_index = merkle_blob.get_hashes_indexes()
 
         existing_hashes = await self.get_existing_hashes(list(hash_to_index.keys()), store_id)
@@ -1457,11 +1457,13 @@ class DataStore:
         if hash_to_index is None:
             hash_to_index = merkle_blob.get_hashes_indexes()
         if existing_hashes is None:
-            previous_generation = max(0, root.generation - 1)
-            previous_root = await self.get_tree_root(store_id=store_id, generation=previous_generation)
-            previous_merkle_blob = await self.get_merkle_blob(previous_root.node_hash)
-            previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
-            existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
+            if root.generation == 0:
+                existing_hashes = {}
+            else:
+                previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
+                previous_merkle_blob = await self.get_merkle_blob(previous_root.node_hash)
+                previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
+                existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
 
         if deltas_only:
             if node_hash in existing_hashes:
