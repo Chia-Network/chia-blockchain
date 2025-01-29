@@ -1458,7 +1458,7 @@ class DataStore:
             hash_to_index = merkle_blob.get_hashes_indexes()
         if existing_hashes is None:
             if root.generation == 0:
-                existing_hashes = {}
+                existing_hashes = set()
             else:
                 previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
                 previous_merkle_blob = await self.get_merkle_blob(previous_root.node_hash)
