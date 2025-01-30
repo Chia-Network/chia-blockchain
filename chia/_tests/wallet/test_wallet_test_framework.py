@@ -19,7 +19,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
             "num_environments": 2,
             "config_overrides": {
                 "foo": "bar",  # A config value that never exists
-                "min_mainnet_k_size": 2,  # A config value overriden
+                "min_mainnet_k_size": 2,  # A config value overridden
             },
             "blocks_needed": [1, 0],
         }

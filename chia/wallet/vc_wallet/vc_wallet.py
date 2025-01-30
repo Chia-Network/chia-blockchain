@@ -243,7 +243,7 @@ class VCWallet:
     ) -> None:
         new_proof_hash: Optional[bytes32] = kwargs.get(
             "new_proof_hash", None
-        )  # Requires that this key posesses the DID to update the specified VC
+        )  # Requires that this key possesses the DID to update the specified VC
         provider_inner_puzhash: Optional[bytes32] = kwargs.get("provider_inner_puzhash", None)
         self_revoke: Optional[bool] = kwargs.get("self_revoke", False)
         """

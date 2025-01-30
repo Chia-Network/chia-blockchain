@@ -647,7 +647,7 @@ class WeightProofHandler:
             fork_point_index = idx
 
         if fork_point_index <= 2:
-            # Two summeries can have different blocks and still be identical
+            # Two summaries can have different blocks and still be identical
             # This gets resolved after one full sub epoch
             return uint32(0), 0
 
