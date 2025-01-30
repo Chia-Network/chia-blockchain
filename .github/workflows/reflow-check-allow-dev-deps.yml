@@ -2,9 +2,6 @@ name: 🚨 Check allow-dev-deps label
 
 on:
   workflow_call:
-    outputs:
-      allow-dev-deps:
-        value: ${{ contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run

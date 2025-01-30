@@ -40,6 +40,7 @@ runs:
   using: "composite"
   steps:
     - name: Set up rust
+      if: ${{ contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
       uses: dtolnay/rust-toolchain@stable
 
     - name: Run install script (macOS, Ubuntu)
