@@ -18,12 +18,11 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
-from chia.wallet.puzzles.singleton_top_layer import (
-    P2_SINGLETON_OR_DELAYED_MOD as P2_SINGLETON_MOD,
-)
+from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_OR_DELAYED_MOD as P2_SINGLETON_MOD
 from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_OR_DELAYED_MOD_HASH as P2_SINGLETON_MOD_HASH
-from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER, SINGLETON_MOD, SINGLETON_MOD_HASH
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH as LAUNCHER_PUZZLE_HASH
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD, SINGLETON_MOD_HASH
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 

@@ -38,8 +38,9 @@ from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import Peak
-from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
+from chia.protocols import full_node_protocol
 from chia.protocols import full_node_protocol as fnp
+from chia.protocols import timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
