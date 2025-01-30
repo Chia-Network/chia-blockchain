@@ -10,7 +10,7 @@ from dataclasses import replace
 from typing import Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, MerkleSet
+from chia_rs import AugSchemeMPL, G2Element, MerkleSet, is_overflow_block
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
@@ -34,7 +34,6 @@ from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.wallet_tools import WalletTool
@@ -854,7 +853,11 @@ class TestBlockHeaderValidation:
             block = blocks[-1]
             if (
                 len(block.finished_sub_slots)
-                and is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
+                and is_overflow_block(
+                    bt.constants.NUM_SPS_SUB_SLOT,
+                    bt.constants.NUM_SP_INTERVALS_EXTRA,
+                    block.reward_chain_block.signage_point_index,
+                )
                 and block.finished_sub_slots[-1].challenge_chain.challenge_chain_end_of_slot_vdf.output
                 != ClassgroupElement.get_default_element()
             ):
@@ -1101,7 +1104,9 @@ class TestBlockHeaderValidation:
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if len(blocks[-1].finished_sub_slots) > 0 and is_overflow_block(
-                bt.constants, blocks[-1].reward_chain_block.signage_point_index
+                bt.constants.NUM_SPS_SUB_SLOT,
+                bt.constants.NUM_SP_INTERVALS_EXTRA,
+                blocks[-1].reward_chain_block.signage_point_index,
             ):
                 new_finished_ss: EndOfSubSlotBundle = recursive_replace(
                     blocks[-1].finished_sub_slots[0],
@@ -1206,7 +1211,11 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(1))
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
 
-            elif not is_overflow_block(bt.constants, blocks[-1].reward_chain_block.signage_point_index):
+            elif not is_overflow_block(
+                bt.constants.NUM_SPS_SUB_SLOT,
+                bt.constants.NUM_SP_INTERVALS_EXTRA,
+                blocks[-1].reward_chain_block.signage_point_index,
+            ):
                 case_2 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(0))
                 await _validate_and_add_block_multi_error(
