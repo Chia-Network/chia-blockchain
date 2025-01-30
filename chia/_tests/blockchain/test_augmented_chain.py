@@ -46,7 +46,7 @@ class NullBlockchain:
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         return self.heights.get(height)
 
-    def contains_block(self, header_hash: bytes32) -> bool:
+    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
         return False  # pragma: no cover
 
     def contains_height(self, height: uint32) -> bool:

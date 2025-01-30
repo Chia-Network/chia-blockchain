@@ -619,6 +619,7 @@ class FullNode:
                 fork_hash = self.constants.GENESIS_CHALLENGE
             assert fork_hash
             fork_info = ForkInfo(start_height - 1, start_height - 1, fork_hash)
+            blockchain = AugmentedBlockchain(self.blockchain)
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
@@ -757,7 +758,7 @@ class FullNode:
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
-        if self.blockchain.contains_block(request.header_hash):
+        if self.blockchain.contains_block(request.header_hash, request.height):
             return None
 
         # Not interested in less heavy peaks

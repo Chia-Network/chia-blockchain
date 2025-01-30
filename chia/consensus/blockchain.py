@@ -788,12 +788,16 @@ class Blockchain:
 
         return PreValidationResult(None, required_iters, conds, uint32(0))
 
-    def contains_block(self, header_hash: bytes32) -> bool:
-        """
-        True if we have already added this block to the chain. This may return false for orphan blocks
-        that we have added but no longer keep in memory.
-        """
-        return header_hash in self.__block_records
+    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
+        if height is None:
+            block_rec = self.try_block_record(header_hash)
+            if block_rec is None:
+                return False
+            height = block_rec.height
+        block_hash_from_hh = self.height_to_hash(height)
+        if block_hash_from_hh is None or block_hash_from_hh != header_hash:
+            return False
+        return True
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__block_records[header_hash]
@@ -955,7 +959,7 @@ class Blockchain:
         return records
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if self.contains_block(header_hash):
+        if header_hash in self.__block_records:
             return self.block_record(header_hash)
         return None
 

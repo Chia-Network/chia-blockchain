@@ -43,8 +43,16 @@ class BlockCache:
             return None
         return self._height_to_hash[height]
 
-    def contains_block(self, header_hash: bytes32) -> bool:
-        return header_hash in self._block_records
+    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
+        if height is None:
+            block_rec = self.try_block_record(header_hash)
+            if block_rec is None:
+                return False
+            height = block_rec.height
+        block_hash_from_hh = self.height_to_hash(height)
+        if block_hash_from_hh is None or block_hash_from_hh != header_hash:
+            return False
+        return True
 
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
