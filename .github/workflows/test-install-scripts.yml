@@ -23,6 +23,7 @@ concurrency:
 jobs:
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    if: ${{ !contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
@@ -134,6 +135,7 @@ jobs:
 
   test_scripts_in_docker:
     name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    if: ${{ !contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:
