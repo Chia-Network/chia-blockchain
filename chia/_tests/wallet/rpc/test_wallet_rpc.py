@@ -1826,8 +1826,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
     )
-    assert min_coins is not None
-    assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
+    assert len(min_coins) == 1
+    assert min_coins[0].amount == uint64(10_000)
 
     # test max coin amount
     max_coins: list[Coin] = await client_2.select_coins(
@@ -1837,8 +1837,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
         ),
     )
-    assert max_coins is not None
-    assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
+    assert len(max_coins) == 2
+    assert max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
     non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
@@ -1847,11 +1847,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
-    assert excluded_amt_coins is not None
-    assert (
-        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
-        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
-    )
+    assert len(excluded_amt_coins) == len([a for a in tx_amounts if a != 1000])
+    assert sum(c.amount for c in excluded_amt_coins) == non_1000_amt
 
     # test excluded coins
     with pytest.raises(ValueError):
