@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
+from chia_rs.datalayer import KeyId, TreeIndex, ValueId
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -42,13 +43,10 @@ from chia.data_layer.data_layer_util import (
     unspecified,
 )
 from chia.data_layer.util.merkle_blob import (
-    KeyId,
     KeyOrValueId,
     MerkleBlob,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
-    TreeIndex,
-    ValueId,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
@@ -444,8 +442,8 @@ class DataStore:
             return bytes(row[0])
 
     async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
-        key = await self.get_blob_from_kvid(kid, store_id)
-        value = await self.get_blob_from_kvid(vid, store_id)
+        key = await self.get_blob_from_kvid(kid.raw, store_id)
+        value = await self.get_blob_from_kvid(vid.raw, store_id)
         if key is None or value is None:
             raise Exception("Cannot find the key/value pair")
 
@@ -542,7 +540,7 @@ class DataStore:
         return result
 
     async def add_node_hash(
-        self, store_id: bytes32, hash: bytes32, root_hash: bytes32, generation: int, index: int
+        self, store_id: bytes32, hash: bytes32, root_hash: bytes32, generation: int, index: TreeIndex
     ) -> None:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
@@ -550,7 +548,7 @@ class DataStore:
                 INSERT INTO nodes(store_id, hash, root_hash, generation, idx)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (store_id, hash, root_hash, generation, index),
+                (store_id, hash, root_hash, generation, index.raw),
             )
 
     async def add_node_hashes(self, store_id: bytes32) -> None:
@@ -1057,7 +1055,7 @@ class DataStore:
             kv_ids = merkle_blob.get_keys_values()
             keys: list[bytes] = []
             for kid in kv_ids.keys():
-                key = await self.get_blob_from_kvid(kid, store_id)
+                key = await self.get_blob_from_kvid(kid.raw, store_id)
                 if key is None:
                     raise Exception(f"Unknown key corresponding to KeyId: {kid}")
                 keys.append(key)

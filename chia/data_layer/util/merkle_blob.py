@@ -3,7 +3,9 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, ClassVar, NewType, Optional, Protocol, TypeVar, Union, cast, final
+from typing import TYPE_CHECKING, ClassVar, Optional, Protocol, TypeVar, Union, cast, final
+
+from chia_rs.datalayer import KeyId, TreeIndex, ValueId
 
 from chia.data_layer.data_layer_util import InternalNode, ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -13,19 +15,7 @@ from chia.util.streamable import Streamable, streamable
 
 dirty_hash = bytes32(b"\x00" * 32)
 
-if TYPE_CHECKING:
-    # for mypy
-    TreeIndex = NewType("TreeIndex", uint32)
-    KeyOrValueId = int64
-    KeyId = NewType("KeyId", KeyOrValueId)
-    ValueId = NewType("ValueId", KeyOrValueId)
-else:
-    # for streamable
-    TreeIndex = uint32
-    KeyOrValueId = int64
-    KeyId = KeyOrValueId
-    ValueId = KeyOrValueId
-
+KeyOrValueId = int64
 
 T = TypeVar("T")
 
@@ -120,20 +110,22 @@ class MerkleBlob:
                 self.update_entry(index=child_index, parent=index)
             self.update_entry(index=index, left=left_index, right=right_index)
 
-        return TreeIndex(index)
+        return index
 
     def get_new_index(self) -> TreeIndex:
         if len(self.free_indexes) == 0:
-            self.last_allocated_index = TreeIndex(uint32(self.last_allocated_index + 1))
-            return TreeIndex(uint32(self.last_allocated_index - 1))
+            result = self.last_allocated_index
+            self.last_allocated_index = TreeIndex(uint32(self.last_allocated_index.raw + 1))
+            return result
 
         return self.free_indexes.pop()
 
     def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
-        if index is None or index < 0 or undefined_index <= index:
+        if undefined_index.raw <= index.raw:
             raise InvalidIndexError(index=index)
 
-        metadata_start = index * spacing
+        # TODO: stop duplicating this...  9384098097057091743210043032
+        metadata_start = index.raw * spacing
         data_start = metadata_start + metadata_size
         end = data_start + data_size
 
@@ -160,10 +152,11 @@ class MerkleBlob:
         return bytes32(node.hash)
 
     def _get_metadata(self, index: TreeIndex) -> NodeMetadata:
-        if index is None or index < 0 or undefined_index <= index:
+        if undefined_index.raw <= index.raw:
             raise InvalidIndexError(index=index)
 
-        metadata_start = index * spacing
+        # TODO: stop duplicating this...  9384098097057091743210043032
+        metadata_start = index.raw * spacing
         data_start = metadata_start + metadata_size
 
         if data_start > len(self.blob):
@@ -176,7 +169,8 @@ class MerkleBlob:
         new_type = type if type is not None else metadata.type
         new_dirty = dirty if dirty is not None else metadata.dirty
 
-        metadata_start = index * spacing
+        # TODO: stop duplicating this...  9384098097057091743210043032
+        metadata_start = index.raw * spacing
         data_start = metadata_start + metadata_size
         self.blob[metadata_start:data_start] = NodeMetadata(type=new_type, dirty=new_dirty).pack()
 
@@ -276,7 +270,8 @@ class MerkleBlob:
                 del self.key_to_index[node.key]
                 self.key_to_index[new_key] = index
 
-        metadata_start = index * spacing
+        # TODO: stop duplicating this...  9384098097057091743210043032
+        metadata_start = index.raw * spacing
         data_start = metadata_start + metadata_size
         end = data_start + data_size
 
@@ -352,7 +347,7 @@ class MerkleBlob:
         if len(self.blob) == 0:
             return []
 
-        free_indexes: set[TreeIndex] = {TreeIndex(uint32(i)) for i in range(int(self.last_allocated_index))}
+        free_indexes: set[TreeIndex] = {TreeIndex(uint32(i)) for i in range(self.last_allocated_index.raw)}
         queue: list[TreeIndex] = [TreeIndex(uint32(0))]
         while len(queue) > 0:
             node_index = queue.pop()
@@ -367,12 +362,13 @@ class MerkleBlob:
 
     def insert_entry_to_blob(self, index: TreeIndex, entry: bytes) -> None:
         extend_index = TreeIndex(uint32(len(self.blob) // spacing))
-        assert index <= extend_index
+        assert index.raw <= extend_index.raw
         if index == extend_index:
             self.blob.extend(entry)
         else:
-            start_index = index * spacing
-            end_index = (index + 1) * spacing
+            # TODO: stop duplicating this...  9384098097057091743210043032
+            start_index = index.raw * spacing
+            end_index = (index.raw + 1) * spacing
             self.blob[start_index:end_index] = entry
 
     def insert_from_leaf(self, old_leaf_index: TreeIndex, new_index: TreeIndex, side: Side = Side.LEFT) -> None:
@@ -440,7 +436,7 @@ class MerkleBlob:
             self.last_allocated_index = TreeIndex(uint32(1))
             return
 
-        seed = std_hash(key.to_bytes(8, byteorder="big", signed=True))
+        seed = std_hash(key.raw.to_bytes(8, byteorder="big", signed=True))
         if reference_kid is None:
             old_leaf: RawMerkleNodeProtocol = self.get_random_leaf_node(bytes(seed))
         else:

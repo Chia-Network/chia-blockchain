@@ -11,12 +11,12 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs.datalayer import KeyId, TreeIndex, ValueId
 
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.data_layer.data_layer_util import InternalNode, Side, internal_hash
 from chia.data_layer.util.merkle_blob import (
     InvalidIndexError,
-    KeyId,
     KeyOrValueId,
     MerkleBlob,
     NodeMetadata,
@@ -24,8 +24,6 @@ from chia.data_layer.util.merkle_blob import (
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     RawMerkleNodeProtocol,
-    TreeIndex,
-    ValueId,
     data_size,
     metadata_size,
     pack_raw_node,
@@ -202,19 +200,19 @@ def test_merkle_blob_two_leafs_loads() -> None:
 
     merkle_blob = MerkleBlob(blob=blob)
     assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == root
-    assert merkle_blob.get_raw_node(TreeIndex(root.left)) == left_leaf
-    assert merkle_blob.get_raw_node(TreeIndex(root.right)) == right_leaf
+    assert merkle_blob.get_raw_node(root.left) == left_leaf
+    assert merkle_blob.get_raw_node(root.right) == right_leaf
     assert left_leaf.parent is not None
-    assert merkle_blob.get_raw_node(TreeIndex(left_leaf.parent)) == root
+    assert merkle_blob.get_raw_node(left_leaf.parent) == root
     assert right_leaf.parent is not None
-    assert merkle_blob.get_raw_node(TreeIndex(right_leaf.parent)) == root
+    assert merkle_blob.get_raw_node(right_leaf.parent) == root
 
-    assert merkle_blob.get_lineage_with_indexes(TreeIndex(uint32(0))) == [(0, root)]
+    assert merkle_blob.get_lineage_with_indexes(TreeIndex(uint32(0))) == [(TreeIndex(uint32(0)), root)]
     expected: list[tuple[TreeIndex, RawMerkleNodeProtocol]] = [
         (TreeIndex(uint32(1)), left_leaf),
         (TreeIndex(uint32(0)), root),
     ]
-    assert merkle_blob.get_lineage_with_indexes(TreeIndex(root.left)) == expected
+    assert merkle_blob.get_lineage_with_indexes(root.left) == expected
 
     merkle_blob.calculate_lazy_hashes()
     son_hash = bytes32(range(32))
@@ -270,7 +268,7 @@ def test_insert_delete_loads_all_keys() -> None:
             hash = generate_hash(seed)
             merkle_blob.insert(key, value, hash)
             key_index = merkle_blob.key_to_index[key]
-            lineage = merkle_blob.get_lineage_with_indexes(TreeIndex(key_index))
+            lineage = merkle_blob.get_lineage_with_indexes(key_index)
             assert len(lineage) <= max_height
             keys_values[key] = value
             if current_num_entries == 0:
@@ -289,7 +287,7 @@ def test_insert_delete_loads_all_keys() -> None:
         hash = generate_hash(seed)
         merkle_blob_2.upsert(key, value, hash)
         key_index = merkle_blob_2.key_to_index[key]
-        lineage = merkle_blob_2.get_lineage_with_indexes(TreeIndex(key_index))
+        lineage = merkle_blob_2.get_lineage_with_indexes(key_index)
         assert len(lineage) <= max_height
         keys_values[key] = value
     assert merkle_blob_2.get_keys_values() == keys_values
@@ -469,8 +467,8 @@ def test_get_nodes(merkle_blob_type: MerkleBlobCallable) -> None:
     all_nodes = merkle_blob.get_nodes_with_indexes()
     for index, node in all_nodes:
         if isinstance(node, (RawInternalMerkleNode, chia_rs.datalayer.InternalNode)):
-            left = merkle_blob.get_raw_node(TreeIndex(node.left))
-            right = merkle_blob.get_raw_node(TreeIndex(node.right))
+            left = merkle_blob.get_raw_node(node.left)
+            right = merkle_blob.get_raw_node(node.right)
             assert left.parent == index
             assert right.parent == index
             assert bytes32(node.hash) == internal_hash(bytes32(left.hash), bytes32(right.hash))
