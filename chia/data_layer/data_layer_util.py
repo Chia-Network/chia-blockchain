@@ -49,6 +49,7 @@ def key_hash(key: bytes) -> bytes32:
     return bytes32(sha256(b"\1" + key).digest())
 
 
+# TODO: allow Optional[bytes32] for `node_hash` and resolve the filenames here
 def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
     if group_by_store:
         return f"{store_id}/{node_hash}-full-{generation}-v1.0.dat"

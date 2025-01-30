@@ -237,6 +237,7 @@ class DataStore:
                 if node_hash not in internal_nodes and node_hash not in terminal_nodes:
                     missing_hashes.append(node_hash)
 
+        # TODO: consider adding transactions aroud this code
         root = await self.get_tree_root(store_id=store_id)
         latest_blob = await self.get_merkle_blob(root.node_hash, read_only=True)
         known_hashes: dict[bytes32, TreeIndex] = {}

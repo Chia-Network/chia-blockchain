@@ -1346,6 +1346,7 @@ async def test_data_server_files(
         counter = 0
         num_repeats = 2
 
+        # Repeat twice to guarantee there will be hashes from the old file format
         for _ in range(num_repeats):
             for batch in range(num_batches):
                 changelist: list[dict[str, Any]] = []
