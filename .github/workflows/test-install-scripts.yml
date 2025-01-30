@@ -21,6 +21,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-allow-dev-deps:
+    uses: ./.github/workflows/reflow-check-allow-dev-deps.yml
+
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
     if: ${{ !contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
