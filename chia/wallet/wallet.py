@@ -319,7 +319,6 @@ class Wallet:
                     decorator_manager.decorate_target_puzzle_hash(inner_puzzle, newpuzzlehash)
                     for newpuzzlehash in newpuzzlehashes
                 ]
-                target_primary: list[CreateCoin] = []
                 if memos is None:
                     memos = [[]] * len(amounts)
                 decorated_memos = [
@@ -333,7 +332,7 @@ class Wallet:
                         decorated_target_puzzle_hashes, amounts, decorated_memos
                     )
                 ]
-                primaries = [
+                target_primaries = [
                     CreateCoin(newpuzzlehash, amount, mems)
                     for newpuzzlehash, amount, mems in zip(newpuzzlehashes, amounts, decorated_memos)
                 ]
@@ -359,7 +358,7 @@ class Wallet:
                     fee=fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
                 )
-                solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
+                solution = decorator_manager.solve(inner_puzzle, target_primaries, solution)
                 primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
 
                 spends.append(

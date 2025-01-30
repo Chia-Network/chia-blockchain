@@ -107,7 +107,7 @@ class NotificationManager:
             fee,
             coins=coins,
             origin_id=origin_coin,
-            memos=[target, msg],
+            memos=[[target, msg]],
             extra_conditions=(
                 *extra_conditions,
                 AssertCoinAnnouncement(asserted_id=notification_coin.name(), asserted_msg=b""),

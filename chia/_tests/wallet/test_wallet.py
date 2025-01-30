@@ -1583,7 +1583,7 @@ class TestWalletSimulator:
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 [uint64(1)] + [uint64(1000000000 + i) for i in range(int(wallet.max_send_quantity) + 1)],
-                [ph] * wallet.max_send_quantity,
+                [ph] * (wallet.max_send_quantity + 2),
                 action_scope,
                 uint64(0),
             )
