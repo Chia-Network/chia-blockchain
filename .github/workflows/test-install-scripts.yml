@@ -26,7 +26,8 @@ jobs:
 
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
-    if: ${{ !contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
+    needs: check-allow-dev-deps
+    if: ${{ !needs.check-allow-dev-deps.outputs.allow-dev-deps }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false

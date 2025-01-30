@@ -6,6 +6,8 @@ on:
       concurrency-name:
         required: true
         type: string
+    outputs:
+      allow-dev-deps: ${{ contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run

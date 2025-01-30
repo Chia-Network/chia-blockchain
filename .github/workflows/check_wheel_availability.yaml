@@ -22,7 +22,8 @@ jobs:
 
   check_dependency_artifacts:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
-    if: ${{ !contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
+    needs: check-allow-dev-deps
+    if: ${{ !needs.check-allow-dev-deps.outputs.allow-dev-deps }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
