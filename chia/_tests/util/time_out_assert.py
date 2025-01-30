@@ -6,7 +6,7 @@ import json
 import logging
 import pathlib
 import time
-from collections.abc import Iterable
+from collections.abc import Awaitable, Iterable
 from inspect import getframeinfo, stack
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar, cast, final
@@ -15,6 +15,7 @@ import chia
 import chia._tests
 from chia._tests import ether
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import Message
 from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
@@ -80,8 +81,14 @@ class TimeOutAssertData:
 
 
 async def time_out_assert_custom_interval(
-    timeout: float, interval, function, value=True, *args, stack_distance=0, **kwargs
-):
+    timeout: float,
+    interval: float,
+    function: Callable[..., Any],
+    value: object = True,
+    *args: object,
+    stack_distance: int = 0,
+    **kwargs: object,
+) -> None:
     __tracebackhide__ = True
 
     entry_file, entry_line = caller_file_and_line(
@@ -131,7 +138,9 @@ async def time_out_assert_custom_interval(
             )
 
 
-async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
+async def time_out_assert(
+    timeout: int, function: Callable[..., Any], value: object = True, *args: object, **kwargs: object
+) -> None:
     __tracebackhide__ = True
     await time_out_assert_custom_interval(
         timeout,
@@ -144,7 +153,9 @@ async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
     )
 
 
-async def time_out_assert_not_none(timeout: float, function, *args, **kwargs):
+async def time_out_assert_not_none(
+    timeout: float, function: Callable[..., Any], *args: object, **kwargs: object
+) -> None:
     # TODO: rework to leverage time_out_assert_custom_interval() such as by allowing
     #       value to be a callable
     __tracebackhide__ = True
@@ -163,8 +174,10 @@ async def time_out_assert_not_none(timeout: float, function, *args, **kwargs):
     assert False, "Timed assertion timed out"
 
 
-def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int = 1) -> Callable:
-    async def bool_f():
+def time_out_messages(
+    incoming_queue: asyncio.Queue[Message], msg_name: str, count: int = 1
+) -> Callable[[], Awaitable[bool]]:
+    async def bool_f() -> bool:
         if incoming_queue.qsize() < count:
             return False
         for _ in range(count):

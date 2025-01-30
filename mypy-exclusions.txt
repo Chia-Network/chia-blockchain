@@ -84,6 +84,5 @@ chia._tests.tools.test_run_block
 chia._tests.util.benchmark_cost
 chia._tests.util.test_full_block_utils
 chia._tests.util.test_misc
-chia._tests.util.time_out_assert
 chia._tests.wallet.did_wallet.test_did
 chia._tests.wallet.rpc.test_wallet_rpc
