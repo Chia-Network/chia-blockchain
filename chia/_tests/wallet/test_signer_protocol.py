@@ -615,7 +615,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
 
     AMOUNT = uint64(1)
     async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, sign=False, push=False) as action_scope:
-        await wallet.generate_signed_transaction(AMOUNT, bytes32.zeros, action_scope)
+        await wallet.generate_signed_transaction([AMOUNT], [bytes32.zeros], action_scope)
     [tx] = action_scope.side_effects.transactions
 
     runner = CliRunner()

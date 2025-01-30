@@ -113,7 +113,7 @@ class GenesisById(LimitationsProgram):
             action_scope.config.tx_config, push=False
         ) as inner_action_scope:
             await wallet.standard_wallet.generate_signed_transaction(
-                amount, minted_cat_puzzle_hash, inner_action_scope, fee, coins, origin_id=origin_id
+                [amount], [minted_cat_puzzle_hash], inner_action_scope, fee, coins, origin_id=origin_id
             )
 
         async with action_scope.use() as interface:
@@ -290,8 +290,8 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             action_scope.config.tx_config, push=False
         ) as inner_action_scope:
             await wallet.standard_wallet.generate_signed_transaction(
-                amount,
-                minted_cat_puzzle_hash,
+                [amount],
+                [minted_cat_puzzle_hash],
                 inner_action_scope,
                 fee,
                 coins=set(coins),

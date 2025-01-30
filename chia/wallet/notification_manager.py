@@ -101,13 +101,13 @@ class NotificationManager:
         )
         extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
         await self.wallet_state_manager.main_wallet.generate_signed_transaction(
-            amount,
-            notification_hash,
+            [amount],
+            [notification_hash],
             action_scope,
             fee,
             coins=coins,
             origin_id=origin_coin,
-            memos=[target, msg],
+            memos=[[target, msg]],
             extra_conditions=(
                 *extra_conditions,
                 AssertCoinAnnouncement(asserted_id=notification_coin.name(), asserted_msg=b""),

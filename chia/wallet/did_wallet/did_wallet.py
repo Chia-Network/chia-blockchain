@@ -1232,12 +1232,11 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
 
         await self.standard_wallet.generate_signed_transaction(
-            amount=amount,
-            puzzle_hash=genesis_launcher_puz.get_tree_hash(),
+            amounts=[amount],
+            puzzle_hashes=[genesis_launcher_puz.get_tree_hash()],
             action_scope=action_scope,
             fee=fee,
             coins=coins,
-            primaries=None,
             origin_id=origin.name(),
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),

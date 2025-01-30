@@ -1705,7 +1705,7 @@ class TestDIDWallet:
         async with wallet_0.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config.override(excluded_coin_ids=[coin_id]), push=True
         ) as action_scope:
-            await wallet_0.generate_signed_transaction(odd_amount, ph_1, action_scope, fee)
+            await wallet_0.generate_signed_transaction([odd_amount], [ph_1], action_scope, fee)
 
         await wallet_environments.process_pending_states(
             [
