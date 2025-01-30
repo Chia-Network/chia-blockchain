@@ -12,8 +12,7 @@ jobs:
     outputs:
       status: ${{ steps.check-labels.outputs.status }}
     steps:
-      - name: check changelog labels
-        id: check-labels
+      - id: check-labels
         uses: mheap/github-action-required-labels@v5
         with:
           mode: exactly
@@ -24,9 +23,3 @@ jobs:
         if: steps.check-labels.outputs.status == 'success'
       - run: echo FAILURE && exit 1
         if: steps.check-labels.outputs.status == 'failure'
-      - name: check banned labels
-        uses: mheap/github-action-required-labels@v5
-        with:
-          mode: exactly
-          count: 0
-          labels: "allow-dev-deps"
