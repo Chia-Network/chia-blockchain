@@ -57,9 +57,9 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        fee = uint64(1999999999999)
+        fee = uint64(1_999_999_999_999)
 
-        for i in range(0, 2):
+        for i in range(2):
             async with dl_wallet.wallet_state_manager.new_action_scope(
                 wallet_environments.tx_config, push=True
             ) as action_scope:
@@ -81,9 +81,7 @@ class TestDLWallet:
                                 "max_send_amount": -fee - 1,
                                 "pending_coin_removal_count": 2,  # creation + launcher
                             },
-                            "dl": {
-                                **({"init": True} if i == 0 else {}),
-                            },
+                            "dl": {"init": True} if i == 0 else {},
                         },
                         post_block_balance_updates={
                             "xch": {
@@ -133,15 +131,13 @@ class TestDLWallet:
 
         expected_launcher_ids = set()
 
-        fee = uint64(1999999999999)
+        fee = uint64(1_999_999_999_999)
 
-        for i in range(0, 2):
+        for i in range(2):
             async with dl_wallet.wallet_state_manager.new_action_scope(
                 wallet_environments.tx_config, push=True
             ) as action_scope:
-                launcher_id = await dl_wallet.generate_new_reporter(
-                    current_root, action_scope, fee=uint64(1999999999999)
-                )
+                launcher_id = await dl_wallet.generate_new_reporter(current_root, action_scope, fee=fee)
             expected_launcher_ids.add(launcher_id)
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
@@ -156,9 +152,7 @@ class TestDLWallet:
                                 "max_send_amount": -fee - 1,
                                 "pending_coin_removal_count": 2,  # creation + launcher
                             },
-                            "dl": {
-                                **({"init": True} if i == 0 else {}),
-                            },
+                            "dl": {"init": True} if i == 0 else {},
                         },
                         post_block_balance_updates={
                             "xch": {
@@ -262,7 +256,7 @@ class TestDLWallet:
         await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
 
-        for i in range(0, 5):
+        for _ in range(5):
             new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
             async with dl_wallet_0.wallet_state_manager.new_action_scope(
                 wallet_environments.tx_config, push=True
@@ -372,7 +366,7 @@ class TestDLWallet:
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
 
-        fee = uint64(1999999999999)
+        fee = uint64(1_999_999_999_999)
 
         async with dl_wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
