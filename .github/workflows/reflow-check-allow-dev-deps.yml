@@ -2,16 +2,13 @@ name: 🚨 Check allow-dev-deps label
 
 on:
   workflow_call:
-    inputs:
-      concurrency-name:
-        required: true
-        type: string
     outputs:
-      allow-dev-deps: ${{ contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
+      allow-dev-deps:
+        value: ${{ contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency-name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
