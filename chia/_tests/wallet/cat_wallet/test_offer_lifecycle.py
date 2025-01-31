@@ -19,9 +19,8 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes
+from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes, CreateCoin
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import OFFER_MOD, Offer
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -60,7 +59,7 @@ async def generate_coins(
                 tail_hash = tail.get_tree_hash()
                 cat_puzzle = construct_cat_puzzle(CAT_MOD, tail_hash, acs)
                 cat_puzzle_hash = cat_puzzle.get_tree_hash()
-                payments.append(Payment(cat_puzzle_hash, uint64(amount)))
+                payments.append(CreateCoin(cat_puzzle_hash, uint64(amount)))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
                         CAT_MOD,
@@ -75,7 +74,7 @@ async def generate_coins(
                     )
                 )
             else:
-                payments.append(Payment(acs_ph, uint64(amount)))
+                payments.append(CreateCoin(acs_ph, uint64(amount)))
 
     # This bundle creates all of the initial coins
     parent_bundle = WalletSpendBundle(
@@ -178,8 +177,11 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         driver_dict_as_infos = {key.hex(): value.info for key, value in driver_dict.items()}
 
         # Create an XCH Offer for RED
-        chia_requested_payments: dict[Optional[bytes32], list[Payment]] = {
-            str_to_tail_hash("red"): [Payment(acs_ph, uint64(100), [b"memo"]), Payment(acs_ph, uint64(200), [b"memo"])]
+        chia_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+            str_to_tail_hash("red"): [
+                CreateCoin(acs_ph, uint64(100), [b"memo"]),
+                CreateCoin(acs_ph, uint64(200), [b"memo"]),
+            ]
         }
         chia_notarized_payments = Offer.notarize_payments(chia_requested_payments, chia_coins)
         chia_announcements = Offer.calculate_announcements(chia_notarized_payments, driver_dict)
@@ -190,8 +192,8 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         # Create a RED Offer for XCH
         red_coins_1 = red_coins[0:1]
         red_coins_2 = red_coins[1:]
-        red_requested_payments: dict[Optional[bytes32], list[Payment]] = {
-            None: [Payment(acs_ph, uint64(300), [b"red memo"]), Payment(acs_ph, uint64(350), [b"red memo"])]
+        red_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+            None: [CreateCoin(acs_ph, uint64(300), [b"red memo"]), CreateCoin(acs_ph, uint64(350), [b"red memo"])]
         }
         red_notarized_payments = Offer.notarize_payments(red_requested_payments, red_coins_1)
         red_announcements = Offer.calculate_announcements(red_notarized_payments, driver_dict)
@@ -201,8 +203,8 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         red_offer = Offer(red_notarized_payments, red_secured_bundle, driver_dict)
         assert not red_offer.is_valid()
 
-        red_requested_payments_2: dict[Optional[bytes32], list[Payment]] = {
-            None: [Payment(acs_ph, uint64(50), [b"red memo"])]
+        red_requested_payments_2: dict[Optional[bytes32], list[CreateCoin]] = {
+            None: [CreateCoin(acs_ph, uint64(50), [b"red memo"])]
         }
         red_notarized_payments_2 = Offer.notarize_payments(red_requested_payments_2, red_coins_2)
         red_announcements_2 = Offer.calculate_announcements(red_notarized_payments_2, driver_dict)
@@ -219,9 +221,9 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         assert new_offer.is_valid()
 
         # Create yet another offer of BLUE for XCH and RED
-        blue_requested_payments: dict[Optional[bytes32], list[Payment]] = {
-            None: [Payment(acs_ph, uint64(200), [b"blue memo"])],
-            str_to_tail_hash("red"): [Payment(acs_ph, uint64(50), [b"blue memo"])],
+        blue_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+            None: [CreateCoin(acs_ph, uint64(200), [b"blue memo"])],
+            str_to_tail_hash("red"): [CreateCoin(acs_ph, uint64(50), [b"blue memo"])],
         }
         blue_notarized_payments = Offer.notarize_payments(blue_requested_payments, blue_coins)
         blue_announcements = Offer.calculate_announcements(blue_notarized_payments, driver_dict)

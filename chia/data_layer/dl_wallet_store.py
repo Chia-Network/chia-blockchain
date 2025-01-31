@@ -5,7 +5,8 @@ from typing import Optional, TypeVar, Union
 
 from aiosqlite import Row
 
-from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone

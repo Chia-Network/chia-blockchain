@@ -55,8 +55,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.conditions import AssertCoinAnnouncement
-from chia.wallet.payment import Payment
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -1653,7 +1652,7 @@ async def test_identical_spend_aggregation_e2e(
         phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
-        other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
+        other_recipients = [CreateCoin(puzzle_hash=p, amount=uint64(200)) for p in phs[1:]]
         async with wallet.wallet_state_manager.new_action_scope(
             DEFAULT_TX_CONFIG, push=False, sign=True
         ) as action_scope:

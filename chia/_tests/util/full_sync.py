@@ -28,6 +28,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
 from chia.util.ints import uint16
 
@@ -184,6 +185,7 @@ async def run_sync_test(
                 worst_batch_height = None
                 worst_batch_time_per_block = None
                 peer_info = peer.get_peer_logging()
+                blockchain = AugmentedBlockchain(full_node.blockchain)
                 async for r in rows:
                     batch_start_time = time.monotonic()
                     with enable_profiler(profile, height):
@@ -216,6 +218,7 @@ async def run_sync_test(
                                 peer_info,
                                 ForkInfo(fork_height, fork_height, header_hash),
                                 ValidationState(ssi, diff, None),
+                                blockchain,
                             )
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)

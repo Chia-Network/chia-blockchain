@@ -7,7 +7,7 @@ import sys
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, cast
 
 import click
 import zstd
@@ -55,10 +55,16 @@ def run_gen(
         return 117, None, 0
 
 
-def callable_for_module_function_path(call: str) -> Callable:
+def callable_for_module_function_path(
+    call: str,
+) -> Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]:
     module_name, function_name = call.split(":", 1)
     module = __import__(module_name, fromlist=[function_name])
-    return getattr(module, function_name)
+    # TODO: casting due to getattr type signature
+    return cast(
+        Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None],
+        getattr(module, function_name),
+    )
 
 
 @click.command()
@@ -70,7 +76,9 @@ def callable_for_module_function_path(call: str) -> Callable:
 @click.option("--start", default=225000, help="first block to examine")
 @click.option("--end", default=None, help="last block to examine")
 @click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
-def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool):
+def main(
+    file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool
+) -> None:
     call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]
     if call is None:
         call_f = partial(default_call, verify_signatures)

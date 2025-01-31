@@ -258,15 +258,11 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             launcher_id = await dl_wallet.generate_new_reporter(current_root, action_scope)
 
         assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-
-        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions(
-            action_scope.side_effects.transactions
-        )
-        await full_node_api.process_transaction_records(records=[std_record])
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
 
@@ -276,7 +272,7 @@ class TestDLWallet:
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
 
-        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await dl_wallet.generate_signed_transaction(
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
@@ -309,8 +305,7 @@ class TestDLWallet:
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(action_scope.side_effects.transactions)
-        await full_node_api.process_transaction_records(records=txs)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds - 2000000000000)
@@ -324,15 +319,14 @@ class TestDLWallet:
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
-        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await dl_wallet.create_update_state_spend(launcher_id, new_root, action_scope)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert new_record is not None
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(action_scope.side_effects.transactions)
-        await full_node_api.process_transaction_records(records=txs)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await asyncio.sleep(0.5)

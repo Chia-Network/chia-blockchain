@@ -24,6 +24,7 @@ from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     UnknownCondition,
@@ -31,7 +32,6 @@ from chia.wallet.conditions import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -397,7 +397,7 @@ class CRCATWallet(CATWallet):
 
     async def _generate_unsigned_spendbundle(
         self,
-        payments: list[Payment],
+        payments: list[CreateCoin],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
@@ -438,7 +438,7 @@ class CRCATWallet(CATWallet):
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries: list[Payment] = []
+        primaries: list[CreateCoin] = []
         for payment in payments:
             primaries.append(payment)
 
@@ -462,7 +462,7 @@ class CRCATWallet(CATWallet):
                         break
             else:
                 change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+            primaries.append(CreateCoin(change_puzhash, uint64(change), [change_puzhash]))
 
         # Find the VC Wallet
         vc_wallet: VCWallet
@@ -622,7 +622,7 @@ class CRCATWallet(CATWallet):
             memos_with_hint.extend(memo_list)
             # Force wrap the outgoing coins in the pending state if not going to us
             payments.append(
-                Payment(
+                CreateCoin(
                     (
                         construct_pending_approval_state(puzhash, amount).get_tree_hash()
                         if puzhash != Offer.ph()
@@ -667,7 +667,7 @@ class CRCATWallet(CATWallet):
                     sent_to=[],
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
-                    name=spend_bundle.name() if i == 0 else payment.as_condition().get_tree_hash(),
+                    name=spend_bundle.name() if i == 0 else payment.to_program().get_tree_hash(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=parse_timelock_info(extra_conditions),
                 )

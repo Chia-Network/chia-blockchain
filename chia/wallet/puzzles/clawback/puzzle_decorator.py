@@ -7,7 +7,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.util.streamable import VersionedBlob
-from chia.wallet.payment import Payment
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.puzzles.clawback.drivers import create_merkle_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.util.wallet_types import RemarkDataType
@@ -41,7 +41,7 @@ class ClawbackPuzzleDecorator:
         )
 
     def solve(
-        self, inner_puzzle: Program, primaries: list[Payment], inner_solution: Program
+        self, inner_puzzle: Program, primaries: list[CreateCoin], inner_solution: Program
     ) -> tuple[Program, Program]:
         # Append REMARK condition [1, "CLAWBACK", TIME_LOCK, SENDER_PUZHSAH, RECIPIENT_PUZHSAH]
         if len(primaries) == 1:

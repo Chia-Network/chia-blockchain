@@ -20,6 +20,7 @@ from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_puzzles import (
     get_most_recent_singleton_coin_from_coin_spend,
     solution_to_pool_state,
@@ -55,6 +56,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     parse_timelock_info,
 )
@@ -87,7 +89,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
@@ -972,7 +973,7 @@ class WalletStateManager:
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[
-                        Payment(
+                        CreateCoin(
                             derivation_record.puzzle_hash,
                             uint64(coin.amount),
                             memos,  # Forward memo of the first coin
@@ -2298,6 +2299,7 @@ class WalletStateManager:
         sign: Optional[bool] = None,
         additional_signing_responses: Optional[list[SigningResponse]] = None,
         extra_spends: Optional[list[WalletSpendBundle]] = None,
+        singleton_records: list[SingletonRecord] = [],
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2343,6 +2345,9 @@ class WalletStateManager:
                     await self.tx_store.add_transaction_record(tx_record)
                     all_coins_names.extend([coin.name() for coin in tx_record.additions])
                     all_coins_names.extend([coin.name() for coin in tx_record.removals])
+
+                for singleton_record in singleton_records:
+                    await self.dl_store.add_singleton_record(singleton_record)
 
             await self.add_interested_coin_ids(all_coins_names)
 

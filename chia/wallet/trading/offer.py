@@ -21,6 +21,7 @@ from chia.wallet.conditions import (
     AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     parse_conditions_non_consensus,
     parse_timelock_info,
 )
@@ -32,7 +33,6 @@ from chia.wallet.outer_puzzles import (
     match_puzzle,
     solve_puzzle,
 )
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
@@ -61,15 +61,17 @@ def detect_dependent_coin(
 
 
 @dataclass(frozen=True)
-class NotarizedPayment(Payment):
+class NotarizedPayment(CreateCoin):
     nonce: bytes32 = bytes32.zeros
 
     @classmethod
     def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
-        p = Payment.from_condition(with_opcode)
-        puzzle_hash, amount, memos = tuple(p.as_condition_args())
-        return cls(puzzle_hash, amount, memos, nonce)
+        p = CreateCoin.from_program(with_opcode)
+        return cls(p.puzzle_hash, p.amount, p.memos, nonce)
+
+    def name(self) -> bytes32:
+        return self.to_program().get_tree_hash()
 
 
 @dataclass(frozen=True, eq=False)
@@ -94,7 +96,7 @@ class Offer:
 
     @staticmethod
     def notarize_payments(
-        requested_payments: dict[Optional[bytes32], list[Payment]],  # `None` means you are requesting XCH
+        requested_payments: dict[Optional[bytes32], list[CreateCoin]],  # `None` means you are requesting XCH
         coins: list[Coin],
     ) -> dict[Optional[bytes32], list[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
@@ -106,8 +108,7 @@ class Offer:
         for asset_id, payments in requested_payments.items():
             notarized_payments[asset_id] = []
             for p in payments:
-                puzzle_hash, amount, memos = tuple(p.as_condition_args())
-                notarized_payments[asset_id].append(NotarizedPayment(puzzle_hash, amount, memos, nonce))
+                notarized_payments[asset_id].append(NotarizedPayment(p.puzzle_hash, p.amount, p.memos, nonce))
 
         return notarized_payments
 

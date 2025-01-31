@@ -30,7 +30,7 @@ from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
-from chia.wallet.payment import Payment
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
@@ -686,13 +686,13 @@ class FullNodeSimulator(FullNodeAPI):
             if len(amounts) == 0:
                 return set()
 
-            outputs: list[Payment] = []
+            outputs: list[CreateCoin] = []
             amounts_seen: set[uint64] = set()
             for amount in amounts:
                 # We need unique puzzle hash amount combos so we'll only generate a new puzzle hash when we've already
                 # seen that amount sent to that puzzle hash
                 puzzle_hash = await wallet.get_puzzle_hash(new=amount in amounts_seen)
-                outputs.append(Payment(puzzle_hash, amount))
+                outputs.append(CreateCoin(puzzle_hash, amount))
                 amounts_seen.add(amount)
 
             transaction_records: list[TransactionRecord] = []

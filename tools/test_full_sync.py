@@ -21,6 +21,7 @@ from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.full_block import FullBlock
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
 
 
@@ -149,6 +150,7 @@ async def run_sync_checkpoint(
 
             block_batch = []
             peer_info = peer.get_peer_logging()
+            blockchain = AugmentedBlockchain(full_node.blockchain)
             async for r in rows:
                 block = FullBlock.from_bytes_unchecked(zstd.decompress(r[0]))
                 block_batch.append(block)
@@ -169,6 +171,7 @@ async def run_sync_checkpoint(
                     peer_info,
                     ForkInfo(fork_height, fork_height, header_hash),
                     ValidationState(ssi, diff, None),
+                    blockchain,
                 )
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
@@ -192,6 +195,7 @@ async def run_sync_checkpoint(
                     peer_info,
                     ForkInfo(fork_height, fork_height, fork_header_hash),
                     ValidationState(ssi, diff, None),
+                    blockchain,
                 )
                 if not success:
                     raise RuntimeError("failed to ingest block batch")

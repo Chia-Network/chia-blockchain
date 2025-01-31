@@ -68,7 +68,6 @@ class GSTOptionalArgs(TypedDict):
     launcher_id: NotRequired[Optional[bytes32]]
     new_root_hash: NotRequired[Optional[bytes32]]
     sign: NotRequired[bool]
-    add_pending_singleton: NotRequired[bool]
     announce_new_state: NotRequired[bool]
     # CATWallet
     cat_discrepancy: NotRequired[Optional[tuple[int, Program, Program]]]

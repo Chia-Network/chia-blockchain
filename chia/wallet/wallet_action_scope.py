@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional, cast, final
 
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
@@ -25,6 +26,7 @@ class _StreamableWalletSideEffects(Streamable):
     signing_responses: list[SigningResponse]
     extra_spends: list[WalletSpendBundle]
     selected_coins: list[Coin]
+    singleton_records: list[SingletonRecord]
 
 
 @dataclass
@@ -33,6 +35,7 @@ class WalletSideEffects:
     signing_responses: list[SigningResponse] = field(default_factory=list)
     extra_spends: list[WalletSpendBundle] = field(default_factory=list)
     selected_coins: list[Coin] = field(default_factory=list)
+    singleton_records: list[SingletonRecord] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
         return bytes(_StreamableWalletSideEffects(**self.__dict__))
@@ -93,4 +96,5 @@ async def new_wallet_action_scope(
         sign=sign,
         additional_signing_responses=self.side_effects.signing_responses,
         extra_spends=self.side_effects.extra_spends,
+        singleton_records=self.side_effects.singleton_records,
     )

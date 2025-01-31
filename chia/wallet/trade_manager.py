@@ -23,6 +23,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     parse_conditions_non_consensus,
     parse_timelock_info,
@@ -30,7 +31,6 @@ from chia.wallet.conditions import (
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
@@ -500,7 +500,7 @@ class TradeManager:
             solver = Solver({})
         try:
             coins_to_offer: dict[Union[int, bytes32], set[Coin]] = {}
-            requested_payments: dict[Optional[bytes32], list[Payment]] = {}
+            requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {}
             offer_dict_no_ints: dict[Optional[bytes32], int] = {}
             for id, amount in offer_dict.items():
                 asset_id: Optional[bytes32] = None
@@ -537,7 +537,7 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
-                    requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
+                    requested_payments[asset_id] = [CreateCoin(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
                     # this is what we are sending in the trade
                     if isinstance(id, int):
@@ -1051,10 +1051,10 @@ class TradeManager:
 
     async def check_for_requested_payment_modifications(
         self,
-        requested_payments: dict[Optional[bytes32], list[Payment]],
+        requested_payments: dict[Optional[bytes32], list[CreateCoin]],
         driver_dict: dict[bytes32, PuzzleInfo],
         taking: bool,
-    ) -> dict[Optional[bytes32], list[Payment]]:
+    ) -> dict[Optional[bytes32], list[CreateCoin]]:
         # This function exclusively deals with CR-CATs for now
         if not taking:
             for asset_id, puzzle_info in driver_dict.items():

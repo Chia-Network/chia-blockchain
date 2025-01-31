@@ -63,7 +63,12 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace, calculate_plot_id_pk, calculate_pos_challenge
+from chia.types.blockchain_format.proof_of_space import (
+    ProofOfSpace,
+    calculate_plot_id_ph,
+    calculate_plot_id_pk,
+    calculate_pos_challenge,
+)
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -128,16 +133,6 @@ async def new_transaction_requested(incoming, new_spend):
             if request.transaction_id == new_spend.transaction_id:
                 return True
     return False
-
-
-async def get_block_path(full_node: FullNodeAPI):
-    blocks_list = [await full_node.full_node.blockchain.get_full_peak()]
-    assert blocks_list[0] is not None
-    while blocks_list[0].height != 0:
-        b = await full_node.full_node.block_store.get_full_block(blocks_list[0].prev_header_hash)
-        assert b is not None
-        blocks_list.insert(0, b)
-    return blocks_list
 
 
 @pytest.mark.anyio
@@ -1476,7 +1471,8 @@ async def test_unfinished_block_with_replaced_generator(wallet_nodes, self_hostn
 
             if committment > 5:
                 if pos.pool_public_key is None:
-                    plot_id = calculate_plot_id_pk(pos.pool_contract_puzzle_hash, public_key)
+                    assert pos.pool_contract_puzzle_hash is not None
+                    plot_id = calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
                 else:
                     plot_id = calculate_plot_id_pk(pos.pool_public_key, public_key)
                 original_challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
@@ -1634,7 +1630,7 @@ async def test_request_unfinished_block2(wallet_nodes, self_hostname):
         if best_unf is None:
             best_unf = unf
         elif (
-            unf.foliage.foliage_transaction_block_hash is not None
+            best_unf.foliage.foliage_transaction_block_hash is not None
             and unf.foliage.foliage_transaction_block_hash < best_unf.foliage.foliage_transaction_block_hash
         ):
             best_unf = unf
