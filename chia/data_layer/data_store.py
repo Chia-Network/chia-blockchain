@@ -51,6 +51,7 @@ from chia.data_layer.util.merkle_blob import (
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -227,7 +228,7 @@ class DataStore:
                     terminal_nodes[node_hash] = (kid, vid)
 
         missing_hashes: list[bytes32] = []
-        merkle_blob_queries: dict[bytes32, list[int]] = defaultdict(list)
+        merkle_blob_queries: dict[bytes32, list[TreeIndex]] = defaultdict(list)
 
         for _, (left, right) in internal_nodes.items():
             for node_hash in (left, right):
@@ -252,7 +253,7 @@ class DataStore:
                     for row in rows:
                         node_hash = bytes32(row["hash"])
                         root_hash_blob = bytes32(row["root_hash"])
-                        index = row["idx"]
+                        index = TreeIndex(uint32(row["idx"]))
                         if node_hash in found_hashes:
                             raise Exception("Internal error: duplicate node_hash found in nodes table")
                         merkle_blob_queries[root_hash_blob].append(index)
@@ -477,8 +478,8 @@ class DataStore:
                 "INSERT OR REPLACE INTO hashes (hash, kid, vid, store_id) VALUES (?, ?, ?, ?)",
                 (
                     hash,
-                    kid,
-                    vid,
+                    kid.raw,
+                    vid.raw,
                     store_id,
                 ),
             )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import itertools
+import re
 from dataclasses import dataclass
 from random import Random
 from typing import Generic, Protocol, TypeVar, final
@@ -30,6 +31,7 @@ from chia.data_layer.util.merkle_blob import (
     raw_node_classes,
     raw_node_type_to_class,
     spacing,
+    undefined_index,
     unpack_raw_node,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -360,7 +362,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             del keys_values[kv_id]
 
         for kv_id in delete_ordering:
-            with pytest.raises(Exception, match=f"Key {kv_id} not present in the store"):
+            with pytest.raises(Exception, match=f"Key {re.escape(str(kv_id))} not present in the store"):
                 merkle_blob.get_proof_of_inclusion(kv_id)
 
         new_keys_values: dict[KeyId, ValueId] = {}
@@ -379,7 +381,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             assert proof_of_inclusion.valid()
 
 
-@pytest.mark.parametrize(argnames="index", argvalues=[-1, 1, None])
+@pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(uint32(1)), undefined_index])
 def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
     merkle_blob = MerkleBlob(blob=bytearray())
     merkle_blob.insert(
