@@ -207,7 +207,7 @@ jobs:
         if: ${{ matrix.distribution.type == 'arch' }}
         run: |
           pacman --noconfirm -Syu
-          pacman --noconfirm -S base git sudo openssl-1.1
+          pacman --noconfirm -S base git sudo openssl-1.1 execstack
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
