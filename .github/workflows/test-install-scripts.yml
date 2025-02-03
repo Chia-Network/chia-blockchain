@@ -207,7 +207,7 @@ jobs:
         if: ${{ matrix.distribution.type == 'arch' }}
         run: |
           pacman --noconfirm -Syu
-          pacman --noconfirm -S base base-devel git sudo openssl-1.1 execstack
+          pacman --noconfirm -S base base-devel git sudo openssl-1.1
           git clone https://aur.archlinux.org/yay.git
           (cd yay && makepkg -si)
           yay -S prelink
