@@ -455,7 +455,7 @@ class Wallet:
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
-                    to_puzzle_hash=puzzle_hashes[0],
+                    to_puzzle_hash=add_list[0].puzzle_hash,
                     amount=uint64(non_change_amount),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -481,8 +481,8 @@ class Wallet:
     ) -> None:
         chia_coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(
-            [uint64(0)],
-            [(await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash))],
+            [],
+            [],
             action_scope,
             fee=fee,
             coins=chia_coins,
