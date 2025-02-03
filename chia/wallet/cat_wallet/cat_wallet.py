@@ -565,8 +565,8 @@ class CATWallet:
                 )
                 origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
-                    [uint64(0)],
-                    [(await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash))],
+                    [],
+                    [],
                     inner_action_scope,
                     fee=uint64(fee - amount_to_claim),
                     coins=chia_coins,

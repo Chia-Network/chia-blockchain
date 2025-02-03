@@ -360,10 +360,8 @@ class DataLayerWallet:
         action_scope: WalletActionScope,
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            amounts=[uint64(0)],
-            puzzle_hashes=[
-                await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)
-            ],
+            amounts=[],
+            puzzle_hashes=[],
             action_scope=action_scope,
             fee=fee,
             negative_change_allowed=False,

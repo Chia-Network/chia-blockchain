@@ -463,8 +463,8 @@ class PoolWallet:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            [uint64(0)],
-            [(await self.standard_wallet.get_new_puzzlehash())],
+            [],
+            [],
             action_scope,
             fee=fee,
             origin_id=None,
