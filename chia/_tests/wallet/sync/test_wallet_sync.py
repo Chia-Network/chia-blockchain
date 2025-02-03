@@ -55,6 +55,7 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import CreateCoin
@@ -444,11 +445,13 @@ async def test_long_sync_wallet(
         full_node.constants, True, block_record, full_node.blockchain
     )
     fork_height = blocks_reorg[-num_blocks - 10].height - 1
+    blockchain = AugmentedBlockchain(full_node.blockchain)
     await full_node.add_block_batch(
         blocks_reorg[-num_blocks - 10 : -1],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(fork_height, fork_height, blocks_reorg[-num_blocks - 10].prev_header_hash),
         ValidationState(sub_slot_iters, difficulty, None),
+        blockchain,
     )
     await full_node.add_block(blocks_reorg[-1])
 
@@ -572,11 +575,13 @@ async def test_wallet_reorg_get_coinbase(
     sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
         full_node.constants, True, block_record, full_node.blockchain
     )
+    blockchain = AugmentedBlockchain(full_node.blockchain)
     await full_node.add_block_batch(
         blocks_reorg_2[-44:],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(blocks_reorg_2[-45].height, blocks_reorg_2[-45].height, blocks_reorg_2[-45].header_hash),
         ValidationState(sub_slot_iters, difficulty, None),
+        blockchain,
     )
 
     for wallet_node, wallet_server in wallets:

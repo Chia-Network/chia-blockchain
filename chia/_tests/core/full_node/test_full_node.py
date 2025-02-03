@@ -63,7 +63,12 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace, calculate_plot_id_pk, calculate_pos_challenge
+from chia.types.blockchain_format.proof_of_space import (
+    ProofOfSpace,
+    calculate_plot_id_ph,
+    calculate_plot_id_pk,
+    calculate_pos_challenge,
+)
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -1466,7 +1471,8 @@ async def test_unfinished_block_with_replaced_generator(wallet_nodes, self_hostn
 
             if committment > 5:
                 if pos.pool_public_key is None:
-                    plot_id = calculate_plot_id_pk(pos.pool_contract_puzzle_hash, public_key)
+                    assert pos.pool_contract_puzzle_hash is not None
+                    plot_id = calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
                 else:
                     plot_id = calculate_plot_id_pk(pos.pool_public_key, public_key)
                 original_challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
