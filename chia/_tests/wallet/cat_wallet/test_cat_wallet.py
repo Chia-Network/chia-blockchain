@@ -1641,8 +1641,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
 
     from chia.simulator.simulator_protocol import GetAllCoinsProtocol
     from chia.wallet.cat_wallet.cat_utils import SpendableCAT, unsigned_spend_bundle_for_spendable_cats
-    from chia.wallet.conditions import UnknownCondition
-    from chia.wallet.payment import Payment
+    from chia.wallet.conditions import CreateCoin, UnknownCondition
 
     await simulator.farm_blocks_to_puzzlehash(count=1, farm_to=CAT_w_ACS_HASH, guarantee_transaction_blocks=True)
     await simulator.farm_blocks_to_puzzlehash(count=1)
@@ -1703,7 +1702,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                     limitations_program_hash=ACS_TAIL_HASH,
                     inner_puzzle=await cat_wallet.inner_puzzle_for_cat_puzhash(new_coin.puzzle_hash),
                     inner_solution=wallet.make_solution(
-                        primaries=[Payment(wallet_ph, uint64(tx_amount), [wallet_ph])],
+                        primaries=[CreateCoin(wallet_ph, uint64(tx_amount), [wallet_ph])],
                         conditions=(
                             UnknownCondition(
                                 opcode=Program.to(51),

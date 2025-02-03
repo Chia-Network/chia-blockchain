@@ -23,9 +23,9 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.dao_wallet.dao_utils import create_cat_launcher_for_singleton_id
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -122,7 +122,7 @@ class GenesisById(LimitationsProgram):
         inner_tree_hash = cat_inner.get_tree_hash()
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])]),
+            wallet.standard_wallet.make_solution(primaries=[CreateCoin(inner_tree_hash, amount, [inner_tree_hash])]),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
@@ -302,7 +302,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
         tx_record: TransactionRecord = inner_action_scope.side_effects.transactions[0]
         assert tx_record.spend_bundle is not None
-        payment = Payment(cat_inner.get_tree_hash(), amount)
+        payment = CreateCoin(cat_inner.get_tree_hash(), amount)
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
             wallet.standard_wallet.make_solution(

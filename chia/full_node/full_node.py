@@ -36,6 +36,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
+from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
@@ -78,7 +79,6 @@ from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
@@ -636,8 +636,9 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
+                    blockchain = AugmentedBlockchain(self.blockchain)
                     success, state_change_summary = await self.add_block_batch(
-                        response.blocks, peer_info, fork_info, vs
+                        response.blocks, peer_info, fork_info, vs, blockchain
                     )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
@@ -1477,13 +1478,13 @@ class FullNode:
         peer_info: PeerInfo,
         fork_info: ForkInfo,
         vs: ValidationState,  # in-out parameter
+        blockchain: AugmentedBlockchain,
         wp_summaries: Optional[list[SubEpochSummary]] = None,
     ) -> tuple[bool, Optional[StateChangeSummary]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
         pre_validate_start = time.monotonic()
-        blockchain = AugmentedBlockchain(self.blockchain)
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
 
         if len(blocks_to_validate) == 0:
@@ -1545,7 +1546,7 @@ class FullNode:
             # we have already validated this block once, no need to do it again.
             # however, if this block is not part of the main chain, we need to
             # update the fork context with its additions and removals
-            if blockchain.height_to_hash(block.height) == header_hash:
+            if self.blockchain.height_to_hash(block.height) == header_hash:
                 # we're on the main chain, just fast-forward the fork height
                 fork_info.reset(block.height, header_hash)
             else:
