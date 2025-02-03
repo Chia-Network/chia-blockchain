@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 import sqlite3
 from contextlib import closing
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -167,7 +168,7 @@ async def test_db_validate_default_1000_blocks(default_1000_blocks: list[FullBlo
             validate_v2(db_file, config=default_config, validate_blocks=True)
         assert "Blockchain has invalid genesis challenge" in str(execinfo.value)
 
-        new_config = default_config.copy()
+        new_config = deepcopy(default_config)
         new_config["full_node"]["network_overrides"]["constants"]["local"]["AGG_SIG_ME_ADDITIONAL_DATA"] = (
             default_1000_blocks[0].foliage.prev_block_hash.hex()
         )
