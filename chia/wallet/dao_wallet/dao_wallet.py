@@ -1545,6 +1545,7 @@ class DAOWallet:
                 action_scope,
                 fee=fee,
                 extra_conditions=extra_conditions,
+                memos=[[p2_singleton_puzhash]],
             )
         else:  # pragma: no cover
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")

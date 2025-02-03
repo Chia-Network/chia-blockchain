@@ -455,7 +455,7 @@ class Wallet:
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
-                    to_puzzle_hash=add_list[0].puzzle_hash,
+                    to_puzzle_hash=add_list[0].puzzle_hash if len(add_list) > 0 else bytes32.zeros,
                     amount=uint64(non_change_amount),
                     fee_amount=uint64(fee),
                     confirmed=False,
