@@ -35,7 +35,7 @@ from chia.data_layer.util.merkle_blob import (
     unpack_raw_node,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int64, uint32
+from chia.util.ints import int64
 
 pytestmark = pytest.mark.data_layer
 
@@ -125,16 +125,16 @@ reference_raw_nodes: list[DataCase] = [
     RawNodeFromBlobCase(
         raw=RawInternalMerkleNode(
             hash=bytes32(range(32)),
-            parent=TreeIndex(uint32(0x20212223)),
-            left=TreeIndex(uint32(0x24252627)),
-            right=TreeIndex(uint32(0x28292A2B)),
+            parent=TreeIndex(0x20212223),
+            left=TreeIndex(0x24252627),
+            right=TreeIndex(0x28292A2B),
         ),
         packed=internal_reference_blob,
     ),
     RawNodeFromBlobCase(
         raw=RawLeafMerkleNode(
             hash=bytes32(range(32)),
-            parent=TreeIndex(uint32(0x20212223)),
+            parent=TreeIndex(0x20212223),
             key=KeyId(KeyOrValueId(int64(0x2425262728292A2B))),
             value=ValueId(KeyOrValueId(int64(0x2C2D2E2F30313233))),
         ),
@@ -146,7 +146,7 @@ reference_raw_nodes: list[DataCase] = [
 @datacases(*reference_raw_nodes)
 def test_raw_node_from_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
     node = unpack_raw_node(
-        index=TreeIndex(uint32(0)),
+        index=TreeIndex(0),
         metadata=NodeMetadata(type=case.raw.type, dirty=False),
         data=case.packed,
     )
@@ -171,7 +171,7 @@ def test_merkle_blob_one_leaf_loads() -> None:
     blob = bytearray(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + pack_raw_node(leaf))
 
     merkle_blob = MerkleBlob(blob=blob)
-    assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == leaf
+    assert merkle_blob.get_raw_node(TreeIndex(0)) == leaf
 
 
 def test_merkle_blob_two_leafs_loads() -> None:
@@ -180,18 +180,18 @@ def test_merkle_blob_two_leafs_loads() -> None:
     root = RawInternalMerkleNode(
         hash=bytes32(range(32)),
         parent=None,
-        left=TreeIndex(uint32(1)),
-        right=TreeIndex(uint32(2)),
+        left=TreeIndex(1),
+        right=TreeIndex(2),
     )
     left_leaf = RawLeafMerkleNode(
         hash=bytes32(range(32)),
-        parent=TreeIndex(uint32(0)),
+        parent=TreeIndex(0),
         key=KeyId(KeyOrValueId(int64(0x0405060708090A0B))),
         value=ValueId(KeyOrValueId(int64(0x0405060708090A1B))),
     )
     right_leaf = RawLeafMerkleNode(
         hash=bytes32(range(32)),
-        parent=TreeIndex(uint32(0)),
+        parent=TreeIndex(0),
         key=KeyId(KeyOrValueId(int64(0x1415161718191A1B))),
         value=ValueId(KeyOrValueId(int64(0x1415161718191A2B))),
     )
@@ -201,7 +201,7 @@ def test_merkle_blob_two_leafs_loads() -> None:
     blob.extend(bytes(NodeMetadata(type=NodeType.leaf, dirty=False)) + pack_raw_node(right_leaf))
 
     merkle_blob = MerkleBlob(blob=blob)
-    assert merkle_blob.get_raw_node(TreeIndex(uint32(0))) == root
+    assert merkle_blob.get_raw_node(TreeIndex(0)) == root
     assert merkle_blob.get_raw_node(root.left) == left_leaf
     assert merkle_blob.get_raw_node(root.right) == right_leaf
     assert left_leaf.parent is not None
@@ -209,10 +209,10 @@ def test_merkle_blob_two_leafs_loads() -> None:
     assert right_leaf.parent is not None
     assert merkle_blob.get_raw_node(right_leaf.parent) == root
 
-    assert merkle_blob.get_lineage_with_indexes(TreeIndex(uint32(0))) == [(TreeIndex(uint32(0)), root)]
+    assert merkle_blob.get_lineage_with_indexes(TreeIndex(0)) == [(TreeIndex(0), root)]
     expected: list[tuple[TreeIndex, RawMerkleNodeProtocol]] = [
-        (TreeIndex(uint32(1)), left_leaf),
-        (TreeIndex(uint32(0)), root),
+        (TreeIndex(1), left_leaf),
+        (TreeIndex(0), root),
     ]
     assert merkle_blob.get_lineage_with_indexes(root.left) == expected
 
@@ -381,7 +381,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             assert proof_of_inclusion.valid()
 
 
-@pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(uint32(1)), undefined_index])
+@pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(1), undefined_index])
 def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
     merkle_blob = MerkleBlob(blob=bytearray())
     merkle_blob.insert(
@@ -412,7 +412,7 @@ def test_helper_methods(merkle_blob_type: MerkleBlobCallable) -> None:
     merkle_blob.insert(key, value, hash)
     assert not merkle_blob.empty()
     assert merkle_blob.get_root_hash() is not None
-    assert merkle_blob.get_root_hash() == merkle_blob.get_hash_at_index(TreeIndex(uint32(0)))
+    assert merkle_blob.get_root_hash() == merkle_blob.get_hash_at_index(TreeIndex(0))
 
     merkle_blob.delete(key)
     assert merkle_blob.empty()
