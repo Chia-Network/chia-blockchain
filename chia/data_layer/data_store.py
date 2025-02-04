@@ -522,9 +522,9 @@ class DataStore:
 
     async def get_terminal_node_by_hash(
         self,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
         node_hash: bytes32,
-        store_id: bytes32
+        store_id: bytes32,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> TerminalNode:
         resolved_root_hash: Optional[bytes32]
         if root_hash is unspecified:
@@ -946,7 +946,7 @@ class DataStore:
         keys: list[bytes] = []
         for hash in pagination_data.hashes:
             leaf_hash = keys_values_compressed.keys_values_hashed[hash]
-            node = await self.get_terminal_node_by_hash(root_hash, leaf_hash, store_id)
+            node = await self.get_terminal_node_by_hash(leaf_hash, store_id, root_hash)
             assert isinstance(node, TerminalNode)
             keys.append(node.key)
 
@@ -969,7 +969,7 @@ class DataStore:
 
         keys_values: list[TerminalNode] = []
         for hash in pagination_data.hashes:
-            node = await self.get_terminal_node_by_hash(root_hash, hash, store_id)
+            node = await self.get_terminal_node_by_hash(hash, store_id, root_hash)
             assert isinstance(node, TerminalNode)
             keys_values.append(node)
 
@@ -1012,7 +1012,7 @@ class DataStore:
 
         for hash in pagination_data.hashes:
             root_hash = hash2 if hash in insertions else hash1
-            node = await self.get_terminal_node_by_hash(root_hash, hash, store_id)
+            node = await self.get_terminal_node_by_hash(hash, store_id, root_hash)
             assert isinstance(node, TerminalNode)
             if hash in insertions:
                 kv_diff.append(DiffData(OperationType.INSERT, node.key, node.value))
