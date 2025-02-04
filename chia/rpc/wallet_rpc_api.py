@@ -1367,7 +1367,7 @@ class WalletRpcApi:
             [output.puzzle_hash for output in outputs],
             action_scope,
             request.fee,
-            coins={coin},
+            coins=coins,
             extra_conditions=extra_conditions,
         )
 

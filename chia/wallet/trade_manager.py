@@ -315,16 +315,20 @@ class TradeManager:
                 async with action_scope.use() as interface:
                     interface.side_effects.selected_coins.append(coin)
                 # This should probably not switch on whether or not we're spending a XCH but it has to for now
-                if wallet.type() == WalletType.STANDARD_WALLET and fee_to_pay > coin.amount:
+                if wallet.type() == WalletType.STANDARD_WALLET:
                     assert isinstance(wallet, Wallet)
-                    selected_coins: set[Coin] = await wallet.select_coins(
-                        uint64(fee_to_pay - coin.amount),
-                        action_scope,
-                    )
+                    if fee_to_pay > coin.amount:
+                        selected_coins: set[Coin] = await wallet.select_coins(
+                            uint64(fee_to_pay - coin.amount),
+                            action_scope,
+                        )
+                    else:
+                        selected_coins = set()
                     selected_coins.add(coin)
-                    uint64(sum(c.amount for c in selected_coins) - fee_to_pay)
+                    amount_to_pay = uint64(sum(c.amount for c in selected_coins) - fee_to_pay)
                 else:
                     selected_coins = {coin}
+                    amount_to_pay = coin.amount
 
                 # ATTENTION: new_wallets
                 assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet, NFTWallet))
@@ -335,12 +339,11 @@ class TradeManager:
                     push=False,
                 ) as inner_action_scope:
                     await wallet.generate_signed_transaction(
-                        # uint64(sum(c.amount for c in selected_coins) - fee_to_pay),
-                        [coin.amount],
+                        [amount_to_pay],
                         [new_ph],
                         inner_action_scope,
                         fee=fee_to_pay,
-                        coins={coin},
+                        coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
 
