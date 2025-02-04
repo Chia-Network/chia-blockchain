@@ -261,7 +261,11 @@ async def test_parser():
         assert height == block.height
         assert is_tx_block == (block.transactions_info is not None)
         gen = generator_from_block(block_bytes)
-        assert gen == bytes(block.transactions_generator)
+        if gen is None:
+            assert block.transactions_generator is None
+        else:
+            assert block.transactions_generator is not None
+            assert gen == bytes(block.transactions_generator)
         bi = block_info_from_block(block_bytes)
         assert block.transactions_generator == bi.transactions_generator
         assert block.prev_header_hash == bi.prev_header_hash
