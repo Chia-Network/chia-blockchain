@@ -150,19 +150,6 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS hashes(
-                        hash BLOB,
-                        kid INTEGER,
-                        vid INTEGER,
-                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
-                        PRIMARY KEY(store_id, hash),
-                        FOREIGN KEY (kid) REFERENCES ids(kv_id),
-                        FOREIGN KEY (vid) REFERENCES ids(kv_id)
-                    )
-                    """
-                )
-                await writer.execute(
-                    """
                     CREATE TABLE IF NOT EXISTS nodes(
                         store_id BLOB NOT NULL CHECK(length(store_id) == 32),
                         hash BLOB NOT NULL,
@@ -473,40 +460,19 @@ class DataStore:
     async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> tuple[KeyId, ValueId]:
         kid = KeyId(await self.add_kvid(key, store_id))
         vid = ValueId(await self.add_kvid(value, store_id))
-        hash = leaf_hash(key, value)
-        async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "INSERT OR REPLACE INTO hashes (hash, kid, vid, store_id) VALUES (?, ?, ?, ?)",
-                (
-                    hash,
-                    kid,
-                    vid,
-                    store_id,
-                ),
-            )
         return (kid, vid)
 
-    async def get_node_by_hash(self, hash: bytes32, store_id: bytes32) -> tuple[KeyId, ValueId]:
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                "SELECT * FROM hashes WHERE hash = ? AND store_id = ?",
-                (
-                    hash,
-                    store_id,
-                ),
-            )
+    async def get_node_by_hash(self, merkle_blob: MerkleBlob, hash: bytes32) -> tuple[KeyId, ValueId]:
+        kid, vid = merkle_blob.get_node_by_hash(hash)
+        if kid is None and vid is None:
+            raise Exception(f"Cannot find node by hash {hash.hex()}")
 
-            row = await cursor.fetchone()
-
-            if row is None:
-                raise Exception(f"Cannot find node by hash {hash.hex()}")
-
-            kid = KeyId(row["kid"])
-            vid = ValueId(row["vid"])
-            return (kid, vid)
+        return (kid, vid)
 
     async def get_terminal_node_by_hash(self, node_hash: bytes32, store_id: bytes32) -> TerminalNode:
-        kid, vid = await self.get_node_by_hash(node_hash, store_id)
+        root = await self.get_tree_root(store_id=store_id)
+        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+        kid, vid = await self.get_node_by_hash(merkle_blob, node_hash)
         return await self.get_terminal_node(kid, vid, store_id)
 
     async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
@@ -815,7 +781,7 @@ class DataStore:
                 raise Exception(f"Root hash is unspecified for store ID: {store_id.hex()}")
 
             merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
-            reference_kid, _ = await self.get_node_by_hash(node_hash, store_id)
+            reference_kid, _ = await self.get_node_by_hash(merkle_blob, node_hash)
 
         return merkle_blob.get_lineage_by_key_id(reference_kid)
 
@@ -1106,7 +1072,7 @@ class DataStore:
             hash = leaf_hash(key, value)
             reference_kid = None
             if reference_node_hash is not None:
-                reference_kid, _ = await self.get_node_by_hash(reference_node_hash, store_id)
+                reference_kid, _ = await self.get_node_by_hash(merkle_blob, reference_node_hash)
 
             was_empty = root.node_hash is None
             if not was_empty and reference_kid is None:
@@ -1213,7 +1179,7 @@ class DataStore:
                     side = change.get("side", None)
                     reference_kid: Optional[KeyId] = None
                     if reference_node_hash is not None:
-                        reference_kid, _ = await self.get_node_by_hash(reference_node_hash, store_id)
+                        reference_kid, _ = await self.get_node_by_hash(merkle_blob, reference_node_hash)
 
                     key_hashed = key_hash(key)
                     kid, vid = await self.add_key_value(key, value, store_id)
@@ -1382,7 +1348,7 @@ class DataStore:
             root = await self.get_tree_root(store_id=store_id)
             root_hash = root.node_hash
         merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
-        kid, _ = await self.get_node_by_hash(node_hash, store_id)
+        kid, _ = await self.get_node_by_hash(merkle_blob, node_hash)
         return merkle_blob.get_proof_of_inclusion(kid)
 
     async def get_proof_of_inclusion_by_key(
@@ -1529,10 +1495,6 @@ class DataStore:
             await writer.execute(
                 "DELETE FROM subscriptions WHERE tree_id == :tree_id",
                 {"tree_id": store_id},
-            )
-            await writer.execute(
-                "DELETE FROM hashes WHERE store_id == :store_id",
-                {"store_id": store_id},
             )
             await writer.execute(
                 "DELETE FROM merkleblob WHERE store_id == :store_id",
