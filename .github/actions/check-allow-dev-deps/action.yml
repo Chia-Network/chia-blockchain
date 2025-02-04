@@ -28,7 +28,7 @@ runs:
         echo "allow=${ALLOW}" >> "$GITHUB_OUTPUT"
 
     - name: maybe fail
-      if: inputs.fail-on-result == steps.check-allow-dev-deps.allow
+      if: inputs.fail-on-result == steps.check-allow-dev-deps.outputs.allow
       shell: bash
       run: |
         false
