@@ -533,7 +533,7 @@ class DataStore:
         else:
             resolved_root_hash = root_hash
 
-        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+        merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
         kid, vid = await self.get_node_by_hash(merkle_blob, node_hash)
         return await self.get_terminal_node(kid, vid, store_id)
 
