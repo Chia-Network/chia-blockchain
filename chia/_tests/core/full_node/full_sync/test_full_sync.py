@@ -8,11 +8,9 @@ import pytest
 
 from chia._tests.core.node_height import node_height_between, node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.shared_protocol import Capability
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
@@ -437,7 +435,3 @@ class TestFullSync:
         block = blocks[-1]
         full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
         assert len(full_node_1.full_node.bad_peak_cache) == 1
-
-
-def has_peers_with_peak(node: FullNode, header_hash: bytes32) -> bool:
-    return len(node.sync_store.get_peers_that_have_peak([header_hash])) > 0

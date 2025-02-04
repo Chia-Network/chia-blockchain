@@ -612,8 +612,10 @@ class SomeWallet:
 
 ## Tests
 
-- Do not import `test_*` modules. Instead locate shared tooling in non-test files within the `tests/` directory or subdirectories.
-- Do not import fixtures. Fixtures are shared by locating them in `conftest.py` files at whatever directory layer you want them to be recursively available from.
+- Do not import `test_*` modules.
+  Instead locate shared tooling in non-test files within the `tests/` directory or subdirectories.
+- Do not import fixtures.
+  Fixtures are shared by locating them in `conftest.py` files at whatever directory layer you want them to be recursively available from.
 - Do not use test classes.
   `unittest` requires that tests be held in a class.
   pytest does not.
