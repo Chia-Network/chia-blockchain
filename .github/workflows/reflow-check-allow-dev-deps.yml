@@ -12,6 +12,8 @@ jobs:
   check-labels:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/check-allow-dev-deps
         id: check-allow-dev-deps
         with:
