@@ -57,7 +57,7 @@ class MerkleBlob:
     blob: bytearray
     key_to_index: dict[KeyId, TreeIndex] = field(default_factory=dict)
     free_indexes: list[TreeIndex] = field(default_factory=list)
-    leaf_hash_to_index: dict[KeyId, TreeIndex] = field(default_factory=dict)
+    leaf_hash_to_index: dict[bytes32, TreeIndex] = field(default_factory=dict)
     last_allocated_index: TreeIndex = TreeIndex(uint32(0))
 
     def __post_init__(self) -> None:
