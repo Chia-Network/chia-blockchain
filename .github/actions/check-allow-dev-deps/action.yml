@@ -9,4 +9,10 @@ runs:
       id: check-allow-dev-deps
       shell: bash
       run: |
-        echo "allow=${{ startsWith(github.ref, 'refs/heads/long_lived/') || startsWith(github.event.pull_request.base.ref, 'refs/heads/long_lived/') || contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}" >> "$GITHUB_OUTPUT"
+        if grep 'git =' pyproject.toml &> /dev/null
+        then
+          ALLOW="${{ startsWith(github.ref, 'refs/heads/long_lived/') || startsWith(github.event.pull_request.base.ref, 'refs/heads/long_lived/') || contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}"
+        else
+          ALLOW="false"
+        fi
+        echo "allow=${ALLOW}" >> "$GITHUB_OUTPUT"
