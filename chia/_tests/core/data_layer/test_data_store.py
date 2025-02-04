@@ -60,7 +60,6 @@ table_columns: dict[str, list[str]] = {
     "schema": ["version_id", "applied_at"],
     "merkleblob": ["hash", "blob", "store_id"],
     "ids": ["kv_id", "blob", "store_id"],
-    "hashes": ["hash", "kid", "vid", "store_id"],
     "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
 
@@ -1127,7 +1126,7 @@ async def test_unsubscribe_clears_databases(data_store: DataStore, store_id: byt
         )
     await data_store.add_node_hashes(store_id)
 
-    tables = ["merkleblob", "ids", "hashes", "nodes"]
+    tables = ["merkleblob", "ids", "nodes"]
     for table in tables:
         async with data_store.db_wrapper.reader() as reader:
             async with reader.execute(f"SELECT COUNT(*) FROM {table}") as cursor:
