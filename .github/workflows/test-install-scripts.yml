@@ -22,7 +22,12 @@ concurrency:
 
 jobs:
   check-allow-dev-deps:
-    uses: ./.github/workflows/reflow-check-allow-dev-deps.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/check-allow-dev-deps
+        id: check-allow-dev-deps
+        with:
+          fail-on-result: "true"
 
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}

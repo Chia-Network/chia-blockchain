@@ -18,7 +18,12 @@ concurrency:
 
 jobs:
   check-allow-dev-deps:
-    uses: ./.github/workflows/reflow-check-allow-dev-deps.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/check-allow-dev-deps
+        id: check-allow-dev-deps
+        with:
+          fail-on-result: "true"
 
   check_dependency_artifacts:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
