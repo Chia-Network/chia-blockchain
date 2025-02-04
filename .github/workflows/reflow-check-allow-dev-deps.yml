@@ -14,8 +14,5 @@ jobs:
     steps:
       - uses: ./.github/actions/check-allow-dev-deps
         id: check-allow-dev-deps
-
-      - name: disallow dev deps
-        if: ${{ steps.check-allow-dev-deps.outputs.allow == 'false' }}
-        run: |
-          false
+        with:
+          fail-on-result: "true"

@@ -2,6 +2,16 @@ name: "Install chia-blockchain"
 
 description: "Check if dev deps should be allowed."
 
+inputs:
+  fail-on-result:
+    description: "Fail if the output is equal to this."
+    required: false
+    default: ""
+outputs:
+  allow:
+    description: ""
+    value: ${{ steps.check-allow-dev-deps.allow }}
+
 runs:
   using: "composite"
   steps:
@@ -16,3 +26,9 @@ runs:
           ALLOW="false"
         fi
         echo "allow=${ALLOW}" >> "$GITHUB_OUTPUT"
+
+    - name: maybe fail
+      if: inputs.fail-on-result == steps.check-allow-dev-deps.allow
+      shell: bash
+      run: |
+        false
