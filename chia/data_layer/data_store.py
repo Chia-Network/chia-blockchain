@@ -520,8 +520,19 @@ class DataStore:
         assert vid is not None
         return (kid, vid)
 
-    async def get_terminal_node_by_hash(self, node_hash: bytes32, store_id: bytes32) -> TerminalNode:
-        root = await self.get_tree_root(store_id=store_id)
+    async def get_terminal_node_by_hash(
+        self,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
+        node_hash: bytes32,
+        store_id: bytes32
+    ) -> TerminalNode:
+        resolved_root_hash: Optional[bytes32]
+        if root_hash is unspecified:
+            root = await self.get_tree_root(store_id=store_id)
+            resolved_root_hash = root.node_hash
+        else:
+            resolved_root_hash = root_hash
+
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
         kid, vid = await self.get_node_by_hash(merkle_blob, node_hash)
         return await self.get_terminal_node(kid, vid, store_id)
@@ -935,7 +946,7 @@ class DataStore:
         keys: list[bytes] = []
         for hash in pagination_data.hashes:
             leaf_hash = keys_values_compressed.keys_values_hashed[hash]
-            node = await self.get_terminal_node_by_hash(leaf_hash, store_id)
+            node = await self.get_terminal_node_by_hash(root_hash, leaf_hash, store_id)
             assert isinstance(node, TerminalNode)
             keys.append(node.key)
 
@@ -958,7 +969,7 @@ class DataStore:
 
         keys_values: list[TerminalNode] = []
         for hash in pagination_data.hashes:
-            node = await self.get_terminal_node_by_hash(hash, store_id)
+            node = await self.get_terminal_node_by_hash(root_hash, hash, store_id)
             assert isinstance(node, TerminalNode)
             keys_values.append(node)
 
@@ -1000,7 +1011,8 @@ class DataStore:
         kv_diff: list[DiffData] = []
 
         for hash in pagination_data.hashes:
-            node = await self.get_terminal_node_by_hash(hash, store_id)
+            root_hash = hash2 if hash in insertions else hash1
+            node = await self.get_terminal_node_by_hash(root_hash, hash, store_id)
             assert isinstance(node, TerminalNode)
             if hash in insertions:
                 kv_diff.append(DiffData(OperationType.INSERT, node.key, node.value))
