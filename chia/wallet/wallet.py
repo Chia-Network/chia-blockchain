@@ -17,7 +17,13 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoinAnnouncement, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreateCoinAnnouncement,
+    parse_timelock_info,
+)
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -25,7 +31,6 @@ from chia.wallet.derive_keys import (
     _derive_path_unhardened,
     master_sk_to_singleton_owner_sk,
 )
-from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -36,7 +41,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_synthetic_public_key,
     solution_for_conditions,
 )
-from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_reserve_fee_condition
+from chia.wallet.puzzles.puzzle_utils import make_reserve_fee_condition
 from chia.wallet.signer_protocol import (
     PathHint,
     Signature,
@@ -206,7 +211,7 @@ class Wallet:
 
     def make_solution(
         self,
-        primaries: list[Payment],
+        primaries: list[CreateCoin],
         conditions: tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
     ) -> Program:
@@ -214,7 +219,7 @@ class Wallet:
         condition_list: list[Any] = [condition.to_program() for condition in conditions]
         if len(primaries) > 0:
             for primary in primaries:
-                condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
+                condition_list.append(primary.to_program())
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
 
@@ -263,7 +268,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
         coins: Optional[set[Coin]] = None,
-        primaries_input: Optional[list[Payment]] = None,
+        primaries_input: Optional[list[CreateCoin]] = None,
         memos: Optional[list[bytes]] = None,
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
@@ -318,13 +323,13 @@ class Wallet:
                 decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
                     inner_puzzle, newpuzzlehash
                 )
-                target_primary: list[Payment] = []
+                target_primary: list[CreateCoin] = []
                 if memos is None:
                     memos = []
                 memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
                 if (primaries_input is None and amount > 0) or primaries_input is not None:
-                    primaries.append(Payment(decorated_target_puzzle_hash, amount, memos))
-                    target_primary.append(Payment(newpuzzlehash, amount, memos))
+                    primaries.append(CreateCoin(decorated_target_puzzle_hash, amount, memos))
+                    target_primary.append(CreateCoin(newpuzzlehash, amount, memos))
 
                 if change > 0:
                     if action_scope.config.tx_config.reuse_puzhash:
@@ -336,7 +341,7 @@ class Wallet:
                                 break
                     else:
                         change_puzzle_hash = await self.get_new_puzzlehash()
-                    primaries.append(Payment(change_puzzle_hash, uint64(change)))
+                    primaries.append(CreateCoin(change_puzzle_hash, uint64(change)))
                 message_list: list[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
@@ -398,7 +403,7 @@ class Wallet:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[set[Coin]] = None,
-        primaries: Optional[list[Payment]] = None,
+        primaries: Optional[list[CreateCoin]] = None,
         memos: Optional[list[bytes]] = None,
         puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
