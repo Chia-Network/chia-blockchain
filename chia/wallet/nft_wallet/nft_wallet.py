@@ -900,7 +900,7 @@ class NFTWallet:
                             [abs(amount)] + ([uint64(payment_sum)] if payment_sum > 0 else []),
                             [OFFER_MOD_HASH] + ([OFFER_MOD_HASH] if payment_sum > 0 else []),
                             inner_action_scope,
-                            fee=fee_left_to_pay,
+                            fee=fee if asset is None else fee_left_to_pay,
                             coins=offered_coins_by_asset[asset],
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                         )
