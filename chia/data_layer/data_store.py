@@ -516,6 +516,8 @@ class DataStore:
         if kid is None and vid is None:
             raise Exception(f"Cannot find node by hash {hash.hex()}")
 
+        assert kid is not None
+        assert vid is not None
         return (kid, vid)
 
     async def get_terminal_node_by_hash(self, node_hash: bytes32, store_id: bytes32) -> TerminalNode:
