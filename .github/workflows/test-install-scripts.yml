@@ -211,7 +211,8 @@ jobs:
           useradd builduser -m
           passwd -d builduser
           printf 'builduser ALL=(ALL) ALL\n' | tee -a /etc/sudoers
-          sudo -u builduser bash -c 'cd ~ && git clone https://aur.archlinux.org/execstack.git && cd execstack && sudo makepkg -si --noconfirm'
+          sudo -u builduser bash -c 'cd ~ && git clone https://aur.archlinux.org/execstack.git && cd execstack && sudo makepkg -s --noconfirm'
+          pacman --noconfirm -U --needed ~builduser/execstack/execstack-20130503-8-x86_64.pkg.tar.zst
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
