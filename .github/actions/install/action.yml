@@ -39,8 +39,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: ./.github/actions/check-allow-dev-deps
+      id: check-allow-dev-deps
+
     - name: Set up rust
-      if: ${{ contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}
+      if: ${{ steps.check-allow-dev-deps.outputs.allow == 'true' }}
       uses: dtolnay/rust-toolchain@stable
 
     - name: Run install script (macOS, Ubuntu)

@@ -1,0 +1,12 @@
+name: "Install chia-blockchain"
+
+description: "Check if dev deps should be allowed."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check allow dev deps
+      id: check-allow-dev-deps
+      shell: bash
+      run: |
+        echo "allow=${{ startsWith(github.ref, 'refs/heads/long_lived/') || startsWith(github.event.pull_request.base.ref, 'refs/heads/long_lived/') || contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}" >> "$GITHUB_OUTPUT"

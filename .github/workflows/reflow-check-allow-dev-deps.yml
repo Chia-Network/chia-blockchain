@@ -12,9 +12,10 @@ jobs:
   check-labels:
     runs-on: ubuntu-latest
     steps:
-      - name: check banned labels
-        uses: mheap/github-action-required-labels@v5
-        with:
-          mode: exactly
-          count: 0
-          labels: "allow-dev-deps"
+      - uses: ./.github/actions/check-allow-dev-deps
+        id: check-allow-dev-deps
+
+      - name: disallow dev deps
+        if: ${{ steps.check-allow-dev-deps.outputs.allow == 'false' }}
+        run: |
+          false
