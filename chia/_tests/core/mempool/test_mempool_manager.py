@@ -55,8 +55,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.conditions import AssertCoinAnnouncement
-from chia.wallet.payment import Payment
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -1653,7 +1652,7 @@ async def test_identical_spend_aggregation_e2e(
         phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
-        other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
+        other_recipients = [CreateCoin(puzzle_hash=p, amount=uint64(200)) for p in phs[1:]]
         async with wallet.wallet_state_manager.new_action_scope(
             DEFAULT_TX_CONFIG, push=False, sign=True
         ) as action_scope:
@@ -2082,3 +2081,48 @@ async def test_fill_rate_block_validation(
         rb_res_parsed = RespondBlock.from_bytes(rb_res.data)
         assert rb_res_parsed.block.transactions_info is not None
         assert rb_res_parsed.block.transactions_info.cost == expected_block_cost
+
+
+@pytest.mark.parametrize("optimized_path", [True, False])
+@pytest.mark.anyio
+async def test_height_added_to_mempool(optimized_path: bool) -> None:
+    """
+    This test covers scenarios when the mempool is updated or rebuilt, to make
+    sure that mempool items maintain correct height added to mempool values.
+    We control whether we're updating the mempool or rebuilding it, through the
+    `optimized_path` param.
+    """
+    mempool_manager = await instantiate_mempool_manager(get_coin_records_for_test_coins)
+    assert mempool_manager.peak is not None
+    assert mempool_manager.peak.height == TEST_HEIGHT
+    assert mempool_manager.peak.header_hash == height_hash(TEST_HEIGHT)
+    # Create a mempool item and keep track of its height added to mempool
+    _, sb_name, _ = await generate_and_add_spendbundle(
+        mempool_manager, [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    )
+    mi = mempool_manager.get_mempool_item(sb_name)
+    assert mi is not None
+    original_height = mi.height_added_to_mempool
+    # Let's get a new peak that doesn't include our item, and make sure the
+    # height added to mempool remains correct.
+    test_new_peak = TestBlockRecord(
+        header_hash=height_hash(TEST_HEIGHT + 1),
+        height=uint32(TEST_HEIGHT + 1),
+        timestamp=uint64(TEST_TIMESTAMP + 42),
+        prev_transaction_block_height=TEST_HEIGHT,
+        prev_transaction_block_hash=height_hash(TEST_HEIGHT),
+    )
+    if optimized_path:
+        # Spend an unrelated coin to get the mempool updated
+        spent_coins = [TEST_COIN_ID2]
+    else:
+        # Trigger the slow path to get the mempool rebuilt
+        spent_coins = None
+    await mempool_manager.new_peak(test_new_peak, spent_coins)
+    assert mempool_manager.peak.height == TEST_HEIGHT + 1
+    assert mempool_manager.peak.header_hash == height_hash(TEST_HEIGHT + 1)
+    # Make sure our item is still in the mempool, and that its height added to
+    # mempool value is still correct.
+    mempool_item = mempool_manager.get_mempool_item(sb_name)
+    assert mempool_item is not None
+    assert mempool_item.height_added_to_mempool == original_height
