@@ -782,7 +782,7 @@ typing-extensions = "*"
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
 reference = "expand_key_value_id_for_python"
-resolved_reference = "72e3c82689237b850f579bbac99c80ff46464735"
+resolved_reference = "2ad9f4da94b59f434ed6cb6bd6cd9879750fa92d"
 subdirectory = "wheel/"
 
 [[package]]
