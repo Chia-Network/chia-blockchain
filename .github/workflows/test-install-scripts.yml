@@ -149,6 +149,9 @@ jobs:
           - name: amazonlinux:2023
             type: amazon
             url: "docker://amazonlinux:2023"
+          # TODO: arch brought in glibc 2.41 which became more sensitive around execstack
+          #       which is enabled in libbladebit.  fixes will be made to main and this
+          #       should be re-enabled then.
           # - name: arch:latest
           #  type: arch
           #  url: "docker://archlinux:latest"
