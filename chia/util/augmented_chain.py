@@ -116,7 +116,7 @@ class AugmentedBlockchain:
             return ret
         return self._underlying.height_to_hash(height)
 
-    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         if height is None:
             block_rec = self.try_block_record(header_hash)
             if block_rec is None:

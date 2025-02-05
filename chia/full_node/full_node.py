@@ -637,7 +637,6 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    blockchain = AugmentedBlockchain(self.blockchain)
                     success, state_change_summary = await self.add_block_batch(
                         response.blocks, peer_info, fork_info, vs, blockchain
                     )
@@ -2019,7 +2018,7 @@ class FullNode:
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = block.header_hash
-        if self.blockchain.contains_block(header_hash):
+        if self.blockchain.contains_block(header_hash, block.height):
             if fork_info is not None:
                 await self.blockchain.run_single_block(block, fork_info)
             return None
@@ -2093,7 +2092,7 @@ class FullNode:
             enable_profiler(self.profile_block_validation) as pr,
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
-            if self.blockchain.contains_block(header_hash):
+            if self.blockchain.contains_block(header_hash, block.height):
                 if fork_info is not None:
                     await self.blockchain.run_single_block(block, fork_info)
                 return None
@@ -2281,8 +2280,9 @@ class FullNode:
         """
         receive_time = time.time()
 
-        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_block(
-            block.prev_header_hash
+        if (
+            block.prev_header_hash != self.constants.GENESIS_CHALLENGE
+            and self.blockchain.block_record(block.prev_header_hash) is None
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.debug("Received a disconnected unfinished block")

@@ -609,7 +609,6 @@ class Blockchain:
         )
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        assert self.contains_block(header_hash)
         curr = self.block_record(header_hash)
         if curr.height <= 2:
             return self.constants.DIFFICULTY_STARTING
@@ -617,7 +616,6 @@ class Blockchain:
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[1]
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        assert self.contains_block(header_hash)
         curr = self.block_record(header_hash)
         if curr.height <= 2:
             return self.constants.SUB_SLOT_ITERS_STARTING
@@ -704,7 +702,7 @@ class Blockchain:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         if (
-            not self.contains_block(block.prev_header_hash)
+            self.block_record(block.prev_header_hash) is None
             and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
         ):
             return None, Err.INVALID_PREV_BLOCK_HASH
@@ -788,7 +786,7 @@ class Blockchain:
 
         return PreValidationResult(None, required_iters, conds, uint32(0))
 
-    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         if height is None:
             block_rec = self.try_block_record(header_hash)
             if block_rec is None:

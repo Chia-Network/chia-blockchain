@@ -122,13 +122,13 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
         assert abc.try_block_record(blocks[i].header_hash) == block_records[i]
         assert abc.height_to_hash(uint32(i)) == blocks[i].header_hash
         assert await abc.prev_block_hash([blocks[i].header_hash]) == [blocks[i].prev_header_hash]
-        assert abc.contains_block(blocks[i].header_hash) is True
+        assert abc.block_record(blocks[i].header_hash) is not None
         assert await abc.get_block_record_from_db(blocks[i].header_hash) == block_records[i]
         assert abc.contains_height(uint32(i))
 
     for i in range(5, 10):
         assert abc.height_to_hash(uint32(i)) is None
-        assert not abc.contains_block(blocks[i].header_hash)
+        assert abc.block_record(blocks[i].header_hash) is None
         assert not await abc.get_block_record_from_db(blocks[i].header_hash)
         assert not abc.contains_height(uint32(i))
 
