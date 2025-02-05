@@ -4685,10 +4685,17 @@ class WalletRpcApi:
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         await vc_wallet.generate_signed_transaction(
-            request.vc_id,
+            [uint64(1)],
+            [
+                request.new_puzhash
+                if request.new_puzhash is not None
+                else await vc_wallet.standard_wallet.get_puzzle_hash(
+                    new=not action_scope.config.tx_config.reuse_puzhash
+                )
+            ],
             action_scope,
             request.fee,
-            request.new_puzhash,
+            vc_id=request.vc_id,
             new_proof_hash=request.new_proof_hash,
             provider_inner_puzhash=request.provider_inner_puzhash,
             extra_conditions=extra_conditions,

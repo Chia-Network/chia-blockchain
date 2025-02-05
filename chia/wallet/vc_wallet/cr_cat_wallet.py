@@ -585,8 +585,10 @@ class CRCATWallet(CATWallet):
         )
         if add_authorizations_to_cr_cats:
             await vc_wallet.generate_signed_transaction(
-                vc.launcher_id,
+                [uint64(1)],
+                [await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
                 action_scope,
+                vc_id=vc.launcher_id,
                 extra_conditions=(
                     *expected_announcements,
                     announcement,
@@ -766,8 +768,10 @@ class CRCATWallet(CATWallet):
 
         # Make the VC TX
         await vc_wallet.generate_signed_transaction(
-            vc.launcher_id,
+            [uint64(1)],
+            [await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
             action_scope,
+            vc_id=vc.launcher_id,
             extra_conditions=(
                 *extra_conditions,
                 *expected_announcements,
