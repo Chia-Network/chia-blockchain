@@ -329,6 +329,11 @@ full_node:
 
   multiprocessing_start_method: default
 
+  # If there's a problem farming blocks with the new block creator, this is an
+  # escape hatch to use the previous function. The old block creation produces
+  # smaller block, likely to collect a smaller fee.
+  # original_block_creation: true
+
   # The maximum number of UnfinishedBlocks we accept (and forward) with the
   # same reward hash (but different foliage hashes). Traditionally this was
   # effectively 1, meaning whichever UnfinishedBlock we saw first was the only

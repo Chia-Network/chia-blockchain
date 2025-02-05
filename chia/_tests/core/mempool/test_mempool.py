@@ -3180,7 +3180,11 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
 
 
 @pytest.mark.anyio
-async def test_create_block_generator() -> None:
+@pytest.mark.parametrize(
+    "old",
+    [True, False],
+)
+async def test_create_block_generator(old: bool) -> None:
     async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
         assert False  # pragma: no cover
 
@@ -3205,7 +3209,9 @@ async def test_create_block_generator() -> None:
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
 
-    generator, signature, additions = await mempool.create_block_generator(
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+
+    generator, signature, additions = await create_block(
         get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
     )
 

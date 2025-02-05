@@ -9,7 +9,7 @@ from enum import Enum
 from time import monotonic
 from typing import Callable, Optional
 
-from chia_rs import AugSchemeMPL, Coin, G2Element, solution_generator_backrefs
+from chia_rs import AugSchemeMPL, BlockBuilder, Coin, G2Element, solution_generator_backrefs
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -504,8 +504,9 @@ class Mempool:
 
         duration = monotonic() - start_time
         log.log(
-            logging.INFO if duration < 1 else logging.WARNING,
-            f"serializing block generator took {duration:0.2f} seconds",
+            logging.INFO if duration < 2 else logging.WARNING,
+            f"serializing block generator took {duration:0.2f} seconds "
+            f"spends: {len(removals)} additions: {len(additions)}",
         )
         return (
             BlockGenerator(SerializedProgram.from_bytes(block_program), []),
@@ -629,3 +630,95 @@ class Mempool:
             f"create_bundle_from_mempool_items took {duration:0.4f} seconds",
         )
         return agg, additions
+
+    async def create_block_generator2(
+        self,
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        constants: ConsensusConstants,
+        height: uint32,
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
+    ) -> tuple[BlockGenerator, G2Element, list[Coin]]:
+        fee_sum = 0  # Checks that total fees don't exceed 64 bits
+        additions: list[Coin] = []
+        # This contains:
+        # 1. A map of coin ID to a coin spend solution and its isolated cost
+        #   We reconstruct it for every bundle we create from mempool items because we
+        #   deduplicate on the first coin spend solution that comes with the highest
+        #   fee rate item, and that can change across calls
+        # 2. A map of fast forward eligible singleton puzzle hash to the most
+        #   recent unspent singleton data, to allow chaining fast forward
+        #   singleton spends
+        eligible_coin_spends = EligibleCoinSpends()
+        log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
+        generator_creation_start = monotonic()
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        builder = BlockBuilder()
+        skipped_items = 0
+        added_spends = 0
+        for row in cursor:
+            current_time = monotonic()
+            if current_time - generator_creation_start > 3:
+                log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
+                break
+            name = bytes32(row[0])
+            fee = int(row[1])
+            item = self._items[name]
+            try:
+                assert item.conds is not None
+                cost = item.conds.condition_cost + item.conds.execution_cost
+                if skipped_items >= PRIORITY_TX_THRESHOLD:
+                    # If we've encountered `PRIORITY_TX_THRESHOLD` number of
+                    # transactions that don't fit in the remaining block size,
+                    # we want to keep looking for smaller transactions that
+                    # might fit, but we also want to avoid spending too much
+                    # time on potentially expensive ones, hence this shortcut.
+                    unique_coin_spends = []
+                    unique_additions = []
+                    for spend_data in item.bundle_coin_spends.values():
+                        if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
+                            raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
+                        unique_coin_spends.append(spend_data.coin_spend)
+                        unique_additions.extend(spend_data.additions)
+                    cost_saving = 0
+                else:
+                    await eligible_coin_spends.process_fast_forward_spends(
+                        mempool_item=item,
+                        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+                        height=height,
+                        constants=constants,
+                    )
+                    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+                        bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                    )
+                item_cost = cost - cost_saving
+                new_fee_sum = fee_sum + fee
+                if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
+                    # Such a fee is very unlikely to happen but we're defensively
+                    # accounting for it
+                    break  # pragma: no cover
+
+                added, done = builder.add_spend_bundle(
+                    SpendBundle(unique_coin_spends, item.spend_bundle.aggregated_signature),
+                    uint64(item_cost),
+                    constants,
+                )
+                if not added:
+                    skipped_items += 1
+                else:
+                    added_spends += len(unique_coin_spends)
+                    additions.extend(unique_additions)
+                    fee_sum = new_fee_sum
+                if done:
+                    break
+            except Exception as e:
+                log.debug(f"Exception while checking a mempool item for deduplication: {e}")
+                continue
+        generator_creation_end = monotonic()
+        duration = generator_creation_end - generator_creation_start
+        block_program, signature, cost = builder.finalize(constants)
+        log.log(
+            logging.INFO if duration < 2 else logging.WARNING,
+            f"create_block_generator2() took {duration:0.4f} seconds. "
+            f"block cost: {cost} spends: {added_spends} additions: {len(additions)}",
+        )
+        return BlockGenerator(SerializedProgram.from_bytes(block_program), []), signature, additions
