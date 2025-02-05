@@ -787,11 +787,6 @@ class Blockchain:
         return PreValidationResult(None, required_iters, conds, uint32(0))
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
-        if height is None:
-            block_rec = self.try_block_record(header_hash)
-            if block_rec is None:
-                return False
-            height = block_rec.height
         block_hash_from_hh = self.height_to_hash(height)
         if block_hash_from_hh is None or block_hash_from_hh != header_hash:
             return False
