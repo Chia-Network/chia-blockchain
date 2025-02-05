@@ -97,7 +97,7 @@ jobs:
           - name: "3.12"
             file_name: "3.12"
             action: "3.12.7"
-            apt: "3.12.7"
+            apt: "3.12"
             install_sh: "3.12"
             matrix: "3.12"
             exclude_from:
