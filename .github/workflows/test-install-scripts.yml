@@ -149,12 +149,9 @@ jobs:
           - name: amazonlinux:2023
             type: amazon
             url: "docker://amazonlinux:2023"
-          # TODO: arch brought in glibc 2.41 which became more sensitive around execstack
-          #       which is enabled in libbladebit.  fixes will be made to main and this
-          #       should be re-enabled then.
-          # - name: arch:latest
-          #  type: arch
-          #  url: "docker://archlinux:latest"
+          - name: arch:latest
+            type: arch
+            url: "docker://archlinux:latest"
           - name: debian:bullseye
             type: debian
             # https://packages.debian.org/bullseye/python/python3 (3.9)
@@ -194,12 +191,14 @@ jobs:
             matrix: arm
           - name: Intel
             matrix: intel
-        # TODO see above on arch linux issues
-        # exclude:
-        #  - distribution:
-        #      type: arch
-        #    arch:
-        #      matrix: arm
+        exclude:
+          - distribution:
+              type: arch
+          # TODO: arch brought in glibc 2.41 which became more sensitive around execstack
+          #       which is enabled in libbladebit.  fixes will be made to main and this
+          #       should be re-enabled then.
+          #    arch:
+          #      matrix: arm
 
     steps:
       - name: Prepare Amazon Linux
