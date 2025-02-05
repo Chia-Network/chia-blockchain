@@ -84,7 +84,7 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
     await time_out_assert(20, peak_height, num_blocks, full_node_api_2)
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, action_scope, 0)
+        await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction([10], [ph1], action_scope, 0)
     [tx] = action_scope.side_effects.transactions
 
     await time_out_assert(
@@ -156,7 +156,7 @@ async def test_mempool_tx_sync(three_nodes_two_wallets, self_hostname, seeded_ra
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, bytes32.random(seeded_random), action_scope, 0
+            [10], [bytes32.random(seeded_random)], action_scope, 0
         )
     [tx] = action_scope.side_effects.transactions
 

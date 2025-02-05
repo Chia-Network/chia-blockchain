@@ -463,13 +463,12 @@ class PoolWallet:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_new_puzzlehash()),
+            [],
+            [],
             action_scope,
             fee=fee,
             origin_id=None,
             coins=None,
-            primaries=None,
             extra_conditions=extra_conditions,
         )
 
@@ -634,8 +633,8 @@ class PoolWallet:
         launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
 
         await standard_wallet.generate_signed_transaction(
-            amount,
-            genesis_launcher_puz.get_tree_hash(),
+            [amount],
+            [genesis_launcher_puz.get_tree_hash()],
             action_scope,
             fee,
             coins,

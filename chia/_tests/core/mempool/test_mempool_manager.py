@@ -55,7 +55,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
+from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -1652,11 +1652,10 @@ async def test_identical_spend_aggregation_e2e(
         phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
-        other_recipients = [CreateCoin(puzzle_hash=p, amount=uint64(200)) for p in phs[1:]]
         async with wallet.wallet_state_manager.new_action_scope(
             DEFAULT_TX_CONFIG, push=False, sign=True
         ) as action_scope:
-            await wallet.generate_signed_transaction(uint64(200), phs[0], action_scope, primaries=other_recipients)
+            await wallet.generate_signed_transaction([uint64(200)] * len(phs), phs, action_scope)
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
@@ -1675,9 +1674,9 @@ async def test_identical_spend_aggregation_e2e(
     async with wallet.wallet_state_manager.new_action_scope(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
-        await wallet.generate_signed_transaction(uint64(30), ph, action_scope, coins={coins[0].coin})
-        await wallet.generate_signed_transaction(uint64(30), ph, action_scope, coins={coins[1].coin})
-        await wallet.generate_signed_transaction(uint64(30), ph, action_scope, coins={coins[2].coin})
+        await wallet.generate_signed_transaction([uint64(30)], [ph], action_scope, coins={coins[0].coin})
+        await wallet.generate_signed_transaction([uint64(30)], [ph], action_scope, coins={coins[1].coin})
+        await wallet.generate_signed_transaction([uint64(30)], [ph], action_scope, coins={coins[2].coin})
     [tx_a, tx_b, tx_c] = action_scope.side_effects.transactions
     assert tx_a.spend_bundle is not None
     assert tx_b.spend_bundle is not None
@@ -1695,7 +1694,9 @@ async def test_identical_spend_aggregation_e2e(
     async with wallet.wallet_state_manager.new_action_scope(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
-        await wallet.generate_signed_transaction(uint64(200), IDENTITY_PUZZLE_HASH, action_scope, coins={coins[3].coin})
+        await wallet.generate_signed_transaction(
+            [uint64(200)], [IDENTITY_PUZZLE_HASH], action_scope, coins={coins[3].coin}
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await send_to_mempool(full_node_api, tx.spend_bundle)
@@ -1722,16 +1723,16 @@ async def test_identical_spend_aggregation_e2e(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
         await wallet.generate_signed_transaction(
-            uint64(100),
-            ph,
+            [uint64(100)],
+            [ph],
             action_scope,
             fee=uint64(0),
             coins={coins[4].coin},
             extra_conditions=(e_announcement,),
         )
         await wallet.generate_signed_transaction(
-            uint64(150),
-            ph,
+            [uint64(150)],
+            [ph],
             action_scope,
             fee=uint64(0),
             coins={coins[5].coin},
@@ -1767,7 +1768,7 @@ async def test_identical_spend_aggregation_e2e(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
         await wallet.generate_signed_transaction(
-            uint64(13), ph, action_scope, coins={g_coin}, extra_conditions=(e_announcement,)
+            [uint64(13)], [ph], action_scope, coins={g_coin}, extra_conditions=(e_announcement,)
         )
     [tx_g] = action_scope.side_effects.transactions
     assert tx_g.spend_bundle is not None

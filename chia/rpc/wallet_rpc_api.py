@@ -1351,38 +1351,25 @@ class WalletRpcApi:
         if len(outputs) == 0:
             return SplitCoinsResponse([], [])
 
-        # TODO: unify GST API
-        if wallet.type() == WalletType.STANDARD_WALLET:
-            assert isinstance(wallet, Wallet)
-            if coin.amount < total_amount + request.fee:
-                async with action_scope.use() as interface:
-                    interface.side_effects.selected_coins.append(coin)
-                coins = await wallet.select_coins(
-                    uint64(total_amount + request.fee - coin.amount),
-                    action_scope,
-                )
-                coins.add(coin)
-            else:
-                coins = {coin}
-            await wallet.generate_signed_transaction(
-                outputs[0].amount,
-                outputs[0].puzzle_hash,
+        if wallet.type() == WalletType.STANDARD_WALLET and coin.amount < total_amount + request.fee:
+            async with action_scope.use() as interface:
+                interface.side_effects.selected_coins.append(coin)
+            coins = await wallet.select_coins(
+                uint64(total_amount + request.fee - coin.amount),
                 action_scope,
-                request.fee,
-                coins,
-                outputs[1:] if len(outputs) > 1 else None,
-                extra_conditions=extra_conditions,
             )
+            coins.add(coin)
         else:
-            assert isinstance(wallet, CATWallet)
-            await wallet.generate_signed_transaction(
-                [output.amount for output in outputs],
-                [output.puzzle_hash for output in outputs],
-                action_scope,
-                request.fee,
-                coins={coin},
-                extra_conditions=extra_conditions,
-            )
+            coins = {coin}
+
+        await wallet.generate_signed_transaction(
+            [output.amount for output in outputs],
+            [output.puzzle_hash for output in outputs],
+            action_scope,
+            request.fee,
+            coins=coins,
+            extra_conditions=extra_conditions,
+        )
 
         return SplitCoinsResponse([], [])  # tx_endpoint will take care to fill this out
 
@@ -1468,24 +1455,18 @@ class WalletRpcApi:
         )
         if isinstance(wallet, Wallet):
             primary_output_amount = uint64(primary_output_amount - request.fee)
-            await wallet.generate_signed_transaction(
-                primary_output_amount,
-                await wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
-                action_scope,
-                request.fee,
-                set(coins),
-                extra_conditions=extra_conditions,
-            )
+            main_wallet = wallet
         else:
-            assert isinstance(wallet, CATWallet)
-            await wallet.generate_signed_transaction(
-                [primary_output_amount],
-                [await wallet.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
-                action_scope,
-                request.fee,
-                coins=set(coins),
-                extra_conditions=extra_conditions,
-            )
+            main_wallet = wallet.standard_wallet
+
+        await wallet.generate_signed_transaction(
+            [primary_output_amount],
+            [await main_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
+            action_scope,
+            request.fee,
+            coins=set(coins),
+            extra_conditions=extra_conditions,
+        )
 
         return CombineCoinsResponse([], [])  # tx_endpoint will take care to fill this out
 
@@ -1595,6 +1576,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=Wallet)
 
+        # TODO: Add support for multiple puzhash/amount/memo sets
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
@@ -1611,16 +1593,15 @@ class WalletRpcApi:
 
         fee: uint64 = uint64(request.get("fee", 0))
 
-        async with self.service.wallet_state_manager.lock:
-            await wallet.generate_signed_transaction(
-                amount,
-                puzzle_hash,
-                action_scope,
-                fee,
-                memos=memos,
-                puzzle_decorator_override=request.get("puzzle_decorator", None),
-                extra_conditions=extra_conditions,
-            )
+        await wallet.generate_signed_transaction(
+            [amount],
+            [puzzle_hash],
+            action_scope,
+            fee,
+            memos=[memos],
+            puzzle_decorator_override=request.get("puzzle_decorator", None),
+            extra_conditions=extra_conditions,
+        )
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
@@ -4214,83 +4195,41 @@ class WalletRpcApi:
             coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
 
         async def _generate_signed_transaction() -> EndpointResult:
-            if isinstance(wallet, Wallet):
-                await wallet.generate_signed_transaction(
-                    amount_0,
-                    bytes32(puzzle_hash_0),
-                    action_scope,
-                    fee,
-                    coins=coins,
-                    primaries=additional_outputs,
-                    memos=memos_0,
-                    extra_conditions=(
-                        *extra_conditions,
-                        *(
-                            AssertCoinAnnouncement(
-                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
-                                asserted_msg=(
-                                    hexstr_to_bytes(ca["message"])
-                                    if request.get("morph_bytes") is None
-                                    else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
-                                ),
-                            )
-                            for ca in request.get("coin_announcements", [])
-                        ),
-                        *(
-                            AssertPuzzleAnnouncement(
-                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
-                                asserted_msg=(
-                                    hexstr_to_bytes(pa["message"])
-                                    if request.get("morph_bytes") is None
-                                    else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
-                                ),
-                            )
-                            for pa in request.get("puzzle_announcements", [])
-                        ),
+            await wallet.generate_signed_transaction(
+                [amount_0] + [output.amount for output in additional_outputs],
+                [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
+                action_scope,
+                fee,
+                coins=coins,
+                memos=[memos_0] + [output.memos if output.memos is not None else [] for output in additional_outputs],
+                extra_conditions=(
+                    *extra_conditions,
+                    *(
+                        AssertCoinAnnouncement(
+                            asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                            asserted_msg=(
+                                hexstr_to_bytes(ca["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
+                            ),
+                        )
+                        for ca in request.get("coin_announcements", [])
                     ),
-                )
-                # tx_endpoint wrapper will take care of this
-                return {"signed_txs": None, "signed_tx": None, "transactions": None}
-
-            else:
-                assert isinstance(wallet, CATWallet)
-
-                await wallet.generate_signed_transaction(
-                    [amount_0] + [output.amount for output in additional_outputs],
-                    [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
-                    action_scope,
-                    fee,
-                    coins=coins,
-                    memos=[memos_0]
-                    + [output.memos if output.memos is not None else [] for output in additional_outputs],
-                    extra_conditions=(
-                        *extra_conditions,
-                        *(
-                            AssertCoinAnnouncement(
-                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
-                                asserted_msg=(
-                                    hexstr_to_bytes(ca["message"])
-                                    if request.get("morph_bytes") is None
-                                    else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
-                                ),
-                            )
-                            for ca in request.get("coin_announcements", [])
-                        ),
-                        *(
-                            AssertPuzzleAnnouncement(
-                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
-                                asserted_msg=(
-                                    hexstr_to_bytes(pa["message"])
-                                    if request.get("morph_bytes") is None
-                                    else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
-                                ),
-                            )
-                            for pa in request.get("puzzle_announcements", [])
-                        ),
+                    *(
+                        AssertPuzzleAnnouncement(
+                            asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                            asserted_msg=(
+                                hexstr_to_bytes(pa["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
+                            ),
+                        )
+                        for pa in request.get("puzzle_announcements", [])
                     ),
-                )
-                # tx_endpoint wrapper will take care of this
-                return {"signed_txs": None, "signed_tx": None, "transactions": None}
+                ),
+            )
+            # tx_endpoint wrapper will take care of this
+            return {"signed_txs": None, "signed_tx": None, "transactions": None}
 
         if hold_lock:
             async with self.service.wallet_state_manager.lock:

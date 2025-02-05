@@ -707,10 +707,9 @@ class FullNodeSimulator(FullNodeAPI):
                         DEFAULT_TX_CONFIG, push=True
                     ) as action_scope:
                         await wallet.generate_signed_transaction(
-                            amount=outputs_group[0].amount,
-                            puzzle_hash=outputs_group[0].puzzle_hash,
+                            amounts=[output.amount for output in outputs_group],
+                            puzzle_hashes=[output.puzzle_hash for output in outputs_group],
                             action_scope=action_scope,
-                            primaries=outputs_group[1:],
                         )
                     transaction_records.extend(action_scope.side_effects.transactions)
                 else:

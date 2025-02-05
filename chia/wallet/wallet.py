@@ -262,14 +262,13 @@ class Wallet:
 
     async def _generate_unsigned_transaction(
         self,
-        amount: uint64,
-        newpuzzlehash: bytes32,
+        amounts: list[uint64],
+        newpuzzlehashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
         coins: Optional[set[Coin]] = None,
-        primaries_input: Optional[list[CreateCoin]] = None,
-        memos: Optional[list[bytes]] = None,
+        memos: Optional[list[list[bytes]]] = None,
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -282,11 +281,7 @@ class Wallet:
         if puzzle_decorator_override is not None:
             decorator_manager = PuzzleDecoratorManager.create(puzzle_decorator_override)
 
-        primaries = []
-        if primaries_input is not None:
-            primaries.extend(primaries_input)
-
-        total_amount = amount + sum(primary.amount for primary in primaries) + fee
+        total_amount = sum(amounts) + fee
         total_balance = await self.get_spendable_balance()
         if coins is None:
             if total_amount > total_balance:
@@ -312,7 +307,7 @@ class Wallet:
         primary_announcement: Optional[AssertCoinAnnouncement] = None
 
         # Check for duplicates
-        all_primaries_list = [(p.puzzle_hash, p.amount) for p in primaries]
+        all_primaries_list = list(zip(amounts, newpuzzlehashes))
         if len(set(all_primaries_list)) != len(all_primaries_list):
             raise ValueError("Cannot create two identical coins")
         for coin in coins:
@@ -320,16 +315,27 @@ class Wallet:
             if origin_id in {None, coin.name()}:
                 origin_id = coin.name()
                 inner_puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
-                    inner_puzzle, newpuzzlehash
-                )
-                target_primary: list[CreateCoin] = []
+                decorated_target_puzzle_hashes = [
+                    decorator_manager.decorate_target_puzzle_hash(inner_puzzle, newpuzzlehash)
+                    for newpuzzlehash in newpuzzlehashes
+                ]
                 if memos is None:
-                    memos = []
-                memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
-                if (primaries_input is None and amount > 0) or primaries_input is not None:
-                    primaries.append(CreateCoin(decorated_target_puzzle_hash, amount, memos))
-                    target_primary.append(CreateCoin(newpuzzlehash, amount, memos))
+                    memos = [[]] * len(amounts)
+                decorated_memos = [
+                    decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, mems)
+                    for newpuzzlehash, mems in zip(newpuzzlehashes, memos)
+                ]
+
+                primaries = [
+                    CreateCoin(decorated_target_puzzle_hash, amount, mems)
+                    for decorated_target_puzzle_hash, amount, mems in zip(
+                        decorated_target_puzzle_hashes, amounts, decorated_memos
+                    )
+                ]
+                target_primaries = [
+                    CreateCoin(newpuzzlehash, amount, mems)
+                    for newpuzzlehash, amount, mems in zip(newpuzzlehashes, amounts, decorated_memos)
+                ]
 
                 if change > 0:
                     if action_scope.config.tx_config.reuse_puzhash:
@@ -352,7 +358,7 @@ class Wallet:
                     fee=fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
                 )
-                solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
+                solution = decorator_manager.solve(inner_puzzle, target_primaries, solution)
                 primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
 
                 spends.append(
@@ -398,13 +404,12 @@ class Wallet:
 
     async def generate_signed_transaction(
         self,
-        amount: uint64,
-        puzzle_hash: bytes32,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[set[Coin]] = None,
-        primaries: Optional[list[CreateCoin]] = None,
-        memos: Optional[list[bytes]] = None,
+        memos: Optional[list[list[bytes]]] = None,
         puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
@@ -416,20 +421,16 @@ class Wallet:
         Note: this must be called under a wallet state manager lock
         The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
-        if primaries is None:
-            non_change_amount = amount
-        else:
-            non_change_amount = uint64(amount + sum(p.amount for p in primaries))
+        non_change_amount = uint64(sum(amounts))
 
-        self.log.debug("Generating transaction for: %s %s %s", puzzle_hash, amount, repr(coins))
+        self.log.debug("Generating transaction for: %s %s %s", puzzle_hashes, amounts, repr(coins))
         transaction = await self._generate_unsigned_transaction(
-            amount,
-            puzzle_hash,
+            amounts,
+            puzzle_hashes,
             action_scope,
             fee,
             origin_id,
             coins,
-            primaries,
             memos,
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,
@@ -454,7 +455,7 @@ class Wallet:
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
-                    to_puzzle_hash=puzzle_hash,
+                    to_puzzle_hash=add_list[0].puzzle_hash if len(add_list) > 0 else bytes32.zeros,
                     amount=uint64(non_change_amount),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -480,8 +481,8 @@ class Wallet:
     ) -> None:
         chia_coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(
-            uint64(0),
-            (await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+            [],
+            [],
             action_scope,
             fee=fee,
             coins=chia_coins,

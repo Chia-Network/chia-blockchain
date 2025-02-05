@@ -732,13 +732,13 @@ class DAOWallet:
         announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
 
         await self.standard_wallet.generate_signed_transaction(
-            uint64(1),
-            genesis_launcher_puz.get_tree_hash(),
+            [uint64(1)],
+            [genesis_launcher_puz.get_tree_hash()],
             action_scope,
             fee,
             origin_id=origin.name(),
             coins=set(coins),
-            memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
+            memos=[[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()]],
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
             ),
@@ -888,8 +888,8 @@ class DAOWallet:
         ).get_tree_hash()
 
         await self.standard_wallet.generate_signed_transaction(
-            uint64(dao_rules.proposal_minimum_amount),
-            genesis_launcher_puz.get_tree_hash(),
+            [uint64(dao_rules.proposal_minimum_amount)],
+            [genesis_launcher_puz.get_tree_hash()],
             action_scope,
             fee,
             origin_id=origin.name(),
@@ -1537,27 +1537,15 @@ class DAOWallet:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
-        if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
-            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
-            wallet: Wallet = funding_wallet  # type: ignore[assignment]
-            await wallet.generate_signed_transaction(
-                amount,
-                p2_singleton_puzhash,
-                action_scope,
-                fee=fee,
-                memos=[p2_singleton_puzhash],
-            )
-        elif funding_wallet.type() == WalletType.CAT.value:
-            cat_wallet: CATWallet = funding_wallet  # type: ignore[assignment]
-            # generate_signed_transaction has a different type signature in Wallet and CATWallet
-            # CATWallet uses a List of amounts and a List of puzhashes as the first two arguments
+        if isinstance(funding_wallet, (Wallet, CATWallet)):
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
-            await cat_wallet.generate_signed_transaction(
+            await funding_wallet.generate_signed_transaction(
                 [amount],
                 [p2_singleton_puzhash],
                 action_scope,
                 fee=fee,
                 extra_conditions=extra_conditions,
+                memos=[[p2_singleton_puzhash]],
             )
         else:  # pragma: no cover
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
