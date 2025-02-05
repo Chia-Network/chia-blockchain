@@ -238,7 +238,7 @@ class VCWallet:
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[set[Coin]] = set(),
+        coins: Optional[set[Coin]] = None,
         memos: Optional[list[list[bytes]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
@@ -261,6 +261,8 @@ class VCWallet:
             raise ValueError("VCWallet.generate_signed_transaction only accepts `amounts=[uint64(1)]`")
         if len(puzzle_hashes) != 1:
             raise ValueError("Can only send a single VC to a single new puzzle hash")
+        if memos is not None:
+            raise ValueError("Memos not currently supported for VC wallets")
         if coins is not None and len(list(coins)) != 1:
             raise ValueError("Can only spend a single VC at a time")
         # Find verified credential
