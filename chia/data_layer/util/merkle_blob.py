@@ -241,10 +241,8 @@ class MerkleBlob:
 
         index = self.leaf_hash_to_index[node_hash]
         node = self.get_raw_node(index)
-        if isinstance(node, RawLeafMerkleNode):
-            return (node.key, node.value)
-
-        return (None, None)
+        assert isinstance(node, RawLeafMerkleNode)
+        return (node.key, node.value)
 
     def get_lineage_with_indexes(self, index: TreeIndex) -> list[tuple[TreeIndex, RawMerkleNodeProtocol]]:
         node = self.get_raw_node(index=index)
