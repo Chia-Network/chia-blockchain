@@ -194,11 +194,12 @@ jobs:
             matrix: arm
           - name: Intel
             matrix: intel
-        exclude:
-          - distribution:
-              type: arch
-            arch:
-              matrix: arm
+        # TODO see above on arch linux issues
+        # exclude:
+        #  - distribution:
+        #      type: arch
+        #    arch:
+        #      matrix: arm
 
     steps:
       - name: Prepare Amazon Linux
