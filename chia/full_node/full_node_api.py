@@ -285,7 +285,7 @@ class FullNodeAPI:
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
-        if self.full_node.blockchain.block_record(request.tip) is None:
+        if self.full_node.blockchain.try_block_record(request.tip) is None:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         if request.tip in self.full_node.pow_creation:

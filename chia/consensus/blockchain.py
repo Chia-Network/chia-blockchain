@@ -609,14 +609,16 @@ class Blockchain:
         )
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        curr = self.block_record(header_hash)
+        curr = self.try_block_record(header_hash)
+        assert curr is not None
         if curr.height <= 2:
             return self.constants.DIFFICULTY_STARTING
 
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[1]
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        curr = self.block_record(header_hash)
+        curr = self.try_block_record(header_hash)
+        assert curr is not None
         if curr.height <= 2:
             return self.constants.SUB_SLOT_ITERS_STARTING
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
@@ -702,7 +704,7 @@ class Blockchain:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         if (
-            self.block_record(block.prev_header_hash) is None
+            self.try_block_record(block.prev_header_hash) is None
             and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
         ):
             return None, Err.INVALID_PREV_BLOCK_HASH
