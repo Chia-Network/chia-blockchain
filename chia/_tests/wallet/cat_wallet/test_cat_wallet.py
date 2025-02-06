@@ -691,7 +691,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
 
     cc2_ph = await cat_wallet_2.get_cat_puzzle_hash(new=False)
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(uint64(10), cc2_ph, action_scope)
+        await wallet.wallet_state_manager.main_wallet.generate_signed_transaction([uint64(10)], [cc2_ph], action_scope)
 
     await wallet_environments.process_pending_states(
         [

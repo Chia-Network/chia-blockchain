@@ -312,13 +312,12 @@ class DataLayerWallet:
         announcement = AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message)
 
         await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(1),
-            puzzle_hash=SINGLETON_LAUNCHER_PUZZLE_HASH,
+            amounts=[uint64(1)],
+            puzzle_hashes=[SINGLETON_LAUNCHER_PUZZLE_HASH],
             action_scope=action_scope,
             fee=fee,
             origin_id=launcher_parent.name(),
             coins=coins,
-            primaries=None,
             extra_conditions=(*extra_conditions, announcement),
         )
 
@@ -361,8 +360,8 @@ class DataLayerWallet:
         action_scope: WalletActionScope,
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
+            amounts=[],
+            puzzle_hashes=[],
             action_scope=action_scope,
             fee=fee,
             negative_change_allowed=False,
@@ -693,12 +692,11 @@ class DataLayerWallet:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            amount=amount,
-            puzzle_hash=create_mirror_puzzle().get_tree_hash(),
+            amounts=[amount],
+            puzzle_hashes=[create_mirror_puzzle().get_tree_hash()],
             action_scope=action_scope,
             fee=fee,
-            primaries=[],
-            memos=[launcher_id, *(url for url in urls)],
+            memos=[[launcher_id, *(url for url in urls)]],
             extra_conditions=extra_conditions,
         )
 
@@ -771,8 +769,8 @@ class DataLayerWallet:
 
         if excess_fee > 0:
             await self.wallet_state_manager.main_wallet.generate_signed_transaction(
-                uint64(1),
-                new_puzhash,
+                [uint64(1)],
+                [new_puzhash],
                 action_scope,
                 fee=uint64(excess_fee),
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=mirror_coin.name(), asserted_msg=b"$"),),

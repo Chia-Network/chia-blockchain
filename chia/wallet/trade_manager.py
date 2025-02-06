@@ -322,41 +322,30 @@ class TradeManager:
                             uint64(fee_to_pay - coin.amount),
                             action_scope,
                         )
-                        selected_coins.add(coin)
                     else:
-                        selected_coins = {coin}
-                    async with self.wallet_state_manager.new_action_scope(
-                        action_scope.config.tx_config.override(
-                            excluded_coin_ids=[],
-                        ),
-                        push=False,
-                    ) as inner_action_scope:
-                        await wallet.generate_signed_transaction(
-                            uint64(sum(c.amount for c in selected_coins) - fee_to_pay),
-                            new_ph,
-                            inner_action_scope,
-                            origin_id=coin.name(),
-                            fee=fee_to_pay,
-                            coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcement_conditions),
-                        )
+                        selected_coins = set()
+                    selected_coins.add(coin)
+                    amount_to_pay = uint64(sum(c.amount for c in selected_coins) - fee_to_pay)
                 else:
-                    # ATTENTION: new_wallets
-                    assert isinstance(wallet, (CATWallet, DataLayerWallet, NFTWallet))
-                    async with self.wallet_state_manager.new_action_scope(
-                        action_scope.config.tx_config.override(
-                            excluded_coin_ids=[],
-                        ),
-                        push=False,
-                    ) as inner_action_scope:
-                        await wallet.generate_signed_transaction(
-                            [coin.amount],
-                            [new_ph],
-                            inner_action_scope,
-                            fee=fee_to_pay,
-                            coins={coin},
-                            extra_conditions=(*extra_conditions, *announcement_conditions),
-                        )
+                    selected_coins = {coin}
+                    amount_to_pay = coin.amount
+
+                # ATTENTION: new_wallets
+                assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet, NFTWallet))
+                async with self.wallet_state_manager.new_action_scope(
+                    action_scope.config.tx_config.override(
+                        excluded_coin_ids=[],
+                    ),
+                    push=False,
+                ) as inner_action_scope:
+                    await wallet.generate_signed_transaction(
+                        [amount_to_pay],
+                        [new_ph],
+                        inner_action_scope,
+                        fee=fee_to_pay,
+                        coins=selected_coins,
+                        extra_conditions=(*extra_conditions, *announcement_conditions),
+                    )
 
                 cancellation_additions.extend(
                     [
@@ -634,17 +623,7 @@ class TradeManager:
                 ) as inner_action_scope:
                     # This should probably not switch on whether or not we're spending XCH but it has to for now
                     assert wallet is not None
-                    if wallet.type() == WalletType.STANDARD_WALLET:
-                        assert isinstance(wallet, Wallet)
-                        await wallet.generate_signed_transaction(
-                            uint64(abs(offer_dict[id])),
-                            Offer.ph(),
-                            inner_action_scope,
-                            fee=fee_left_to_pay,
-                            coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
-                        )
-                    elif wallet.type() == WalletType.NFT:
+                    if wallet.type() == WalletType.NFT:
                         assert isinstance(wallet, NFTWallet)
                         # This is to generate the tx for specific nft assets, i.e. not using
                         # wallet_id as the selector which would select any coins from nft_wallet
@@ -660,7 +639,7 @@ class TradeManager:
                         )
                     else:
                         # ATTENTION: new_wallets
-                        assert isinstance(wallet, (CATWallet, DataLayerWallet))
+                        assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet))
                         await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
                             [Offer.ph()],
