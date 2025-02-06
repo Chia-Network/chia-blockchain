@@ -776,13 +776,13 @@ async def test_respond_unfinished(wallet_nodes, self_hostname):
     assert result.conds is not None
     assert result.conds.cost > 0
 
-    assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
+    assert not full_node_1.full_node.blockchain.contains_block(block.header_hash, block.height)
     assert block.transactions_generator is not None
     block_no_transactions = block.replace(transactions_generator=None)
     assert block_no_transactions.transactions_generator is None
 
     await full_node_1.full_node.add_block(block_no_transactions)
-    assert full_node_1.full_node.blockchain.contains_block(block.header_hash)
+    assert full_node_1.full_node.blockchain.contains_block(block.header_hash, block.height)
 
 
 @pytest.mark.anyio
