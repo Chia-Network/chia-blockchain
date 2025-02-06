@@ -194,8 +194,11 @@ jobs:
         exclude:
           - distribution:
               type: arch
-            arch:
-              matrix: arm
+          # TODO: arch brought in glibc 2.41 which became more sensitive around execstack
+          #       which is enabled in libbladebit.  fixes will be made to main and this
+          #       should be re-enabled then.
+          #    arch:
+          #      matrix: arm
 
     steps:
       - name: Prepare Amazon Linux
