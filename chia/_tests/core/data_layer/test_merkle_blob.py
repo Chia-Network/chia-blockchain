@@ -15,7 +15,7 @@ from _pytest.fixtures import SubRequest
 from chia_rs.datalayer import KeyId, TreeIndex, ValueId
 
 from chia._tests.util.misc import DataCase, Marks, datacases
-from chia.data_layer.data_layer_util import InternalNode, Side, internal_hash
+from chia.data_layer.data_layer_util import Side, internal_hash
 from chia.data_layer.util.merkle_blob import (
     InvalidIndexError,
     KeyOrValueId,
@@ -215,13 +215,6 @@ def test_merkle_blob_two_leafs_loads() -> None:
         (TreeIndex(0), root),
     ]
     assert merkle_blob.get_lineage_with_indexes(root.left) == expected
-
-    merkle_blob.calculate_lazy_hashes()
-    son_hash = bytes32(range(32))
-    root_hash = internal_hash(son_hash, son_hash)
-    expected_node = InternalNode(root_hash, son_hash, son_hash)
-    assert merkle_blob.get_lineage_by_key_id(KeyId(KeyOrValueId(int64(0x0405060708090A0B)))) == [expected_node]
-    assert merkle_blob.get_lineage_by_key_id(KeyId(KeyOrValueId(int64(0x1415161718191A1B)))) == [expected_node]
 
 
 def generate_kvid(seed: int) -> tuple[KeyId, ValueId]:
