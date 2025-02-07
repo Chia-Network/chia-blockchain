@@ -90,6 +90,7 @@ if [ "$PLATFORM" = "arm64" ]; then
   # This is a temporary fix.
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
   # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
+  sudo apt update -y
   sudo apt -y install ruby ruby-dev
   # ERROR:  Error installing fpm:
   #     The last version of dotenv (>= 0) to support your Ruby & RubyGems was 2.8.1. Try installing it with `gem install dotenv -v 2.8.1` and then running the current command again
