@@ -8,6 +8,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -53,7 +54,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -1499,3 +1500,16 @@ class DIDWallet:
             ).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    async def generate_signed_transaction(
+        self,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        **kwargs: Unpack[GSTOptionalArgs],
+    ) -> None:
+        raise NotImplementedError("DIDWallet does not implement `generate_signed_transaction`")

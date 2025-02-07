@@ -592,7 +592,7 @@ class DataLayerWallet:
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: set[Coin] = set(),
+        coins: Optional[set[Coin]] = None,
         memos: Optional[list[list[bytes]]] = None,  # ignored
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
@@ -601,7 +601,7 @@ class DataLayerWallet:
         new_root_hash: Optional[bytes32] = kwargs.get("new_root_hash", None)
         announce_new_state: bool = kwargs.get("announce_new_state", False)
         # Figure out the launcher ID
-        if len(coins) == 0:
+        if coins is None or len(coins) == 0:
             if launcher_id is None:
                 raise ValueError("Not enough info to know which DL coin to send")
         else:
