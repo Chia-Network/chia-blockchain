@@ -70,12 +70,12 @@ def add_block(
     )
 
 
-default_config: dict[str, Any] = {
-    "full_node": {"selected_network": "local", "network_overrides": {"constants": {"local": {}}}}
-}
+@pytest.fixture(name="default_config")
+def default_config_fixture() -> dict[str, Any]:
+    return {"full_node": {"selected_network": "local", "network_overrides": {"constants": {"local": {}}}}}
 
 
-def test_db_validate_wrong_version() -> None:
+def test_db_validate_wrong_version(default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 3)
@@ -85,7 +85,7 @@ def test_db_validate_wrong_version() -> None:
         assert "Database has the wrong version (3 expected 2)" in str(execinfo.value)
 
 
-def test_db_validate_missing_peak_table() -> None:
+def test_db_validate_missing_peak_table(default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 2)
@@ -95,7 +95,7 @@ def test_db_validate_missing_peak_table() -> None:
         assert "Database is missing current_peak table" in str(execinfo.value)
 
 
-def test_db_validate_missing_peak_block() -> None:
+def test_db_validate_missing_peak_block(default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 2)
@@ -109,7 +109,7 @@ def test_db_validate_missing_peak_block() -> None:
 
 
 @pytest.mark.parametrize("invalid_in_chain", [True, False])
-def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
+def test_db_validate_in_main_chain(invalid_in_chain: bool, default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 2)
@@ -157,7 +157,9 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
 
 
 @pytest.mark.anyio
-async def test_db_validate_default_1000_blocks(default_1000_blocks: list[FullBlock]) -> None:
+async def test_db_validate_default_1000_blocks(
+    default_1000_blocks: list[FullBlock], default_config: dict[str, Any]
+) -> None:
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)
 
@@ -167,8 +169,7 @@ async def test_db_validate_default_1000_blocks(default_1000_blocks: list[FullBlo
             validate_v2(db_file, config=default_config, validate_blocks=True)
         assert "Blockchain has invalid genesis challenge" in str(execinfo.value)
 
-        new_config = default_config.copy()
-        new_config["full_node"]["network_overrides"]["constants"]["local"]["AGG_SIG_ME_ADDITIONAL_DATA"] = (
+        default_config["full_node"]["network_overrides"]["constants"]["local"]["AGG_SIG_ME_ADDITIONAL_DATA"] = (
             default_1000_blocks[0].foliage.prev_block_hash.hex()
         )
-        validate_v2(db_file, config=new_config, validate_blocks=True)
+        validate_v2(db_file, config=default_config, validate_blocks=True)
