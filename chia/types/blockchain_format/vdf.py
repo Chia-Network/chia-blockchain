@@ -7,7 +7,7 @@ from functools import lru_cache
 from typing import Optional
 
 from chia_rs import VDFInfo, VDFProof
-from chiavdf import create_discriminant, verify_n_wesolowski
+from chiavdf import create_discriminant_and_verify_n_wesolowski
 
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -17,34 +17,6 @@ from chia.util.ints import uint8, uint64
 log = logging.getLogger(__name__)
 
 __all__ = ["VDFInfo", "VDFProof"]
-
-
-@lru_cache(maxsize=200)
-def get_discriminant(challenge: bytes32, size_bites: int) -> int:
-    return int(
-        create_discriminant(challenge, size_bites),
-        16,
-    )
-
-
-@lru_cache(maxsize=1000)
-def verify_vdf(
-    disc: int,
-    input_el: bytes100,
-    output: bytes,
-    number_of_iterations: uint64,
-    discriminant_size: int,
-    witness_type: uint8,
-) -> bool:
-    # TODO: chiavdf needs hinted
-    return verify_n_wesolowski(  # type:ignore[no-any-return]
-        str(disc),
-        input_el,
-        output,
-        number_of_iterations,
-        discriminant_size,
-        witness_type,
-    )
 
 
 def validate_vdf(
@@ -63,17 +35,19 @@ def validate_vdf(
         return False
     if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
         return False
+
+    # with open("/Users/bill/downloads/newvdfs.txt", "a") as file:
+    #    file.write(f"{info.challenge.hex()}\n{constants.DISCRIMINANT_SIZE_BITS}\n{input_el.data.hex()}\n{(info.output.data + bytes(proof.witness)).hex()}\n{info.number_of_iterations}\n{proof.witness_type}\n")
+
     try:
-        disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
-        # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
-        return verify_vdf(
-            disc,
-            input_el.data,
-            info.output.data + bytes(proof.witness),
-            info.number_of_iterations,
-            constants.DISCRIMINANT_SIZE_BITS,
-            proof.witness_type,
-        )
+        return create_discriminant_and_verify_n_wesolowski(  # type:ignore[no-any-return]
+                info.challenge,
+                constants.DISCRIMINANT_SIZE_BITS,
+                input_el.data,
+                info.output.data + bytes(proof.witness),
+                info.number_of_iterations,
+                proof.witness_type,
+            )
     except Exception:
         return False
 
