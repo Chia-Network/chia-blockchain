@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import itertools
 import logging
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable
@@ -860,7 +861,19 @@ class DataStore:
             merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
             reference_kid, _ = await self.get_node_by_hash(node_hash, store_id)
 
-        return merkle_blob.get_lineage_by_key_id(reference_kid)
+        reference_index = merkle_blob.key_to_index[reference_kid]
+        lineage = merkle_blob.get_lineage_with_indexes(reference_index)
+        result: list[InternalNode] = []
+        for index, node in itertools.islice(lineage, 1, None):
+            assert isinstance(node, RawInternalMerkleNode)
+            result.append(
+                InternalNode(
+                    hash=node.hash,
+                    left_hash=merkle_blob.get_hash_at_index(node.left),
+                    right_hash=merkle_blob.get_hash_at_index(node.right),
+                )
+            )
+        return result
 
     async def get_internal_nodes(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> list[InternalNode]:
         async with self.db_wrapper.reader() as reader:
