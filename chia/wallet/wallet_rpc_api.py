@@ -3668,9 +3668,6 @@ class WalletRpcApi:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
             if record.type == TransactionType.COINBASE_REWARD.value:
-                if self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET:
-                    # Don't add pool rewards for pool wallets.
-                    continue
                 pool_reward_amount += record.amount
             height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
             # .get_farming_rewards() above queries for only confirmed records.  This
