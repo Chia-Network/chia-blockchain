@@ -22,13 +22,13 @@ from chia.util.streamable import Streamable
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
+    CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     UnknownCondition,
     parse_timelock_info,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.trading.offer import Offer
@@ -265,7 +265,9 @@ class VCWallet:
         if new_inner_puzhash is None:
             new_inner_puzhash = inner_puzhash
 
-        primaries: list[Payment] = [Payment(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])]
+        primaries: list[CreateCoin] = [
+            CreateCoin(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])
+        ]
 
         if fee > 0:
             coin_name = vc_record.vc.coin.name()

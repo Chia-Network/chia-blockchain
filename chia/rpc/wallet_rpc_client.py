@@ -4,7 +4,8 @@ from collections.abc import Sequence
 from typing import Any, Optional, Union, cast
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
-from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import (

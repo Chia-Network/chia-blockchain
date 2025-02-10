@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
@@ -17,19 +18,20 @@ def db_validate_func(
     *,
     validate_blocks: bool,
 ) -> None:
+    config: dict[str, Any] = load_config(root_path, "config.yaml")
     if in_db_path is None:
-        config: dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
-        selected_network: str = config["selected_network"]
-        db_pattern: str = config["database_path"]
+        full_node_config = config["full_node"]
+        selected_network: str = full_node_config["selected_network"]
+        db_pattern: str = full_node_config["database_path"]
         db_path_replaced: str = db_pattern.replace("CHALLENGE", selected_network)
         in_db_path = path_from_root(root_path, db_path_replaced)
 
-    validate_v2(in_db_path, validate_blocks=validate_blocks)
+    validate_v2(in_db_path, config=config, validate_blocks=validate_blocks)
 
     print(f"\n\nDATABASE IS VALID: {in_db_path}\n")
 
 
-def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
+def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool) -> None:
     import sqlite3
     from contextlib import closing
 
@@ -174,10 +176,14 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
 
         # make sure the prev_hash pointer of block height 0 is the genesis
         # challenge
-        if next_hash != DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA:
+        service_config = config["full_node"]
+        network_id = service_config["selected_network"]
+        overrides = service_config["network_overrides"]["constants"][network_id]
+        updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
+        if next_hash != updated_constants.AGG_SIG_ME_ADDITIONAL_DATA:
             raise RuntimeError(
                 f"Blockchain has invalid genesis challenge {next_hash}, expected "
-                f"{DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA.hex()}"
+                f"{updated_constants.AGG_SIG_ME_ADDITIONAL_DATA.hex()}"
             )
 
         if num_orphans > 0:
