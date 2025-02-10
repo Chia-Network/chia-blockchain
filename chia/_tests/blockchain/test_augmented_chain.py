@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 import pytest
 
+from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.util.blockchain import create_blockchain
 from chia.consensus.block_record import BlockRecord
+from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.augmented_chain import AugmentedBlockchain
@@ -143,3 +146,49 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
         abc.add_block_record(BR(b))
     assert len(abc._extra_blocks) == 0
     assert null.added_blocks == {br.header_hash for br in blocks[:5]}
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_augmented_chain_contains_block(default_10000_blocks: list[FullBlock], bt: BlockTools) -> None:
+    blocks = default_10000_blocks[:50]
+    async with create_blockchain(bt.constants, 2) as (b1, _):
+        async with create_blockchain(bt.constants, 2) as (b2, _):
+            for block in blocks:
+                await _validate_and_add_block(b1, block)
+                await _validate_and_add_block(b2, block)
+
+            new_blocks = bt.get_consecutive_blocks(10, block_list_input=blocks)
+            abc = AugmentedBlockchain(b1)
+            for block in new_blocks:
+                await _validate_and_add_block(b2, block)
+                block_rec = b2.block_record(block.header_hash)
+                abc.add_extra_block(block, block_rec)
+
+            for block in blocks:
+                # check underlying contains block but augmented does not
+                assert abc.contains_block(block.header_hash, block.height) is True
+                assert block.height not in abc._height_to_hash
+
+            for block in new_blocks:
+                # check augmented contains block but augmented does not
+                assert abc.contains_block(block.header_hash, block.height) is True
+                assert not abc._underlying.contains_height(block.height)
+
+            for block in new_blocks:
+                await _validate_and_add_block(b1, block)
+
+            for block in new_blocks:
+                # check underlying contains block
+                assert abc._underlying.height_to_hash(block.height) == block.header_hash
+                # check augmented contains block
+                assert abc._height_to_hash[block.height] == block.header_hash
+
+            abc.remove_extra_block(new_blocks[-1].header_hash)
+
+            # check blocks removed from augmented
+            for block in new_blocks:
+                # check underlying contains block
+                assert abc._underlying.height_to_hash(block.height) == block.header_hash
+                # check augmented contains block
+                assert block.height not in abc._height_to_hash
