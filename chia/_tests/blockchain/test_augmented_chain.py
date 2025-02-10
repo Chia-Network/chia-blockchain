@@ -158,7 +158,7 @@ async def test_augmented_chain_contains_block(default_10000_blocks: list[FullBlo
                 await _validate_and_add_block(b1, block)
                 await _validate_and_add_block(b2, block)
 
-            new_blocks = bt.get_consecutive_blocks(10, block_list_input=blocks)
+            new_blocks = bt.get_consecutive_blocks(10, block_list_input=blocks)[50:]
             abc = AugmentedBlockchain(b1)
             for block in new_blocks:
                 await _validate_and_add_block(b2, block)
