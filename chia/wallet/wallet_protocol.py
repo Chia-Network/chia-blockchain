@@ -84,6 +84,7 @@ class GSTOptionalArgs(TypedDict):
     new_proof_hash: NotRequired[Optional[bytes32]]
     provider_inner_puzhash: NotRequired[Optional[bytes32]]
     self_revoke: NotRequired[bool]
+    vc_id: NotRequired[Optional[bytes32]]
     # Wallet
     origin_id: NotRequired[Optional[bytes32]]
     negative_change_allowed: NotRequired[bool]

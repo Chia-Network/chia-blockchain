@@ -719,8 +719,10 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             wallet_environments.tx_config, push=False
         ) as action_scope:
             await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
-                new_vc_record.vc.launcher_id,
+                [uint64(1)],
+                [await wallet_0.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
                 action_scope,
+                vc_id=new_vc_record.vc.launcher_id,
                 new_proof_hash=bytes32.zeros,
                 self_revoke=True,
             )
