@@ -35,13 +35,12 @@ async def add_blocks_in_batches(
     fork_info = ForkInfo(fork_height, blocks[0].height - 1, peak_hash)
 
     vs = ValidationState(ssi, diff, None)
-
+    blockchain = AugmentedBlockchain(full_node.blockchain)
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
         # vs is updated by the call to add_block_batch()
-        blockchain = AugmentedBlockchain(full_node.blockchain)
         success, state_change_summary = await full_node.add_block_batch(
             block_batch.entries, PeerInfo("0.0.0.0", 0), fork_info, vs, blockchain
         )
