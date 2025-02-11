@@ -28,11 +28,13 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    _peak_height: Optional[uint32]
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._peak_height = None
 
     def _get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         eb = self._extra_blocks.get(header_hash)
@@ -44,9 +46,14 @@ class AugmentedBlockchain:
         assert block.header_hash == block_record.header_hash
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        if self._peak_height is None:
+            self._peak_height = block.height
+        else:
+            self._peak_height = max(block.height, self._peak_height)
 
     def remove_extra_block(self, hh: bytes32) -> None:
         if hh in self._extra_blocks:
+            assert self._underlying.contains_block(hh)
             block_record = self._extra_blocks.pop(hh)[1]
             del self._height_to_hash[block_record.height]
 
@@ -121,7 +128,10 @@ class AugmentedBlockchain:
         return (header_hash in self._extra_blocks) or self._underlying.contains_block(header_hash)
 
     def contains_height(self, height: uint32) -> bool:
-        return (height in self._height_to_hash) or self._underlying.contains_height(height)
+        peak_height = self.get_peak_height()
+        if peak_height is None:
+            return False
+        return height <= peak_height
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret: list[bytes32] = []
@@ -132,3 +142,6 @@ class AugmentedBlockchain:
             else:
                 ret.extend(await self._underlying.prev_block_hash([hh]))
         return ret
+
+    def get_peak_height(self) -> Optional[uint32]:
+        return self._peak_height
