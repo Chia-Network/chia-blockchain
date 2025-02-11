@@ -96,7 +96,7 @@ class FullNodeAPI:
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
-        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="node-api-")
 
     @property
     def server(self) -> ChiaServer:
@@ -285,7 +285,7 @@ class FullNodeAPI:
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
-        if not self.full_node.blockchain.contains_block(request.tip):
+        if self.full_node.blockchain.try_block_record(request.tip) is None:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         if request.tip in self.full_node.pow_creation:

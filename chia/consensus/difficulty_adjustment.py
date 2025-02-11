@@ -224,10 +224,9 @@ def _get_next_sub_slot_iters(
     if next_height < constants.EPOCH_BLOCKS:
         return uint64(constants.SUB_SLOT_ITERS_STARTING)
 
-    if not blocks.contains_block(prev_header_hash):
+    prev_b = blocks.try_block_record(prev_header_hash)
+    if prev_b is None:
         raise ValueError(f"Header hash {prev_header_hash} not in blocks")
-
-    prev_b: BlockRecord = blocks.block_record(prev_header_hash)
 
     # If we are in the same epoch, return same ssi
     if not skip_epoch_check:
@@ -304,10 +303,9 @@ def _get_next_difficulty(
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
-    if not blocks.contains_block(prev_header_hash):
+    prev_b = blocks.try_block_record(prev_header_hash)
+    if prev_b is None:
         raise ValueError(f"Header hash {prev_header_hash} not in blocks")
-
-    prev_b: BlockRecord = blocks.block_record(prev_header_hash)
 
     # If we are in the same slot as previous block, return same difficulty
     if not skip_epoch_check:
