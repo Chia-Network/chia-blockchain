@@ -96,7 +96,7 @@ class FullNodeAPI:
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
-        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="node-api-")
 
     @property
     def server(self) -> ChiaServer:

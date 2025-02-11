@@ -418,7 +418,7 @@ class PlotManager:
 
             return new_plot_info
 
-        with self, ThreadPoolExecutor() as executor:
+        with self, ThreadPoolExecutor(thread_name_prefix="plot-process-") as executor:
             plots_refreshed: dict[Path, PlotInfo] = {}
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:

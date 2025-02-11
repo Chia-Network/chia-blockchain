@@ -146,6 +146,7 @@ class Blockchain:
             num_workers = max(cpu_count - reserved_cores, 1)
             self.pool = ThreadPoolExecutor(
                 max_workers=num_workers,
+                thread_name_prefix="block-validation-",
             )
             log.info(f"Started {num_workers} processes for block validation")
 

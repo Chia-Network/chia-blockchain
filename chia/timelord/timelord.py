@@ -167,6 +167,7 @@ class Timelord:
                 self._executor_shutdown_tempfile = _create_shutdown_file()
                 self.bluebox_pool = ThreadPoolExecutor(
                     max_workers=workers,
+                    thread_name_prefix="blue-box-",
                 )
                 self.main_loop = create_referenced_task(
                     self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)

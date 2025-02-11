@@ -180,7 +180,7 @@ class MempoolManager:
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            self.pool = ThreadPoolExecutor(max_workers=2)
+            self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="mempool-")
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecordProtocol] = None
