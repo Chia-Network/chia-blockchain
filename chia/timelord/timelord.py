@@ -938,18 +938,13 @@ class Timelord:
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
         try:
-            # Depending on the flags 'fast_algorithm' and 'bluebox_mode',
-            # the timelord tells the vdf_client what to execute.
+            # Depending on the flag 'bluebox_mode', the timelord tells the vdf_client what to execute.
             async with self.lock:
                 if self.bluebox_mode:
                     writer.write(b"S")
                 else:
-                    if self.config["fast_algorithm"]:
-                        # Run n-wesolowski (fast) algorithm.
-                        writer.write(b"N")
-                    else:
-                        # Run two-wesolowski (slow) algorithm.
-                        writer.write(b"T")
+                    # Run two-wesolowski algorithm.
+                    writer.write(b"T")
                 await writer.drain()
 
             prefix = str(len(str(disc)))
