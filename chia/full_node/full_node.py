@@ -1240,7 +1240,7 @@ class FullNode:
                                 # By setting the next allowed timestamp to now,
                                 # means that any other peer that has waited for
                                 # this will have its next allowed timestamp in
-                                # the passed, and be prefered multiple times
+                                # the passed, and be preferred multiple times
                                 # over this peer.
                                 new_peers_with_peak[idx] = (
                                     new_peers_with_peak[idx][0],
