@@ -160,7 +160,8 @@ async def run_mempool_benchmark() -> None:
         large_spend_bundles.append(bundles)
 
     start_height = height
-    for single_threaded in [False, True]:
+    # for single_threaded in [False, True]:
+    for single_threaded in [True]:
         if single_threaded:
             print("\n== Single-threaded")
         else:
@@ -231,26 +232,26 @@ async def run_mempool_benchmark() -> None:
         print("\nProfiling create_block_generator()")
         with enable_profiler(True, f"create-{suffix}"):
             start = monotonic()
-            for _ in range(50):
+            for _ in range(10):
                 await mempool.create_block_generator(
                     last_tb_header_hash=rec.header_hash,
                     get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                 )
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / 50 * 1000:0.2f}ms")
+        print(f"  per call: {(stop - start) / 10 * 1000:0.2f}ms")
 
         print("\nProfiling create_block_generator2()")
         with enable_profiler(True, f"create2-{suffix}"):
             start = monotonic()
-            for _ in range(20):
+            for _ in range(10):
                 await mempool.create_block_generator2(
                     last_tb_header_hash=rec.header_hash,
                     get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                 )
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / 20 * 1000:0.2f}ms")
+        print(f"  per call: {(stop - start) / 10 * 1000:0.2f}ms")
 
         print("\nProfiling new_peak() (optimized)")
         blocks: list[tuple[BenchBlockRecord, list[bytes32]]] = []

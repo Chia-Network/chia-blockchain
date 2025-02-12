@@ -654,12 +654,18 @@ class Mempool:
         cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
         builder = BlockBuilder()
         skipped_items = 0
-        added_spends = 0
+
+        transactions: list[tuple[SpendBundle, uint64]] = []
+        tx_metadata: list[tuple[int, list[Coin]]] = []
+        cumulative_cost = 0
         for row in cursor:
             current_time = monotonic()
-            if current_time - generator_creation_start > 3:
+            if current_time - generator_creation_start > 1:
                 log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
                 break
+            if cumulative_cost > constants.MAX_BLOCK_COST_CLVM:
+                break
+
             name = bytes32(row[0])
             fee = int(row[1])
             item = self._items[name]
@@ -697,22 +703,27 @@ class Mempool:
                     # accounting for it
                     break  # pragma: no cover
 
-                added, done = builder.add_spend_bundle(
-                    SpendBundle(unique_coin_spends, item.spend_bundle.aggregated_signature),
-                    uint64(item_cost),
-                    constants,
+                transactions.append(
+                    (SpendBundle(unique_coin_spends, item.spend_bundle.aggregated_signature), uint64(item_cost))
                 )
-                if not added:
-                    skipped_items += 1
-                else:
-                    added_spends += len(unique_coin_spends)
-                    additions.extend(unique_additions)
-                    fee_sum = new_fee_sum
-                if done:
-                    break
+                tx_metadata.append((len(unique_coin_spends), unique_additions))
+                fee_sum = new_fee_sum
+                cumulative_cost += item.conds.cost - cost_saving
             except Exception as e:
                 log.debug(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
+
+        added, _done = builder.add_spend_bundle_batch(transactions, constants)
+        added_spends = 0
+        last_idx = 0
+        for idx in added:
+            skipped_items += idx - last_idx
+            added_spends += tx_metadata[idx][0]
+            additions.extend(tx_metadata[idx][1])
+
+        # if done:
+        #    break
+
         generator_creation_end = monotonic()
         duration = generator_creation_end - generator_creation_start
         block_program, signature, cost = builder.finalize(constants)
