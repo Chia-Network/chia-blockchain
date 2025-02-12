@@ -410,12 +410,12 @@ class Wallet:
         fee: uint64 = uint64(0),
         coins: Optional[set[Coin]] = None,
         memos: Optional[list[list[bytes]]] = None,
-        puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
         negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
+        puzzle_decorator_override: Optional[list[dict[str, Any]]] = kwargs.get("puzzle_decorator_override", None)
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
