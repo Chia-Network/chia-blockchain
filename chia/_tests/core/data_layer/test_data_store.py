@@ -15,6 +15,7 @@ from typing import Any, BinaryIO, Callable, Optional
 
 import aiohttp
 import pytest
+from chia_rs.datalayer import TreeIndex
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
@@ -41,7 +42,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
-from chia.data_layer.util.merkle_blob import MerkleBlob, RawInternalMerkleNode, RawLeafMerkleNode, TreeIndex
+from chia.data_layer.util.merkle_blob import MerkleBlob, RawInternalMerkleNode, RawLeafMerkleNode
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
