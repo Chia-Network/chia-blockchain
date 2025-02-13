@@ -72,10 +72,6 @@ class MerkleBlob:
                 raise Exception("Nodes must be empty when root_hash is None")
         else:
             merkle_blob.build_blob_from_node_list(internal_nodes, terminal_nodes, root_hash)
-            merkle_blob.key_to_index = merkle_blob.get_keys_indexes()
-            merkle_blob.free_indexes = merkle_blob.get_free_indexes()
-            merkle_blob.leaf_hash_to_index = merkle_blob.get_hashes_indexes(leafs_only=True)
-            merkle_blob.last_allocated_index = TreeIndex(uint32(len(merkle_blob.blob) // spacing))
 
         return merkle_blob
 

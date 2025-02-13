@@ -303,7 +303,8 @@ class DataStore:
                         internal_nodes[bytes32(node.hash)] = (index_to_hash[node.left], index_to_hash[node.right])
 
         merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
-        await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
+        # Don't store these blob objects into cache, since their data structures are not calculated yet.
+        await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
 
     async def migrate_db(self, server_files_location: Path) -> None:
         async with self.db_wrapper.reader() as reader:
@@ -425,6 +426,7 @@ class DataStore:
         store_id: bytes32,
         status: Status,
         old_root: Optional[Root] = None,
+        update_cache: bool = True,
     ) -> Root:
         if not merkle_blob.empty():
             merkle_blob.calculate_lazy_hashes()
@@ -442,7 +444,8 @@ class DataStore:
                     """,
                     (root_hash, merkle_blob.blob, store_id),
                 )
-            self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+            if update_cache:
+                self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
 
