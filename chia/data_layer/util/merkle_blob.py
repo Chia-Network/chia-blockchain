@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, ClassVar, Optional, Protocol, TypeVar, Union, cast, final
+from typing import TYPE_CHECKING, ClassVar, Optional, Protocol, SupportsBytes, TypeVar, Union, cast, final
 
 from chia_rs.datalayer import KeyId, TreeIndex, ValueId
 
@@ -121,6 +121,9 @@ class MerkleBlob:
             return result
 
         return self.free_indexes.pop()
+
+    def get_key_index(self, key: KeyId) -> TreeIndex:
+        return self.key_to_index[key]
 
     def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
         if undefined_index.raw <= index.raw:
@@ -689,7 +692,7 @@ def unpack_raw_node(index: TreeIndex, metadata: NodeMetadata, data: bytes) -> Ra
 
 
 # TODO: allow broader bytes'ish types
-def pack_raw_node(raw_node: RawMerkleNodeProtocol) -> bytes:
+def pack_raw_node(raw_node: SupportsBytes) -> bytes:
     data = bytes(raw_node)
     padding = data_size - len(data)
     assert padding >= 0, f"unexpected negative padding: {padding}"
