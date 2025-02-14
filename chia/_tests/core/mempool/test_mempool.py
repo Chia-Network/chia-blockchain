@@ -6,7 +6,15 @@ import random
 from typing import Callable, Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, get_flags_for_height_and_constants, run_block_generator2
+from chia_rs import (
+    ENABLE_KECCAK,
+    ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
+    AugSchemeMPL,
+    G1Element,
+    G2Element,
+    get_flags_for_height_and_constants,
+    run_block_generator2,
+)
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
 from clvm_tools.binutils import assemble
@@ -3238,11 +3246,6 @@ async def test_create_block_generator() -> None:
 
     assert num_additions == len(additions)
     invariant_check_mempool(mempool)
-
-
-# TODO: import this from chia_rs once we bump the version we depend on
-ENABLE_KECCAK = 0x200
-ENABLE_KECCAK_OPS_OUTSIDE_GUARD = 0x100
 
 
 def test_flags_for_height() -> None:
