@@ -158,6 +158,7 @@ def load_config_cli(
     filename: str,
     sub_config: Optional[str] = None,
     fill_missing_services: bool = False,
+    args: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     """
     Loads configuration from the specified filename, in the config directory,
@@ -176,7 +177,7 @@ def load_config_cli(
         prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore
         parser.add_argument(f"--{prop_name}", type=prop_type, dest=prop_name)
 
-    for key, value in vars(parser.parse_args()).items():
+    for key, value in vars(parser.parse_args(args=args)).items():
         if value is not None:
             flattened_props[key] = value
 
