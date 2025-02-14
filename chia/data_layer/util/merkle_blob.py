@@ -225,9 +225,9 @@ class MerkleBlob:
 
         return ProofOfInclusion(node_hash=bytes32(node.hash), layers=layers)
 
-    def get_node_by_hash(self, node_hash: bytes32) -> Optional[tuple[KeyId, ValueId]]:
+    def get_node_by_hash(self, node_hash: bytes32) -> tuple[KeyId, ValueId]:
         if node_hash not in self.leaf_hash_to_index:
-            return None
+            raise Exception(f"Cannot find node by hash {node_hash.hex()}")
 
         index = self.leaf_hash_to_index[node_hash]
         node = self.get_raw_node(index)

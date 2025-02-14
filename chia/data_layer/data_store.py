@@ -513,15 +513,6 @@ class DataStore:
         vid = ValueId(await self.add_kvid(value, store_id))
         return (kid, vid)
 
-    async def get_node_by_hash(self, merkle_blob: MerkleBlob, hash: bytes32) -> tuple[KeyId, ValueId]:
-        kid, vid = merkle_blob.get_node_by_hash(hash)
-        if kid is None and vid is None:
-            raise Exception(f"Cannot find node by hash {hash.hex()}")
-
-        assert kid is not None
-        assert vid is not None
-        return (kid, vid)
-
     async def get_terminal_node_by_hash(
         self,
         node_hash: bytes32,
@@ -536,7 +527,7 @@ class DataStore:
             resolved_root_hash = root_hash
 
         merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
-        kid, vid = await self.get_node_by_hash(merkle_blob, node_hash)
+        kid, vid = merkle_blob.get_node_by_hash(node_hash)
         return await self.get_terminal_node(kid, vid, store_id)
 
     async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
@@ -843,7 +834,7 @@ class DataStore:
                 raise Exception(f"Root hash is unspecified for store ID: {store_id.hex()}")
 
             merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
-            reference_kid, _ = await self.get_node_by_hash(merkle_blob, node_hash)
+            reference_kid, _ = merkle_blob.get_node_by_hash(node_hash)
 
         reference_index = merkle_blob.key_to_index[reference_kid]
         lineage = merkle_blob.get_lineage_with_indexes(reference_index)
@@ -1147,7 +1138,7 @@ class DataStore:
             hash = leaf_hash(key, value)
             reference_kid = None
             if reference_node_hash is not None:
-                reference_kid, _ = await self.get_node_by_hash(merkle_blob, reference_node_hash)
+                reference_kid, _ = merkle_blob.get_node_by_hash(reference_node_hash)
 
             was_empty = root.node_hash is None
             if not was_empty and reference_kid is None:
@@ -1254,7 +1245,7 @@ class DataStore:
                     side = change.get("side", None)
                     reference_kid: Optional[KeyId] = None
                     if reference_node_hash is not None:
-                        reference_kid, _ = await self.get_node_by_hash(merkle_blob, reference_node_hash)
+                        reference_kid, _ = merkle_blob.get_node_by_hash(reference_node_hash)
 
                     key_hashed = key_hash(key)
                     kid, vid = await self.add_key_value(key, value, store_id)
@@ -1423,7 +1414,7 @@ class DataStore:
             root = await self.get_tree_root(store_id=store_id)
             root_hash = root.node_hash
         merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
-        kid, _ = await self.get_node_by_hash(merkle_blob, node_hash)
+        kid, _ = merkle_blob.get_node_by_hash(node_hash)
         return merkle_blob.get_proof_of_inclusion(kid)
 
     async def get_proof_of_inclusion_by_key(
