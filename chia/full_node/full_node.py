@@ -270,6 +270,7 @@ class FullNode:
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
+                selected_network=self.config.get("selected_network"),
             )
 
             self._mempool_manager = MempoolManager(
