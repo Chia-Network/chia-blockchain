@@ -111,12 +111,11 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
         WalletType.POOLING_WALLET,
         WalletType.DATA_LAYER,
         WalletType.VC,
-        WalletType.DAO,
     }:
         mojo_per_unit = units["chia"]
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         mojo_per_unit = units["cat"]
-    elif wallet_type in {WalletType.NFT, WalletType.DECENTRALIZED_ID, WalletType.DAO_CAT}:
+    elif wallet_type in {WalletType.NFT, WalletType.DECENTRALIZED_ID}:
         mojo_per_unit = units["mojo"]
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
@@ -940,13 +939,6 @@ async def print_balances(
                     my_did = get_did_response["did_id"]
                     if my_did is not None and len(my_did) > 0:
                         print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
-                elif typ == WalletType.DAO:
-                    get_id_response = await wallet_client.dao_get_treasury_id(wallet_id)
-                    treasury_id = get_id_response["treasury_id"][2:]
-                    print(f"{indent}{'-Treasury ID:'.ljust(ljust)} {treasury_id}")
-                elif typ == WalletType.DAO_CAT:
-                    cat_asset_id = summary["data"][32:96]
-                    print(f"{indent}{'-Asset ID:'.ljust(ljust)} {cat_asset_id}")
                 elif len(asset_id) > 0:
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")
                 print(f"{indent}{'-Wallet ID:'.ljust(ljust)} {wallet_id}")
