@@ -8,7 +8,14 @@ from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Callable, Optional, TypeVar
 
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, supports_fast_forward, validate_clvm_and_signature
+from chia_rs import (
+    ELIGIBLE_FOR_DEDUP,
+    ELIGIBLE_FOR_FF,
+    BLSCache,
+    G2Element,
+    supports_fast_forward,
+    validate_clvm_and_signature,
+)
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
@@ -26,6 +33,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import EligibilityAndAdditions, UnspentLineageInfo
 from chia.types.fee_rate import FeeRate
+from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -195,6 +203,7 @@ class MempoolManager:
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
 
+    # TODO: remove this, use create_generator() instead
     async def create_bundle_from_mempool(
         self,
         last_tb_header_hash: bytes32,
@@ -208,14 +217,27 @@ class MempoolManager:
 
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        if item_inclusion_filter is None:
-
-            def always(bundle_name: bytes32) -> bool:
-                return True
-
-            item_inclusion_filter = always
         return await self.mempool.create_bundle_from_mempool_items(
-            item_inclusion_filter, get_unspent_lineage_info_for_puzzle_hash, self.constants, self.peak.height
+            get_unspent_lineage_info_for_puzzle_hash, self.constants, self.peak.height, item_inclusion_filter
+        )
+
+    async def create_block_generator(
+        self,
+        last_tb_header_hash: bytes32,
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
+    ) -> tuple[BlockGenerator, G2Element, list[Coin]]:
+        """
+        Returns a block generator program, the aggregate signature and all additions, for a new block
+        """
+        if self.peak is None or self.peak.header_hash != last_tb_header_hash:
+            return (BlockGenerator(), G2Element(), [])
+
+        return await self.mempool.create_block_generator(
+            get_unspent_lineage_info_for_puzzle_hash,
+            self.constants,
+            self.peak.height,
+            item_inclusion_filter,
         )
 
     def get_filter(self) -> bytes:

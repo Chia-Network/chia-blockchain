@@ -6,7 +6,7 @@ import random
 from typing import Callable, Optional
 
 import pytest
-from chia_rs import G1Element, G2Element, get_flags_for_height_and_constants
+from chia_rs import AugSchemeMPL, G1Element, G2Element, get_flags_for_height_and_constants, run_block_generator2
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
 from clvm_tools.binutils import assemble
@@ -3093,23 +3093,21 @@ def test_get_items_by_coin_ids(items: list[MempoolItem], coin_ids: list[bytes32]
     assert set(result) == set(expected)
 
 
+def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = False) -> SpendBundle:
+    conditions = []
+    actual_fee = fee
+    if with_higher_cost:
+        conditions.extend([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i] for i in range(3)])
+        actual_fee += 3
+    conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - actual_fee])
+    sb = spend_bundle_from_conditions(conditions, coin)
+    return sb
+
+
 @pytest.mark.anyio
 async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
-    def always(_: bytes32) -> bool:
-        return True
-
     async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
         assert False  # pragma: no cover
-
-    def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = False) -> SpendBundle:
-        conditions = []
-        actual_fee = fee
-        if with_higher_cost:
-            conditions.extend([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i] for i in range(3)])
-            actual_fee += 3
-        conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - actual_fee])
-        sb = spend_bundle_from_conditions(conditions, coin)
-        return sb
 
     def agg_and_add_sb_returning_cost_info(mempool: Mempool, spend_bundles: list[SpendBundle]) -> uint64:
         sb = SpendBundle.aggregate(spend_bundles)
@@ -3142,7 +3140,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
     result = await mempool.create_bundle_from_mempool_items(
-        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
     )
     assert result is not None
     agg, _ = result
@@ -3163,7 +3161,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
     result = await mempool.create_bundle_from_mempool_items(
-        always, get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
     )
     assert result is not None
     agg, _ = result
@@ -3179,6 +3177,67 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
         get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram.to(None), []), TEST_COIN, 0, test_constants)
+
+
+@pytest.mark.anyio
+async def test_create_block_generator() -> None:
+    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False  # pragma: no cover
+
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+
+    fee_estimator = create_bitcoin_fee_estimator(test_constants.MAX_BLOCK_COST_CLVM)
+    mempool = Mempool(mempool_info, fee_estimator)
+    coins = [
+        Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount)) for amount in range(2000000000, 2000000020, 2)
+    ]
+
+    spend_bundles = set(make_test_spendbundle(c) for c in coins)
+    expected_additions = set(Coin(c.name(), IDENTITY_PUZZLE_HASH, c.amount) for c in coins)
+    expected_signature = AugSchemeMPL.aggregate([sb.aggregated_signature for sb in spend_bundles])
+
+    for sb in spend_bundles:
+        mi = mempool_item_from_spendbundle(sb)
+        mempool.add_to_pool(mi)
+        invariant_check_mempool(mempool)
+
+    generator, signature, additions = await mempool.create_block_generator(
+        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+    )
+
+    assert set(additions) == expected_additions
+
+    assert len(additions) == len(expected_additions)
+    assert signature == expected_signature
+
+    err, conds = run_block_generator2(
+        bytes(generator.program),
+        generator.generator_refs,
+        test_constants.MAX_BLOCK_COST_CLVM,
+        0,
+        signature,
+        None,
+        test_constants,
+    )
+
+    assert err is None
+    assert conds is not None
+
+    assert len(conds.spends) == len(coins)
+
+    num_additions = 0
+    for spend in conds.spends:
+        assert Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount)) in coins
+        for add2 in spend.create_coin:
+            assert Coin(spend.coin_id, add2[0], uint64(add2[1])) in expected_additions
+            num_additions += 1
+
+    assert num_additions == len(additions)
+    invariant_check_mempool(mempool)
 
 
 # TODO: import this from chia_rs once we bump the version we depend on
