@@ -839,34 +839,36 @@ class FullNodeRpcApi:
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
     async def create_block_bundle_from_mempool(self, _: dict[str, Any]) -> EndpointResult:
-        peak = self.service.blockchain.get_peak()
-
         mempool_bundle = None
 
-        if peak is not None:
-            # Grab best transactions from Mempool for given tip target
-            async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
+        # Grab best transactions from Mempool for given tip target
+        async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+            peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
 
-                # Finds the last transaction block before this one
-                curr_l_tb: BlockRecord = peak
-                while not curr_l_tb.is_transaction_block:
-                    curr_l_tb = self.service.blockchain.block_record(curr_l_tb.prev_hash)
+            if peak is None:
+                return {"mempool_bundle": None}
 
-                self.service.log.info("Beginning simulated block construction from mempool")
-                start_time = time.time()
+            # Finds the last transaction block before this one
+            curr_l_tb: BlockRecord = peak
+            while not curr_l_tb.is_transaction_block:
+                curr_l_tb = self.service.blockchain.block_record(curr_l_tb.prev_hash)
 
-                try:
-                    mempool_bundle, _ = await self.service.mempool_manager.create_bundle_from_mempool(
-                        curr_l_tb.header_hash, self.service.coin_store.get_unspent_lineage_info_for_puzzle_hash
-                    )
-                except Exception as e:
-                    self.service.log.error(f"Traceback: {traceback.format_exc()}")
-                    self.service.log.error(f"Error making spend bundle {e} peak: {peak}")
-                    mempool_bundle = None
-                self.service.log.info(f"Simulated block constructed in {time.time() - start_time} seconds")
+            self.service.log.info("Beginning simulated block construction from mempool")
+            start_time = time.time()
 
-        return {"mempool_bundle": mempool_bundle.to_json_dict()}
+            try:
+                result = await self.service.mempool_manager.create_bundle_from_mempool(
+                    curr_l_tb.header_hash, self.service.coin_store.get_unspent_lineage_info_for_puzzle_hash
+                )
+                assert result is not None
+                mempool_bundle = result[0]
+            except Exception as e:
+                self.service.log.error(f"Traceback: {traceback.format_exc()}")
+                self.service.log.error(f"Error making spend bundle {e} peak: {peak}")
+                mempool_bundle = None
+            self.service.log.info(f"Simulated block constructed in {time.time() - start_time} seconds")
+
+        return {"mempool_bundle": None if mempool_bundle is None else mempool_bundle.to_json_dict()}
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """
