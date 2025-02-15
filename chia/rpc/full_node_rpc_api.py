@@ -11,7 +11,6 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
-from chia.full_node.mempool import Mempool, MempoolItem
 from chia.full_node.mempool_check_conditions import (
     get_puzzle_and_solution_for_coin,
     get_spends_for_block,
