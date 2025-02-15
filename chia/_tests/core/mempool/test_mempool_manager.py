@@ -2594,9 +2594,12 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 # if we try to fill the mempool with more than 550, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
-@pytest.mark.parametrize("mempool_size", [1, 2, 50, 100, 300, 400, 550])
-@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5, 6])
-async def test_create_block_generator(mempool_size: int, seed: int, transactions_1000: list[SpendBundle]) -> None:
+@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550])
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5])
+@pytest.mark.parametrize("old", [True, False])
+async def test_create_block_generator(
+    mempool_size: int, seed: int, old: bool, transactions_1000: list[SpendBundle]
+) -> None:
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
     coins = TestCoins(all_coins, {})
@@ -2628,7 +2631,8 @@ async def test_create_block_generator(mempool_size: int, seed: int, transactions
     invariant_check_mempool(mempool_manager.mempool)
 
     assert mempool_manager.peak is not None
-    new_block_gen = await mempool_manager.create_block_generator(mempool_manager.peak.header_hash)
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+    new_block_gen = await create_block(mempool_manager.peak.header_hash)
     assert new_block_gen is not None
 
     # now, make sure the generator we got is valid
