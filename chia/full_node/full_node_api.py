@@ -862,11 +862,17 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
+                        # TODO: once we're confident in the new block creation,
+                        # switch to it by default
+                        if self.full_node.config.get("original_block_creation", True):
+                            create_block = self.full_node.mempool_manager.create_block_generator
+                        else:
+                            create_block = self.full_node.mempool_manager.create_block_generator2
                         (
                             block_generator,
                             aggregate_signature,
                             additions,
-                        ) = await self.full_node.mempool_manager.create_block_generator(
+                        ) = await create_block(
                             curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
                         )
                     except Exception as e:
