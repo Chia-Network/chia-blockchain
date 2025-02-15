@@ -240,6 +240,25 @@ class MempoolManager:
             item_inclusion_filter,
         )
 
+    async def create_block_generator2(
+        self,
+        last_tb_header_hash: bytes32,
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
+    ) -> tuple[BlockGenerator, G2Element, list[Coin]]:
+        """
+        Returns a block generator program, the aggregate signature and all additions, for a new block
+        """
+        if self.peak is None or self.peak.header_hash != last_tb_header_hash:
+            return (BlockGenerator(), G2Element(), [])
+
+        return await self.mempool.create_block_generator2(
+            get_unspent_lineage_info_for_puzzle_hash,
+            self.constants,
+            self.peak.height,
+            item_inclusion_filter,
+        )
+
     def get_filter(self) -> bytes:
         all_transactions: set[bytes32] = set()
         byte_array_list = []
