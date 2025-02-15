@@ -2935,7 +2935,8 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 # make sure that after failing to pick 3 fast-forward spends, we skip
 # FF spends
 @pytest.mark.anyio
-async def test_skip_error_items() -> None:
+@pytest.mark.parametrize("old", [True, False])
+async def test_skip_error_items(old: bool) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
@@ -2957,7 +2958,8 @@ async def test_skip_error_items() -> None:
         called += 1
         raise RuntimeError("failed to find fast forward coin")
 
-    generator = await mempool.create_block_generator(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
     assert generator is not None
 
     assert called == 3
@@ -3221,7 +3223,8 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
 
 
 @pytest.mark.anyio
-async def test_create_block_generator() -> None:
+@pytest.mark.parametrize("old", [True, False])
+async def test_create_block_generator(old: bool) -> None:
     async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
         assert False  # pragma: no cover
 
@@ -3246,9 +3249,8 @@ async def test_create_block_generator() -> None:
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
 
-    generator = await mempool.create_block_generator(
-        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
-    )
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = await create_block(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0))
     assert generator is not None
 
     assert set(generator.additions) == expected_additions
