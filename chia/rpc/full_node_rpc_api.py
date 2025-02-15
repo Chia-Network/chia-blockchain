@@ -125,7 +125,6 @@ class FullNodeRpcApi:
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
             "/get_mempool_items_by_coin_name": self.get_mempool_items_by_coin_name,
-            "/import_mempool_items": self.import_mempool_items,
             "/create_block_bundle_from_mempool": self.create_block_bundle_from_mempool,
             # Fee estimation
             "/get_fee_estimate": self.get_fee_estimate,
