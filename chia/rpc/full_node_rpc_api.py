@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+import traceback
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
@@ -9,6 +11,7 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
+from chia.full_node.mempool import Mempool, MempoolItem
 from chia.full_node.mempool_check_conditions import (
     get_puzzle_and_solution_for_coin,
     get_spends_for_block,
@@ -123,6 +126,8 @@ class FullNodeRpcApi:
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
             "/get_mempool_items_by_coin_name": self.get_mempool_items_by_coin_name,
+            "/import_mempool_items": self.import_mempool_items,
+            "/create_block_bundle_from_mempool": self.create_block_bundle_from_mempool,
             # Fee estimation
             "/get_fee_estimate": self.get_fee_estimate,
         }
@@ -834,6 +839,36 @@ class FullNodeRpcApi:
         items = self.service.mempool_manager.mempool.get_items_by_coin_id(coin_name)
 
         return {"mempool_items": [item.to_json_dict() for item in items]}
+
+    async def create_block_bundle_from_mempool(self, _: dict[str, Any]) -> EndpointResult:
+        peak = self.service.blockchain.get_peak()
+
+        mempool_bundle = None
+
+        if peak is not None:
+            # Grab best transactions from Mempool for given tip target
+            async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
+
+                # Finds the last transaction block before this one
+                curr_l_tb: BlockRecord = peak
+                while not curr_l_tb.is_transaction_block:
+                    curr_l_tb = self.service.blockchain.block_record(curr_l_tb.prev_hash)
+
+                self.service.log.info("Beginning simulated block construction from mempool")
+                start_time = time.time()
+
+                try:
+                    mempool_bundle, _ = await self.service.mempool_manager.create_bundle_from_mempool(
+                        curr_l_tb.header_hash, self.service.coin_store.get_unspent_lineage_info_for_puzzle_hash
+                    )
+                except Exception as e:
+                    self.service.log.error(f"Traceback: {traceback.format_exc()}")
+                    self.service.log.error(f"Error making spend bundle {e} peak: {peak}")
+                    mempool_bundle = None
+                self.service.log.info(f"Simulated block constructed in {time.time() - start_time} seconds")
+
+        return {"mempool_bundle": mempool_bundle.to_json_dict()}
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """
