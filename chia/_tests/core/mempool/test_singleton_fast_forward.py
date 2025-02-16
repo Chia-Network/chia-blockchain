@@ -575,55 +575,36 @@ async def test_singleton_fast_forward_solo() -> None:
     are difficult to evict from the mempool. They would always be valid as long as
     the singleton exists.
     """
-    START_AMOUNT = uint64(1337)
-    # We're decrementing the next iteration's amount for testing purposes
-    SINGLETON_AMOUNT = uint64(1335)
-    # We're incrementing the next iteration's amount for testing purposes
-    SINGLETON_CHILD_AMOUNT = uint64(1339)
+    SINGLETON_AMOUNT = uint64(1337)
     async with sim_and_client() as (sim, sim_client):
-        singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
-            sim, sim_client, True, START_AMOUNT, SINGLETON_AMOUNT
+        singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
+            sim, sim_client, True, SINGLETON_AMOUNT, SINGLETON_AMOUNT
         )
         # Let's spend this first version, to create a bigger singleton child
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
         inner_puzzle_hash = inner_puzzle.get_tree_hash()
-        sk = AugSchemeMPL.key_gen(b"9" * 32)
-        g1 = sk.get_g1()
-        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
         inner_conditions: list[list[Any]] = [
-            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
-            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_CHILD_AMOUNT],
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_AMOUNT],
         ]
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
-        # Spend also a remaining coin for balance, as we're increasing the singleton amount
-        diff_to_balance = SINGLETON_CHILD_AMOUNT - SINGLETON_AMOUNT
-        remaining_spend_solution = SerializedProgram.from_program(
-            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount - diff_to_balance]])
-        )
         # spending the eve coin is not eligible for fast forward, so we need to make this spend first, to test FF
-        remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
-        await make_and_send_spend_bundle(sim, sim_client, [remaining_coin_spend, singleton_coin_spend], aggsig=sig)
+        await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=G2Element())
         unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
-        singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
-        assert singleton_child.amount == SINGLETON_CHILD_AMOUNT
+        singleton_child, _ = await get_singleton_and_remaining_coins(sim)
+        assert singleton_child.amount == SINGLETON_AMOUNT
         assert unspent_lineage_info == UnspentLineageInfo(
             coin_id=singleton_child.name(),
             coin_amount=singleton_child.amount,
-            parent_id=singleton.name(),
+            parent_id=eve_coin_spend.coin.name(),
             parent_amount=singleton.amount,
-            parent_parent_id=eve_coin_spend.coin.name(),
+            parent_parent_id=eve_coin_spend.coin.parent_coin_info,
         )
 
-        sk = AugSchemeMPL.key_gen(b"a" * 32)
-        g1 = sk.get_g1()
-        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
-
-        inner_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"]]
-        inner_conditions.append([ConditionOpcode.CREATE_COIN, inner_puzzle_hash, 21])
+        inner_conditions = [[ConditionOpcode.CREATE_COIN, inner_puzzle_hash, 21]]
         # this is a FF spend that isn't combined with any other spend. It's not allowed
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
-        status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], sig))
+        status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], G2Element()))
         assert error is Err.INVALID_SPEND_BUNDLE
         assert status == MempoolInclusionStatus.FAILED
