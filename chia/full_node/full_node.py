@@ -274,6 +274,7 @@ class FullNode:
 
             self._mempool_manager = MempoolManager(
                 get_coin_records=self.coin_store.get_coin_records,
+                get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 single_threaded=single_threaded,
             )
