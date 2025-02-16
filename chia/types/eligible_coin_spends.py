@@ -233,22 +233,30 @@ class EligibleCoinSpends:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         height: uint32,
         constants: ConsensusConstants,
-    ) -> None:
+    ) -> InternalMempoolItem:
         """
-        Provides the caller with an in-place internal mempool item that has a
-        proper state of fast forwarded coin spends and additions starting from
+        Provides the caller with an internal mempool item that has a proper
+        state of fast forwarded coin spends and additions starting from
         the most recent unspent versions of the related singleton spends.
 
         Args:
-            mempool_item: in-out parameter for the internal mempool item to process
+            mempool_item: The internal mempool item to process
             get_unspent_lineage_info_for_puzzle_hash: to lookup the most recent
                 version of the singleton from the coin store
             constants: needed in order to refresh the mempool item if needed
             height: needed in order to refresh the mempool item if needed
 
+        Returns:
+            The resulting mempool item after fast forwarding
+
         Raises:
             If a fast forward cannot proceed, to prevent potential double spends
         """
+
+        # Let's first create a copy of the mempool item to work on and return.
+        # This way we avoid the possibility of propagating a modified version
+        # of this input item through the network.
+        mempool_item = dataclasses.replace(mempool_item)
         new_coin_spends = []
         ff_bundle_coin_spends = {}
         replaced_coin_ids = []
@@ -326,7 +334,7 @@ class EligibleCoinSpends:
             new_coin_spends.append(new_coin_spend)
         if len(ff_bundle_coin_spends) == 0:
             # This item doesn't have any fast forward coins, nothing to do here
-            return
+            return mempool_item
         # Update the mempool item after validating the new spend bundle
         new_sb = SpendBundle(
             coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
@@ -363,3 +371,5 @@ class EligibleCoinSpends:
         # new coin spends
         mempool_item.spend_bundle = new_sb
         mempool_item.conds = new_conditions
+
+        return mempool_item
