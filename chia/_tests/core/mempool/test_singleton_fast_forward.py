@@ -393,7 +393,6 @@ async def test_singleton_fast_forward_solo() -> None:
         singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
             sim, sim_client, True, SINGLETON_AMOUNT, SINGLETON_AMOUNT
         )
-        # Let's spend this first version, to create a bigger singleton child
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
         inner_puzzle_hash = inner_puzzle.get_tree_hash()
         inner_conditions: list[list[Any]] = [
