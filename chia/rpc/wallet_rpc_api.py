@@ -1914,9 +1914,10 @@ class WalletRpcApi:
         # Since we've bumping the derivation index without having found any new puzzles, we want
         # to preserve the current last used index, so we call create_more_puzzle_hashes with
         # mark_existing_as_used=False
-        await self.service.wallet_state_manager.create_more_puzzle_hashes(
+        result = await self.service.wallet_state_manager.create_more_puzzle_hashes(
             from_zero=False, mark_existing_as_used=False, up_to_index=index, num_additional_phs=0
         )
+        await result.commit(self.service.wallet_state_manager)
 
         updated: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
         updated_index = updated if updated is not None else None
