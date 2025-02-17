@@ -782,7 +782,7 @@ typing-extensions = "*"
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
 reference = "add_datalayer_proof_of_inclusion"
-resolved_reference = "9db7ce35e8c68b4a567d24ef0f7514c62fda2eb8"
+resolved_reference = "aac829983f41387ea5a0e47a2eda36475c8e0442"
 subdirectory = "wheel/"
 
 [[package]]
