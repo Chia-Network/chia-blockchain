@@ -17,6 +17,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 
@@ -90,9 +91,15 @@ async def run_mempool_benchmark() -> None:
                 ret.append(r)
         return ret
 
+    # We currently don't need to keep track of these for our purpose
+    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False
+
     timestamp = uint64(1631794488)
 
-    mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=True)
+    mempool = MempoolManager(
+        get_coin_record, get_unspent_lineage_info_for_puzzle_hash, DEFAULT_CONSTANTS, single_threaded=True
+    )
 
     print("\nrunning add_spend_bundle() + new_peak()")
 

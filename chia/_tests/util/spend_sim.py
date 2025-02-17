@@ -165,7 +165,9 @@ class SpendSim:
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
             self.hint_store = await HintStore.create(self.db_wrapper)
-            self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
+            self.mempool_manager = MempoolManager(
+                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
+            )
             self.defaults = defaults
 
             # Load the next data if there is any
