@@ -345,14 +345,14 @@ def test_small_insert_deletes(merkle_types: MerkleTypes) -> None:
             assert not remaining_keys_values
 
 
-def test_proof_of_inclusion_merkle_blob() -> None:
+def test_proof_of_inclusion_merkle_blob(merkle_types: MerkleTypes) -> None:
     num_repeats = 10
     seed = 0
 
     random = Random()
     random.seed(100, version=2)
 
-    merkle_blob = MerkleBlob(blob=bytearray())
+    merkle_blob = merkle_types.blob(blob=bytearray())
     keys_values: dict[KeyId, ValueId] = {}
 
     for repeats in range(num_repeats):
@@ -383,7 +383,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             del keys_values[kv_id]
 
         for kv_id in delete_ordering:
-            with pytest.raises(Exception, match=f"Key {re.escape(str(kv_id))} not present in the store"):
+            with pytest.raises(Exception, match=f"unknown key: {re.escape(str(kv_id))}"):
                 merkle_blob.get_proof_of_inclusion(kv_id)
 
         new_keys_values: dict[KeyId, ValueId] = {}
