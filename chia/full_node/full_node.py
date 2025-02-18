@@ -781,8 +781,7 @@ class FullNode:
                     if (
                         target_peak_response is not None
                         and isinstance(target_peak_response, RespondBlock)
-                        and target_peak_response.block.header_hash
-                        == target_peak.header_hash
+                        and target_peak_response.block.header_hash == target_peak.header_hash
                     ):
                         self.sync_store.peer_has_block(
                             target_peak.header_hash,
