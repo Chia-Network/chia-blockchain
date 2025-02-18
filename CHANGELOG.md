@@ -15,6 +15,7 @@ for setuptools_scm/PEP 440 reasons.
 - Validate fast forward spends before adding their spend bundle to the mempool
 - Create a mempool item out of a copy of the input one when processing fast forward spends
 - Harden mempool fast forward feature
+- Improve handling when non-chia fork chains connect to chia nodes
 
 ## 2.5.1 Chia blockchain 2025-02-15
 
@@ -110,7 +111,7 @@ for setuptools_scm/PEP 440 reasons.
 - Fix peak_post_processing w/priority_mutex
 - avoid a traceback on failure
 - clean overflow blocks moved to unfinished block cache on reset chain
-- use undelying height_to_hash to check main chain
+- use underlying height_to_hash to check main chain
 - fix: typos in documentation files (thanks @leopardracer)
 - fix 404 status URL (thanks @thirdkeyword)
 - Minor grammatical correction in wallet_rpc_api.py (thanks @Jsewill)
