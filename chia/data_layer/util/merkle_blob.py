@@ -58,6 +58,9 @@ class MerkleBlob:
         self.free_indexes = self.get_free_indexes()
         self.leaf_hash_to_index = self.get_hashes_indexes(leafs_only=True)
 
+    def __len__(self) -> int:
+        return len(self.blob)
+
     @classmethod
     def from_node_list(
         cls: type[MerkleBlob],
@@ -206,7 +209,7 @@ class MerkleBlob:
 
     def get_proof_of_inclusion(self, key_id: KeyId) -> ProofOfInclusion:
         if key_id not in self.key_to_index:
-            raise Exception(f"Key {key_id} not present in the store")
+            raise Exception(f"unknown key: {key_id}")
 
         index = self.key_to_index[key_id]
         node = self.get_raw_node(index)
