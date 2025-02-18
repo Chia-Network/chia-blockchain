@@ -568,14 +568,14 @@ class Mempool:
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
                 else:
-                    await eligible_coin_spends.process_fast_forward_spends(
+                    bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
                         mempool_item=item,
                         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                         height=height,
                         constants=constants,
                     )
                     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                        bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                        bundle_coin_spends=bundle_coin_spends, max_cost=cost
                     )
                 item_cost = cost - cost_saving
                 log.info(
