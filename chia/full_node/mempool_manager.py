@@ -474,6 +474,12 @@ class MempoolManager:
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
+        # fast forward spends are only allowed when bundled with other, non-FF, spends
+        # in order to evict an FF spend, it must be associated with a normal
+        # spend that can be included in a block or invalidated some other way
+        if all([s.eligible_for_fast_forward for s in bundle_coin_spends.values()]):
+            return Err.INVALID_SPEND_BUNDLE, None, []
+
         removal_record_dict: dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
         removal_records = await get_coin_records(removal_names)

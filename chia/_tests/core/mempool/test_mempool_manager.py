@@ -1136,7 +1136,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     skipped_due_to_eligible_coins = sum(
         1
         for line in caplog.text.split("\n")
-        if "DEBUG Exception while checking a mempool item for deduplication: Skipping transaction with eligible coin(s)"
+        if "Exception while checking a mempool item for deduplication: Skipping transaction with eligible coin(s)"
         in line
     )
     if num_skipped_items == PRIORITY_TX_THRESHOLD:

@@ -612,7 +612,7 @@ class Mempool:
                 if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
                     break
             except Exception as e:
-                log.debug(f"Exception while checking a mempool item for deduplication: {e}")
+                log.info(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
         if processed_spend_bundles == 0:
             return None
