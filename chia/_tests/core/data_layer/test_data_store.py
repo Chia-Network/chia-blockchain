@@ -35,14 +35,15 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     TerminalNode,
     _debug_dump,
+    as_program,
     get_delta_filename_path,
     get_full_tree_filename_path,
     leaf_hash,
 )
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, MerkleBlobHint
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
-from chia.data_layer.util.merkle_blob import MerkleBlob, RawInternalMerkleNode, RawLeafMerkleNode
+from chia.data_layer.util.merkle_blob import RawInternalMerkleNode, RawLeafMerkleNode
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -792,7 +793,7 @@ async def test_proof_of_inclusion_by_hash_program(data_store: DataStore, store_i
 
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, store_id=store_id)
 
-    assert proof.as_program() == [
+    assert as_program(proof) == [
         b"\x04",
         [
             bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
@@ -833,7 +834,7 @@ async def test_proof_of_inclusion_by_hash_bytes(data_store: DataStore, store_id:
         b"\xe2\xa0\xaeX\xe2\x80\x80"
     )
 
-    assert bytes(proof.as_program()) == expected
+    assert bytes(as_program(proof)) == expected
 
 
 # @pytest.mark.anyio
@@ -1286,7 +1287,7 @@ async def write_tree_to_file_old_format(
     node_hash: bytes32,
     store_id: bytes32,
     writer: BinaryIO,
-    merkle_blob: Optional[MerkleBlob] = None,
+    merkle_blob: Optional[MerkleBlobHint] = None,
     hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
 ) -> None:
     if node_hash == bytes32.zeros:
