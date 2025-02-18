@@ -87,6 +87,7 @@ from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.lru_cache import LRUCache
 from chia.util.network import is_localhost
 from chia.util.path import path_from_root
 from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
@@ -164,6 +165,12 @@ class FullNode:
     bad_peak_cache: dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: Optional[asyncio.Task[None]] = None
     _bls_cache: BLSCache = dataclasses.field(default_factory=lambda: BLSCache(50000))
+    # these are transactions that we're not interested in having peers send us (right now).
+    # it could be transactions that we've already received and are currently
+    # validating (or that are queued up for validation). Or it can be transactions
+    # that failed validation.
+    # the key is the transaction ID and the value is the timestamp of when we added the entry
+    _recent_txs: LRUCache[bytes32, float] = dataclasses.field(default_factory=lambda: LRUCache(6000))
 
     @property
     def server(self) -> ChiaServer:
@@ -493,6 +500,13 @@ class FullNode:
         try:
             inc_status, err = await self.add_transaction(entry.transaction, entry.spend_name, peer, entry.test)
             entry.done.set((inc_status, err))
+            if err is None and inc_status == MempoolInclusionStatus.SUCCESS:
+                # if the transaction is valid, it was added to the mempool and
+                # we don't need to keep it in _recent_txs anymore
+                try:
+                    self._recent_txs.remove(entry.spend_name)
+                except KeyError:
+                    pass
         except asyncio.CancelledError:
             error_stack = traceback.format_exc()
             self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
@@ -918,7 +932,23 @@ class FullNode:
             synced = await self.synced()
             peak_height = self.blockchain.get_peak_height()
             if synced and peak_height is not None:
-                my_filter = self.mempool_manager.get_filter()
+                # any invalid transactions we've seen recently, we don't need
+                # to see again, so add those to the filter as well
+
+                # first remove transactions that are older than 10 minutes. We
+                # don't want to keep old transactions around indefinitely
+                now = time.monotonic()
+                oldest = self._recent_txs.peek()
+                while oldest is not None:
+                    tx, timestamp = oldest
+                    if timestamp + 600 < now:
+                        self._recent_txs.remove(tx)
+                        oldest = self._recent_txs.peek()
+                    else:
+                        break
+
+                extra: set[bytes32] = set(self._recent_txs.cache.keys())
+                my_filter = self.mempool_manager.get_filter_with_extra(extra)
                 mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
                 msg = make_msg(ProtocolMessageTypes.request_mempool_transactions, mempool_request)

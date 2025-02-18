@@ -240,6 +240,24 @@ class MempoolManager:
             item_inclusion_filter,
         )
 
+    def get_filter_with_extra(self, extra: set[bytes32]) -> bytes:
+        """
+        Returns the BIP158 filter for the transactions in the mempool plus
+        the specified transaction IDs
+        """
+        all_transactions = extra
+        byte_array_list = []
+        for key in all_transactions:
+            byte_array_list.append(bytearray(key))
+
+        for key in self.mempool.all_item_ids():
+            if key not in all_transactions:
+                all_transactions.add(key)
+                byte_array_list.append(bytearray(key))
+
+        tx_filter: PyBIP158 = PyBIP158(byte_array_list)
+        return bytes(tx_filter.GetEncoded())
+
     def get_filter(self) -> bytes:
         all_transactions: set[bytes32] = set()
         byte_array_list = []

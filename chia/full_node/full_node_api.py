@@ -276,6 +276,8 @@ class FullNodeAPI:
             await self.full_node.transaction_queue.put(
                 TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
             )
+            self.full_node._recent_txs.put(spend_name, time.monotonic())
+
         except TransactionQueueFull:
             pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
         return None
