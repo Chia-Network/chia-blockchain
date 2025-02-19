@@ -610,7 +610,11 @@ class WalletStateManager:
             await self.puzzle_store.add_derivation_paths(derivation_paths)
 
     async def _get_unused_derivation_record(
-        self, wallet_id: uint32, *, hardened: bool = False
+        self,
+        wallet_id: uint32,
+        *,
+        hardened: bool = False,
+        previous_result: Optional[GetUnusedDerivationRecordResult] = None,
     ) -> GetUnusedDerivationRecordResult:
         """
         Creates a puzzle hash for the given wallet, and then makes more puzzle hashes
@@ -619,6 +623,8 @@ class WalletStateManager:
         """
         try:
             async with self.db_wrapper.writer():
+                if previous_result is not None:
+                    await previous_result.commit(self)
                 create_more_puzzle_hashes_result: Optional[CreateMorePuzzleHashesResult] = None
                 # If we have no unused public keys, we will create new ones
                 unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
