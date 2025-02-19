@@ -181,6 +181,16 @@ class CreateMorePuzzleHashesResult:
             await wallet_state_manager.puzzle_store.set_used_up_to(uint32(self.unused - 1))
 
 
+@dataclasses.dataclass(frozen=True)
+class GetUnusedDerivationRecordResult:
+    record: DerivationRecord
+    create_more_puzzle_hashes_result: CreateMorePuzzleHashesResult
+
+    async def commit(self, wallet_state_manager: WalletStateManager) -> None:
+        await self.create_more_puzzle_hashes_result.commit(wallet_state_manager)
+        await wallet_state_manager.puzzle_store.set_used_up_to(self.record.index)
+
+
 class WalletStateManager:
     # Ruff thinks these are "mutable class attributes" that should be annotated with `ClassVar`
     # When this is a dataclass, these errors should go away
@@ -599,37 +609,50 @@ class WalletStateManager:
                 )
             await self.puzzle_store.add_derivation_paths(derivation_paths)
 
-    async def get_unused_derivation_record(self, wallet_id: uint32, *, hardened: bool = False) -> DerivationRecord:
+    async def _get_unused_derivation_record(
+        self, wallet_id: uint32, *, hardened: bool = False
+    ) -> GetUnusedDerivationRecordResult:
         """
         Creates a puzzle hash for the given wallet, and then makes more puzzle hashes
         for every wallet to ensure we always have more in the database. Never reusue the
         same public key more than once (for privacy).
         """
-        async with self.puzzle_store.lock:
-            # If we have no unused public keys, we will create new ones
-            unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
-            if unused is None:
-                self.log.debug("No unused paths, generate more ")
-                result = await self.create_more_puzzle_hashes()
-                await result.commit(self)
-                # Now we must have unused public keys
-                unused = await self.puzzle_store.get_unused_derivation_path()
-                assert unused is not None
+        try:
+            async with self.db_wrapper.writer():
+                create_more_puzzle_hashes_result: Optional[CreateMorePuzzleHashesResult] = None
+                # If we have no unused public keys, we will create new ones
+                unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+                if unused is None:
+                    self.log.debug("No unused paths, generate more ")
+                    create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes()
+                    await create_more_puzzle_hashes_result.commit(self)
+                    # Now we must have unused public keys
+                    unused = await self.puzzle_store.get_unused_derivation_path()
+                    assert unused is not None
 
-            self.log.debug("Fetching derivation record for: %s %s %s", unused, wallet_id, hardened)
-            record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(
-                unused, wallet_id, hardened
-            )
-            if record is None:
-                raise ValueError(f"Missing derivation '{unused}' for wallet id '{wallet_id}' (hardened={hardened})")
+                self.log.debug("Fetching derivation record for: %s %s %s", unused, wallet_id, hardened)
+                record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(
+                    unused, wallet_id, hardened
+                )
+                if record is None:
+                    raise ValueError(f"Missing derivation '{unused}' for wallet id '{wallet_id}' (hardened={hardened})")
 
-            # Set this key to used so we never use it again
-            await self.puzzle_store.set_used_up_to(record.index)
+                # Set this key to used so we never use it again
+                await self.puzzle_store.set_used_up_to(record.index)
 
-            # Create more puzzle hashes / keys
-            result = await self.create_more_puzzle_hashes()
-            await result.commit(self)
-            return record
+                # Create more puzzle hashes / keys
+                create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
+                    previous_result=create_more_puzzle_hashes_result
+                )
+                await create_more_puzzle_hashes_result.commit(self)
+                raise PurposefulAbort(GetUnusedDerivationRecordResult(record, create_more_puzzle_hashes_result))
+        except PurposefulAbort as e:
+            return cast(GetUnusedDerivationRecordResult, e.obj)
+
+    async def get_unused_derivation_record(self, wallet_id: uint32, *, hardened: bool = False) -> DerivationRecord:
+        result = await self._get_unused_derivation_record(wallet_id, hardened=hardened)
+        await result.commit(self)
+        return result.record
 
     async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:
         async with self.puzzle_store.lock:
