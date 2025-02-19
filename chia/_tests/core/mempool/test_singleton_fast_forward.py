@@ -692,3 +692,52 @@ async def test_mempool_items_immutability_on_ff() -> None:
         sb_filter = PyBIP158(bytearray(original_filter))
         items_not_in_sb_filter = sim_client.service.mempool_manager.get_items_not_in_filter(sb_filter)
         assert len(items_not_in_sb_filter) == 0
+
+
+@pytest.mark.anyio
+async def test_double_spend_ff_spend_no_latest_unspent() -> None:
+    """
+    This test covers the scenario where we receive a spend bundle with a
+    singleton fast forward spend that has currently no unspent coin.
+    """
+    test_amount = uint64(1337)
+    async with sim_and_client() as (sim, sim_client):
+        # Prepare a singleton spend
+        singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
+            sim, sim_client, True, start_amount=test_amount, singleton_amount=test_amount
+        )
+        singleton_name = singleton.name()
+        singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        sk = AugSchemeMPL.key_gen(b"9" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+        inner_conditions: list[list[Any]] = [
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, test_amount],
+        ]
+        singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
+        # Get its current latest unspent info
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton_puzzle_hash
+        )
+        assert unspent_lineage_info == UnspentLineageInfo(
+            coin_id=singleton_name,
+            coin_amount=test_amount,
+            parent_id=eve_coin_spend.coin.name(),
+            parent_amount=eve_coin_spend.coin.amount,
+            parent_parent_id=eve_coin_spend.coin.parent_coin_info,
+        )
+        # Let's remove this latest unspent coin from the coin store
+        async with sim_client.service.coin_store.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute("DELETE FROM coin_record WHERE coin_name = ?", (unspent_lineage_info.coin_id,))
+        # This singleton no longer has a latest unspent coin
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton_puzzle_hash
+        )
+        assert unspent_lineage_info is None
+        # Let's attempt to spend this singleton and get get it fast forwarded
+        status, error = await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=sig)
+        # It fails validation because it doesn't currently have a latest unspent
+        assert status == MempoolInclusionStatus.FAILED
+        assert error == Err.DOUBLE_SPEND

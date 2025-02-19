@@ -24,7 +24,10 @@ from chia.util.ints import uint32, uint64
 class EligibilityAndAdditions:
     is_eligible_for_dedup: bool
     spend_additions: list[Coin]
-    is_eligible_for_ff: bool
+    # This is the spend puzzle hash. It's set to `None` if the spend is not
+    # eligible for fast forward. When the spend is eligible, we use its puzzle
+    # hash to check if the singleton has an unspent coin or not.
+    ff_puzzle_hash: Optional[bytes32] = None
 
 
 def run_for_cost(
