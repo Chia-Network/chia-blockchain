@@ -3,10 +3,13 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Optional, cast, final
+from typing import TYPE_CHECKING, Callable, Optional, cast, final
+
+from chia_rs.chia_rs import G1Element
 
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import SigningResponse
@@ -54,6 +57,7 @@ class WalletActionConfig:
     additional_signing_responses: list[SigningResponse]
     extra_spends: list[WalletSpendBundle]
     tx_config: TXConfig
+    puzzle_for_pk: Callable[[G1Element], Program]
 
     def adjust_for_side_effects(self, side_effects: WalletSideEffects) -> WalletActionConfig:
         return replace(
@@ -77,10 +81,16 @@ async def new_wallet_action_scope(
     sign: Optional[bool] = None,
     additional_signing_responses: list[SigningResponse] = [],
     extra_spends: list[WalletSpendBundle] = [],
+    puzzle_for_pk: Optional[Callable[[G1Element], Program]] = None,
 ) -> AsyncIterator[WalletActionScope]:
+    if puzzle_for_pk is None:
+        puzzle_for_pk = wallet_state_manager.main_wallet.puzzle_for_pk
+    assert puzzle_for_pk is not None
     async with ActionScope.new_scope(
         WalletSideEffects,
-        WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config),
+        WalletActionConfig(
+            push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config, puzzle_for_pk
+        ),
     ) as self:
         self = cast(WalletActionScope, self)
         async with self.use() as interface:
