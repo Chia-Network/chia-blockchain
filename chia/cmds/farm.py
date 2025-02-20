@@ -35,7 +35,7 @@ def farm_cmd() -> None:
     "-hp",
     "--harvester-rpc-port",
     help=(
-        "Set the port where the Harvester is hosting the RPC interfaceSee the rpc_port under harvester in config.yaml"
+        "Set the port where the Harvester is hosting the RPC interface. See the rpc_port under harvester in config.yaml"
     ),
     type=int,
     default=None,
