@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import copy
 import itertools
 import logging
 from collections import defaultdict
@@ -398,12 +397,12 @@ class DataStore:
         read_only: bool = False,
         update_cache: bool = True,
     ) -> MerkleBlobHint:
+        # print(f".get_merkle_blob() getting blob for: {root_hash}")
         if root_hash is None:
             return chia_rs.datalayer.MerkleBlob(blob=bytearray())
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
-            # return existing_blob if read_only else copy.deepcopy(existing_blob)
             return existing_blob if read_only else chia_rs.datalayer.MerkleBlob(existing_blob.blob)
 
         async with self.db_wrapper.reader() as reader:
@@ -422,7 +421,7 @@ class DataStore:
             merkle_blob = chia_rs.datalayer.MerkleBlob(blob=bytearray(row["blob"]))
 
             if update_cache:
-                self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+                self.recent_merkle_blobs.put(root_hash, chia_rs.datalayer.MerkleBlob(merkle_blob.blob))
 
             return merkle_blob
 
@@ -451,7 +450,6 @@ class DataStore:
                     (root_hash, merkle_blob.blob, store_id),
                 )
             if update_cache:
-                # self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
                 self.recent_merkle_blobs.put(root_hash, chia_rs.datalayer.MerkleBlob(merkle_blob.blob))
 
         return await self._insert_root(store_id, root_hash, status)
@@ -1113,6 +1111,11 @@ class DataStore:
     async def get_terminal_node_from_kid(
         self, merkle_blob: MerkleBlobHint, kid: KeyId, store_id: bytes32
     ) -> TerminalNode:
+        # print()
+        # print(rf"/ ----- get_terminal_node_from_kid() (length: {len(merkle_blob)})")
+        # for k, i in merkle_blob.key_to_index.items():
+        #     print(f"k/i: {k} -- {i}")
+        # print(r"\ -----")
         index = merkle_blob.get_key_index(kid)
         raw_node = merkle_blob.get_raw_node(index)
         assert isinstance(raw_node, LeafTypes)

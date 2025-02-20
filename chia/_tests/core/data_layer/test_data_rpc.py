@@ -417,20 +417,26 @@ async def test_keys_values_ancestors(
         assert res is not None
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+        reference_hashes = []
         key1 = b"a"
         value1 = b"\x01\x02"
+        reference_hashes.append(leaf_hash(key=key1, value=value1))
         changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
+        reference_hashes.append(leaf_hash(key=key2, value=value2))
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
         key3 = b"c"
         value3 = b"\x04\x05"
+        reference_hashes.append(leaf_hash(key=key3, value=value3))
         changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
         key4 = b"d"
         value4 = b"\x06\x03"
+        reference_hashes.append(leaf_hash(key=key4, value=value4))
         changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
         key5 = b"e"
         value5 = b"\x07\x01"
+        reference_hashes.append(leaf_hash(key=key5, value=value5))
         changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
@@ -448,7 +454,7 @@ async def test_keys_values_ancestors(
         assert len(keys["keys"]) == len(dic)
         for key in keys["keys"]:
             assert key in dic
-        val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
+        val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": reference_hashes[3].hex()})
         # todo better assertions for get_ancestors result
         assert len(val["ancestors"]) == 1
         res_before = await data_rpc_api.get_root({"id": store_id.hex()})
@@ -1019,7 +1025,7 @@ async def process_for_data_layer_keys(
             value = await data_layer.get_value(store_id=store_id, key=expected_key)
         except Exception as e:
             # TODO: more specific exceptions...
-            if "Key not found" not in str(e):
+            if "Key not found" not in str(e) and "unknown key" not in str(e):
                 raise  # pragma: no cover
         else:
             if expected_value is None or value == expected_value:
@@ -3437,7 +3443,9 @@ async def test_unsubmitted_batch_update(
             count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
-        assert keys_values == prev_keys_values
+        assert {item["key"]: item for item in keys_values["keys_values"]} == {
+            item["key"]: item for item in prev_keys_values["keys_values"]
+        }
 
         pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
         assert pending_root is not None

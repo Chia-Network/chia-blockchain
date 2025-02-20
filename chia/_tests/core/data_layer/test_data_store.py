@@ -14,6 +14,7 @@ from random import Random
 from typing import Any, BinaryIO, Callable, Optional
 
 import aiohttp
+import chia_rs.datalayer
 import pytest
 from chia_rs.datalayer import TreeIndex
 
@@ -25,8 +26,6 @@ from chia.data_layer.data_layer_util import (
     InternalNode,
     Node,
     OperationType,
-    ProofOfInclusion,
-    ProofOfInclusionLayer,
     Root,
     SerializedNode,
     ServerInfo,
@@ -40,10 +39,9 @@ from chia.data_layer.data_layer_util import (
     get_full_tree_filename_path,
     leaf_hash,
 )
-from chia.data_layer.data_store import DataStore, MerkleBlobHint
+from chia.data_layer.data_store import DataStore, InternalTypes, LeafTypes, MerkleBlobHint
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
-from chia.data_layer.util.merkle_blob import RawInternalMerkleNode, RawLeafMerkleNode
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -493,8 +491,8 @@ async def test_insert_batch_reference_and_side(
     nodes_with_indexes = merkle_blob.get_nodes_with_indexes()
     nodes = [pair[1] for pair in nodes_with_indexes]
     assert len(nodes) == 3
-    assert isinstance(nodes[1], RawLeafMerkleNode)
-    assert isinstance(nodes[2], RawLeafMerkleNode)
+    assert isinstance(nodes[1], LeafTypes)
+    assert isinstance(nodes[2], LeafTypes)
     left_terminal_node = await data_store.get_terminal_node(nodes[1].key, nodes[1].value, store_id)
     right_terminal_node = await data_store.get_terminal_node(nodes[2].key, nodes[2].value, store_id)
     if side == Side.LEFT:
@@ -751,24 +749,24 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, store_id: bytes
     await _debug_dump(db=data_store.db_wrapper)
 
     expected_layers = [
-        ProofOfInclusionLayer(
+        chia_rs.datalayer.ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
             other_hash=bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
             combined_hash=bytes32.fromhex("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),
         ),
-        ProofOfInclusionLayer(
+        chia_rs.datalayer.ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
             other_hash=bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
             combined_hash=bytes32.fromhex("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),
         ),
-        ProofOfInclusionLayer(
+        chia_rs.datalayer.ProofOfInclusionLayer(
             other_hash_side=Side.LEFT,
             other_hash=bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
             combined_hash=bytes32.fromhex("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
         ),
     ]
 
-    assert proof == ProofOfInclusion(node_hash=node.hash, layers=expected_layers)
+    assert proof == chia_rs.datalayer.ProofOfInclusion(node_hash=node.hash, layers=expected_layers)
 
 
 @pytest.mark.anyio
@@ -781,7 +779,7 @@ async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, st
 
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, store_id=store_id)
 
-    assert proof == ProofOfInclusion(node_hash=node.hash, layers=[])
+    assert proof == chia_rs.datalayer.ProofOfInclusion(node_hash=node.hash, layers=[])
 
 
 @pytest.mark.anyio
@@ -1307,13 +1305,13 @@ async def write_tree_to_file_old_format(
     raw_node = merkle_blob.get_raw_node(raw_index)
 
     to_write = b""
-    if isinstance(raw_node, RawInternalMerkleNode):
+    if isinstance(raw_node, InternalTypes):
         left_hash = merkle_blob.get_hash_at_index(raw_node.left)
         right_hash = merkle_blob.get_hash_at_index(raw_node.right)
         await write_tree_to_file_old_format(data_store, root, left_hash, store_id, writer, merkle_blob, hash_to_index)
         await write_tree_to_file_old_format(data_store, root, right_hash, store_id, writer, merkle_blob, hash_to_index)
         to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
-    elif isinstance(raw_node, RawLeafMerkleNode):
+    elif isinstance(raw_node, LeafTypes):
         node = await data_store.get_terminal_node(raw_node.key, raw_node.value, store_id)
         to_write = bytes(SerializedNode(True, node.key, node.value))
     else:
@@ -1721,7 +1719,7 @@ async def test_insert_from_delta_file(
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + max_full_files - 1
     kv = await data_store.get_keys_values(store_id=store_id)
-    assert kv == kv_before
+    assert set(kv) == set(kv_before)
 
 
 @pytest.mark.anyio
@@ -1759,7 +1757,7 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                 if random.randint(0, 4) == 0:
                     batch = [{"action": "delete", "key": key}]
                     await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
-                    with pytest.raises(KeyNotFoundError, match=f"Key not found: {key.hex()}"):
+                    with pytest.raises((KeyNotFoundError, chia_rs.datalayer.UnknownKeyError)):
                         await raw_data_store.get_node_by_key(store_id=store_id, key=key)
 
 
@@ -1828,7 +1826,7 @@ async def test_insert_from_delta_file_correct_file_exists(
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + 2  # 1 full and 6 deltas
     kv = await data_store.get_keys_values(store_id=store_id)
-    assert kv == kv_before
+    assert set(kv) == set(kv_before)
 
 
 @pytest.mark.anyio
@@ -2043,7 +2041,7 @@ async def test_migration(
     data_store.recent_merkle_blobs = LRUCache(capacity=128)
     assert await data_store.get_keys_values(store_id=store_id) == []
     await data_store.migrate_db(tmp_path)
-    assert await data_store.get_keys_values(store_id=store_id) == kv_before
+    assert set(await data_store.get_keys_values(store_id=store_id)) == set(kv_before)
 
 
 @pytest.mark.anyio
