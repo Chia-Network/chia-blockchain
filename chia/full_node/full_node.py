@@ -779,7 +779,11 @@ class FullNode:
                         full_node_protocol.RequestBlock(target_peak.height, False),
                         timeout=10,
                     )
-                    if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
+                    if (
+                        target_peak_response is not None
+                        and isinstance(target_peak_response, RespondBlock)
+                        and target_peak_response.block.header_hash == target_peak.header_hash
+                    ):
                         self.sync_store.peer_has_block(
                             target_peak.header_hash,
                             peer.peer_node_id,
@@ -1023,7 +1027,11 @@ class FullNode:
                     )
                 )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
-                if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
+                if (
+                    target_peak_response is not None
+                    and isinstance(target_peak_response, RespondBlock)
+                    and target_peak_response.block.header_hash == target_peak.header_hash
+                ):
                     self.sync_store.peer_has_block(
                         target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
                     )
