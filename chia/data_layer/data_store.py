@@ -306,7 +306,7 @@ class DataStore:
                     elif isinstance(node, InternalTypes):
                         internal_nodes[bytes32(node.hash)] = (index_to_hash[node.left], index_to_hash[node.right])
 
-        merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
+        merkle_blob = chia_rs.datalayer.MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
 
