@@ -7,18 +7,7 @@ import inspect
 import pathlib
 import sys
 from dataclasses import MISSING, dataclass, field, fields
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Optional,
-    Protocol,
-    Union,
-    final,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+from typing import Any, Callable, ClassVar, Optional, Protocol, Union, final, get_args, get_origin, get_type_hints
 
 import click
 from typing_extensions import dataclass_transform

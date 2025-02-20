@@ -30,15 +30,15 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_PROPOSAL_VALIDATOR_MOD_HASH,
     DAO_TREASURY_MOD,
     DAO_TREASURY_MOD_HASH,
+)
+from chia.wallet.dao_wallet.dao_utils import DAO_UPDATE_PROPOSAL_MOD as DAO_UPDATE_MOD
+from chia.wallet.dao_wallet.dao_utils import (
     P2_SINGLETON_AGGREGATOR_MOD,
     P2_SINGLETON_MOD,
     SPEND_P2_SINGLETON_MOD,
     curry_singleton,
     get_p2_singleton_puzhash,
     get_treasury_puzzle,
-)
-from chia.wallet.dao_wallet.dao_utils import (
-    DAO_UPDATE_PROPOSAL_MOD as DAO_UPDATE_MOD,
 )
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH
 from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD as SINGLETON_MOD
