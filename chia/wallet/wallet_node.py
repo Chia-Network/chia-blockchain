@@ -14,11 +14,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast, overload
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
 from chia.consensus.blockchain import AddBlockResult
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight

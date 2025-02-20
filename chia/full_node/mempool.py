@@ -9,9 +9,8 @@ from enum import Enum
 from time import monotonic
 from typing import Callable, Optional
 
-from chia_rs import AugSchemeMPL, Coin, G2Element, solution_generator_backrefs
+from chia_rs import AugSchemeMPL, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
 
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface

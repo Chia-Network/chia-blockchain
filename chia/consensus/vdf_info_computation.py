@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle

@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Optional, Union
 
-from chia.consensus.constants import ConsensusConstants
+from chia_rs import ConsensusConstants
+
 from chia.protocols import timelord_protocol
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.types import Chain, StateType

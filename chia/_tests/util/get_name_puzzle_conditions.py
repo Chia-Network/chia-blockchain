@@ -5,13 +5,13 @@ import logging
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     MEMPOOL_MODE,
+    ConsensusConstants,
     G2Element,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
 
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.generator_types import BlockGenerator
 from chia.util.errors import Err

@@ -11,8 +11,10 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, Optional, Union
 
+from chia_rs import ConsensusConstants
+
 from chia.cmds.init_funcs import init
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service

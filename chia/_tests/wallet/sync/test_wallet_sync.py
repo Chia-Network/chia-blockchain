@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
-from chia_rs import G2Element, confirm_not_included_already_hashed
+from chia_rs import ConsensusConstants, G2Element, confirm_not_included_already_hashed
 from chiabip158 import PyBIP158
 from colorlog import getLogger
 
@@ -24,7 +24,6 @@ from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.weight_proof import WeightProofHandler

@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from chia_rs import ConsensusConstants
 
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.pot_iterations import calculate_iterations_quality

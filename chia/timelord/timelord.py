@@ -15,9 +15,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs import ConsensusConstants
 from chiavdf import create_discriminant, prove
 
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes

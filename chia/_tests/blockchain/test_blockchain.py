@@ -10,7 +10,7 @@ from dataclasses import replace
 from typing import Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, MerkleSet
+from chia_rs import AugSchemeMPL, ConsensusConstants, G2Element, MerkleSet
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
@@ -29,7 +29,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_generator import get_block_generator

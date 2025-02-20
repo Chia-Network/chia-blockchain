@@ -13,11 +13,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
-from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.data_layer.singleton_record import SingletonRecord

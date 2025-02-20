@@ -6,14 +6,20 @@ from collections.abc import Awaitable, Collection
 from typing import Any, Callable, ClassVar, Optional
 
 import pytest
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, AugSchemeMPL, G2Element, get_conditions_from_spendbundle
+from chia_rs import (
+    ELIGIBLE_FOR_DEDUP,
+    ELIGIBLE_FOR_FF,
+    AugSchemeMPL,
+    ConsensusConstants,
+    G2Element,
+    get_conditions_from_spendbundle,
+)
 from chiabip158 import PyBIP158
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks

@@ -14,9 +14,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
 
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver

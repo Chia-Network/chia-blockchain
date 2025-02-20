@@ -6,14 +6,13 @@ from collections.abc import Awaitable, Collection
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
-from chia_rs import SpendBundleConditions, compute_merkle_set_root
+from chia_rs import ConsensusConstants, SpendBundleConditions, compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32

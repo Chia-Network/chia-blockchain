@@ -6,13 +6,13 @@ from collections.abc import AsyncIterator
 from typing import Optional
 
 import pytest
+from chia_rs import ConsensusConstants
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.util.ints import uint8, uint32
 
 
