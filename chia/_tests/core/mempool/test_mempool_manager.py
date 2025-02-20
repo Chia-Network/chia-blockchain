@@ -102,6 +102,10 @@ async def zero_calls_get_coin_records(coin_ids: Collection[bytes32]) -> list[Coi
     return []
 
 
+async def zero_calls_get_unspent_lineage_info_for_puzzle_hash(_puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+    assert False  # pragma no cover
+
+
 async def get_coin_records_for_test_coins(coin_ids: Collection[bytes32]) -> list[CoinRecord]:
     test_coin_records = {
         TEST_COIN_ID: TEST_COIN_RECORD,
@@ -139,7 +143,12 @@ async def instantiate_mempool_manager(
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: Optional[uint64] = None,
 ) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_records, constants, max_tx_clvm_cost=max_tx_clvm_cost)
+    mempool_manager = MempoolManager(
+        get_coin_records,
+        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
+        constants,
+        max_tx_clvm_cost=max_tx_clvm_cost,
+    )
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
     invariant_check_mempool(mempool_manager.mempool)
@@ -426,18 +435,18 @@ def make_bundle_spends_map_and_fee(
         eligibility_and_additions[coin_id] = EligibilityAndAdditions(
             is_eligible_for_dedup=bool(spend.flags & ELIGIBLE_FOR_DEDUP),
             spend_additions=spend_additions,
-            is_eligible_for_ff=bool(spend.flags & ELIGIBLE_FOR_FF),
+            ff_puzzle_hash=bytes32(spend.puzzle_hash) if bool(spend.flags & ELIGIBLE_FOR_FF) else None,
         )
     for coin_spend in spend_bundle.coin_spends:
         coin_id = coin_spend.coin.name()
         removals_amount += coin_spend.coin.amount
         eligibility_info = eligibility_and_additions.get(
-            coin_id, EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], is_eligible_for_ff=False)
+            coin_id, EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None)
         )
         bundle_coin_spends[coin_id] = BundleCoinSpend(
             coin_spend=coin_spend,
             eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
-            eligible_for_fast_forward=eligibility_info.is_eligible_for_ff,
+            eligible_for_fast_forward=eligibility_info.ff_puzzle_hash is not None,
             additions=eligibility_info.spend_additions,
         )
     fee = uint64(removals_amount - additions_amount)

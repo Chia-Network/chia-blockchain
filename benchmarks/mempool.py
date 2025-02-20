@@ -166,7 +166,12 @@ async def run_mempool_benchmark() -> None:
         else:
             print("\n== Multi-threaded")
 
-        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(
+            get_coin_records,
+            get_unspent_lineage_info_for_puzzle_hash,
+            DEFAULT_CONSTANTS,
+            single_threaded=single_threaded,
+        )
 
         height = start_height
         rec = fake_block_record(height, timestamp)
@@ -196,7 +201,12 @@ async def run_mempool_benchmark() -> None:
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
 
-        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(
+            get_coin_records,
+            get_unspent_lineage_info_for_puzzle_hash,
+            DEFAULT_CONSTANTS,
+            single_threaded=single_threaded,
+        )
 
         height = start_height
         rec = fake_block_record(height, timestamp)

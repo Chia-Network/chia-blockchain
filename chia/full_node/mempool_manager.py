@@ -137,6 +137,7 @@ class MempoolManager:
     constants: ConsensusConstants
     seen_bundle_hashes: dict[bytes32, bytes32]
     get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]]
+    get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]]
     nonzero_fee_minimum_fpc: int
     mempool_max_total_cost: int
     # a cache of MempoolItems that conflict with existing items in the pool
@@ -153,6 +154,7 @@ class MempoolManager:
     def __init__(
         self,
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         consensus_constants: ConsensusConstants,
         *,
         single_threaded: bool = False,
@@ -164,6 +166,7 @@ class MempoolManager:
         self.seen_bundle_hashes: dict[bytes32, bytes32] = {}
 
         self.get_coin_records = get_coin_records
+        self.get_unspent_lineage_info_for_puzzle_hash = get_unspent_lineage_info_for_puzzle_hash
 
         # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
@@ -371,6 +374,7 @@ class MempoolManager:
             spend_name,
             first_added_height,
             get_coin_records,
+            self.get_unspent_lineage_info_for_puzzle_hash,
         )
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
@@ -401,6 +405,7 @@ class MempoolManager:
         spend_name: bytes32,
         first_added_height: uint32,
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
     ) -> tuple[Optional[Err], Optional[MempoolItem], list[bytes32]]:
         """
         Validates new_spend with the given NPCResult, and spend_name, and the current mempool. The mempool should
@@ -445,7 +450,7 @@ class MempoolManager:
             eligibility_and_additions[coin_id] = EligibilityAndAdditions(
                 is_eligible_for_dedup=is_eligible_for_dedup,
                 spend_additions=spend_additions,
-                is_eligible_for_ff=is_eligible_for_ff,
+                ff_puzzle_hash=bytes32(spend.puzzle_hash) if is_eligible_for_ff else None,
             )
         removal_names_from_coin_spends: set[bytes32] = set()
         fast_forward_coin_ids: set[bytes32] = set()
@@ -455,14 +460,20 @@ class MempoolManager:
             removal_names_from_coin_spends.add(coin_id)
             eligibility_info = eligibility_and_additions.get(
                 coin_id,
-                EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], is_eligible_for_ff=False),
+                EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
-            mark_as_fast_forward = eligibility_info.is_eligible_for_ff and supports_fast_forward(coin_spend)
+            mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
+            if mark_as_fast_forward:
+                # Make sure the fast forward spend still has a version that is
+                # still unspent, because if the singleton has been melted, the
+                # fast forward spend will never become valid.
+                assert eligibility_info.ff_puzzle_hash is not None
+                if await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash) is None:
+                    return Err.DOUBLE_SPEND, None, []
+                fast_forward_coin_ids.add(coin_id)
             # We are now able to check eligibility of both dedup and fast forward
             if not (eligibility_info.is_eligible_for_dedup or mark_as_fast_forward):
                 non_eligible_coin_ids.append(coin_id)
-            if mark_as_fast_forward:
-                fast_forward_coin_ids.add(coin_id)
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
