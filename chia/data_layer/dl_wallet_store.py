@@ -78,9 +78,7 @@ class DataLayerStore:
             )
 
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS mirror_confirmations("
-                "coin_id blob PRIMARY KEY,"
-                "confirmed_at_height int)"
+                "CREATE TABLE IF NOT EXISTS mirror_confirmations(coin_id blob PRIMARY KEY,confirmed_at_height int)"
             )
 
             await conn.execute(

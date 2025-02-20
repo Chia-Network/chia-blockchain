@@ -191,8 +191,7 @@ class NewProofOfSpaceCase:
             plot_challenge=bytes32.fromhex("7580e4c366dc2c94c37ce44943f9629a3cd6e027d7b24cd014adeaa578d4b0a2"),
             plot_public_key=G1Element.from_bytes(
                 bytes.fromhex(
-                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3e"
-                    "d69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
+                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3ed69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
                 )
             ),
             pool_public_key=None,

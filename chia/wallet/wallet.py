@@ -607,8 +607,7 @@ class Wallet:
                 if fingerprint_as_int not in pk_lookup:
                     if not partial_allowed:
                         raise ValueError(
-                            "No pubkey found (or path hinted to) for "
-                            f"fingerprint {int.from_bytes(fingerprint, 'big')}"
+                            f"No pubkey found (or path hinted to) for fingerprint {int.from_bytes(fingerprint, 'big')}"
                         )
                     else:
                         aggregate_responses_at_end = False

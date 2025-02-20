@@ -463,8 +463,7 @@ class WSChiaConnection:
 
             response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)
             self.log.debug(
-                f"Time taken to process {message_type} from {self.peer_node_id} is "
-                f"{time.time() - start_time} seconds"
+                f"Time taken to process {message_type} from {self.peer_node_id} is {time.time() - start_time} seconds"
             )
 
             if response is not None:
