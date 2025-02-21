@@ -29,3 +29,12 @@ class LRUCache(Generic[K, V]):
 
     def remove(self, key: K) -> None:
         self.cache.pop(key)
+
+    def peek(self) -> Optional[tuple[K, V]]:
+        """
+        Return the oldest (key, value)-pair in the cache, or None if the cache is empty
+        """
+        try:
+            return next(self.cache.items().__iter__())
+        except StopIteration:
+            return None
