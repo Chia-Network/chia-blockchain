@@ -25,6 +25,7 @@ from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_po
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -270,6 +271,8 @@ async def submit_tx_with_confirmation(
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_record.name))
                 return None
+    except ResponseFailureError:
+        raise
     except Exception as e:
         print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
 
