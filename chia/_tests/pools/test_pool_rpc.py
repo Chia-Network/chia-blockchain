@@ -14,12 +14,11 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
-from chia_rs import G1Element
+from chia_rs import ConsensusConstants, G1Element
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches

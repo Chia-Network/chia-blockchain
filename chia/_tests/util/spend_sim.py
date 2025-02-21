@@ -10,11 +10,16 @@ from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar
 
 import anyio
-from chia_rs import DONT_VALIDATE_SIGNATURE, G2Element, get_flags_for_height_and_constants, run_block_generator2
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    ConsensusConstants,
+    G2Element,
+    get_flags_for_height_and_constants,
+    run_block_generator2,
+)
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore

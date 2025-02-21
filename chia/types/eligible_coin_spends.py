@@ -5,10 +5,9 @@ import dataclasses
 from collections.abc import Awaitable
 from typing import Callable, Optional
 
-from chia_rs import fast_forward_singleton, get_conditions_from_spendbundle
+from chia_rs import ConsensusConstants, fast_forward_singleton, get_conditions_from_spendbundle
 
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32

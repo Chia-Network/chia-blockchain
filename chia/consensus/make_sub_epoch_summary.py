@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 from typing import Optional, Union
 
+from chia_rs import ConsensusConstants
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import (
     _get_next_difficulty,

@@ -5,12 +5,12 @@ from typing import Optional
 
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
 from chia_rs import (
+    ConsensusConstants,
     get_flags_for_height_and_constants,
     run_chia_program,
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
 
-from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32

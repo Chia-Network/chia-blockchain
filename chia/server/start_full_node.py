@@ -6,8 +6,10 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.apis import ApiProtocolRegistry
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI

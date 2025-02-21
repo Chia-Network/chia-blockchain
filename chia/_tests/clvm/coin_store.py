@@ -5,8 +5,9 @@ from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from typing import Optional
 
+from chia_rs import ConsensusConstants
+
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks

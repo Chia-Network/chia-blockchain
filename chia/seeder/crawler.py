@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
 
 import aiosqlite
+from chia_rs import ConsensusConstants
 
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondPeers

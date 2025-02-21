@@ -4,10 +4,9 @@ import logging
 from typing import Callable, Optional
 
 import pytest
-from chia_rs import Coin, G2Element
+from chia_rs import Coin, ConsensusConstants, G2Element
 
 from chia._tests.util.spend_sim import SimClient, SpendSim, sim_and_client
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.types.blockchain_format.program import Program

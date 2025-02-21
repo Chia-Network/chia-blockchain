@@ -10,12 +10,11 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import ConsensusConstants, additions_and_removals, get_flags_for_height_and_constants
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain

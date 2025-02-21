@@ -10,12 +10,17 @@ from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Optional
 
-from chia_rs import SpendBundleConditions, get_flags_for_height_and_constants, run_block_generator, run_block_generator2
+from chia_rs import (
+    ConsensusConstants,
+    SpendBundleConditions,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+)
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.get_block_generator import get_block_generator
