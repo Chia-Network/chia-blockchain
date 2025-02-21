@@ -5,9 +5,10 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 import aiosqlite
+import chia_rs.datalayer
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
@@ -23,6 +24,9 @@ from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
     from chia.wallet.wallet_node import WalletNode
+
+ProofOfInclusionHint = Union["ProofOfInclusion", chia_rs.datalayer.ProofOfInclusion]
+ProofOfInclusionLayerHint = Union["ProofOfInclusionLayer", chia_rs.datalayer.ProofOfInclusionLayer]
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
@@ -187,7 +191,7 @@ class NodeType(IntEnum):
 
 
 @final
-class Side(IntEnum):
+class Side(uint8, Enum):
     LEFT = 0
     RIGHT = 1
 
@@ -278,7 +282,31 @@ class ProofOfInclusionLayer:
         return cls(other_hash_side=other_hash_side, other_hash=other_hash, combined_hash=combined_hash)
 
 
-other_side_to_bit = {Side.LEFT: 1, Side.RIGHT: 0}
+def sibling_sides_integer(proof: ProofOfInclusionHint) -> int:
+    # casting to workaround this
+    # class C: ...
+    # class D: ...
+    #
+    # m: list[C | D]
+    # reveal_type(enumerate(m))
+    # # main.py:5: note: Revealed type is "builtins.enumerate[Union[__main__.C, __main__.D]]"
+    #
+    # n: list[C] | list[D]
+    # reveal_type(enumerate(n))
+    # main.py:9: note: Revealed type is "builtins.enumerate[builtins.object]"
+
+    return sum(
+        (1 << index if cast(ProofOfInclusionLayerHint, layer).other_hash_side == Side.LEFT else 0)
+        for index, layer in enumerate(proof.layers)
+    )
+
+
+def sibling_hashes(proof: ProofOfInclusionHint) -> list[bytes32]:
+    return [layer.other_hash for layer in proof.layers]
+
+
+def as_program(proof: ProofOfInclusionHint) -> Program:
+    return Program.to([sibling_sides_integer(proof), sibling_hashes(proof)])
 
 
 @dataclass(frozen=True)
@@ -292,15 +320,6 @@ class ProofOfInclusion:
             return self.node_hash
 
         return self.layers[-1].combined_hash
-
-    def sibling_sides_integer(self) -> int:
-        return sum(other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers))
-
-    def sibling_hashes(self) -> list[bytes32]:
-        return [layer.other_hash for layer in self.layers]
-
-    def as_program(self) -> Program:
-        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])
 
     def valid(self) -> bool:
         existing_hash = self.node_hash

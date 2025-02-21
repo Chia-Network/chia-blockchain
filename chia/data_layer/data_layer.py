@@ -34,6 +34,7 @@ from chia.data_layer.data_layer_util import (
     ProofOfInclusionLayer,
     Root,
     ServerInfo,
+    Side,
     Status,
     StoreProofs,
     Subscription,
@@ -44,6 +45,8 @@ from chia.data_layer.data_layer_util import (
     get_delta_filename_path,
     get_full_tree_filename_path,
     leaf_hash,
+    sibling_hashes,
+    sibling_sides_integer,
     unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
@@ -1065,7 +1068,7 @@ class DataLayer:
                         node_hash=proof_of_inclusion.node_hash,
                         layers=tuple(
                             Layer(
-                                other_hash_side=layer.other_hash_side,
+                                other_hash_side=Side(layer.other_hash_side),
                                 other_hash=layer.other_hash,
                                 combined_hash=layer.combined_hash,
                             )
@@ -1164,12 +1167,12 @@ class DataLayer:
                         for layer in proof.layers
                     ]
                     proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=layers)
-                    sibling_sides_integer = proof_of_inclusion.sibling_sides_integer()
+                    sibling_sides_integer_value = sibling_sides_integer(proof_of_inclusion)
                     proofs_of_inclusion.append(
                         (
                             root.hex(),
-                            str(sibling_sides_integer),
-                            ["0x" + sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
+                            str(sibling_sides_integer_value),
+                            ["0x" + sibling_hash.hex() for sibling_hash in sibling_hashes(proof_of_inclusion)],
                         )
                     )
 
