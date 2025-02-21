@@ -4,7 +4,6 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
-# todo input assertions for all rpc's
 from chia_rs.sized_ints import uint8, uint64
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
