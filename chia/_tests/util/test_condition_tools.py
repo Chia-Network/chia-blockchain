@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
@@ -13,7 +14,6 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendCondi
 from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 
 H1 = bytes32(b"a" * 32)
 H2 = bytes32(b"b" * 32)

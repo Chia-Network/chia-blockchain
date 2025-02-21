@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 import pytest
+from chia_rs.sized_ints import uint32
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
@@ -13,7 +14,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
-from chia.util.ints import uint32
 
 
 @dataclass

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
+from chia_rs.sized_ints import uint32
+
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode, PeakPostProcessingResult
@@ -10,7 +12,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.batches import to_batches
-from chia.util.ints import uint32
 
 
 async def add_blocks_in_batches(

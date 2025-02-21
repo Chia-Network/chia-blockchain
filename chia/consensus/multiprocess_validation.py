@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from chia_rs import SpendBundleConditions, get_flags_for_height_and_constants, run_block_generator, run_block_generator2
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -30,7 +31,6 @@ from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)

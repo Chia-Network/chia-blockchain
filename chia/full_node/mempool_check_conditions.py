@@ -9,6 +9,7 @@ from chia_rs import (
     run_chia_program,
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.coin import Coin
@@ -20,7 +21,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 

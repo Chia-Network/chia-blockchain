@@ -6,12 +6,12 @@ from typing import Optional
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint8, uint32
 
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace, passes_plot_filter, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
-from chia.util.ints import uint8, uint32
 
 
 @dataclass

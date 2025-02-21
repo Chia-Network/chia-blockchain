@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.transaction_record import TransactionRecord

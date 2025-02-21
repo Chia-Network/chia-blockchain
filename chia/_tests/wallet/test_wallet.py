@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
@@ -22,7 +23,6 @@ from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.types.spend_bundle import estimate_fees
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import Err
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes, CreateCoin
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings

@@ -4,6 +4,9 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
+# todo input assertions for all rpc's
+from chia_rs.sized_ints import uint8, uint64
+
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
     CancelOfferRequest,
@@ -33,9 +36,6 @@ from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.rpc.util import marshal as streamable_marshal
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-
-# todo input assertions for all rpc's
-from chia.util.ints import uint8, uint64
 from chia.util.streamable import recurse_jsonify
 from chia.util.ws_message import WsRpcMessage
 from chia.wallet.trading.offer import Offer as TradingOffer

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 
 
 def coin_serialize(amount: uint64, clvm_serialize: bytes, full_serialize: bytes):

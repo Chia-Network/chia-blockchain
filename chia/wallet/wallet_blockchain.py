@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
+from chia_rs.sized_ints import uint32, uint64
+
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult
@@ -14,7 +16,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 

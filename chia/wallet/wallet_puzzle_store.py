@@ -5,10 +5,10 @@ import logging
 from typing import Optional
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType

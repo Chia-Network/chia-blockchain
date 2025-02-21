@@ -13,6 +13,7 @@ from unittest.mock import patch
 import aiosqlite
 import pytest
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -85,7 +86,6 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle

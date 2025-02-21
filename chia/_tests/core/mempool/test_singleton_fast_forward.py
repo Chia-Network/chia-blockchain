@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint64
 from chiabip158 import PyBIP158
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
@@ -33,7 +34,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
 from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
 

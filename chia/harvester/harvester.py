@@ -10,6 +10,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs.sized_ints import uint32
 from typing_extensions import Literal
 
 from chia.consensus.constants import ConsensusConstants
@@ -40,7 +41,6 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.cpu import available_logical_cores
-from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from chia_rs.sized_ints import uint8, uint32, uint64
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
@@ -16,7 +18,6 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64
 
 
 def block_to_block_record(

@@ -4,13 +4,13 @@ from __future__ import annotations
 from secrets import token_bytes
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
-from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.singleton_record import SingletonRecord

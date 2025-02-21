@@ -6,6 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack, final
 
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
@@ -41,7 +42,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER

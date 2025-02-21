@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from chia_rs.sized_ints import uint32
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.ints import uint32
 
 
 @dataclass(frozen=True)

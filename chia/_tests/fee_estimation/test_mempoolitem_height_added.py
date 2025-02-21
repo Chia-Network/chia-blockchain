@@ -5,6 +5,7 @@ from typing import Callable, Optional
 
 import pytest
 from chia_rs import Coin, G2Element
+from chia_rs.sized_ints import uint8, uint64
 
 from chia._tests.util.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.constants import ConsensusConstants
@@ -14,7 +15,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint64
 
 log = logging.getLogger(__name__)
 

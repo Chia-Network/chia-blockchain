@@ -18,6 +18,7 @@ from chia_rs import (
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from clvm.casts import int_to_bytes
 from packaging.version import Version
 
@@ -88,7 +89,6 @@ from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.task_referencer import create_referenced_task

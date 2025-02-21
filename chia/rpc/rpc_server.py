@@ -20,6 +20,7 @@ from aiohttp import (
     WSMsgType,
     web,
 )
+from chia_rs.sized_ints import uint16
 from typing_extensions import Protocol, final
 
 from chia import __version__
@@ -35,7 +36,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chia_logging import default_log_level, set_log_level
 from chia.util.config import str2bool
-from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import WebServer, resolve
 from chia.util.task_referencer import create_referenced_task

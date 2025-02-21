@@ -6,6 +6,7 @@ from typing import Optional
 import click
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint64
 from click.testing import CliRunner
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
@@ -37,7 +38,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord

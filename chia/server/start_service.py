@@ -11,6 +11,8 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
+from chia_rs.sized_ints import uint16
+
 from chia.daemon.server import service_launch_lock_path
 from chia.protocols.shared_protocol import default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
@@ -24,7 +26,6 @@ from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.chia_version import chia_short_version
-from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve
