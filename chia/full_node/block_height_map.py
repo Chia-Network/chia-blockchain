@@ -56,7 +56,9 @@ class BlockHeightMap:
     __ses_filename: Path
 
     @classmethod
-    async def create(cls, blockchain_dir: Path, db: DBWrapper2) -> BlockHeightMap:
+    async def create(
+        cls, blockchain_dir: Path, db: DBWrapper2, selected_network: Optional[str] = None
+    ) -> BlockHeightMap:
         if db.db_version != 2:
             raise RuntimeError(f"BlockHeightMap does not support database schema v{db.db_version}")
         self = BlockHeightMap()
@@ -66,8 +68,9 @@ class BlockHeightMap:
         self.__first_dirty = 0
         self.__height_to_hash = bytearray()
         self.__sub_epoch_summaries = {}
-        self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
-        self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
+        suffix = "" if (selected_network is None or selected_network == "mainnet") else f"-{selected_network}"
+        self.__height_to_hash_filename = blockchain_dir / f"height-to-hash{suffix}"
+        self.__ses_filename = blockchain_dir / f"sub-epoch-summaries{suffix}"
 
         async with self.db.reader_no_transaction() as conn:
             async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
