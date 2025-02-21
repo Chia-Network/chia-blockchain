@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
-from chia_rs import Coin
+from chia_rs import Coin, ConsensusConstants
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32

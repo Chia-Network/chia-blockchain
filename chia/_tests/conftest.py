@@ -21,6 +21,7 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest import MonkeyPatch
 
@@ -48,7 +49,6 @@ from chia._tests.util.setup_nodes import (
 )
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient

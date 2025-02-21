@@ -10,10 +10,10 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint32
 from typing_extensions import Literal
 
-from chia.consensus.constants import ConsensusConstants
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (

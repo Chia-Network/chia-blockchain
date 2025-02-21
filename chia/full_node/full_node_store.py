@@ -6,11 +6,11 @@ import logging
 import time
 from typing import Optional
 
+from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult

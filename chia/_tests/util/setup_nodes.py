@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Optional, Union
 
 import anyio
+from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.environments.full_node import FullNodeEnvironment
 from chia._tests.environments.wallet import WalletEnvironment
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
 from chia.farmer.farmer import Farmer
 from chia.full_node.full_node_api import FullNodeAPI

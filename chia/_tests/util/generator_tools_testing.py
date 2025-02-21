@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint32
 
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
