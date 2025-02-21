@@ -142,7 +142,7 @@ async def get_any_service_client(
             if tb is not None:
                 print(f"Traceback:\n{tb}")
         except (click.ClickException, click.Abort):
-            # this includes CliRpcConnectionError which is a subbclass of click.ClickException
+            # this includes CliRpcConnectionError which is a subclass of click.ClickException
             # raising here allows click to do it's normal click error handling
             raise
         except Exception as e:  # this is only here to make the errors more user-friendly.
