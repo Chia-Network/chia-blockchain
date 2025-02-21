@@ -174,9 +174,9 @@ class WalletBlockchain:
         if self._peak is not None:
             return self._peak
         header_block = await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
-        assert header_block is None or isinstance(
-            header_block, HeaderBlock
-        ), f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        assert header_block is None or isinstance(header_block, HeaderBlock), (
+            f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        )
         return header_block
 
     async def set_finished_sync_up_to(self, height: int, *, in_rollback: bool = False) -> None:

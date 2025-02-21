@@ -245,9 +245,9 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     assert "Traceback" not in serve_output
     assert "paused accepting connections" in serve_output
     assert post_connection_succeeded, post_connection_error
-    assert all(
-        "new connection" not in line.casefold() for line in shutdown_lines
-    ), "new connection found during shut down"
+    assert all("new connection" not in line.casefold() for line in shutdown_lines), (
+        "new connection found during shut down"
+    )
 
     logger.info(" ==== all checks passed")
 

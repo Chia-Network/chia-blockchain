@@ -2160,8 +2160,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4c65742773206561742c204772616e646d61",  # Let's eat, Grandma
                 "pubkey": (
-                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
-                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
                 ),
                 "signature": (
                     "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
@@ -2177,8 +2176,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2195,8 +2193,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2212,8 +2209,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4f7a6f6e65",  # Ozone
                 "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab3524e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
                     "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
@@ -2231,8 +2227,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4c6574277320656174204772616e646d61",  # Let's eat Grandma
                 "pubkey": (
-                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
-                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
                 ),
                 "signature": (
                     "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
@@ -2247,8 +2242,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2264,8 +2258,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4f7a6f6e65",  # Ozone
                 "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab3524e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
                     "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
@@ -2486,9 +2479,9 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     fingerprint = wallet_node.logged_in_fingerprint
     assert fingerprint
     db_path = wallet_node.wallet_state_manager.db_path
-    assert await wallet_node.reset_sync_db(
-        db_path, fingerprint
-    ), "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
+    assert await wallet_node.reset_sync_db(db_path, fingerprint), (
+        "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
+    )
     dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
     conn: aiosqlite.Connection
     async with dbw.writer() as conn:

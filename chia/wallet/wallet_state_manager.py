@@ -2448,9 +2448,9 @@ class WalletStateManager:
     def get_dl_wallet(self) -> DataLayerWallet:
         for wallet in self.wallets.values():
             if wallet.type() == WalletType.DATA_LAYER.value:
-                assert isinstance(
-                    wallet, DataLayerWallet
-                ), f"WalletType.DATA_LAYER should be a DataLayerWallet instance got: {type(wallet).__name__}"
+                assert isinstance(wallet, DataLayerWallet), (
+                    f"WalletType.DATA_LAYER should be a DataLayerWallet instance got: {type(wallet).__name__}"
+                )
                 return wallet
         raise ValueError("DataLayerWallet not available")
 

@@ -412,8 +412,7 @@ class TradeStore:
         # Create an ORDER BY clause according to the desired sort type
         if sort_key is None or sort_key == "CONFIRMED_AT_HEIGHT":
             order_by_clause = (
-                f"ORDER BY confirmed_at_index {'ASC' if reverse else 'DESC'}, "
-                f"trade_id {'DESC' if reverse else 'ASC'} "
+                f"ORDER BY confirmed_at_index {'ASC' if reverse else 'DESC'}, trade_id {'DESC' if reverse else 'ASC'} "
             )
         elif sort_key == "RELEVANCE":
             # Custom sort order for statuses to separate out pending/completed offers

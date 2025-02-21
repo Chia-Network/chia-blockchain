@@ -1004,9 +1004,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
     assert_list = [
-        "  OFFERED:\n"
-        "    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n"
-        f"    - {cat1.hex()}: 100.0 (100000 mojos)",
+        f"  OFFERED:\n    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n    - {cat1.hex()}: 100.0 (100000 mojos)",
         "  REQUESTED:\n"
         f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"
         "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",
@@ -1101,9 +1099,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
     assert_list = [
-        "  OFFERED:\n"
-        "    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n"
-        f"    - {cat1.hex()}: 100.0 (100000 mojos)",
+        f"  OFFERED:\n    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n    - {cat1.hex()}: 100.0 (100000 mojos)",
         "  REQUESTED:\n"
         f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"
         "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",

@@ -337,8 +337,8 @@ class PlotManager:
                         if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
                             log.warning(
                                 f"Not farming plot {file_path}. "
-                                f"Size is {stat_info.st_size / (1024 ** 3)} GiB, "
-                                f"but expected at least: {expected_size / (1024 ** 3)} GiB. "
+                                f"Size is {stat_info.st_size / (1024**3)} GiB, "
+                                f"but expected at least: {expected_size / (1024**3)} GiB. "
                                 "We assume the file is being copied."
                             )
                             return None

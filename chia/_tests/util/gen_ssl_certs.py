@@ -31,9 +31,9 @@ def gen_ssl(suffix: str = "") -> None:
             captured_crt = cert_data
             captured_key = key_data
 
-        print(f"{cert_path} = b\"\"\"{cert_data.decode(encoding='utf8')}\"\"\"")
+        print(f'{cert_path} = b"""{cert_data.decode(encoding="utf8")}"""')
         print()
-        print(f"{key_path} = b\"\"\"{key_data.decode(encoding='utf8')}\"\"\"")
+        print(f'{key_path} = b"""{key_data.decode(encoding="utf8")}"""')
         print()
 
     patch = MonkeyPatch()

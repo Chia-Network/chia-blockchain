@@ -1434,8 +1434,7 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                "Wallet address 9 (m/12381/8444/2/9): "
-                "txch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs2dzchv"
+                "Wallet address 9 (m/12381/8444/2/9): txch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs2dzchv"
             )
             != -1
         )

@@ -384,8 +384,7 @@ class FarmerAPI:
                             self.farmer.log.info(f"Pool response: {pool_response}")
                             if "error_code" in pool_response:
                                 self.farmer.log.error(
-                                    f"Error in pooling: "
-                                    f"{pool_response['error_code'], pool_response['error_message']}"
+                                    f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}"
                                 )
 
                                 increment_pool_stats(

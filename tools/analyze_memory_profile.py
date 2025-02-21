@@ -35,7 +35,7 @@ class Frame:
 
 
 def color(pct: float) -> str:
-    return f"{int((100. - pct) // 10) + 1}"
+    return f"{((100 - pct) // 10) + 1}"
 
 
 def fontcolor(pct: float) -> str:

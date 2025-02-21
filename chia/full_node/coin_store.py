@@ -163,7 +163,7 @@ class CoinStore:
                     await conn.execute(
                         f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                         f"coin_parent, amount, timestamp FROM coin_record "
-                        f'WHERE coin_name in ({",".join(["?"] * len(names_db))}) ',
+                        f"WHERE coin_name in ({','.join(['?'] * len(names_db))}) ",
                         names_db,
                     )
                 )
@@ -271,7 +271,7 @@ class CoinStore:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
-                f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
+                f"WHERE puzzle_hash in ({'?,' * (len(puzzle_hashes) - 1)}?) "
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 (*puzzle_hashes_db, start_height, end_height),
@@ -297,7 +297,7 @@ class CoinStore:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
-                f'WHERE coin_name in ({"?," * (len(names) - 1)}?) '
+                f"WHERE coin_name in ({'?,' * (len(names) - 1)}?) "
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 [*names, start_height, end_height],
@@ -336,7 +336,7 @@ class CoinStore:
                 async with conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                     f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
-                    f'WHERE puzzle_hash in ({"?," * (len(batch.entries) - 1)}?) '
+                    f"WHERE puzzle_hash in ({'?,' * (len(batch.entries) - 1)}?) "
                     f"AND (confirmed_index>=? OR spent_index>=?)"
                     f"{'' if include_spent_coins else 'AND spent_index=0'}"
                     " LIMIT ?",
@@ -367,7 +367,7 @@ class CoinStore:
                 parent_ids_db: tuple[Any, ...] = tuple(batch.entries)
                 async with conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
-                    f'FROM coin_record WHERE coin_parent in ({"?," * (len(batch.entries) - 1)}?) '
+                    f"FROM coin_record WHERE coin_parent in ({'?,' * (len(batch.entries) - 1)}?) "
                     f"AND confirmed_index>=? AND confirmed_index<? "
                     f"{'' if include_spent_coins else 'AND spent_index=0'}",
                     (*parent_ids_db, start_height, end_height),
@@ -401,7 +401,7 @@ class CoinStore:
 
                 async with conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
-                    f'FROM coin_record WHERE coin_name in ({"?," * (len(batch.entries) - 1)}?) '
+                    f"FROM coin_record WHERE coin_name in ({'?,' * (len(batch.entries) - 1)}?) "
                     f"AND (confirmed_index>=? OR spent_index>=?) {max_height_sql}"
                     f"{'' if include_spent_coins else 'AND spent_index=0'}"
                     " LIMIT ?",
@@ -464,7 +464,7 @@ class CoinStore:
             cursor = await conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
-                f'WHERE puzzle_hash in ({"?," * (puzzle_hash_count - 1)}?) '
+                f"WHERE puzzle_hash in ({'?,' * (puzzle_hash_count - 1)}?) "
                 f"AND (confirmed_index>=? OR spent_index>=?) "
                 f"{height_filter} {amount_filter}"
                 f"ORDER BY MAX(confirmed_index, spent_index) ASC "
@@ -486,7 +486,7 @@ class CoinStore:
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                     f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
                     f"WHERE coin_name IN (SELECT coin_id FROM hints "
-                    f'WHERE hint IN ({"?," * (puzzle_hash_count - 1)}?)) '
+                    f"WHERE hint IN ({'?,' * (puzzle_hash_count - 1)}?)) "
                     f"AND (confirmed_index>=? OR spent_index>=?) "
                     f"{height_filter} {amount_filter}"
                     f"ORDER BY MAX(confirmed_index, spent_index) ASC "
