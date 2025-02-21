@@ -185,6 +185,7 @@ async def run_sync_test(
                 worst_batch_height = None
                 worst_batch_time_per_block = None
                 peer_info = peer.get_peer_logging()
+                blockchain = AugmentedBlockchain(full_node.blockchain)
                 async for r in rows:
                     batch_start_time = time.monotonic()
                     with enable_profiler(profile, height):
@@ -212,12 +213,12 @@ async def run_sync_test(
                             )
                             fork_height = block_batch[0].height - 1
                             header_hash = block_batch[0].prev_header_hash
-                            success, summary, _err = await full_node.add_block_batch(
-                                AugmentedBlockchain(full_node.blockchain),
+                            success, summary = await full_node.add_block_batch(
                                 block_batch,
                                 peer_info,
                                 ForkInfo(fork_height, fork_height, header_hash),
                                 ValidationState(ssi, diff, None),
+                                blockchain,
                             )
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)

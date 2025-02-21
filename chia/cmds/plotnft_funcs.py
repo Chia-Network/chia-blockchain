@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional
 
 import aiohttp
 
-from chia.cmds.cmd_classes import WalletClientInfo
+from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import (
     cli_confirm,
     get_any_service_client,
@@ -207,7 +207,7 @@ async def pprint_all_pool_wallet_state(
 
 async def show(
     wallet_info: WalletClientInfo,
-    root_path: Optional[Path],
+    root_path: Path,
     wallet_id_passed_in: Optional[int],
 ) -> None:
     summaries_response = await wallet_info.client.get_wallets()
@@ -243,7 +243,7 @@ async def show(
         await pprint_all_pool_wallet_state(wallet_info.client, summaries_response, address_prefix, pool_state_dict)
 
 
-async def get_login_link(launcher_id: bytes32, root_path: Optional[Path]) -> None:
+async def get_login_link(launcher_id: bytes32, root_path: Path) -> None:
     async with get_any_service_client(FarmerRpcClient, root_path=root_path) as (farmer_client, _):
         login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
         if login_link is None:

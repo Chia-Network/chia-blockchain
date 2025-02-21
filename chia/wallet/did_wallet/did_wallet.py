@@ -8,6 +8,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -21,6 +22,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     parse_timelock_info,
 )
@@ -29,7 +31,6 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -53,7 +54,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -583,7 +584,7 @@ class DIDWallet:
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                Payment(
+                CreateCoin(
                     puzzle_hash=new_inner_puzzle.get_tree_hash(),
                     amount=uint64(coin.amount),
                     memos=[p2_puzzle.get_tree_hash()],
@@ -695,7 +696,7 @@ class DIDWallet:
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
+            primaries=[CreateCoin(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -765,23 +766,31 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
         innerpuz: Program = self.did_info.current_inner
+        assert (
+            create_singleton_puzzle(
+                innerpuz,
+                self.did_info.origin_coin.name(),
+            ).get_tree_hash()
+            == coin.puzzle_hash
+        )
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
+        assert uncurried is not None
+        p2_puzzle, id_list_hash, num_of_backup_ids_needed, _, metadata = uncurried
         # Quote message puzzle & solution
         if action_scope.config.tx_config.reuse_puzhash:
             new_innerpuzzle_hash = innerpuz.get_tree_hash()
-            uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
-            assert uncurried is not None
-            p2_ph = uncurried[0].get_tree_hash()
+            p2_ph = p2_puzzle.get_tree_hash()
         else:
             p2_ph = await self.standard_wallet.get_puzzle_hash(new=True)
             new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
                 p2_puzhash=p2_ph,
-                recovery_list=self.did_info.backup_ids,
-                num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+                recovery_list_hash=bytes32(id_list_hash.as_atom()),
+                num_of_backup_ids_needed=uint64(num_of_backup_ids_needed.as_int()),
                 launcher_id=self.did_info.origin_coin.name(),
-                metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                metadata=metadata,
             )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
+            primaries=[CreateCoin(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
             conditions=extra_conditions,
         )
         # innerpuz solution is (mode p2_solution)
@@ -916,8 +925,8 @@ class DIDWallet:
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
-                Payment(innermessage, uint64(0)),
+                CreateCoin(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
+                CreateCoin(innermessage, uint64(0)),
             ],
             conditions=extra_conditions,
         )
@@ -1224,12 +1233,11 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
 
         await self.standard_wallet.generate_signed_transaction(
-            amount=amount,
-            puzzle_hash=genesis_launcher_puz.get_tree_hash(),
+            amounts=[amount],
+            puzzle_hashes=[genesis_launcher_puz.get_tree_hash()],
             action_scope=action_scope,
             fee=fee,
             coins=coins,
-            primaries=None,
             origin_id=origin.name(),
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
@@ -1309,7 +1317,7 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
+            primaries=[CreateCoin(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             conditions=extra_conditions,
         )
         innersol = Program.to([1, p2_solution])
@@ -1492,3 +1500,16 @@ class DIDWallet:
             ).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    async def generate_signed_transaction(
+        self,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        **kwargs: Unpack[GSTOptionalArgs],
+    ) -> None:
+        raise NotImplementedError("DIDWallet does not implement `generate_signed_transaction`")

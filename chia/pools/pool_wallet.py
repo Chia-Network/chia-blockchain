@@ -6,11 +6,10 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element, G2Element, PrivateKey
-from typing_extensions import final
+from typing_extensions import Unpack, final
 
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_puzzles import (
-    SINGLETON_LAUNCHER,
     create_absorb_spend,
     create_full_puzzle,
     create_pooling_inner_puzzle,
@@ -45,6 +44,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
 from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -53,6 +53,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import GSTOptionalArgs
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
@@ -463,13 +464,12 @@ class PoolWallet:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_new_puzzlehash()),
+            [],
+            [],
             action_scope,
             fee=fee,
             origin_id=None,
             coins=None,
-            primaries=None,
             extra_conditions=extra_conditions,
         )
 
@@ -634,8 +634,8 @@ class PoolWallet:
         launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
 
         await standard_wallet.generate_signed_transaction(
-            amount,
-            genesis_launcher_puz.get_tree_hash(),
+            [amount],
+            [genesis_launcher_puz.get_tree_hash()],
             action_scope,
             fee,
             coins,
@@ -931,3 +931,16 @@ class PoolWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         return False  # PoolWallet pre-dates hints
+
+    async def generate_signed_transaction(
+        self,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        **kwargs: Unpack[GSTOptionalArgs],
+    ) -> None:
+        raise NotImplementedError("Pool Wallet does not implement `generate_signed_transaction`")

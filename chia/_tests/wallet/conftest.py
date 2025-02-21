@@ -10,6 +10,7 @@ from typing import Any, Callable, Literal, Optional
 import pytest
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    ConsensusConstants,
     SpendBundleConditions,
     get_flags_for_height_and_constants,
     run_block_generator,
@@ -19,7 +20,6 @@ from chia_rs import (
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient

@@ -6,8 +6,10 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.apis import ApiProtocolRegistry
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler

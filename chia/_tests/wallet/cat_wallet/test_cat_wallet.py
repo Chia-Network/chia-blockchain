@@ -691,7 +691,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
 
     cc2_ph = await cat_wallet_2.get_cat_puzzle_hash(new=False)
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(uint64(10), cc2_ph, action_scope)
+        await wallet.wallet_state_manager.main_wallet.generate_signed_transaction([uint64(10)], [cc2_ph], action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -1641,8 +1641,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
 
     from chia.simulator.simulator_protocol import GetAllCoinsProtocol
     from chia.wallet.cat_wallet.cat_utils import SpendableCAT, unsigned_spend_bundle_for_spendable_cats
-    from chia.wallet.conditions import UnknownCondition
-    from chia.wallet.payment import Payment
+    from chia.wallet.conditions import CreateCoin, UnknownCondition
 
     await simulator.farm_blocks_to_puzzlehash(count=1, farm_to=CAT_w_ACS_HASH, guarantee_transaction_blocks=True)
     await simulator.farm_blocks_to_puzzlehash(count=1)
@@ -1703,7 +1702,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                     limitations_program_hash=ACS_TAIL_HASH,
                     inner_puzzle=await cat_wallet.inner_puzzle_for_cat_puzhash(new_coin.puzzle_hash),
                     inner_solution=wallet.make_solution(
-                        primaries=[Payment(wallet_ph, uint64(tx_amount), [wallet_ph])],
+                        primaries=[CreateCoin(wallet_ph, uint64(tx_amount), [wallet_ph])],
                         conditions=(
                             UnknownCondition(
                                 opcode=Program.to(51),

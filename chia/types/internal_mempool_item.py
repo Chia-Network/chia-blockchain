@@ -9,7 +9,7 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint32
 
 
-@dataclass
+@dataclass(frozen=True)
 class InternalMempoolItem:
     spend_bundle: SpendBundle
     conds: SpendBundleConditions

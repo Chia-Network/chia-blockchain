@@ -9,16 +9,17 @@ from enum import Enum
 from time import monotonic
 from typing import Callable, Optional
 
-from chia_rs import AugSchemeMPL, Coin, G2Element
+from chia_rs import AugSchemeMPL, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
 
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo
+from chia.types.generator_types import BlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -471,12 +472,52 @@ class Mempool:
 
         return self._total_cost + cost > self.mempool_info.max_size_in_cost
 
-    async def create_bundle_from_mempool_items(
+    async def create_block_generator(
         self,
-        item_inclusion_filter: Callable[[bytes32], bool],
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
+    ) -> tuple[BlockGenerator, G2Element, list[Coin]]:
+        """
+        height is needed in case we fast-forward a transaction and we need to
+        re-run its puzzle.
+        """
+
+        mempool_bundle = await self.create_bundle_from_mempool_items(
+            get_unspent_lineage_info_for_puzzle_hash, constants, height, item_inclusion_filter
+        )
+        if mempool_bundle is None:
+            return (BlockGenerator(), G2Element(), [])
+
+        spend_bundle, additions = mempool_bundle
+        removals = spend_bundle.removals()
+        log.info(f"Add rem: {len(additions)} {len(removals)}")
+
+        # since the hard fork has activated, block generators are
+        # allowed to be serialized with CLVM back-references. We can do that
+        # unconditionally.
+        start_time = monotonic()
+        spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spend_bundle.coin_spends]
+        block_program = solution_generator_backrefs(spends)
+
+        duration = monotonic() - start_time
+        log.log(
+            logging.INFO if duration < 1 else logging.WARNING,
+            f"serializing block generator took {duration:0.2f} seconds",
+        )
+        return (
+            BlockGenerator(SerializedProgram.from_bytes(block_program), []),
+            spend_bundle.aggregated_signature,
+            additions,
+        )
+
+    async def create_bundle_from_mempool_items(
+        self,
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        constants: ConsensusConstants,
+        height: uint32,
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -501,7 +542,12 @@ class Mempool:
             name = bytes32(row[0])
             fee = int(row[1])
             item = self._items[name]
-            if not item_inclusion_filter(name):
+
+            current_time = monotonic()
+            if current_time - bundle_creation_start > 1:
+                log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
+                break
+            if item_inclusion_filter is not None and not item_inclusion_filter(name):
                 continue
             try:
                 assert item.conds is not None
@@ -521,14 +567,14 @@ class Mempool:
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
                 else:
-                    await eligible_coin_spends.process_fast_forward_spends(
+                    bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
                         mempool_item=item,
                         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                         height=height,
                         constants=constants,
                     )
                     unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                        bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                        bundle_coin_spends=bundle_coin_spends, max_cost=cost
                     )
                 item_cost = cost - cost_saving
                 log.info(
@@ -565,7 +611,7 @@ class Mempool:
                 if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
                     break
             except Exception as e:
-                log.debug(f"Exception while checking a mempool item for deduplication: {e}")
+                log.info(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
         if processed_spend_bundles == 0:
             return None

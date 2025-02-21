@@ -6,15 +6,14 @@ import click
 from chia_rs import PrivateKey
 
 from chia.cmds import options
+from chia.cmds.cmd_classes import ChiaCliContext
 
 
 @click.group("keys", help="Manage your keys")
 @click.pass_context
 def keys_cmd(ctx: click.Context) -> None:
     """Create, delete, view and use your key pairs"""
-    from pathlib import Path
-
-    root_path: Path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.set_default(ctx).root_path
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init")
 
@@ -34,7 +33,7 @@ def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     from chia.cmds.keys_funcs import generate_and_add
 
     generate_and_add(label)
-    check_keys(ctx.obj["root_path"])
+    check_keys(ChiaCliContext.set_default(ctx).root_path)
 
 
 @keys_cmd.command("show", help="Displays all the keys in keychain or the key with the given fingerprint")
@@ -77,7 +76,14 @@ def show_cmd(
 ) -> None:
     from chia.cmds.keys_funcs import show_keys
 
-    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint, bech32m_prefix)
+    show_keys(
+        ChiaCliContext.set_default(ctx).root_path,
+        show_mnemonic_seed,
+        non_observer_derivation,
+        json,
+        fingerprint,
+        bech32m_prefix,
+    )
 
 
 @keys_cmd.command("add", help="Add a private key by mnemonic or public key as hex")
@@ -109,7 +115,7 @@ def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
         mnemonic_or_pk = Path(filename).read_text().rstrip()
 
     query_and_add_key_info(mnemonic_or_pk, label)
-    check_keys(ctx.obj["root_path"])
+    check_keys(ChiaCliContext.set_default(ctx).root_path)
 
 
 @keys_cmd.group("label", help="Manage your key labels")
@@ -155,7 +161,7 @@ def delete_cmd(ctx: click.Context, fingerprint: int) -> None:
     from chia.cmds.keys_funcs import delete
 
     delete(fingerprint)
-    check_keys(ctx.obj["root_path"])
+    check_keys(ChiaCliContext.set_default(ctx).root_path)
 
 
 @keys_cmd.command("delete_all", help="Delete all private keys in keychain")
@@ -275,8 +281,9 @@ def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, js
 )
 @click.pass_context
 def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]) -> None:
-    ctx.obj["fingerprint"] = fingerprint
-    ctx.obj["filename"] = filename
+    context = ChiaCliContext.set_default(ctx)
+    context.keys_fingerprint = fingerprint
+    context.keys_filename = filename
 
 
 @derive_cmd.command("search", help="Search the keyring for one or more matching derived keys or wallet addresses")
@@ -332,8 +339,9 @@ def search_cmd(
 
     from chia.cmds.keys_funcs import resolve_derivation_master_key, search_derive
 
-    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
-    filename: Optional[str] = ctx.obj.get("filename", None)
+    context = ChiaCliContext.set_default(ctx)
+    fingerprint: Optional[int] = context.keys_fingerprint
+    filename: Optional[str] = context.keys_filename
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
     resolved_sk = None
@@ -343,7 +351,7 @@ def search_cmd(
             print("Could not resolve private key from fingerprint/mnemonic file")
 
     found: bool = search_derive(
-        ctx.obj["root_path"],
+        context.root_path,
         fingerprint,
         search_terms,
         limit,
@@ -410,8 +418,9 @@ def wallet_address_cmd(
 ) -> None:
     from chia.cmds.keys_funcs import derive_wallet_address
 
-    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
-    filename: Optional[str] = ctx.obj.get("filename", None)
+    context = ChiaCliContext.set_default(ctx)
+    fingerprint = context.keys_fingerprint
+    filename = context.keys_filename
 
     try:
         fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
@@ -419,7 +428,14 @@ def wallet_address_cmd(
         return
 
     derive_wallet_address(
-        ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
+        context.root_path,
+        fingerprint,
+        index,
+        count,
+        prefix,
+        non_observer_derivation,
+        show_hd_path,
+        sk,
     )
 
 
@@ -488,8 +504,9 @@ def child_key_cmd(
     if key_type is None and derive_from_hd_path is None:
         ctx.fail("--type or --derive-from-hd-path is required")
 
-    fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
-    filename: Optional[str] = ctx.obj.get("filename", None)
+    context = ChiaCliContext.set_default(ctx)
+    fingerprint = context.keys_fingerprint
+    filename = context.keys_filename
 
     try:
         fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)

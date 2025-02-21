@@ -33,12 +33,12 @@ def farmer_is_started(farmer: Farmer) -> bool:
 
 
 async def get_harvester_config(harvester_rpc_port: Optional[int], root_path: Path) -> dict[str, Any]:
-    async with get_any_service_client(HarvesterRpcClient, harvester_rpc_port, root_path) as (harvester_client, _):
+    async with get_any_service_client(HarvesterRpcClient, root_path, harvester_rpc_port) as (harvester_client, _):
         return await harvester_client.get_harvester_config()
 
 
 async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: Path, config: dict[str, Any]) -> bool:
-    async with get_any_service_client(HarvesterRpcClient, harvester_rpc_port, root_path) as (harvester_client, _):
+    async with get_any_service_client(HarvesterRpcClient, root_path, harvester_rpc_port) as (harvester_client, _):
         return await harvester_client.update_harvester_config(config)
 
 

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from chia.consensus.constants import ConsensusConstants
+from chia_rs import ConsensusConstants
+
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished

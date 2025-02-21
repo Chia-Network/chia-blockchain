@@ -11,8 +11,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.util.ints import uint32, uint64
-
-# from chia.wallet.dao_wallet.dao_wallet import DAOInfo, DAOWallet
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.singleton_record import SingletonRecord

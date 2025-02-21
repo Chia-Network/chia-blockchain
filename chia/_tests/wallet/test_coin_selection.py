@@ -98,6 +98,24 @@ class TestCoinSelection:
             assert len(result) <= 500
 
     @pytest.mark.anyio
+    async def test_coin_selection_zero_coins(self, a_hash: bytes32) -> None:
+        coin_list: list[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(0)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            for _ in range(0, 100)
+        ]
+
+        result: set[Coin] = await select_coins(
+            uint128(0),
+            DEFAULT_COIN_SELECTION_CONFIG,
+            coin_list,
+            {},
+            logging.getLogger("test"),
+            uint128(0),
+        )
+
+        assert len(result) > 0
+
+    @pytest.mark.anyio
     async def test_coin_selection_with_dust(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000000000 + 10000)
         coin_list: list[WalletCoinRecord] = [

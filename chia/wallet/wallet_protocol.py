@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar
 
 from chia_rs import G1Element
-from typing_extensions import NotRequired, Protocol, TypedDict
+from typing_extensions import NotRequired, Protocol, TypedDict, Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import Condition
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -59,6 +60,18 @@ class WalletProtocol(Protocol[T_contra]):
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool: ...
 
+    async def generate_signed_transaction(
+        self,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        **kwargs: Unpack[GSTOptionalArgs],
+    ) -> None: ...
+
     wallet_info: WalletInfo
     wallet_state_manager: WalletStateManager
 
@@ -68,7 +81,6 @@ class GSTOptionalArgs(TypedDict):
     launcher_id: NotRequired[Optional[bytes32]]
     new_root_hash: NotRequired[Optional[bytes32]]
     sign: NotRequired[bool]
-    add_pending_singleton: NotRequired[bool]
     announce_new_state: NotRequired[bool]
     # CATWallet
     cat_discrepancy: NotRequired[Optional[tuple[int, Program, Program]]]
@@ -85,6 +97,8 @@ class GSTOptionalArgs(TypedDict):
     new_proof_hash: NotRequired[Optional[bytes32]]
     provider_inner_puzhash: NotRequired[Optional[bytes32]]
     self_revoke: NotRequired[bool]
+    vc_id: NotRequired[Optional[bytes32]]
     # Wallet
     origin_id: NotRequired[Optional[bytes32]]
     negative_change_allowed: NotRequired[bool]
+    puzzle_decorator_override: NotRequired[Optional[list[dict[str, Any]]]]

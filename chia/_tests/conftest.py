@@ -21,6 +21,7 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs import ConsensusConstants
 from pytest import MonkeyPatch
 
 from chia._tests import ether
@@ -47,7 +48,6 @@ from chia._tests.util.setup_nodes import (
 )
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -195,12 +195,12 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK_5 = 2
+    SOFT_FORK_6 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_5],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_6],
 )
 def consensus_mode(request):
     return request.param
@@ -216,7 +216,7 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
-    if consensus_mode >= ConsensusMode.SOFT_FORK_5:
+    if consensus_mode >= ConsensusMode.SOFT_FORK_6:
         ret = ret.replace(
             SOFT_FORK6_HEIGHT=uint32(2),
         )
@@ -267,7 +267,7 @@ def db_version(request) -> int:
     return request.param
 
 
-SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5716000, 5940000]
+SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5716000, 6800000]
 
 
 @pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)

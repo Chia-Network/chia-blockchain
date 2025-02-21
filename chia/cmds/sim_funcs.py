@@ -130,10 +130,10 @@ def create_chia_directory(
     # get fork heights then write back to config
     if "HARD_FORK_HEIGHT" not in sim_config:  # this meh code is done so that we also write to the config file.
         sim_config["HARD_FORK_HEIGHT"] = 0
-    if "SOFT_FORK5_HEIGHT" not in sim_config:
-        sim_config["SOFT_FORK5_HEIGHT"] = 0
+    if "SOFT_FORK6_HEIGHT" not in sim_config:
+        sim_config["SOFT_FORK6_HEIGHT"] = 0
     simulator_consts["HARD_FORK_HEIGHT"] = sim_config["HARD_FORK_HEIGHT"]
-    simulator_consts["SOFT_FORK5_HEIGHT"] = sim_config["SOFT_FORK5_HEIGHT"]
+    simulator_consts["SOFT_FORK6_HEIGHT"] = sim_config["SOFT_FORK6_HEIGHT"]
 
     # save config and return the config
     save_config(chia_root, "config.yaml", config)
@@ -407,7 +407,7 @@ async def print_status(
     from chia.cmds.show_funcs import print_blockchain_state
     from chia.cmds.units import units
 
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         # Display keychain info
         if show_key:
             if fingerprint is None:
@@ -451,7 +451,7 @@ async def revert_block_height(
     """
     This function allows users to easily revert the chain to a previous state or perform a reorg.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, _):
         if use_revert_blocks:
             if num_new_blocks != 1:
                 print(f"Ignoring num_new_blocks: {num_new_blocks}, because we are not performing a reorg.")
@@ -479,7 +479,7 @@ async def farm_blocks(
     """
     This function is used to generate new blocks.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         if target_address == "":
             target_address = config["simulator"]["farming_address"]
         if target_address is None:
@@ -500,7 +500,7 @@ async def set_auto_farm(rpc_port: Optional[int], root_path: Path, set_autofarm: 
     """
     This function can be used to enable or disable Auto Farming.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, _):
         current = await node_client.get_auto_farming()
         if current == set_autofarm:
             print(f"Auto farming is already {'on' if set_autofarm else 'off'}")

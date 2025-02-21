@@ -221,7 +221,7 @@ class AggSigMe(Condition):
         )
 
 
-@final
+# @final  # subclassing allowed for NotarizedPayment
 @streamable
 @dataclass(frozen=True)
 class CreateCoin(Condition):
@@ -237,7 +237,7 @@ class CreateCoin(Condition):
         return condition
 
     @classmethod
-    def from_program(cls, program: Program) -> CreateCoin:
+    def from_program(cls: type[_T_CreateCoin], program: Program) -> _T_CreateCoin:
         potential_memos: Program = program.at("rrr")
         return cls(
             bytes32(program.at("rf").as_atom()),
@@ -248,6 +248,12 @@ class CreateCoin(Condition):
                 else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
             ),
         )
+
+    def as_condition_args(self) -> list[Union[bytes32, uint64, Optional[list[bytes]]]]:
+        return [self.puzzle_hash, self.amount, self.memos]
+
+
+_T_CreateCoin = TypeVar("_T_CreateCoin", bound=CreateCoin)
 
 
 @final

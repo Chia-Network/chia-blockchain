@@ -132,6 +132,11 @@ jobs:
           - name: actionlint
             command: |
               bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+              echo ==== shellcheck version
+              shellcheck --version
+              echo ==== actionlint version
+              ./actionlint --version
+              echo ==== running actionlint
               ./actionlint -color -shellcheck shellcheck
 
     steps:

@@ -46,9 +46,16 @@ class AugmentedBlockchain:
         self._height_to_hash[block_record.height] = block_record.header_hash
 
     def remove_extra_block(self, hh: bytes32) -> None:
-        if hh in self._extra_blocks:
-            block_record = self._extra_blocks.pop(hh)[1]
-            del self._height_to_hash[block_record.height]
+        if hh not in self._extra_blocks:
+            return
+
+        block_record = self._extra_blocks.pop(hh)[1]
+        if self._underlying.contains_block(block_record.header_hash, block_record.height):
+            height_to_remove = block_record.height
+            for h in range(height_to_remove, -1, -1):
+                if h not in self._height_to_hash:
+                    break
+                del self._height_to_hash[uint32(h)]
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -82,12 +89,11 @@ class AugmentedBlockchain:
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._underlying.add_block_record(block_record)
-
+        self._height_to_hash[block_record.height] = block_record.header_hash
         # now that we're adding the block to the underlying blockchain, we don't
         # need to keep the extra block around anymore
         hh = block_record.header_hash
         if hh in self._extra_blocks:
-            del self._height_to_hash[block_record.height]
             del self._extra_blocks[hh]
 
     # BlockRecordsProtocol
@@ -109,6 +115,7 @@ class AugmentedBlockchain:
             ret = self._get_block_record(header_hash)
             if ret is not None:
                 return ret
+            return self._underlying.block_record(header_hash)
         return self._underlying.height_to_block_record(height)
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
@@ -117,8 +124,11 @@ class AugmentedBlockchain:
             return ret
         return self._underlying.height_to_hash(height)
 
-    def contains_block(self, header_hash: bytes32) -> bool:
-        return (header_hash in self._extra_blocks) or self._underlying.contains_block(header_hash)
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
+        block_hash_from_hh = self.height_to_hash(height)
+        if block_hash_from_hh is None or block_hash_from_hh != header_hash:
+            return False
+        return True
 
     def contains_height(self, height: uint32) -> bool:
         return (height in self._height_to_hash) or self._underlying.contains_height(height)

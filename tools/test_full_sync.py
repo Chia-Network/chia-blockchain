@@ -150,6 +150,7 @@ async def run_sync_checkpoint(
 
             block_batch = []
             peer_info = peer.get_peer_logging()
+            blockchain = AugmentedBlockchain(full_node.blockchain)
             async for r in rows:
                 block = FullBlock.from_bytes_unchecked(zstd.decompress(r[0]))
                 block_batch.append(block)
@@ -165,12 +166,12 @@ async def run_sync_checkpoint(
                 fork_height = block_batch[0].height - 1
                 header_hash = block_batch[0].prev_header_hash
 
-                success, _, _err = await full_node.add_block_batch(
-                    AugmentedBlockchain(full_node.blockchain),
+                success, _ = await full_node.add_block_batch(
                     block_batch,
                     peer_info,
                     ForkInfo(fork_height, fork_height, header_hash),
                     ValidationState(ssi, diff, None),
+                    blockchain,
                 )
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
@@ -189,12 +190,12 @@ async def run_sync_checkpoint(
                 )
                 fork_height = block_batch[0].height - 1
                 fork_header_hash = block_batch[0].prev_header_hash
-                success, _, _err = await full_node.add_block_batch(
-                    AugmentedBlockchain(full_node.blockchain),
+                success, _ = await full_node.add_block_batch(
                     block_batch,
                     peer_info,
                     ForkInfo(fork_height, fork_height, fork_header_hash),
                     ValidationState(ssi, diff, None),
+                    blockchain,
                 )
                 if not success:
                     raise RuntimeError("failed to ingest block batch")

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from chia.consensus.constants import ConsensusConstants
+from chia_rs import ConsensusConstants
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -71,7 +72,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
-    SOFT_FORK6_HEIGHT=uint32(9999999),  # temporary placeholder
+    SOFT_FORK6_HEIGHT=uint32(6800000),
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
     # June 2027
@@ -86,4 +87,4 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
     if network_id == "testnet11":
         if "SOFT_FORK6_HEIGHT" not in overrides:
-            overrides["SOFT_FORK6_HEIGHT"] = 9999999  # temporary placeholder
+            overrides["SOFT_FORK6_HEIGHT"] = 2000000

@@ -37,7 +37,7 @@ network_overrides: &network_overrides
       SUB_SLOT_ITERS_STARTING: 67108864
       # Forks activated from the beginning on this network
       HARD_FORK_HEIGHT: 0
-      SOFT_FORK5_HEIGHT: 1340000
+      SOFT_FORK6_HEIGHT: 2000000
       PLOT_FILTER_128_HEIGHT: 6029568
       PLOT_FILTER_64_HEIGHT: 11075328
       PLOT_FILTER_32_HEIGHT: 16121088
@@ -264,19 +264,9 @@ timelord:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-  # fast_algorithm is a faster proof generation algorithm. This speed increase
-  # requires much less memory usage and a does not have the risk of OOM that
-  # the normal timelord has but requires significantly more cores doing
-  # parallel proof generation and creates a larger and slower to verify
-  # resulting proof.
-  # An Intel Core i9-10900K can run 2 normal vdf_clients at ~221,000 ips
-  # without slowing down but running more than 1 with fast_algorithm will
-  # run each vdf_client slower.
-  fast_algorithm: False
   # Bluebox (sanitizing timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
-  # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
-  # is running in bluebox_mode.
+  # extending the chain.
   # You must set 'send_uncompact_interval' in 'full_node' > 0 in the full_node
   # section below to have full_node send existing time proofs to be sanitized.
   bluebox_mode: False
@@ -410,6 +400,10 @@ full_node:
 
   enable_memory_profiler: False
 
+  # this is a debug/auditing facility that saves all spend bundles added to the
+  # mempool, organized by peak height at the time
+  log_mempool: false
+
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/sql.log).
   log_sqlite_cmds: False
@@ -436,6 +430,7 @@ full_node:
     - "seeder.dexie.space"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
+    - "seeder.xchseeder.com"
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
@@ -686,4 +681,4 @@ simulator:
 
   # Fork Settings
   HARD_FORK_HEIGHT: 0
-  SOFT_FORK5_HEIGHT: 0
+  SOFT_FORK6_HEIGHT: 0

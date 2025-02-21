@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.5.0 Chia blockchain 2024-12-12
+
+## What's Changed
+
+### Added
+
+- Implemented CHIP-36: Introduced new soft-fork with CLVM `keccak256` operator
+
+### Changed
+
+- Bump `chia_rs` to `0.16.0`
+
+### Removed
+
+- Python 3.8 support has been removed
+
 ## 2.4.4 Chia blockchain 2024-10-15
 
 ## What's Changed
@@ -710,7 +726,7 @@ macOS 11 (Big Sur) is deprecated. This release (2.4.0) will be the last release 
 - Only subscribe to inner wallet puzzle hashes
 - Rpc: Fix and test `WalletRpcApi.get_coin_records_by_names`
 - Full_node: `uint32.MAXIMUM_EXCLUSIVE` -> `uint32.MAXIMUM`
-- Full_node: Don't send duplicates in `register_interest_in_puzzle_hash`
+- Full_node: Don't send duplicates in `register_for_ph_updates`
 - Wallet: Deduplicate coin states from peers
 - Build: include `puzzles` packages (#15508)
 - Handle VC syncing exceptions better

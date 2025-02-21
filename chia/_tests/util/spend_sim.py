@@ -10,11 +10,16 @@ from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar
 
 import anyio
-from chia_rs import DONT_VALIDATE_SIGNATURE, G2Element, get_flags_for_height_and_constants, run_block_generator2
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    ConsensusConstants,
+    G2Element,
+    get_flags_for_height_and_constants,
+    run_block_generator2,
+)
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
@@ -165,7 +170,9 @@ class SpendSim:
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
             self.hint_store = await HintStore.create(self.db_wrapper)
-            self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
+            self.mempool_manager = MempoolManager(
+                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
+            )
             self.defaults = defaults
 
             # Load the next data if there is any

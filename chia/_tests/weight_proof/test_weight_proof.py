@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from chia_rs import ConsensusConstants
 
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.pot_iterations import calculate_iterations_quality
@@ -74,7 +74,7 @@ async def load_blocks_dont_validate(
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
-        header_cache[block.header_hash] = get_block_header(block, [], [])
+        header_cache[block.header_hash] = get_block_header(block)
         if sub_block.sub_epoch_summary_included is not None:
             sub_epoch_summaries[block.height] = sub_block.sub_epoch_summary_included
         prev_block = block

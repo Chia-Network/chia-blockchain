@@ -116,7 +116,7 @@ async def peer_async(
     remove_connection: str,
 ) -> None:
     client_type = NODE_TYPES[node_type]
-    async with get_any_service_client(client_type, rpc_port, root_path) as (rpc_client, config):
+    async with get_any_service_client(client_type, root_path, rpc_port) as (rpc_client, config):
         # Check or edit node connections
         if show_connections:
             trusted_peers: dict[str, Any] = config[node_type].get("trusted_peers", {})

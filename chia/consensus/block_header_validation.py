@@ -4,11 +4,10 @@ import logging
 import time
 from typing import Optional
 
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, ConsensusConstants
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge

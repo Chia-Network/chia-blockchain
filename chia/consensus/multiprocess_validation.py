@@ -5,17 +5,22 @@ import copy
 import logging
 import time
 import traceback
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Optional
 
-from chia_rs import SpendBundleConditions, get_flags_for_height_and_constants, run_block_generator, run_block_generator2
+from chia_rs import (
+    ConsensusConstants,
+    SpendBundleConditions,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+)
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.get_block_generator import get_block_generator
@@ -94,12 +99,11 @@ def _pre_validate_block(
 
     try:
         validation_start = time.monotonic()
-        tx_additions: list[Coin] = []
-        removals: list[bytes32] = []
+        removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None
         if conds is not None:
             assert conds.validated_signature is True
             assert block.transactions_generator is not None
-            removals, tx_additions = tx_removals_and_additions(conds)
+            removals_and_additions = tx_removals_and_additions(conds)
         elif block.transactions_generator is not None:
             assert prev_generators is not None
             assert block.transactions_info is not None
@@ -118,10 +122,13 @@ def _pre_validate_block(
                 return PreValidationResult(uint16(err), None, None, uint32(validation_time * 1000))
             assert conds is not None
             assert conds.validated_signature is True
-            removals, tx_additions = tx_removals_and_additions(conds)
+            removals_and_additions = tx_removals_and_additions(conds)
+        elif block.is_transaction_block():
+            # This is a transaction block with just reward coins.
+            removals_and_additions = ([], [])
 
         assert conds is None or conds.validated_signature is True
-        header_block = get_block_header(block, tx_additions, removals)
+        header_block = get_block_header(block, removals_and_additions)
         required_iters, error = validate_finished_header_block(
             constants,
             blockchain,

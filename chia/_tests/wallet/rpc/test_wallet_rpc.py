@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import io
 import json
 import logging
 import random
 from operator import attrgetter
 from typing import Any, Optional, cast
+from unittest.mock import patch
 
 import aiosqlite
 import pytest
 from chia_rs import G1Element, G2Element
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.wallet.test_wallet_coin_store import (
@@ -41,6 +42,8 @@ from chia._tests.wallet.test_wallet_coin_store import (
     record_8,
     record_9,
 )
+from chia.cmds.coins import CombineCMD, SplitCMD
+from chia.cmds.param_types import CliAmount
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -55,13 +58,13 @@ from chia.rpc.wallet_request_types import (
     DIDGetPubkey,
     GetNotifications,
     GetPrivateKey,
+    GetSyncStatusResponse,
     GetTimestampForHeight,
     LogIn,
     PushTransactions,
     PushTX,
     SetWalletResyncOnStartup,
     SplitCoins,
-    SplitCoinsResponse,
     VerifySignature,
     VerifySignatureResponse,
 )
@@ -500,8 +503,8 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     fee_amount = 100
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            amount=uint64(5),
-            puzzle_hash=bytes32.zeros,
+            amounts=[uint64(5)],
+            puzzle_hashes=[bytes32.zeros],
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
@@ -1342,53 +1345,6 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=0, end=50)
     assert len(all_offers) == 2
 
-    ###
-    # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-    # There's also temp code in wallet_rpc_api.py
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "get_offer_summary",
-            {
-                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "check_offer_validity",
-            {
-                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "take_offer",
-            {
-                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "get_offer_summary",
-            {
-                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "check_offer_validity",
-            {
-                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "take_offer",
-            {
-                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
-            },
-        )
-    ###
-
     await wallet_1_rpc.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
         DEFAULT_TX_CONFIG,
@@ -1870,8 +1826,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
     )
-    assert min_coins is not None
-    assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
+    assert len(min_coins) == 1
+    assert min_coins[0].amount == uint64(10_000)
 
     # test max coin amount
     max_coins: list[Coin] = await client_2.select_coins(
@@ -1881,8 +1837,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
         ),
     )
-    assert max_coins is not None
-    assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
+    assert len(max_coins) == 2
+    assert max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
     non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
@@ -1891,11 +1847,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
-    assert excluded_amt_coins is not None
-    assert (
-        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
-        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
-    )
+    assert len(excluded_amt_coins) == len([a for a in tx_amounts if a != 1000])
+    assert sum(c.amount for c in excluded_amt_coins) == non_1000_amt
 
     # test excluded coins
     with pytest.raises(ValueError):
@@ -2667,9 +2620,9 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
     ],
     indirect=True,
 )
-@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
+async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
     env.wallet_aliases = {
         "xch": 1,
@@ -2681,58 +2634,59 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
         target_coin = next(iter(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope)))
         assert target_coin.amount == 250_000_000_000
 
-    xch_request = SplitCoins(
-        wallet_id=uint32(1),
-        number_of_coins=uint16(100),
-        amount_per_coin=uint64(100),
-        target_coin_id=target_coin.name(),
-        fee=uint64(1_000_000_000_000),  # 1 XCH
-        push=True,
+    xch_request = SplitCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["xch"],
+                number_of_coins=100,
+                amount_per_coin=CliAmount(amount=uint64(100), mojos=True),
+                target_coin_id=target_coin.name(),
+                fee=uint64(1_000_000_000_000),  # 1 XCH
+                push=True,
+            ),
+        }
     )
 
     with pytest.raises(ResponseFailureError, match="501 coins is greater then the maximum limit of 500 coins"):
-        await env.rpc_client.split_coins(
-            dataclasses.replace(xch_request, number_of_coins=uint16(501)),
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(xch_request, number_of_coins=501).run()
 
     with pytest.raises(ResponseFailureError, match="Could not find coin with ID 00000000000000000"):
-        await env.rpc_client.split_coins(
-            dataclasses.replace(xch_request, target_coin_id=bytes32.zeros),
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(xch_request, target_coin_id=bytes32.zeros).run()
 
     with pytest.raises(ResponseFailureError, match="is less than the total amount of the split"):
-        await env.rpc_client.split_coins(
-            dataclasses.replace(xch_request, amount_per_coin=uint64(1_000_000_000_000)),
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(
+            xch_request, amount_per_coin=CliAmount(amount=uint64(1_000_000_000_000), mojos=True)
+        ).run()
 
-    with pytest.raises(ResponseFailureError, match="Wallet with ID 42 does not exist"):
-        await env.rpc_client.split_coins(
-            dataclasses.replace(xch_request, wallet_id=uint32(42)),
-            wallet_environments.tx_config,
-        )
+    # We catch this one
+    capsys.readouterr()
+    await dataclasses.replace(xch_request, id=50).run()
+    output = (capsys.readouterr()).out
+    assert "Wallet id: 50 not found" in output
 
+    # This one only "works" on the RPC
     env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
     with pytest.raises(ResponseFailureError, match="Cannot split coins from non-fungible wallet types"):
-        await env.rpc_client.split_coins(
-            dataclasses.replace(xch_request, wallet_id=uint32(42)),
-            wallet_environments.tx_config,
+        assert xch_request.amount_per_coin is not None  # hey there mypy
+        rpc_request = SplitCoins(
+            wallet_id=uint32(42),
+            number_of_coins=uint16(xch_request.number_of_coins),
+            amount_per_coin=xch_request.amount_per_coin.convert_amount(1),
+            target_coin_id=xch_request.target_coin_id,
+            fee=xch_request.fee,
+            push=xch_request.push,
         )
+        await env.rpc_client.split_coins(rpc_request, wallet_environments.tx_config)
+
     del env.wallet_state_manager.wallets[uint32(42)]
 
-    response = await env.rpc_client.split_coins(
-        dataclasses.replace(xch_request, number_of_coins=uint16(0)),
-        wallet_environments.tx_config,
-    )
-    assert response == SplitCoinsResponse([], [])
+    await dataclasses.replace(xch_request, number_of_coins=0).run()
+    output = (capsys.readouterr()).out
+    assert "Transaction sent" not in output
 
     with wallet_environments.new_puzzle_hashes_allowed():
-        await env.rpc_client.split_coins(
-            xch_request,
-            wallet_environments.tx_config,
-        )
+        await xch_request.run()
 
     await wallet_environments.process_pending_states(
         [
@@ -2790,19 +2744,21 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
         target_coin = next(iter(await cat_wallet.select_coins(uint64(50), action_scope)))
         assert target_coin.amount == 50
 
-    cat_request = SplitCoins(
-        wallet_id=uint32(2),
-        number_of_coins=uint16(50),
-        amount_per_coin=uint64(1),
-        target_coin_id=target_coin.name(),
-        push=True,
+    cat_request = SplitCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["cat"],
+                number_of_coins=50,
+                amount_per_coin=CliAmount(amount=uint64(1), mojos=True),
+                target_coin_id=target_coin.name(),
+                push=True,
+            ),
+        }
     )
 
     with wallet_environments.new_puzzle_hashes_allowed():
-        await env.rpc_client.split_coins(
-            cat_request,
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(cat_request).run()
 
     await wallet_environments.process_pending_states(
         [
@@ -2830,6 +2786,17 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
         ]
     )
 
+    # Test a not synced error
+    assert xch_request.rpc_info.client_info is not None
+
+    async def not_synced() -> GetSyncStatusResponse:
+        return GetSyncStatusResponse(False, False)
+
+    xch_request.rpc_info.client_info.client.get_sync_status = not_synced  # type: ignore[method-assign]
+    await xch_request.run()
+    output = (capsys.readouterr()).out
+    assert "Wallet not synced. Please wait." in output
+
 
 @pytest.mark.parametrize(
     "wallet_environments",
@@ -2841,9 +2808,9 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
     ],
     indirect=True,
 )
-@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
+async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
     env.wallet_aliases = {
         "xch": 1,
@@ -2862,53 +2829,55 @@ async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
     # - Less amount than will have to be selected in order create it
     # - Higher # coins than necessary to create it
     fee = uint64(100)
-    xch_combine_request = CombineCoins(
-        wallet_id=uint32(1),
-        target_coin_amount=uint64(1_000_000_000_000),
-        number_of_coins=uint16(3),
-        target_coin_ids=[target_coin.name()],
-        fee=fee,
-        push=True,
+    xch_combine_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["xch"],
+                target_amount=CliAmount(amount=uint64(1_000_000_000_000), mojos=True),
+                number_of_coins=uint16(3),
+                input_coins=(target_coin.name(),),
+                fee=fee,
+                push=True,
+            ),
+        }
     )
 
     # Test some error cases first
     with pytest.raises(ResponseFailureError, match="greater then the maximum limit"):
-        await env.rpc_client.combine_coins(
-            dataclasses.replace(xch_combine_request, number_of_coins=uint16(501)),
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(xch_combine_request, number_of_coins=uint16(501)).run()
 
     with pytest.raises(ResponseFailureError, match="You need at least two coins to combine"):
-        await env.rpc_client.combine_coins(
-            dataclasses.replace(xch_combine_request, number_of_coins=uint16(0)),
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(xch_combine_request, number_of_coins=uint16(0)).run()
 
     with pytest.raises(ResponseFailureError, match="More coin IDs specified than desired number of coins to combine"):
-        await env.rpc_client.combine_coins(
-            dataclasses.replace(xch_combine_request, target_coin_ids=[bytes32.zeros] * 100),
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(xch_combine_request, input_coins=(bytes32.zeros,) * 100).run()
 
-    with pytest.raises(ResponseFailureError, match="Wallet with ID 50 does not exist"):
-        await env.rpc_client.combine_coins(
-            dataclasses.replace(xch_combine_request, wallet_id=uint32(50)),
-            wallet_environments.tx_config,
-        )
+    # We catch this one
+    capsys.readouterr()
+    await dataclasses.replace(xch_combine_request, id=50).run()
+    output = (capsys.readouterr()).out
+    assert "Wallet id: 50 not found" in output
 
+    # This one only "works" on the RPC
     env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
     with pytest.raises(ResponseFailureError, match="Cannot combine coins from non-fungible wallet types"):
-        await env.rpc_client.combine_coins(
-            dataclasses.replace(xch_combine_request, wallet_id=uint32(42)),
-            wallet_environments.tx_config,
+        assert xch_combine_request.target_amount is not None  # hey there mypy
+        rpc_request = CombineCoins(
+            wallet_id=uint32(42),
+            target_coin_amount=xch_combine_request.target_amount.convert_amount(1),
+            number_of_coins=uint16(xch_combine_request.number_of_coins),
+            target_coin_ids=list(xch_combine_request.input_coins),
+            fee=xch_combine_request.fee,
+            push=xch_combine_request.push,
         )
+        await env.rpc_client.combine_coins(rpc_request, wallet_environments.tx_config)
+
     del env.wallet_state_manager.wallets[uint32(42)]
 
     # Now push the request
-    await env.rpc_client.combine_coins(
-        xch_combine_request,
-        wallet_environments.tx_config,
-    )
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await xch_combine_request.run()
 
     await wallet_environments.process_pending_states(
         [
@@ -2989,20 +2958,23 @@ async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
     )
 
     # We're going to test that we select the two smaller coins
-    cat_combine_request = CombineCoins(
-        wallet_id=uint32(2),
-        target_coin_amount=None,
-        number_of_coins=uint16(2),
-        target_coin_ids=[],
-        largest_first=False,
-        fee=fee,
-        push=True,
+    cat_combine_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["cat"],
+                target_amount=None,
+                number_of_coins=uint16(2),
+                input_coins=(),
+                largest_first=False,
+                fee=fee,
+                push=True,
+            ),
+        }
     )
 
-    await env.rpc_client.combine_coins(
-        cat_combine_request,
-        wallet_environments.tx_config,
-    )
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await cat_combine_request.run()
 
     await wallet_environments.process_pending_states(
         [
@@ -3035,6 +3007,17 @@ async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
             )
         ]
     )
+
+    # Test a not synced error
+    assert xch_combine_request.rpc_info.client_info is not None
+
+    async def not_synced() -> GetSyncStatusResponse:
+        return GetSyncStatusResponse(False, False)
+
+    xch_combine_request.rpc_info.client_info.client.get_sync_status = not_synced  # type: ignore[method-assign]
+    await xch_combine_request.run()
+    output = (capsys.readouterr()).out
+    assert "Wallet not synced. Please wait." in output
 
 
 @pytest.mark.parametrize(
@@ -3072,25 +3055,26 @@ async def test_fee_bigger_than_selection_coin_combining(wallet_environments: Wal
     fee = uint64(1_750_000_000_000)
     # Under standard circumstances we would select the small coins, but this is not enough to pay the fee
     # Instead, we will grab the big coin first and combine it with one of the smaller coins
-    xch_combine_request = CombineCoins(
-        wallet_id=uint32(1),
-        number_of_coins=uint16(2),
-        fee=fee,
-        largest_first=False,
-        push=True,
+    xch_combine_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["xch"],
+                number_of_coins=uint16(2),
+                input_coins=(),
+                fee=fee,
+                push=True,
+                largest_first=False,
+            ),
+        }
     )
 
     # First test an error where fee selection causes too many coins to be selected
     with pytest.raises(ResponseFailureError, match="without selecting more coins than specified: 3"):
-        await env.rpc_client.combine_coins(
-            dataclasses.replace(xch_combine_request, fee=uint64(2_250_000_000_000)),
-            wallet_environments.tx_config,
-        )
+        await dataclasses.replace(xch_combine_request, fee=uint64(2_250_000_000_000)).run()
 
-    await env.rpc_client.combine_coins(
-        xch_combine_request,
-        wallet_environments.tx_config,
-    )
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await xch_combine_request.run()
 
     await wallet_environments.process_pending_states(
         [

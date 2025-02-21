@@ -3,13 +3,12 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from chia_rs import G1Element, G2Element, compute_merkle_set_root
+from chia_rs import ConsensusConstants, G1Element, G2Element, compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
