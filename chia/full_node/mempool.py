@@ -612,6 +612,7 @@ class Mempool:
                     break
             except Exception as e:
                 log.info(f"Exception while checking a mempool item for deduplication: {e}")
+                skipped_items += 1
                 continue
         if processed_spend_bundles == 0:
             return None

@@ -3176,7 +3176,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     # The 3 items got skipped here
     # We ran with solution A and missed bigger savings on solution B
     assert mempool.size() == 5
-    assert [c.coin for c in agg.coin_spends] == [coins[0], coins[1], coins[2]]
+    assert [c.coin for c in agg.coin_spends] == [coins[0], coins[1]]
     invariant_check_mempool(mempool)
 
 
