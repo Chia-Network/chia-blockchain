@@ -20,6 +20,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, get_plot_dir
@@ -1157,7 +1158,7 @@ class TestPoolWalletRpc:
         await time_out_assert(45, status_is_farming_to_pool, True, wallet_id)
 
         # Test joining the same pool via the RPC client
-        with pytest.raises(ValueError, match="Already farming to pool"):
+        with pytest.raises(ResponseFailureError, match="Already farming to pool"):
             await client.pw_join_pool(
                 wallet_id=wallet_id,
                 target_puzzlehash=our_ph,
