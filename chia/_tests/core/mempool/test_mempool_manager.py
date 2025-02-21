@@ -14,6 +14,7 @@ from chia_rs import (
     G2Element,
     get_conditions_from_spendbundle,
 )
+from chia_rs.sized_ints import uint8, uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia._tests.conftest import ConsensusMode
@@ -60,7 +61,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet

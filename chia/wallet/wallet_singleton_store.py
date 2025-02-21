@@ -5,6 +5,7 @@ import logging
 from sqlite3 import Row
 from typing import Optional, TypeVar, Union
 
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -14,7 +15,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint32, uint64
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle

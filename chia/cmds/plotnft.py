@@ -4,6 +4,7 @@ from dataclasses import field
 from typing import Optional
 
 import click
+from chia_rs.sized_ints import uint64
 
 from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
 from chia.cmds.cmd_helpers import NeedsWalletRPC
@@ -15,7 +16,6 @@ from chia.cmds.param_types import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint64
 
 
 @click.group("plotnft", help="Manage your plot NFTs")

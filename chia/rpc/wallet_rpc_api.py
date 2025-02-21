@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
 
 from chia_rs import AugSchemeMPL, Coin, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
@@ -85,7 +86,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, UInt32Range, streamable

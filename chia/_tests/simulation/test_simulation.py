@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 
 import aiohttp
 import pytest
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.setup_nodes import FullSystem, OldSimulatorsAndWallets
@@ -25,7 +26,6 @@ from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode

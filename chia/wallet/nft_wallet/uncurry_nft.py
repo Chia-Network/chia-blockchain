@@ -4,11 +4,12 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, TypeVar
 
+from chia_rs.sized_ints import uint16
+
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD as NFT_MOD

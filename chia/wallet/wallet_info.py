@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from chia.util.ints import uint8, uint32
+from chia_rs.sized_ints import uint8, uint32
+
 from chia.util.streamable import Streamable, streamable
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
@@ -13,7 +14,6 @@ from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG

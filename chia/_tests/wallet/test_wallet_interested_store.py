@@ -3,11 +3,11 @@ from __future__ import annotations
 import random
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 

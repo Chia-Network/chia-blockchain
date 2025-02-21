@@ -17,6 +17,7 @@ from chia_rs import (
     supports_fast_forward,
     validate_clvm_and_signature,
 )
+from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
@@ -41,7 +42,6 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
-from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

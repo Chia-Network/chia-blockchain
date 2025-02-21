@@ -11,6 +11,7 @@ from typing import Optional, Union
 
 import anyio
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.environments.full_node import FullNodeEnvironment
 from chia._tests.environments.wallet import WalletEnvironment
@@ -42,7 +43,6 @@ from chia.types.aliases import FarmerService, FullNodeService, HarvesterService,
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode

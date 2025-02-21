@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Optional, cast
 
+from chia_rs.sized_ints import uint32
+
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
@@ -12,7 +14,6 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.util.ints import uint32
 
 
 def coin_record_dict_backwards_compat(coin_record: dict[str, Any]) -> dict[str, Any]:

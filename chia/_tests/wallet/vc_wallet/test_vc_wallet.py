@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_ints import uint64
 from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
@@ -19,7 +20,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet

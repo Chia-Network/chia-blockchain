@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 import aiohttp
+from chia_rs.sized_ints import uint32
 
-from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload_dict

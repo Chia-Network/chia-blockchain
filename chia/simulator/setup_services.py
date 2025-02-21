@@ -12,6 +12,7 @@ from types import FrameType
 from typing import Any, Optional, Union
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint16
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import replace_str_to_bytes
@@ -47,7 +48,6 @@ from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
 from chia.util.task_referencer import create_referenced_task

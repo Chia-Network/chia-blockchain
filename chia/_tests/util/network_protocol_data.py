@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from chia_rs import G1Element, G2Element, RewardChainBlockUnfinished
+from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64, uint128
 
 from chia.protocols import (
     farmer_protocol,
@@ -37,7 +38,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegment, SubEpochData, SubSlotData, WeightProof
 from chia.util.errors import Err
-from chia.util.ints import int16, uint8, uint16, uint32, uint64, uint128
 
 # SHARED PROTOCOL
 error_without_data = Error(int16(Err.UNKNOWN.value), "Unknown", None)

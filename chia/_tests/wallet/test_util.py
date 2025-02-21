@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.misc import CoinGenerator, coin_creation_args
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -11,7 +12,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import make_spend
 from chia.util.errors import ValidationError
-from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 from chia.wallet.util.merkle_utils import list_to_binary_tree

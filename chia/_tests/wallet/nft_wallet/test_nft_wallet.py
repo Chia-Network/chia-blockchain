@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools.binutils import disassemble
 
 from chia._tests.conftest import ConsensusMode
@@ -26,7 +27,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
 from chia.util.timing import adjusted_timeout
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_info import NFTInfo

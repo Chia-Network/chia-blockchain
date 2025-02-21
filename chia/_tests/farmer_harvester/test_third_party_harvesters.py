@@ -11,6 +11,7 @@ from typing import Optional, Union, cast
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
@@ -44,7 +45,6 @@ from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 
 SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
 SPList = list[SPType]

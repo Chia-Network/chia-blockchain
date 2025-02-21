@@ -4,8 +4,9 @@ import math
 from dataclasses import dataclass
 from typing import Optional
 
+from chia_rs.sized_ints import uint64
+
 from chia.types.fee_rate import FeeRate, FeeRateV2
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 

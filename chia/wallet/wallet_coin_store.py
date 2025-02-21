@@ -5,11 +5,12 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
+from chia_rs.sized_ints import uint8, uint32, uint64
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.lru_cache import LRUCache
 from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob, streamable
 from chia.wallet.util.query_filter import AmountFilter, FilterMode, HashFilter

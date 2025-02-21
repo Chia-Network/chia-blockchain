@@ -4,6 +4,7 @@ import logging
 from typing import Union
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint64
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
@@ -12,7 +13,6 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 

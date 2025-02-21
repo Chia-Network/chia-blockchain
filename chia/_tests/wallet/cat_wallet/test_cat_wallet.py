@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import (
@@ -22,7 +23,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle

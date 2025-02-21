@@ -4,13 +4,13 @@ import dataclasses
 from typing import Optional, TypeVar, Union
 
 from aiosqlite import Row
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 
 _T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")

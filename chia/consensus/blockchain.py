@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import ConsensusConstants, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
@@ -42,7 +43,6 @@ from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.priority_mutex import PriorityMutex
 
 log = logging.getLogger(__name__)

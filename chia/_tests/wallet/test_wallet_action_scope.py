@@ -5,12 +5,12 @@ from typing import Optional
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_ints import uint64
 
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG

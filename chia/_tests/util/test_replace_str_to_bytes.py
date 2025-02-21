@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia.consensus.constants import replace_str_to_bytes
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 

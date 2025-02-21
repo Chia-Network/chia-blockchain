@@ -21,6 +21,7 @@ from types import FrameType
 from typing import Any, Optional, TextIO
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
@@ -38,7 +39,6 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
-from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError

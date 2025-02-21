@@ -23,6 +23,7 @@ from chia_rs import (
     run_block_generator,
     run_block_generator2,
 )
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
@@ -85,7 +86,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
 from chia.util.path import path_from_root

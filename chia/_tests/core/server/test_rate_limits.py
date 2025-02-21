@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from chia_rs.sized_ints import uint32
 
 from chia._tests.conftest import node_with_params
 from chia._tests.util.time_out_assert import time_out_assert
@@ -17,7 +18,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32
 
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
 rl_v1 = [Capability.BASE]

@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections.abc import Awaitable
 from typing import Callable
 
+from chia_rs.sized_ints import uint32
+
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.ints import uint32
 
 
 async def check_fork_next_block(

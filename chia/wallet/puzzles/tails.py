@@ -9,11 +9,11 @@ from chia_puzzles_py.programs import (
     GENESIS_BY_COIN_ID_OR_SINGLETON,
     GENESIS_BY_PUZZLE_HASH,
 )
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 import aiohttp
+from chia_rs.sized_ints import uint16
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -20,7 +21,6 @@ from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
-from chia.util.ints import uint16
 from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)

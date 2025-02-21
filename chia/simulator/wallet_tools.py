@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
@@ -15,7 +16,6 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import agg_sig_additional_data, conditions_dict_for_solution, make_aggsig_final_message
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (

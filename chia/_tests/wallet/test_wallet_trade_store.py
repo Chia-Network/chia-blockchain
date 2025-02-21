@@ -5,11 +5,11 @@ import time
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord, TradeRecordOld
 from chia.wallet.trading.offer import Offer

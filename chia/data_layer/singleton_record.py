@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import dataclasses
 
+from chia_rs.sized_ints import uint32, uint64
+
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 

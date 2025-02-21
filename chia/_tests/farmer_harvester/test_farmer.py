@@ -10,6 +10,7 @@ from unittest.mock import ANY
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
 from yarl import URL
 
@@ -33,7 +34,6 @@ from chia.types.blockchain_format.proof_of_space import (
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 log = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Union
 
 import chia_rs
+from chia_rs.sized_ints import uint64
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -13,7 +14,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 CoinSpend = chia_rs.CoinSpend

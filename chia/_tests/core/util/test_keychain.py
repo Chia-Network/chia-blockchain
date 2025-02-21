@@ -8,6 +8,7 @@ from typing import Callable, Optional
 import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_ints import uint32
 
 import chia._tests.util
 from chia.simulator.keyring import TempKeyring
@@ -20,7 +21,6 @@ from chia.util.errors import (
     KeychainLabelInvalid,
     KeychainSecretsMissing,
 )
-from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
     KeyData,

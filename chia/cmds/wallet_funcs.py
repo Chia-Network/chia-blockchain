@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable, Optional, Union
 
+from chia_rs.sized_ints import uint16, uint32, uint64
+
 from chia.cmds.cmds_util import (
     CMDTXConfigLoader,
     cli_confirm,
@@ -38,7 +40,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.outer_puzzles import AssetType

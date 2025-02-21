@@ -3,10 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from chia_rs.sized_ints import uint32, uint64
+
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mojos import Mojos
-from chia.util.ints import uint32, uint64
 
 
 @dataclass(frozen=True)

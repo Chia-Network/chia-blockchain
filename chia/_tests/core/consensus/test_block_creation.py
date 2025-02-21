@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.core.make_block_generator import make_block_generator
 from chia.consensus.block_creation import compute_block_cost, compute_block_fee
@@ -8,7 +9,6 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 
 
 @pytest.mark.parametrize("add_amount", [[0], [1, 2, 3], []])

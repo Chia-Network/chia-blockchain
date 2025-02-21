@@ -4,6 +4,7 @@ import logging
 import random
 
 import pytest
+from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.connection_utils import add_dummy_connection
@@ -18,7 +19,6 @@ from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 

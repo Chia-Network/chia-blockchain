@@ -18,6 +18,7 @@ from chia_rs import (
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -71,7 +72,6 @@ from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
 

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from chia_rs.sized_ints import uint64
+
 from chia.types.blockchain_format.coin import Coin as _Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable
 from chia.wallet.util.clvm_streamable import clvm_streamable
 

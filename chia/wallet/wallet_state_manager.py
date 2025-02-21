@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
@@ -42,7 +43,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob

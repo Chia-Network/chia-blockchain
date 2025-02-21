@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from chia_rs.sized_ints import uint64
+
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable
 from chia.wallet.signer_protocol import (
     KeyHints,

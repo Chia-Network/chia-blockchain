@@ -4,9 +4,10 @@ import logging
 import random
 from typing import Optional
 
+from chia_rs.sized_ints import uint64, uint128
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64, uint128
 from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 

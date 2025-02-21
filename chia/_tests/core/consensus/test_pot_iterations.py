@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -11,7 +12,6 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 test_constants = DEFAULT_CONSTANTS.replace(NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=uint16(300))
 

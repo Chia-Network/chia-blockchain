@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast,
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from packaging.version import Version
 
 from chia.consensus.blockchain import AddBlockResult
@@ -49,7 +50,6 @@ from chia.util.config import lock_and_load_config, process_config_start_method, 
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task

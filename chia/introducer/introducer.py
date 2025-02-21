@@ -7,12 +7,13 @@ import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs.sized_ints import uint64
+
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.ints import uint64
 from chia.util.task_referencer import create_referenced_task
 
 

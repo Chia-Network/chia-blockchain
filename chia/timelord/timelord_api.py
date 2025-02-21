@@ -4,6 +4,8 @@ import logging
 import time
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
+from chia_rs.sized_ints import uint64
+
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.rpc.rpc_server import StateChangedProtocol
@@ -11,7 +13,6 @@ from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
 from chia.timelord.types import Chain, IterationType
-from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 

@@ -5,6 +5,7 @@ import contextlib
 import logging
 
 import pytest
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -16,7 +17,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 
 log = logging.getLogger(__name__)

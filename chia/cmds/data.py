@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, Union
 
 import click
+from chia_rs.sized_ints import uint64
 
 from chia.cmds import options
 from chia.cmds.param_types import Bytes32ParamType
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 
 _T = TypeVar("_T")
 

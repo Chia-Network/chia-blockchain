@@ -6,6 +6,7 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Literal
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
@@ -17,7 +18,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
