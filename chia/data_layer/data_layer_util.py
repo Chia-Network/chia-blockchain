@@ -299,9 +299,6 @@ class ProofOfInclusion:
     def sibling_hashes(self) -> list[bytes32]:
         return [layer.other_hash for layer in self.layers]
 
-    def as_program(self) -> Program:
-        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])
-
     def valid(self) -> bool:
         existing_hash = self.node_hash
 
