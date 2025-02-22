@@ -14,6 +14,7 @@ from random import Random
 from typing import Any, BinaryIO, Callable, Optional
 
 import aiohttp
+import chia_rs.datalayer
 import pytest
 from chia_rs.datalayer import TreeIndex
 
@@ -39,10 +40,9 @@ from chia.data_layer.data_layer_util import (
     get_full_tree_filename_path,
     leaf_hash,
 )
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, InternalTypes, LeafTypes, MerkleBlobHint
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
-from chia.data_layer.util.merkle_blob import MerkleBlob, RawInternalMerkleNode, RawLeafMerkleNode
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -492,8 +492,8 @@ async def test_insert_batch_reference_and_side(
     nodes_with_indexes = merkle_blob.get_nodes_with_indexes()
     nodes = [pair[1] for pair in nodes_with_indexes]
     assert len(nodes) == 3
-    assert isinstance(nodes[1], RawLeafMerkleNode)
-    assert isinstance(nodes[2], RawLeafMerkleNode)
+    assert isinstance(nodes[1], LeafTypes)
+    assert isinstance(nodes[2], LeafTypes)
     left_terminal_node = await data_store.get_terminal_node(nodes[1].key, nodes[1].value, store_id)
     right_terminal_node = await data_store.get_terminal_node(nodes[2].key, nodes[2].value, store_id)
     if side == Side.LEFT:
@@ -1246,7 +1246,7 @@ async def write_tree_to_file_old_format(
     node_hash: bytes32,
     store_id: bytes32,
     writer: BinaryIO,
-    merkle_blob: Optional[MerkleBlob] = None,
+    merkle_blob: Optional[MerkleBlobHint] = None,
     hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
 ) -> None:
     if node_hash == bytes32.zeros:
@@ -1266,13 +1266,13 @@ async def write_tree_to_file_old_format(
     raw_node = merkle_blob.get_raw_node(raw_index)
 
     to_write = b""
-    if isinstance(raw_node, RawInternalMerkleNode):
+    if isinstance(raw_node, InternalTypes):
         left_hash = merkle_blob.get_hash_at_index(raw_node.left)
         right_hash = merkle_blob.get_hash_at_index(raw_node.right)
         await write_tree_to_file_old_format(data_store, root, left_hash, store_id, writer, merkle_blob, hash_to_index)
         await write_tree_to_file_old_format(data_store, root, right_hash, store_id, writer, merkle_blob, hash_to_index)
         to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
-    elif isinstance(raw_node, RawLeafMerkleNode):
+    elif isinstance(raw_node, LeafTypes):
         node = await data_store.get_terminal_node(raw_node.key, raw_node.value, store_id)
         to_write = bytes(SerializedNode(True, node.key, node.value))
     else:
@@ -1680,7 +1680,8 @@ async def test_insert_from_delta_file(
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + max_full_files - 1
     kv = await data_store.get_keys_values(store_id=store_id)
-    assert kv == kv_before
+    # order agnostic comparison of the list
+    assert set(kv) == set(kv_before)
 
 
 @pytest.mark.anyio
@@ -1718,7 +1719,7 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                 if random.randint(0, 4) == 0:
                     batch = [{"action": "delete", "key": key}]
                     await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
-                    with pytest.raises(KeyNotFoundError, match=f"Key not found: {key.hex()}"):
+                    with pytest.raises((KeyNotFoundError, chia_rs.datalayer.UnknownKeyError)):
                         await raw_data_store.get_node_by_key(store_id=store_id, key=key)
 
 
@@ -1787,7 +1788,8 @@ async def test_insert_from_delta_file_correct_file_exists(
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + 2  # 1 full and 6 deltas
     kv = await data_store.get_keys_values(store_id=store_id)
-    assert kv == kv_before
+    # order agnostic comparison of the list
+    assert set(kv) == set(kv_before)
 
 
 @pytest.mark.anyio
@@ -2002,7 +2004,8 @@ async def test_migration(
     data_store.recent_merkle_blobs = LRUCache(capacity=128)
     assert await data_store.get_keys_values(store_id=store_id) == []
     await data_store.migrate_db(tmp_path)
-    assert await data_store.get_keys_values(store_id=store_id) == kv_before
+    # order agnostic comparison of the list
+    assert set(await data_store.get_keys_values(store_id=store_id)) == set(kv_before)
 
 
 @pytest.mark.anyio

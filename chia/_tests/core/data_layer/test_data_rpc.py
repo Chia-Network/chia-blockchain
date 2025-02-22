@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Optional, cast
 
 import anyio
+import chia_rs.datalayer
 import pytest
 
 from chia._tests.util.misc import boolean_datacases
@@ -1017,10 +1018,8 @@ async def process_for_data_layer_keys(
     for sleep_time in backoff_times():
         try:
             value = await data_layer.get_value(store_id=store_id, key=expected_key)
-        except Exception as e:
-            # TODO: more specific exceptions...
-            if "Key not found" not in str(e):
-                raise  # pragma: no cover
+        except (KeyNotFoundError, chia_rs.datalayer.UnknownKeyError):
+            pass
         else:
             if expected_value is None or value == expected_value:
                 break
@@ -3437,7 +3436,10 @@ async def test_unsubmitted_batch_update(
             count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
-        assert keys_values == prev_keys_values
+        # order agnostic comparison of the list of dicts
+        assert {item["key"]: item for item in keys_values["keys_values"]} == {
+            item["key"]: item for item in prev_keys_values["keys_values"]
+        }
 
         pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
         assert pending_root is not None

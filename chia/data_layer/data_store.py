@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
+import chia_rs.datalayer
 from chia_rs.datalayer import KeyId, TreeIndex, ValueId
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
@@ -26,7 +27,7 @@ from chia.data_layer.data_layer_util import (
     Node,
     NodeType,
     OperationType,
-    ProofOfInclusion,
+    ProofOfInclusionHint,
     Root,
     SerializedNode,
     ServerInfo,
@@ -60,13 +61,17 @@ log = logging.getLogger(__name__)
 # TODO: review exceptions for values that shouldn't be displayed
 # TODO: pick exception types other than Exception
 
+MerkleBlobHint = Union[MerkleBlob, chia_rs.datalayer.MerkleBlob]
+LeafTypes = (RawLeafMerkleNode, chia_rs.datalayer.LeafNode)
+InternalTypes = (RawInternalMerkleNode, chia_rs.datalayer.InternalNode)
+
 
 @dataclass
 class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
     db_wrapper: DBWrapper2
-    recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
+    recent_merkle_blobs: LRUCache[bytes32, MerkleBlobHint]
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -86,7 +91,7 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=128)
+            recent_merkle_blobs: LRUCache[bytes32, MerkleBlobHint] = LRUCache(capacity=128)
             self = cls(db_wrapper=db_wrapper, recent_merkle_blobs=recent_merkle_blobs)
 
             async with db_wrapper.writer() as writer:
@@ -297,9 +302,9 @@ class DataStore:
                 nodes = merkle_blob.get_nodes_with_indexes(index=index)
                 index_to_hash = {index: bytes32(node.hash) for index, node in nodes}
                 for _, node in nodes:
-                    if isinstance(node, RawLeafMerkleNode):
+                    if isinstance(node, LeafTypes):
                         terminal_nodes[bytes32(node.hash)] = (node.key, node.value)
-                    elif isinstance(node, RawInternalMerkleNode):
+                    elif isinstance(node, InternalTypes):
                         internal_nodes[bytes32(node.hash)] = (index_to_hash[node.left], index_to_hash[node.right])
 
         merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
@@ -392,7 +397,7 @@ class DataStore:
         root_hash: Optional[bytes32],
         read_only: bool = False,
         update_cache: bool = True,
-    ) -> MerkleBlob:
+    ) -> MerkleBlobHint:
         if root_hash is None:
             return MerkleBlob(blob=bytearray())
 
@@ -422,7 +427,7 @@ class DataStore:
 
     async def insert_root_from_merkle_blob(
         self,
-        merkle_blob: MerkleBlob,
+        merkle_blob: MerkleBlobHint,
         store_id: bytes32,
         status: Status,
         old_root: Optional[Root] = None,
@@ -836,11 +841,11 @@ class DataStore:
             merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
             reference_kid, _ = merkle_blob.get_node_by_hash(node_hash)
 
-        reference_index = merkle_blob.key_to_index[reference_kid]
+        reference_index = merkle_blob.get_key_index(reference_kid)
         lineage = merkle_blob.get_lineage_with_indexes(reference_index)
         result: list[InternalNode] = []
         for index, node in itertools.islice(lineage, 1, None):
-            assert isinstance(node, RawInternalMerkleNode)
+            assert isinstance(node, InternalTypes)
             result.append(
                 InternalNode(
                     hash=node.hash,
@@ -1096,17 +1101,19 @@ class DataStore:
 
         return keys
 
-    def get_reference_kid_side(self, merkle_blob: MerkleBlob, seed: bytes32) -> tuple[KeyId, Side]:
+    def get_reference_kid_side(self, merkle_blob: MerkleBlobHint, seed: bytes32) -> tuple[KeyId, Side]:
         side_seed = bytes(seed)[0]
         side = Side.LEFT if side_seed < 128 else Side.RIGHT
         reference_node = merkle_blob.get_random_leaf_node(seed)
         kid = reference_node.key
         return (kid, side)
 
-    async def get_terminal_node_from_kid(self, merkle_blob: MerkleBlob, kid: KeyId, store_id: bytes32) -> TerminalNode:
-        index = merkle_blob.key_to_index[kid]
+    async def get_terminal_node_from_kid(
+        self, merkle_blob: MerkleBlobHint, kid: KeyId, store_id: bytes32
+    ) -> TerminalNode:
+        index = merkle_blob.get_key_index(kid)
         raw_node = merkle_blob.get_raw_node(index)
-        assert isinstance(raw_node, RawLeafMerkleNode)
+        assert isinstance(raw_node, LeafTypes)
         return await self.get_terminal_node(raw_node.key, raw_node.value, store_id)
 
     async def get_terminal_node_for_seed(self, seed: bytes32, store_id: bytes32) -> Optional[TerminalNode]:
@@ -1249,7 +1256,11 @@ class DataStore:
 
                     key_hashed = key_hash(key)
                     kid, vid = await self.add_key_value(key, value, store_id)
-                    if merkle_blob.key_exists(kid):
+                    try:
+                        merkle_blob.get_key_index(kid)
+                    except (KeyError, chia_rs.datalayer.UnknownKeyError):
+                        pass
+                    else:
                         raise Exception(f"Key already present: {key.hex()}")
                     hash = leaf_hash(key, value)
 
@@ -1362,8 +1373,6 @@ class DataStore:
             if kvid is None:
                 raise KeyNotFoundError(key=key)
             kid = KeyId(kvid)
-            if not merkle_blob.key_exists(kid):
-                raise KeyNotFoundError(key=key)
             return await self.get_terminal_node_from_kid(merkle_blob, kid, store_id)
 
     async def get_node(self, node_hash: bytes32) -> Node:
@@ -1389,14 +1398,14 @@ class DataStore:
             hash_to_node: dict[bytes32, Node] = {}
             tree_node: Node
             for _, node in reversed(nodes):
-                if isinstance(node, RawInternalMerkleNode):
+                if isinstance(node, InternalTypes):
                     left_hash = merkle_blob.get_hash_at_index(node.left)
                     right_hash = merkle_blob.get_hash_at_index(node.right)
                     tree_node = InternalNode.from_child_nodes(
                         left=hash_to_node[left_hash], right=hash_to_node[right_hash]
                     )
                 else:
-                    assert isinstance(node, RawLeafMerkleNode)
+                    assert isinstance(node, LeafTypes)
                     tree_node = await self.get_terminal_node(node.key, node.value, store_id)
                 hash_to_node[bytes32(node.hash)] = tree_node
 
@@ -1409,7 +1418,7 @@ class DataStore:
         node_hash: bytes32,
         store_id: bytes32,
         root_hash: Optional[bytes32] = None,
-    ) -> ProofOfInclusion:
+    ) -> ProofOfInclusionHint:
         if root_hash is None:
             root = await self.get_tree_root(store_id=store_id)
             root_hash = root.node_hash
@@ -1421,7 +1430,7 @@ class DataStore:
         self,
         key: bytes,
         store_id: bytes32,
-    ) -> ProofOfInclusion:
+    ) -> ProofOfInclusionHint:
         root = await self.get_tree_root(store_id=store_id)
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
         kvid = await self.get_kvid(key, store_id)
@@ -1437,7 +1446,7 @@ class DataStore:
         store_id: bytes32,
         deltas_only: bool,
         writer: BinaryIO,
-        merkle_blob: Optional[MerkleBlob] = None,
+        merkle_blob: Optional[MerkleBlobHint] = None,
         hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
         existing_hashes: Optional[set[bytes32]] = None,
     ) -> None:
@@ -1465,7 +1474,7 @@ class DataStore:
         raw_node = merkle_blob.get_raw_node(raw_index)
 
         to_write = b""
-        if isinstance(raw_node, RawInternalMerkleNode):
+        if isinstance(raw_node, InternalTypes):
             left_hash = merkle_blob.get_hash_at_index(raw_node.left)
             right_hash = merkle_blob.get_hash_at_index(raw_node.right)
             await self.write_tree_to_file(
@@ -1475,7 +1484,7 @@ class DataStore:
                 root, right_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index, existing_hashes
             )
             to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
-        elif isinstance(raw_node, RawLeafMerkleNode):
+        elif isinstance(raw_node, LeafTypes):
             node = await self.get_terminal_node(raw_node.key, raw_node.value, store_id)
             to_write = bytes(SerializedNode(True, node.key, node.value))
         else:

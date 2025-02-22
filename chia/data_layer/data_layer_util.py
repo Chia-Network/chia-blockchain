@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import aiosqlite
+import chia_rs.datalayer
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
@@ -23,6 +24,9 @@ from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
     from chia.wallet.wallet_node import WalletNode
+
+ProofOfInclusionHint = Union["ProofOfInclusion", chia_rs.datalayer.ProofOfInclusion]
+ProofOfInclusionLayerHint = Union["ProofOfInclusionLayer", chia_rs.datalayer.ProofOfInclusionLayer]
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
@@ -187,7 +191,7 @@ class NodeType(IntEnum):
 
 
 @final
-class Side(IntEnum):
+class Side(uint8, Enum):
     LEFT = 0
     RIGHT = 1
 
