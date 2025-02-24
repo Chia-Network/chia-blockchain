@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
@@ -45,7 +46,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
 from chia.util.profiler import profile_task

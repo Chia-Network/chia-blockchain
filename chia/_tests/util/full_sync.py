@@ -12,6 +12,7 @@ from typing import Callable, Optional, cast
 
 import aiosqlite
 import zstd
+from chia_rs.sized_ints import uint16
 
 from chia._tests.util.constants import test_constants as TEST_CONSTANTS
 from chia.cmds.init_funcs import chia_init
@@ -30,7 +31,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
-from chia.util.ints import uint16
 
 
 class ExitOnError(logging.Handler):

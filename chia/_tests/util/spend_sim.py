@@ -17,6 +17,7 @@ from chia_rs import (
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -39,7 +40,6 @@ from chia.types.spend_bundle import SpendBundle, T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 

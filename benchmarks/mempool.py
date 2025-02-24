@@ -9,6 +9,8 @@ from subprocess import check_call
 from time import monotonic
 from typing import Optional
 
+from chia_rs.sized_ints import uint32, uint64
+
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
@@ -20,7 +22,6 @@ from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.batches import to_batches
-from chia.util.ints import uint32, uint64
 from chia.util.task_referencer import create_referenced_task
 
 NUM_ITERS = 200

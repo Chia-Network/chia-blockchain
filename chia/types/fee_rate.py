@@ -4,10 +4,10 @@ import math
 from dataclasses import dataclass
 
 import typing_extensions
+from chia_rs.sized_ints import uint64
 
 from chia.types.clvm_cost import CLVMCost
 from chia.types.mojos import Mojos
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 

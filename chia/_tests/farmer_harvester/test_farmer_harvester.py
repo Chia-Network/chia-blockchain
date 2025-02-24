@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.split_managers import split_async_manager
@@ -24,7 +25,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.config import load_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import generate_mnemonic
 
 

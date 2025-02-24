@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 from chia_rs import AugSchemeMPL, ConsensusConstants
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
@@ -31,7 +32,6 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

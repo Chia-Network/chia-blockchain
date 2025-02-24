@@ -10,6 +10,7 @@ from time import monotonic
 from typing import Callable, Optional
 
 from chia_rs import AugSchemeMPL, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
@@ -26,7 +27,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

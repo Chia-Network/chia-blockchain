@@ -11,6 +11,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, ConsensusConstants, G2Element, MerkleSet
+from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
@@ -56,7 +57,6 @@ from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof

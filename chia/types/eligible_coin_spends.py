@@ -6,6 +6,7 @@ from collections.abc import Awaitable
 from typing import Callable, Optional
 
 from chia_rs import ConsensusConstants, fast_forward_singleton, get_conditions_from_spendbundle
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.coin import Coin
@@ -16,7 +17,6 @@ from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 
 @dataclasses.dataclass(frozen=True)

@@ -17,6 +17,7 @@ from chia_rs import (
     run_block_generator,
     run_block_generator2,
 )
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -36,7 +37,6 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.prev_transaction_block import get_prev_transaction_block
 
 log = logging.getLogger(__name__)

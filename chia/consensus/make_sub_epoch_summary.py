@@ -4,6 +4,7 @@ import logging
 from typing import Optional, Union
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
@@ -19,7 +20,6 @@ from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

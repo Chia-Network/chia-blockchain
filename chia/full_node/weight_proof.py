@@ -11,6 +11,7 @@ from multiprocessing.context import BaseContext
 from typing import IO, Optional
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -44,7 +45,6 @@ from chia.types.weight_proof import (
 from chia.util.batches import to_batches
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.task_referencer import create_referenced_task
 

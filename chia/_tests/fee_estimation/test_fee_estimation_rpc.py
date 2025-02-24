@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -16,7 +17,6 @@ from chia.types.aliases import WalletService
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
 
 
 @pytest.fixture(scope="function")

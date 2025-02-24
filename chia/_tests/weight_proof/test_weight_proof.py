@@ -4,6 +4,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.block_record import BlockRecord
@@ -18,7 +19,6 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.generator_tools import get_block_header
-from chia.util.ints import uint8, uint32, uint64
 
 
 async def load_blocks_dont_validate(

@@ -3,6 +3,7 @@ from __future__ import annotations
 from random import Random
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.core.consensus.test_pot_iterations import test_constants
 from chia._tests.util.db_connection import DBConnection
@@ -13,7 +14,6 @@ from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
-from chia.util.ints import uint32, uint64
 
 
 @pytest.mark.anyio

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint64
 
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.types.blockchain_format.coin import Coin
@@ -11,7 +12,6 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
 GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001

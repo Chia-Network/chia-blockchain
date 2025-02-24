@@ -29,6 +29,7 @@ import pytest
 from _pytest.nodes import Node
 from aiohttp import web
 from chia_rs import Coin
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 import chia
 import chia._tests
@@ -42,7 +43,6 @@ from chia.server.outbound_message import Message
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode

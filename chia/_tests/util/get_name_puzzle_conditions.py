@@ -11,11 +11,11 @@ from chia_rs import (
     run_block_generator,
     run_block_generator2,
 )
+from chia_rs.sized_ints import uint16, uint32
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.generator_types import BlockGenerator
 from chia.util.errors import Err
-from chia.util.ints import uint16, uint32
 
 log = logging.getLogger(__name__)
 

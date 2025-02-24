@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from typing import Optional
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.cost_calculator import NPCResult
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 MAX_COST = 11000000000
 

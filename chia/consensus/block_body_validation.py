@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
 from chia_rs import ConsensusConstants, SpendBundleConditions, compute_merkle_set_root
+from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -21,7 +22,6 @@ from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

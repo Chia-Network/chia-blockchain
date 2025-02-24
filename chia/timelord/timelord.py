@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiavdf import create_discriminant, prove
 
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
@@ -40,7 +41,6 @@ from chia.types.blockchain_format.slots import (
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.util.task_referencer import create_referenced_task
 

@@ -7,6 +7,7 @@ from typing import Optional, cast
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint64
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from pytest_mock import MockerFixture
@@ -42,7 +43,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager

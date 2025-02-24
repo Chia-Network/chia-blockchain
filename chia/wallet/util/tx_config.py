@@ -4,12 +4,12 @@ import dataclasses
 from typing import Any, Optional, TypeVar
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint64
 from typing_extensions import NotRequired, TypedDict, Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 

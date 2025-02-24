@@ -12,6 +12,7 @@ from secrets import randbits
 from typing import Any, Optional
 
 import dns.asyncresolver
+from chia_rs.sized_ints import uint16, uint64
 
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
@@ -23,7 +24,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo, UnresolvedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint64
 from chia.util.ip_address import IPAddress
 from chia.util.network import resolve
 from chia.util.safe_cancel_task import cancel_task_safe

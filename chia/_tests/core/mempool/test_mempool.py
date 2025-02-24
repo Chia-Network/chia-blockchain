@@ -15,6 +15,7 @@ from chia_rs import (
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
 from clvm_tools.binutils import assemble
@@ -74,7 +75,6 @@ from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 

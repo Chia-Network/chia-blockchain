@@ -4,11 +4,11 @@ import random
 from dataclasses import dataclass
 
 import pytest
+from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.block_cache import BlockCache
-from chia.util.ints import uint32
 
 
 @dataclass

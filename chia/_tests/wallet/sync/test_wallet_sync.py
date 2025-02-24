@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 from aiosqlite import Error as AIOSqliteError
 from chia_rs import ConsensusConstants, G2Element, confirm_not_included_already_hashed
+from chia_rs.sized_ints import uint32, uint64, uint128
 from chiabip158 import PyBIP158
 from colorlog import getLogger
 
@@ -56,7 +57,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
