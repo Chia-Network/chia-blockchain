@@ -5,11 +5,10 @@ from collections.abc import Generator, Iterator
 from typing import Optional
 
 import pytest
-from chia_rs import G1Element, G2Element
+from chia_rs import Foliage, FoliageBlockData, FoliageTransactionBlock, G1Element, G2Element, TransactionsInfo
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.util.benchmarks import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock

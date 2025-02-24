@@ -12,9 +12,12 @@ from typing import Any, Optional
 import pytest
 from chia_rs import (
     AugSchemeMPL,
+    Foliage,
+    FoliageTransactionBlock,
     G2Element,
     PrivateKey,
     SpendBundleConditions,
+    TransactionsInfo,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
@@ -64,7 +67,6 @@ from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
