@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from chia_rs.sized_ints import uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
@@ -21,7 +22,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.ints import uint128
 
 
 class TestNewPeak:

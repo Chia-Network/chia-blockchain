@@ -7,6 +7,7 @@ from typing import Optional
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
+from chia_rs.sized_ints import uint64
 
 import chia.server.server
 from chia._tests.util.time_out_assert import time_out_assert
@@ -22,7 +23,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.util.timing import adjusted_timeout
 from chia.wallet.wallet_node import WalletNode
 

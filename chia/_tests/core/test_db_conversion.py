@@ -4,6 +4,7 @@ import random
 from pathlib import Path
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
@@ -16,7 +17,6 @@ from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 
 
 def rand_bytes(num) -> bytes:

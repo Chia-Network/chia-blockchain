@@ -6,6 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
@@ -21,7 +22,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertAnnouncement,
     AssertCoinAnnouncement,
@@ -312,13 +312,12 @@ class DataLayerWallet:
         announcement = AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message)
 
         await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(1),
-            puzzle_hash=SINGLETON_LAUNCHER_PUZZLE_HASH,
+            amounts=[uint64(1)],
+            puzzle_hashes=[SINGLETON_LAUNCHER_PUZZLE_HASH],
             action_scope=action_scope,
             fee=fee,
             origin_id=launcher_parent.name(),
             coins=coins,
-            primaries=None,
             extra_conditions=(*extra_conditions, announcement),
         )
 
@@ -361,8 +360,8 @@ class DataLayerWallet:
         action_scope: WalletActionScope,
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
+            amounts=[],
+            puzzle_hashes=[],
             action_scope=action_scope,
             fee=fee,
             negative_change_allowed=False,
@@ -593,7 +592,7 @@ class DataLayerWallet:
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: set[Coin] = set(),
+        coins: Optional[set[Coin]] = None,
         memos: Optional[list[list[bytes]]] = None,  # ignored
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
@@ -602,7 +601,7 @@ class DataLayerWallet:
         new_root_hash: Optional[bytes32] = kwargs.get("new_root_hash", None)
         announce_new_state: bool = kwargs.get("announce_new_state", False)
         # Figure out the launcher ID
-        if len(coins) == 0:
+        if coins is None or len(coins) == 0:
             if launcher_id is None:
                 raise ValueError("Not enough info to know which DL coin to send")
         else:
@@ -693,12 +692,11 @@ class DataLayerWallet:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            amount=amount,
-            puzzle_hash=create_mirror_puzzle().get_tree_hash(),
+            amounts=[amount],
+            puzzle_hashes=[create_mirror_puzzle().get_tree_hash()],
             action_scope=action_scope,
             fee=fee,
-            primaries=[],
-            memos=[launcher_id, *(url for url in urls)],
+            memos=[[launcher_id, *(url for url in urls)]],
             extra_conditions=extra_conditions,
         )
 
@@ -771,8 +769,8 @@ class DataLayerWallet:
 
         if excess_fee > 0:
             await self.wallet_state_manager.main_wallet.generate_signed_transaction(
-                uint64(1),
-                new_puzhash,
+                [uint64(1)],
+                [new_puzhash],
                 action_scope,
                 fee=uint64(excess_fee),
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=mirror_coin.name(), asserted_msg=b"$"),),

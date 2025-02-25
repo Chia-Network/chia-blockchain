@@ -11,6 +11,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -27,7 +28,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import ConditionValidTimes

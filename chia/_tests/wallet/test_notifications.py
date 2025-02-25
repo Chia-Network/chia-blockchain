@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -14,7 +15,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 from chia.wallet.notification_store import NotificationStore
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 

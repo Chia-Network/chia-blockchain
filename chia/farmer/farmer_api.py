@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
@@ -44,7 +45,6 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 
 class FarmerAPI:

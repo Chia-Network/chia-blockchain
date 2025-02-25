@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
 
+from chia_rs.sized_ints import uint64
+
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 

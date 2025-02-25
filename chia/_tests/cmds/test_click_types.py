@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 import pytest
+from chia_rs.sized_ints import uint64
 from click import BadParameter
 
 from chia.cmds.cmd_classes import ChiaCliContext
@@ -20,7 +21,6 @@ from chia.cmds.param_types import (
 from chia.cmds.units import units
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 
 """

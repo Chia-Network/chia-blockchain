@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import (
@@ -22,7 +23,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -691,7 +691,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
 
     cc2_ph = await cat_wallet_2.get_cat_puzzle_hash(new=False)
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(uint64(10), cc2_ph, action_scope)
+        await wallet.wallet_state_manager.main_wallet.generate_signed_transaction([uint64(10)], [cc2_ph], action_scope)
 
     await wallet_environments.process_pending_states(
         [

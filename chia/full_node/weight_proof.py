@@ -10,10 +10,12 @@ from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
 from typing import IO, Optional
 
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.consensus.pot_iterations import (
@@ -43,7 +45,6 @@ from chia.types.weight_proof import (
 from chia.util.batches import to_batches
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.task_referencer import create_referenced_task
 
@@ -647,7 +648,7 @@ class WeightProofHandler:
             fork_point_index = idx
 
         if fork_point_index <= 2:
-            # Two summeries can have different blocks and still be identical
+            # Two summaries can have different blocks and still be identical
             # This gets resolved after one full sub epoch
             return uint32(0), 0
 

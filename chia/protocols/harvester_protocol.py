@@ -5,11 +5,11 @@ from enum import IntEnum
 from typing import Optional
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_ints import int16, uint8, uint32, uint64
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 """

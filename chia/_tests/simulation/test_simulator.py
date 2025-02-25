@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.cmds.units import units
@@ -8,7 +9,6 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
@@ -127,8 +127,8 @@ async def test_wait_transaction_records_entered_mempool(
     for coin in coins:
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                amount=uint64(tx_amount),
-                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                amounts=[uint64(tx_amount)],
+                puzzle_hashes=[await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()],
                 action_scope=action_scope,
                 coins={coin},
             )
@@ -163,8 +163,8 @@ async def test_process_transaction_records(
     for coin in coins:
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                amount=uint64(tx_amount),
-                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                amounts=[uint64(tx_amount)],
+                puzzle_hashes=[await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()],
                 action_scope=action_scope,
                 coins={coin},
             )

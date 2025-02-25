@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 import aiosqlite
 import chia_rs.datalayer
+from chia_rs.sized_ints import uint8, uint64
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
@@ -17,7 +18,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 

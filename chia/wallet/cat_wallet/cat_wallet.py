@@ -7,6 +7,7 @@ import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -19,7 +20,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
@@ -565,8 +565,8 @@ class CATWallet:
                 )
                 origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
-                    uint64(0),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                    [],
+                    [],
                     inner_action_scope,
                     fee=uint64(fee - amount_to_claim),
                     coins=chia_coins,
@@ -582,8 +582,8 @@ class CATWallet:
                 origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
-                    uint64(selected_amount + amount_to_claim - fee),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                    [uint64(selected_amount + amount_to_claim - fee)],
+                    [(await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash))],
                     inner_action_scope,
                     coins=chia_coins,
                     negative_change_allowed=True,

@@ -10,6 +10,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
@@ -27,7 +28,6 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import agg_sig_additional_data
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
 

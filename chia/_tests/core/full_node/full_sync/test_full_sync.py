@@ -5,6 +5,7 @@ import logging
 import time
 
 import pytest
+from chia_rs.sized_ints import uint16
 
 from chia._tests.core.node_height import node_height_between, node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
@@ -15,7 +16,6 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16
 
 log = logging.getLogger(__name__)
 

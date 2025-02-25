@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs.sized_ints import uint32, uint64, uint128
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
@@ -27,7 +29,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
 from chia.util.math import make_monotonically_decreasing
 from chia.util.ws_message import WsRpcMessage, create_payload_dict

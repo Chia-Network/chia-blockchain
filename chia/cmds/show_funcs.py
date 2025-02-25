@@ -11,9 +11,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:
     import time
 
+    from chia_rs.sized_ints import uint64
+
     from chia.cmds.cmds_util import format_bytes
     from chia.consensus.block_record import BlockRecord
-    from chia.util.ints import uint64
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:

@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_ints import uint64
 from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
@@ -19,7 +20,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -719,8 +719,10 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             wallet_environments.tx_config, push=False
         ) as action_scope:
             await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
-                new_vc_record.vc.launcher_id,
+                [uint64(1)],
+                [await wallet_0.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
                 action_scope,
+                vc_id=new_vc_record.vc.launcher_id,
                 new_proof_hash=bytes32.zeros,
                 self_revoke=True,
             )

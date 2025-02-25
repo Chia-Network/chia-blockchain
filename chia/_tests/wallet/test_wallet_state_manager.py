@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.transaction_record import TransactionRecord
@@ -125,14 +125,14 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     ) as action_scope:
         coins = list(await wsm.main_wallet.select_coins(uint64(2_000_000_000_000), action_scope))
         await wsm.main_wallet.generate_signed_transaction(
-            uint64(0),
-            bytes32.zeros,
+            [uint64(0)],
+            [bytes32.zeros],
             action_scope,
             coins={coins[0]},
         )
         await wsm.main_wallet.generate_signed_transaction(
-            uint64(0),
-            bytes32.zeros,
+            [uint64(0)],
+            [bytes32.zeros],
             action_scope,
             coins={coins[1]},
         )
@@ -220,8 +220,8 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
     # Some transaction, doesn't matter what
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         await env_1.xch_wallet.generate_signed_transaction(
-            uint64(1),
-            await env_1.xch_wallet.get_puzzle_hash(new=False),
+            [uint64(1)],
+            [await env_1.xch_wallet.get_puzzle_hash(new=False)],
             action_scope,
         )
 
