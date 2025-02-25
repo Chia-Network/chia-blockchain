@@ -10,7 +10,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
 from typing import IO, Optional
 
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, SubEpochChallengeSegment, SubEpochData, SubEpochSegments, SubSlotData
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_header_validation import validate_finished_header_block
@@ -36,10 +36,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import (
     RecentChainData,
-    SubEpochChallengeSegment,
-    SubEpochData,
-    SubEpochSegments,
-    SubSlotData,
     WeightProof,
 )
 from chia.util.batches import to_batches

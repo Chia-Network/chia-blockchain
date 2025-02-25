@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import chia_rs
+from chia_rs import SubEpochChallengeSegment, SubEpochData
 
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
 from chia.util.streamable import Streamable, streamable
-
-SubEpochData = chia_rs.SubEpochData
 
 # number of challenge blocks
 # Average iters for challenge blocks
@@ -20,11 +18,6 @@ SubEpochData = chia_rs.SubEpochData
 # |----------------------------A---------------------------------|       Attackers chain 1000
 #                            0.48
 # total number of challenge blocks == total number of reward chain blocks
-
-
-SubEpochChallengeSegment = chia_rs.SubEpochChallengeSegment
-SubEpochSegments = chia_rs.SubEpochSegments
-SubSlotData = chia_rs.SubSlotData
 
 
 @streamable
