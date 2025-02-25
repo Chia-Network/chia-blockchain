@@ -16,7 +16,7 @@ from typing import Any, BinaryIO, Callable, Optional
 import aiohttp
 import chia_rs.datalayer
 import pytest
-from chia_rs.datalayer import TreeIndex
+from chia_rs.datalayer import KeyAlreadyPresentError, TreeIndex
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
@@ -1862,7 +1862,7 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
         key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
     )
     # TODO: this exception should just be more specific to avoid the case sensitivity concerns
-    with pytest.raises(Exception, match=f"(?i)Key already present: {key.hex()}"):
+    with pytest.raises(KeyAlreadyPresentError):
         await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
 
 
@@ -1878,7 +1878,7 @@ async def test_batch_insert_key_already_present(
     changelist = [{"action": "insert", "key": key, "value": value}]
     await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
     # TODO: this exception should just be more specific to avoid the case sensitivity concerns
-    with pytest.raises(Exception, match=f"(?i)Key already present: {key.hex()}"):
+    with pytest.raises(KeyAlreadyPresentError):
         await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
 
 
