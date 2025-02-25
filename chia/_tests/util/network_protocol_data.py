@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from chia_rs import G1Element, G2Element, RewardChainBlockUnfinished
+from chia_rs import (
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    G1Element,
+    G2Element,
+    RewardChainBlockUnfinished,
+    TransactionsInfo,
+)
 from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64, uint128
 
 from chia.protocols import (
@@ -15,7 +23,6 @@ from chia.protocols import (
 from chia.protocols.shared_protocol import Error
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
