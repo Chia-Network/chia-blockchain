@@ -12,6 +12,7 @@ import pytest
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 from chia_rs.datalayer import KeyId, TreeIndex, ValueId
+from chia_rs.sized_ints import int64
 
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.data_layer.data_layer_util import Side, internal_hash
@@ -33,7 +34,6 @@ from chia.data_layer.util.merkle_blob import (
     unpack_raw_node,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int64
 
 pytestmark = pytest.mark.data_layer
 
