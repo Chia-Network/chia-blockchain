@@ -1252,7 +1252,7 @@ class DataStore:
                     kid, vid = await self.add_key_value(key, value, store_id)
                     try:
                         merkle_blob.get_key_index(kid)
-                    except (KeyError, chia_rs.datalayer.UnknownKeyError):
+                    except chia_rs.datalayer.UnknownKeyError:
                         pass
                     else:
                         raise KeyAlreadyPresentError(kid)

@@ -1018,7 +1018,7 @@ async def process_for_data_layer_keys(
     for sleep_time in backoff_times():
         try:
             value = await data_layer.get_value(store_id=store_id, key=expected_key)
-        except (KeyNotFoundError, chia_rs.datalayer.UnknownKeyError):
+        except chia_rs.datalayer.UnknownKeyError:
             pass
         else:
             if expected_value is None or value == expected_value:

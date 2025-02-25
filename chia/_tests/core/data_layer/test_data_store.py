@@ -1719,7 +1719,7 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                 if random.randint(0, 4) == 0:
                     batch = [{"action": "delete", "key": key}]
                     await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
-                    with pytest.raises((KeyNotFoundError, chia_rs.datalayer.UnknownKeyError)):
+                    with pytest.raises(chia_rs.datalayer.UnknownKeyError):
                         await raw_data_store.get_node_by_key(store_id=store_id, key=key)
 
 
