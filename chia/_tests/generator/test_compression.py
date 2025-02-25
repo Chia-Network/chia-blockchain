@@ -13,6 +13,7 @@ from chia_puzzles_py.programs import (
     ROM_BOOTSTRAP_GENERATOR,
 )
 from chia_rs import serialized_length
+from chia_rs.sized_ints import uint32
 from clvm.serialize import sexp_from_stream
 from clvm.SExp import SExp
 from clvm_tools import binutils
@@ -20,7 +21,6 @@ from clvm_tools import binutils
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)

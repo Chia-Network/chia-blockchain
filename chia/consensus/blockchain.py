@@ -10,12 +10,12 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import ConsensusConstants, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -43,7 +43,6 @@ from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.priority_mutex import PriorityMutex
 
 log = logging.getLogger(__name__)
@@ -146,6 +145,7 @@ class Blockchain:
             num_workers = max(cpu_count - reserved_cores, 1)
             self.pool = ThreadPoolExecutor(
                 max_workers=num_workers,
+                thread_name_prefix="block-validation-",
             )
             log.info(f"Started {num_workers} processes for block validation")
 
@@ -609,16 +609,16 @@ class Blockchain:
         )
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        assert self.contains_block(header_hash)
-        curr = self.block_record(header_hash)
+        curr = self.try_block_record(header_hash)
+        assert curr is not None
         if curr.height <= 2:
             return self.constants.DIFFICULTY_STARTING
 
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[1]
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        assert self.contains_block(header_hash)
-        curr = self.block_record(header_hash)
+        curr = self.try_block_record(header_hash)
+        assert curr is not None
         if curr.height <= 2:
             return self.constants.SUB_SLOT_ITERS_STARTING
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
@@ -704,7 +704,7 @@ class Blockchain:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         if (
-            not self.contains_block(block.prev_header_hash)
+            self.try_block_record(block.prev_header_hash) is None
             and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
         ):
             return None, Err.INVALID_PREV_BLOCK_HASH
@@ -788,12 +788,11 @@ class Blockchain:
 
         return PreValidationResult(None, required_iters, conds, uint32(0))
 
-    def contains_block(self, header_hash: bytes32) -> bool:
-        """
-        True if we have already added this block to the chain. This may return false for orphan blocks
-        that we have added but no longer keep in memory.
-        """
-        return header_hash in self.__block_records
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
+        block_hash_from_hh = self.height_to_hash(height)
+        if block_hash_from_hh is None or block_hash_from_hh != header_hash:
+            return False
+        return True
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__block_records[header_hash]
@@ -955,7 +954,7 @@ class Blockchain:
         return records
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if self.contains_block(header_hash):
+        if header_hash in self.__block_records:
             return self.block_record(header_hash)
         return None
 

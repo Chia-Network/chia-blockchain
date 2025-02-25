@@ -205,7 +205,7 @@ class S3Plugin:
             target_diff_path = self.get_s3_target_from_path(store_id, diff_path, group_files_by_store)
 
             try:
-                with concurrent.futures.ThreadPoolExecutor() as pool:
+                with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-upload-") as pool:
                     if full_tree_path is not None:
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
@@ -284,7 +284,7 @@ class S3Plugin:
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")
-            with concurrent.futures.ThreadPoolExecutor() as pool:
+            with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-download-") as pool:
                 await asyncio.get_running_loop().run_in_executor(
                     pool, functools.partial(my_bucket.download_file, filename, str(target_filename))
                 )
@@ -330,7 +330,7 @@ class S3Plugin:
                         log.debug(f"skip {file_name} already in bucket")
                         continue
 
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                    with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-missing-") as pool:
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
                             functools.partial(my_bucket.upload_file, file_path, target_file_name),

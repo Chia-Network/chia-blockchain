@@ -7,6 +7,7 @@ from collections.abc import Collection
 from typing import Any, Optional, Union
 
 import anyio
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
@@ -28,7 +29,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
@@ -707,10 +707,9 @@ class FullNodeSimulator(FullNodeAPI):
                         DEFAULT_TX_CONFIG, push=True
                     ) as action_scope:
                         await wallet.generate_signed_transaction(
-                            amount=outputs_group[0].amount,
-                            puzzle_hash=outputs_group[0].puzzle_hash,
+                            amounts=[output.amount for output in outputs_group],
+                            puzzle_hashes=[output.puzzle_hash for output in outputs_group],
                             action_scope=action_scope,
-                            primaries=outputs_group[1:],
                         )
                     transaction_records.extend(action_scope.side_effects.transactions)
                 else:

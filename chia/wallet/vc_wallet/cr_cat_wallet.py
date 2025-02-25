@@ -6,6 +6,7 @@ import traceback
 from typing import TYPE_CHECKING, Any, Optional
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
@@ -15,7 +16,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, construct_cat_puzzle
@@ -585,8 +585,10 @@ class CRCATWallet(CATWallet):
         )
         if add_authorizations_to_cr_cats:
             await vc_wallet.generate_signed_transaction(
-                vc.launcher_id,
+                [uint64(1)],
+                [await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
                 action_scope,
+                vc_id=vc.launcher_id,
                 extra_conditions=(
                     *expected_announcements,
                     announcement,
@@ -766,8 +768,10 @@ class CRCATWallet(CATWallet):
 
         # Make the VC TX
         await vc_wallet.generate_signed_transaction(
-            vc.launcher_id,
+            [uint64(1)],
+            [await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
             action_scope,
+            vc_id=vc.launcher_id,
             extra_conditions=(
                 *extra_conditions,
                 *expected_announcements,

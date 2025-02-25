@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from time import monotonic
 
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import (
     clvm_generator,
@@ -29,7 +31,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 # to run this benchmark:
 # python -m benchmarks.coin_store

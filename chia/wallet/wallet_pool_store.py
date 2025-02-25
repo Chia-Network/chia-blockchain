@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 
+from chia_rs.sized_ints import uint32
+
 from chia.types.coin_spend import CoinSpend
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)
 

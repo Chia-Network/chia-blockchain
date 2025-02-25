@@ -5,6 +5,7 @@ import json
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -23,7 +24,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
@@ -1705,7 +1705,7 @@ class TestDIDWallet:
         async with wallet_0.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config.override(excluded_coin_ids=[coin_id]), push=True
         ) as action_scope:
-            await wallet_0.generate_signed_transaction(odd_amount, ph_1, action_scope, fee)
+            await wallet_0.generate_signed_transaction([odd_amount], [ph_1], action_scope, fee)
 
         await wallet_environments.process_pending_states(
             [

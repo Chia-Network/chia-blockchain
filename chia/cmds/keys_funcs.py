@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint32
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.signing_mode import SigningMode
@@ -15,7 +16,6 @@ from chia.util.bech32m import bech32_encode, convertbits, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.errors import KeychainException
 from chia.util.file_keyring import MAX_LABEL_LENGTH
-from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
     KeyData,

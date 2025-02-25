@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from chia_rs.sized_ints import uint128
+
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint128
 
 
 class SimulatorFullNodeRpcClient(FullNodeRpcClient):

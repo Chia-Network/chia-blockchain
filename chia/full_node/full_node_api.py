@@ -18,6 +18,7 @@ from chia_rs import (
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -25,7 +26,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -72,7 +72,6 @@ from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
 
@@ -96,7 +95,7 @@ class FullNodeAPI:
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
-        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="node-api-")
 
     @property
     def server(self) -> ChiaServer:
@@ -285,7 +284,7 @@ class FullNodeAPI:
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
-        if not self.full_node.blockchain.contains_block(request.tip):
+        if self.full_node.blockchain.try_block_record(request.tip) is None:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         if request.tip in self.full_node.pow_creation:
@@ -863,32 +862,16 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                        (
+                            block_generator,
+                            aggregate_signature,
+                            additions,
+                        ) = await self.full_node.mempool_manager.create_block_generator(
                             curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
                         )
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
-                        mempool_bundle = None
-                    if mempool_bundle is not None:
-                        spend_bundle, additions = mempool_bundle
-                        removals = spend_bundle.removals()
-                        self.full_node.log.info(f"Add rem: {len(additions)} {len(removals)}")
-                        aggregate_signature = spend_bundle.aggregated_signature
-                        # when the hard fork activates, block generators are
-                        # allowed to be serialized with the improved CLVM
-                        # serialization format, supporting back-references
-                        start_time = time.monotonic()
-                        if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
-                            block_generator = simple_solution_generator_backrefs(spend_bundle)
-                        else:
-                            block_generator = simple_solution_generator(spend_bundle)
-                        end_time = time.monotonic()
-                        duration = end_time - start_time
-                        self.log.log(
-                            logging.INFO if duration < 1 else logging.WARNING,
-                            f"serializing block generator took {duration:0.2f} seconds",
-                        )
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:

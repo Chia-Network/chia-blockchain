@@ -8,6 +8,8 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
+from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -16,7 +18,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
@@ -53,7 +54,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -1232,12 +1233,11 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
 
         await self.standard_wallet.generate_signed_transaction(
-            amount=amount,
-            puzzle_hash=genesis_launcher_puz.get_tree_hash(),
+            amounts=[amount],
+            puzzle_hashes=[genesis_launcher_puz.get_tree_hash()],
             action_scope=action_scope,
             fee=fee,
             coins=coins,
-            primaries=None,
             origin_id=origin.name(),
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
@@ -1500,3 +1500,16 @@ class DIDWallet:
             ).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    async def generate_signed_transaction(
+        self,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        **kwargs: Unpack[GSTOptionalArgs],
+    ) -> None:
+        raise NotImplementedError("DIDWallet does not implement `generate_signed_transaction`")
