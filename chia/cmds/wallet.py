@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Optional
 
 import click
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
@@ -22,7 +23,6 @@ from chia.cmds.param_types import (
 )
 from chia.cmds.signer import PushTransactionsCMD, signer_cmd
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey

@@ -4,6 +4,7 @@ import random
 
 import importlib_resources
 from chia_rs import AugSchemeMPL, ClassgroupElement, Coin, G1Element, G2Element, VDFInfo, VDFProof
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -14,7 +15,6 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)

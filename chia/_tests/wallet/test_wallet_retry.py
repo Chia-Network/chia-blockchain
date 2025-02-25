@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.full_node.full_node_api import FullNodeAPI
@@ -13,7 +14,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
@@ -55,7 +55,7 @@ async def test_wallet_tx_retry(
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
     async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet_1.generate_signed_transaction(uint64(100), reward_ph, action_scope)
+        await wallet_1.generate_signed_transaction([uint64(100)], [reward_ph], action_scope)
     [transaction] = action_scope.side_effects.transactions
     sb1 = transaction.spend_bundle
     assert sb1 is not None

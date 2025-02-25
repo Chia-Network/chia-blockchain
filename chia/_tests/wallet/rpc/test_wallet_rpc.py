@@ -13,6 +13,7 @@ from unittest.mock import patch
 import aiosqlite
 import pytest
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -85,7 +86,6 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -503,8 +503,8 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     fee_amount = 100
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            amount=uint64(5),
-            puzzle_hash=bytes32.zeros,
+            amounts=[uint64(5)],
+            puzzle_hashes=[bytes32.zeros],
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
@@ -1826,8 +1826,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
     )
-    assert min_coins is not None
-    assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
+    assert len(min_coins) == 1
+    assert min_coins[0].amount == uint64(10_000)
 
     # test max coin amount
     max_coins: list[Coin] = await client_2.select_coins(
@@ -1837,8 +1837,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
         ),
     )
-    assert max_coins is not None
-    assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
+    assert len(max_coins) == 2
+    assert max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
     non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
@@ -1847,11 +1847,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
-    assert excluded_amt_coins is not None
-    assert (
-        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
-        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
-    )
+    assert len(excluded_amt_coins) == len([a for a in tx_amounts if a != 1000])
+    assert sum(c.amount for c in excluded_amt_coins) == non_1000_amt
 
     # test excluded coins
     with pytest.raises(ValueError):

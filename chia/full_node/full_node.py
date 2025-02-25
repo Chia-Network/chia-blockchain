@@ -18,10 +18,12 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TextIO, Uni
 from chia_rs import (
     AugSchemeMPL,
     BLSCache,
+    ConsensusConstants,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
@@ -29,7 +31,6 @@ from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
@@ -85,7 +86,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
 from chia.util.path import path_from_root
@@ -274,6 +274,7 @@ class FullNode:
 
             self._mempool_manager = MempoolManager(
                 get_coin_records=self.coin_store.get_coin_records,
+                get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 single_threaded=single_threaded,
             )
@@ -619,6 +620,7 @@ class FullNode:
                 fork_hash = self.constants.GENESIS_CHALLENGE
             assert fork_hash
             fork_info = ForkInfo(start_height - 1, start_height - 1, fork_hash)
+            blockchain = AugmentedBlockchain(self.blockchain)
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
@@ -636,7 +638,6 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    blockchain = AugmentedBlockchain(self.blockchain)
                     success, state_change_summary = await self.add_block_batch(
                         response.blocks, peer_info, fork_info, vs, blockchain
                     )
@@ -757,7 +758,7 @@ class FullNode:
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
-        if self.blockchain.contains_block(request.header_hash):
+        if self.blockchain.contains_block(request.header_hash, request.height):
             return None
 
         # Not interested in less heavy peaks
@@ -778,7 +779,11 @@ class FullNode:
                         full_node_protocol.RequestBlock(target_peak.height, False),
                         timeout=10,
                     )
-                    if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
+                    if (
+                        target_peak_response is not None
+                        and isinstance(target_peak_response, RespondBlock)
+                        and target_peak_response.block.header_hash == target_peak.header_hash
+                    ):
                         self.sync_store.peer_has_block(
                             target_peak.header_hash,
                             peer.peer_node_id,
@@ -1022,7 +1027,11 @@ class FullNode:
                     )
                 )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
-                if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
+                if (
+                    target_peak_response is not None
+                    and isinstance(target_peak_response, RespondBlock)
+                    and target_peak_response.block.header_hash == target_peak.header_hash
+                ):
                     self.sync_store.peer_has_block(
                         target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
                     )
@@ -1240,7 +1249,7 @@ class FullNode:
                                 # By setting the next allowed timestamp to now,
                                 # means that any other peer that has waited for
                                 # this will have its next allowed timestamp in
-                                # the passed, and be prefered multiple times
+                                # the passed, and be preferred multiple times
                                 # over this peer.
                                 new_peers_with_peak[idx] = (
                                     new_peers_with_peak[idx][0],
@@ -2018,7 +2027,7 @@ class FullNode:
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = block.header_hash
-        if self.blockchain.contains_block(header_hash):
+        if self.blockchain.contains_block(header_hash, block.height):
             if fork_info is not None:
                 await self.blockchain.run_single_block(block, fork_info)
             return None
@@ -2092,7 +2101,7 @@ class FullNode:
             enable_profiler(self.profile_block_validation) as pr,
         ):
             # After acquiring the lock, check again, because another asyncio thread might have added it
-            if self.blockchain.contains_block(header_hash):
+            if self.blockchain.contains_block(header_hash, block.height):
                 if fork_info is not None:
                     await self.blockchain.run_single_block(block, fork_info)
                 return None
@@ -2280,8 +2289,9 @@ class FullNode:
         """
         receive_time = time.time()
 
-        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_block(
-            block.prev_header_hash
+        if (
+            block.prev_header_hash != self.constants.GENESIS_CHALLENGE
+            and self.blockchain.try_block_record(block.prev_header_hash) is None
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.debug("Received a disconnected unfinished block")

@@ -3,13 +3,13 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal, Optional, Union
 
+from chia_rs.sized_ints import uint16, uint64
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_OWNERSHIP_LAYER,

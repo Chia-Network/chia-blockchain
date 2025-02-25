@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+from chia_rs.sized_ints import uint32, uint64
+
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, FeeEstimateV2, fee_estimate_v2_to_v1
 from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.full_node.fee_tracker import (
@@ -13,7 +15,6 @@ from chia.full_node.fee_tracker import (
     get_estimate_time_intervals,
 )
 from chia.types.fee_rate import FeeRate, FeeRateV2
-from chia.util.ints import uint32, uint64
 
 
 # https://github.com/bitcoin/bitcoin/blob/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy/fees.cpp

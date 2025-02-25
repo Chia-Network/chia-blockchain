@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import copy
 import dataclasses
 from collections.abc import Awaitable
 from typing import Callable, Optional
 
-from chia_rs import fast_forward_singleton, get_conditions_from_spendbundle
+from chia_rs import ConsensusConstants, fast_forward_singleton, get_conditions_from_spendbundle
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,14 +17,16 @@ from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 
 @dataclasses.dataclass(frozen=True)
 class EligibilityAndAdditions:
     is_eligible_for_dedup: bool
     spend_additions: list[Coin]
-    is_eligible_for_ff: bool
+    # This is the spend puzzle hash. It's set to `None` if the spend is not
+    # eligible for fast forward. When the spend is eligible, we use its puzzle
+    # hash to check if the singleton has an unspent coin or not.
+    ff_puzzle_hash: Optional[bytes32] = None
 
 
 def run_for_cost(
@@ -233,26 +236,36 @@ class EligibleCoinSpends:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         height: uint32,
         constants: ConsensusConstants,
-    ) -> None:
+    ) -> dict[bytes32, BundleCoinSpend]:
         """
-        Provides the caller with an in-place internal mempool item that has a
-        proper state of fast forwarded coin spends and additions starting from
+        Provides the caller with a `bundle_coin_spends` map that has a proper
+        state of fast forwarded coin spends and additions starting from
         the most recent unspent versions of the related singleton spends.
 
         Args:
-            mempool_item: in-out parameter for the internal mempool item to process
+            mempool_item: The internal mempool item to process
             get_unspent_lineage_info_for_puzzle_hash: to lookup the most recent
                 version of the singleton from the coin store
             constants: needed in order to refresh the mempool item if needed
             height: needed in order to refresh the mempool item if needed
 
+        Returns:
+            The resulting `bundle_coin_spends` map of coin IDs to coin spends
+            and metadata, after fast forwarding
+
         Raises:
             If a fast forward cannot proceed, to prevent potential double spends
         """
+
+        # Let's first create a copy of the mempool item's `bundle_coin_spends`
+        # map to work on and return. This way we avoid the possibility of
+        # propagating a modified version of this item through the network.
+        bundle_coin_spends = copy.copy(mempool_item.bundle_coin_spends)
         new_coin_spends = []
+        # Map of rebased singleton coin ID to coin spend and metadata
         ff_bundle_coin_spends = {}
         replaced_coin_ids = []
-        for coin_id, spend_data in mempool_item.bundle_coin_spends.items():
+        for coin_id, spend_data in bundle_coin_spends.items():
             if not spend_data.eligible_for_fast_forward:
                 # Nothing to do for this spend, moving on
                 new_coin_spends.append(spend_data.coin_spend)
@@ -326,21 +339,17 @@ class EligibleCoinSpends:
             new_coin_spends.append(new_coin_spend)
         if len(ff_bundle_coin_spends) == 0:
             # This item doesn't have any fast forward coins, nothing to do here
-            return
+            return bundle_coin_spends
         # Update the mempool item after validating the new spend bundle
         new_sb = SpendBundle(
             coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
         )
-        # We need to run the new spend bundle to make sure it remains valid
         assert mempool_item.conds is not None
         try:
-            new_conditions = get_conditions_from_spendbundle(
-                new_sb,
-                mempool_item.conds.cost,
-                constants,
-                height,
-            )
-        # validate_clvm_and_signature raises a TypeError with an error code
+            # Run the new spend bundle to make sure it remains valid. What we
+            # care about here is whether this call throws or not.
+            get_conditions_from_spendbundle(new_sb, mempool_item.conds.cost, constants, height)
+        # get_conditions_from_spendbundle raises a TypeError with an error code
         except TypeError as e:
             # Convert that to a ValidationError
             if len(e.args) > 0:
@@ -351,15 +360,9 @@ class EligibleCoinSpends:
                     "Mempool item became invalid after singleton fast forward with an unspecified error."
                 )  # pragma: no cover
 
-        # Update bundle_coin_spends using the collected data
+        # Update bundle_coin_spends using the map of rebased singleton coin ID
+        # to coin spend and metadata.
         for coin_id in replaced_coin_ids:
-            mempool_item.bundle_coin_spends.pop(coin_id, None)
-        mempool_item.bundle_coin_spends.update(ff_bundle_coin_spends)
-        # Update the mempool item with the new spend bundle related information
-        # NOTE: From this point on, in `create_bundle_from_mempool_items`, we rely
-        # on `bundle_coin_spends` and we don't use this updated spend bundle
-        # information, as we'll only need `aggregated_signature` which doesn't
-        # change. Still, it's good form to update the spend bundle with the
-        # new coin spends
-        mempool_item.spend_bundle = new_sb
-        mempool_item.conds = new_conditions
+            bundle_coin_spends.pop(coin_id, None)
+        bundle_coin_spends.update(ff_bundle_coin_spends)
+        return bundle_coin_spends

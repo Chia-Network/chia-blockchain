@@ -8,6 +8,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from clvm.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Unpack
 
@@ -19,7 +20,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
@@ -388,12 +388,11 @@ class NFTWallet:
         )
         # store the launcher transaction in the wallet state
         await self.standard_wallet.generate_signed_transaction(
-            uint64(amount),
-            SINGLETON_LAUNCHER_PUZZLE_HASH,
+            [uint64(amount)],
+            [SINGLETON_LAUNCHER_PUZZLE_HASH],
             action_scope,
             fee,
-            coins,
-            None,
+            coins=coins,
             origin_id=origin.name(),
             extra_conditions=(
                 *extra_conditions,
@@ -894,19 +893,18 @@ class NFTWallet:
                 async with wallet_state_manager.new_action_scope(
                     action_scope.config.tx_config, push=False
                 ) as inner_action_scope:
-                    if wallet.type() == WalletType.STANDARD_WALLET:
+                    if asset in fungible_asset_dict:
                         payments = royalty_payments[asset] if asset in royalty_payments else []
                         payment_sum = sum(p.amount for _, p in payments)
                         await wallet.generate_signed_transaction(
-                            abs(amount),
-                            OFFER_MOD_HASH,
+                            [abs(amount)] + ([uint64(payment_sum)] if payment_sum > 0 else []),
+                            [OFFER_MOD_HASH] + ([OFFER_MOD_HASH] if payment_sum > 0 else []),
                             inner_action_scope,
-                            primaries=[CreateCoin(OFFER_MOD_HASH, uint64(payment_sum))] if payment_sum > 0 else [],
-                            fee=fee,
+                            fee=fee if asset is None else fee_left_to_pay,
                             coins=offered_coins_by_asset[asset],
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                         )
-                    elif asset not in fungible_asset_dict:
+                    else:
                         assert asset is not None
                         await wallet.generate_signed_transaction(
                             [abs(amount)],
@@ -921,16 +919,7 @@ class NFTWallet:
                             ],
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                         )
-                    else:
-                        payments = royalty_payments[asset] if asset in royalty_payments else []
-                        await wallet.generate_signed_transaction(
-                            [abs(amount)] + ([sum(p.amount for _, p in payments)] if payments != [] else []),
-                            [OFFER_MOD_HASH] + ([OFFER_MOD_HASH] if payments != [] else []),
-                            inner_action_scope,
-                            fee=fee_left_to_pay,
-                            coins=offered_coins_by_asset[asset],
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
-                        )
+
                 all_transactions.extend(inner_action_scope.side_effects.transactions)
                 fee_left_to_pay = uint64(0)
                 extra_conditions = tuple()

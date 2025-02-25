@@ -5,11 +5,11 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, TypeVar, final
 
 from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
@@ -842,63 +842,3 @@ class NFTSetNFTDIDResponse(TransactionEndpointResponse):
 class NFTMintBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
     nft_id_list: list[str]
-
-
-@streamable
-@dataclass(frozen=True)
-class CreateNewDAOWalletResponse(TransactionEndpointResponse):
-    type: uint32
-    wallet_id: uint32
-    treasury_id: bytes32
-    cat_wallet_id: uint32
-    dao_cat_wallet_id: uint32
-
-
-@streamable
-@dataclass(frozen=True)
-class DAOCreateProposalResponse(TransactionEndpointResponse):
-    proposal_id: bytes32
-    tx_id: bytes32
-    tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DAOVoteOnProposalResponse(TransactionEndpointResponse):
-    tx_id: bytes32
-    tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DAOCloseProposalResponse(TransactionEndpointResponse):
-    tx_id: bytes32
-    tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DAOFreeCoinsFromFinishedProposalsResponse(TransactionEndpointResponse):
-    tx_id: bytes32
-    tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DAOAddFundsToTreasuryResponse(TransactionEndpointResponse):
-    tx_id: bytes32
-    tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DAOSendToLockupResponse(TransactionEndpointResponse):
-    tx_id: bytes32
-    txs: list[TransactionRecord]
-
-
-@streamable
-@dataclass(frozen=True)
-class DAOExitLockupResponse(TransactionEndpointResponse):
-    tx_id: bytes32
-    tx: TransactionRecord

@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletStateTransition, WalletTestFramework
@@ -16,7 +17,6 @@ from chia.cmds.coins import CombineCMD, ListCMD, SplitCMD
 from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.wallet_request_types import GetSyncStatusResponse
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 ONE_TRILLION = 1_000_000_000_000
