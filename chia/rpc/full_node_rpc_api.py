@@ -125,7 +125,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
             "/get_mempool_items_by_coin_name": self.get_mempool_items_by_coin_name,
-            "/create_block_bundle_from_mempool": self.create_block_bundle_from_mempool,
+            "/create_block_bundle": self.create_block_bundle,
             # Fee estimation
             "/get_fee_estimate": self.get_fee_estimate,
         }
@@ -838,7 +838,7 @@ class FullNodeRpcApi:
 
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
-    async def create_block_bundle_from_mempool(self, _: dict[str, Any]) -> EndpointResult:
+    async def create_block_bundle(self, _: dict[str, Any]) -> EndpointResult:
         mempool_bundle = None
 
         # Grab best transactions from Mempool for given tip target
@@ -854,7 +854,7 @@ class FullNodeRpcApi:
                 curr_l_tb = self.service.blockchain.block_record(curr_l_tb.prev_hash)
 
             self.service.log.info("Beginning simulated block construction from mempool")
-            start_time = time.time()
+            start_time = time.monotonic()
 
             try:
                 result = await self.service.mempool_manager.create_bundle_from_mempool(
@@ -866,7 +866,7 @@ class FullNodeRpcApi:
                 self.service.log.error(f"Traceback: {traceback.format_exc()}")
                 self.service.log.error(f"Error making spend bundle {e} peak: {peak}")
                 mempool_bundle = None
-            self.service.log.info(f"Simulated block constructed in {time.time() - start_time} seconds")
+            self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time} seconds")
 
         return {"mempool_bundle": None if mempool_bundle is None else mempool_bundle.to_json_dict()}
 
