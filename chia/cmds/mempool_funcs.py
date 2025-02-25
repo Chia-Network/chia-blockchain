@@ -54,9 +54,9 @@ async def create_block_async(
     from chia.cmds.cmds_util import get_any_service_client
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, _):
-        start = time.time()
-        bundle = await node_client.create_block_bundle_from_mempool()
-        end = time.time()
+        start = time.monotonic()
+        bundle = await node_client.create_block_bundle()
+        end = time.monotonic()
         assert bundle is not None
         spends = len(bundle["mempool_bundle"]["coin_spends"])
         print(f"Successfully created block bundle in {end - start} seconds with {spends} coin spends")
