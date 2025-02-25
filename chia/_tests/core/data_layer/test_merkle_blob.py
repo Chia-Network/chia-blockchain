@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import itertools
-import re
 from dataclasses import dataclass
 from random import Random
 from typing import Generic, TypeVar, Union, final
@@ -17,7 +16,6 @@ from chia_rs.datalayer import KeyId, TreeIndex, ValueId
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.data_layer.data_layer_util import Side, internal_hash
 from chia.data_layer.util.merkle_blob import (
-    InvalidIndexError,
     KeyOrValueId,
     MerkleBlob,
     NodeMetadata,
@@ -383,7 +381,7 @@ def test_proof_of_inclusion_merkle_blob(merkle_types: MerkleTypes) -> None:
             del keys_values[kv_id]
 
         for kv_id in delete_ordering:
-            with pytest.raises(Exception, match=f"unknown key: {re.escape(str(kv_id))}"):
+            with pytest.raises(chia_rs.datalayer.UnknownKeyError):
                 merkle_blob.get_proof_of_inclusion(kv_id)
 
         new_keys_values: dict[KeyId, ValueId] = {}
@@ -412,16 +410,16 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex, merkle_types:
     )
 
     if index is None:
-        expected = (InvalidIndexError, TypeError)
+        expected = (chia_rs.datalayer.BlockIndexOutOfBoundsError, TypeError)
     else:
-        expected = (InvalidIndexError, chia_rs.datalayer.BlockIndexOutOfBoundsError)
+        expected = chia_rs.datalayer.BlockIndexOutOfBoundsError
 
     with pytest.raises(expected):
         merkle_blob.get_raw_node(index)
 
     # this is a python-implementation detail test
     if isinstance(merkle_blob, MerkleBlob):
-        with pytest.raises(InvalidIndexError):
+        with pytest.raises(chia_rs.datalayer.BlockIndexOutOfBoundsError):
             merkle_blob._get_metadata(index)
 
 
@@ -472,7 +470,7 @@ def test_double_insert_fails(merkle_types: MerkleTypes) -> None:
     hash = generate_hash(0)
     merkle_blob.insert(key, value, hash)
     # TODO: this exception should just be more specific to avoid the case sensitivity concerns
-    with pytest.raises(Exception, match="(?i)Key already present"):
+    with pytest.raises(chia_rs.datalayer.KeyAlreadyPresentError):
         merkle_blob.insert(key, value, hash)
 
 

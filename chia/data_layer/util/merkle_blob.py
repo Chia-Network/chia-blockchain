@@ -5,7 +5,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, Optional, Protocol, SupportsBytes, TypeVar, Union, cast, final
 
-from chia_rs.datalayer import KeyId, TreeIndex, ValueId
+from chia_rs.datalayer import (
+    BlockIndexOutOfBoundsError,
+    KeyAlreadyPresentError,
+    KeyId,
+    TreeIndex,
+    UnknownKeyError,
+    ValueId,
+)
 
 from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -20,11 +27,6 @@ KeyOrValueId = int64
 T = TypeVar("T")
 
 undefined_index = TreeIndex(2 ** (4 * 8) - 2)
-
-
-class InvalidIndexError(Exception):
-    def __init__(self, index: object) -> None:
-        super().__init__(f"Invalid index: {index}")
 
 
 class NodeType(uint8, Enum):
@@ -126,11 +128,15 @@ class MerkleBlob:
         return self.free_indexes.pop()
 
     def get_key_index(self, key: KeyId) -> TreeIndex:
-        return self.key_to_index[key]
+        index = self.key_to_index.get(key)
+        if index is None:
+            raise UnknownKeyError(key)
+
+        return index
 
     def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
         if undefined_index.raw <= index.raw:
-            raise InvalidIndexError(index=index)
+            raise BlockIndexOutOfBoundsError(index)
 
         # TODO: stop duplicating this...  9384098097057091743210043032
         metadata_start = index.raw * spacing
@@ -138,7 +144,7 @@ class MerkleBlob:
         end = data_start + data_size
 
         if end > len(self.blob):
-            raise InvalidIndexError(index=index)
+            raise BlockIndexOutOfBoundsError(index)
 
         block = self.blob[metadata_start:end]
         metadata = NodeMetadata.unpack(block[:metadata_size])
@@ -161,14 +167,14 @@ class MerkleBlob:
 
     def _get_metadata(self, index: TreeIndex) -> NodeMetadata:
         if undefined_index.raw <= index.raw:
-            raise InvalidIndexError(index=index)
+            raise BlockIndexOutOfBoundsError(index)
 
         # TODO: stop duplicating this...  9384098097057091743210043032
         metadata_start = index.raw * spacing
         data_start = metadata_start + metadata_size
 
         if data_start > len(self.blob):
-            raise InvalidIndexError(index=index)
+            raise BlockIndexOutOfBoundsError(index)
 
         return NodeMetadata.unpack(self.blob[metadata_start:data_start])
 
@@ -209,7 +215,7 @@ class MerkleBlob:
 
     def get_proof_of_inclusion(self, key_id: KeyId) -> ProofOfInclusion:
         if key_id not in self.key_to_index:
-            raise Exception(f"unknown key: {key_id}")
+            raise UnknownKeyError(key_id)
 
         index = self.key_to_index[key_id]
         node = self.get_raw_node(index)
@@ -437,7 +443,7 @@ class MerkleBlob:
         side: Optional[Side] = None,
     ) -> None:
         if key in self.key_to_index:
-            raise Exception("Key already present")
+            raise KeyAlreadyPresentError()
         if len(self.blob) == 0:
             self.blob.extend(
                 NodeMetadata(type=NodeType.leaf, dirty=False).pack()
