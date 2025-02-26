@@ -43,7 +43,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
-from chia.full_node.mempool import MempoolRemoveInfo
+from chia.full_node.mempool import MempoolConfig, MempoolRemoveInfo
 from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
@@ -272,11 +272,16 @@ class FullNode:
                 log_coins=log_coins,
             )
 
+            mempool_config: dict[str, Any] = self.config.get("mempool", {})
+
             self._mempool_manager = MempoolManager(
                 get_coin_records=self.coin_store.get_coin_records,
                 get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 single_threaded=single_threaded,
+                mempool_config=MempoolConfig(
+                    minimum_fpc_for_block_inclusion=mempool_config.get("minimum_fpc_for_block_inclusion", 0.0)
+                )
             )
 
             # Transactions go into this queue from the server, and get sent to respond_transaction
