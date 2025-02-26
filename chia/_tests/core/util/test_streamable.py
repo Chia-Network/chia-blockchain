@@ -7,6 +7,7 @@ from typing import Any, Callable, Optional, get_type_hints
 
 import pytest
 from chia_rs import G1Element, SubEpochChallengeSegment
+from chia_rs.sized_bytes import bytes4, bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm_tools import binutils
 from typing_extensions import Literal, get_args
@@ -15,7 +16,6 @@ from chia.protocols.wallet_protocol import RespondRemovals
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes4, bytes32
 from chia.types.full_block import FullBlock
 from chia.util.streamable import (
     ConversionError,

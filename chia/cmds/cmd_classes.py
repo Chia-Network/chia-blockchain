@@ -21,9 +21,9 @@ from typing import (
 )
 
 import click
+from chia_rs.sized_bytes import bytes32
 from typing_extensions import dataclass_transform
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.streamable import is_type_SpecificOptional

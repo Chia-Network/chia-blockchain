@@ -19,6 +19,7 @@ from typing import Any, Callable, Optional
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import MEMPOOL_MODE, AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey, solution_generator
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
@@ -77,7 +78,6 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,

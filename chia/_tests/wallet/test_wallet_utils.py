@@ -5,9 +5,9 @@ from typing import Optional
 
 import pytest
 from chia_rs import Coin, CoinState
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.wallet_sync_utils import sort_coin_states
 

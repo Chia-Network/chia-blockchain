@@ -10,13 +10,13 @@ from time import monotonic
 from typing import Callable, Optional
 
 from chia_rs import AugSchemeMPL, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo

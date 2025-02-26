@@ -8,11 +8,11 @@ from chia_puzzles_py.programs import (
     SINGLETON_TOP_LAYER_V1_1,
     SINGLETON_TOP_LAYER_V1_1_HASH,
 )
+from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,

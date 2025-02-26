@@ -12,6 +12,7 @@ from chia_puzzles_py.programs import (
     POOL_WAITINGROOM_INNERPUZ_HASH,
 )
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 
@@ -21,7 +22,6 @@ from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.wallet.puzzles.singleton_top_layer import (
     SINGLETON_LAUNCHER_HASH,

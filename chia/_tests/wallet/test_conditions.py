@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from typing import Any, Optional, Union
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import (
     CONDITION_DRIVERS,

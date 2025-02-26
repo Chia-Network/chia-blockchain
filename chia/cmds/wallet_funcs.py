@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable, Optional, Union
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.cmds.cmds_util import (
@@ -36,7 +37,6 @@ from chia.rpc.wallet_request_types import (
     VCSpend,
 )
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
