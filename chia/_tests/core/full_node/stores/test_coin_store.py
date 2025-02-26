@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -30,7 +31,6 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 
 constants = test_constants
 

@@ -3,8 +3,9 @@ from __future__ import annotations
 import dataclasses
 from typing import Optional
 
+from chia_rs.sized_ints import uint64
+
 from chia.consensus.block_record import BlockRecord
-from chia.util.ints import uint64
 
 
 @dataclasses.dataclass

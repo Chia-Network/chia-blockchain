@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Collection
 from typing import Optional
 
+from chia_rs.sized_ints import uint64
 from chiabip158 import PyBIP158
 
 from chia.types.blockchain_format.coin import Coin
@@ -10,7 +11,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.ints import uint64
 
 
 def get_block_header(

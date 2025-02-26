@@ -5,8 +5,10 @@ import pathlib
 import sys
 from typing import Any, Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.apis import ApiProtocolRegistry
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI

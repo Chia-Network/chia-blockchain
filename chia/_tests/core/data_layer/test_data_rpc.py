@@ -19,7 +19,9 @@ from pathlib import Path
 from typing import Any, Optional, cast
 
 import anyio
+import chia_rs.datalayer
 import pytest
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -66,7 +68,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -1023,10 +1024,8 @@ async def process_for_data_layer_keys(
     for sleep_time in backoff_times():
         try:
             value = await data_layer.get_value(store_id=store_id, key=expected_key)
-        except Exception as e:
-            # TODO: more specific exceptions...
-            if "Key not found" not in str(e) and "unknown key" not in str(e):
-                raise  # pragma: no cover
+        except chia_rs.datalayer.UnknownKeyError:
+            pass
         else:
             if expected_value is None or value == expected_value:
                 break
@@ -3443,6 +3442,7 @@ async def test_unsubmitted_batch_update(
             count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        # order agnostic comparison of the list of dicts
         assert {item["key"]: item for item in keys_values["keys_values"]} == {
             item["key"]: item for item in prev_keys_values["keys_values"]
         }

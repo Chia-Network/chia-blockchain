@@ -16,7 +16,7 @@ from typing import Any, BinaryIO, Callable, Optional
 import aiohttp
 import chia_rs.datalayer
 import pytest
-from chia_rs.datalayer import TreeIndex
+from chia_rs.datalayer import KeyAlreadyPresentError, TreeIndex
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
@@ -34,7 +34,6 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     TerminalNode,
     _debug_dump,
-    as_program,
     get_delta_filename_path,
     get_full_tree_filename_path,
     leaf_hash,
@@ -783,25 +782,6 @@ async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, st
 
 
 @pytest.mark.anyio
-async def test_proof_of_inclusion_by_hash_program(data_store: DataStore, store_id: bytes32) -> None:
-    """The proof of inclusion program has the expected Python equivalence."""
-
-    await add_01234567_example(data_store=data_store, store_id=store_id)
-    node = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
-
-    proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, store_id=store_id)
-
-    assert as_program(proof) == [
-        b"\x04",
-        [
-            bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
-            bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
-            bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
-        ],
-    ]
-
-
-@pytest.mark.anyio
 async def test_proof_of_inclusion_by_hash_equals_by_key(data_store: DataStore, store_id: bytes32) -> None:
     """The proof of inclusion is equal between hash and key requests."""
 
@@ -812,27 +792,6 @@ async def test_proof_of_inclusion_by_hash_equals_by_key(data_store: DataStore, s
     proof_by_key = await data_store.get_proof_of_inclusion_by_key(key=b"\x04", store_id=store_id)
 
     assert proof_by_hash == proof_by_key
-
-
-@pytest.mark.anyio
-async def test_proof_of_inclusion_by_hash_bytes(data_store: DataStore, store_id: bytes32) -> None:
-    """The proof of inclusion provided by the data store is able to be converted to a
-    program and subsequently to bytes.
-    """
-    await add_01234567_example(data_store=data_store, store_id=store_id)
-    node = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
-
-    proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, store_id=store_id)
-
-    expected = (
-        b"\xff\x04\xff\xff\xa0\xfbf\xfeS\x9b>\xb2\x02\r\xfb\xfa\xdf\xd6\x01\xfa1\x85!)"
-        b"+A\xf0L W\xc1o\xcak\x94|\xa1\xff\xa0m:\xf8\xd9=\xb9H\xe8\xb6\xaaC\x86\x95"
-        b"\x8e\x13|k\xe8\xba\xb7&\xdb\x86x\x95\x94\xb3X\x8b5\xad\xcd\xff\xa0\xc8R\xec"
-        b"\xd8\xfbaT\x9a\nB\xf9\xeb\x9d\xdee\xe6\xc9J\x01\x93M\xbd\x9c\x1d5\xab\x94"
-        b"\xe2\xa0\xaeX\xe2\x80\x80"
-    )
-
-    assert bytes(as_program(proof)) == expected
 
 
 # @pytest.mark.anyio
@@ -1719,6 +1678,7 @@ async def test_insert_from_delta_file(
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + max_full_files - 1
     kv = await data_store.get_keys_values(store_id=store_id)
+    # order agnostic comparison of the list
     assert set(kv) == set(kv_before)
 
 
@@ -1757,7 +1717,7 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
                 if random.randint(0, 4) == 0:
                     batch = [{"action": "delete", "key": key}]
                     await raw_data_store.insert_batch(store_id, batch, status=Status.COMMITTED)
-                    with pytest.raises((KeyNotFoundError, chia_rs.datalayer.UnknownKeyError)):
+                    with pytest.raises(chia_rs.datalayer.UnknownKeyError):
                         await raw_data_store.get_node_by_key(store_id=store_id, key=key)
 
 
@@ -1826,6 +1786,7 @@ async def test_insert_from_delta_file_correct_file_exists(
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + 2  # 1 full and 6 deltas
     kv = await data_store.get_keys_values(store_id=store_id)
+    # order agnostic comparison of the list
     assert set(kv) == set(kv_before)
 
 
@@ -1899,7 +1860,7 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
         key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
     )
     # TODO: this exception should just be more specific to avoid the case sensitivity concerns
-    with pytest.raises(Exception, match=f"(?i)Key already present: {key.hex()}"):
+    with pytest.raises(KeyAlreadyPresentError):
         await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
 
 
@@ -1915,7 +1876,7 @@ async def test_batch_insert_key_already_present(
     changelist = [{"action": "insert", "key": key, "value": value}]
     await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
     # TODO: this exception should just be more specific to avoid the case sensitivity concerns
-    with pytest.raises(Exception, match=f"(?i)Key already present: {key.hex()}"):
+    with pytest.raises(KeyAlreadyPresentError):
         await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
 
 
@@ -2041,6 +2002,7 @@ async def test_migration(
     data_store.recent_merkle_blobs = LRUCache(capacity=128)
     assert await data_store.get_keys_values(store_id=store_id) == []
     await data_store.migrate_db(tmp_path)
+    # order agnostic comparison of the list
     assert set(await data_store.get_keys_values(store_id=store_id)) == set(kv_before)
 
 

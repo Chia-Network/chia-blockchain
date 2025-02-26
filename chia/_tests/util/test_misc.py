@@ -7,6 +7,7 @@ from typing import Optional, TypeVar
 import aiohttp
 import anyio
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.misc import RecordingWebServer
 from chia._tests.util.split_managers import SplitAsyncManager, SplitManager, split_async_manager, split_manager
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.transaction_queue_entry import ValuedEvent
 from chia.util.batches import to_batches
 from chia.util.errors import InvalidPathError
-from chia.util.ints import uint64
 from chia.util.timing import adjusted_timeout, backoff_times
 
 T = TypeVar("T")

@@ -4,6 +4,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint64
 
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
@@ -18,7 +19,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.drivers import (
     create_augmented_cond_puzzle_hash,

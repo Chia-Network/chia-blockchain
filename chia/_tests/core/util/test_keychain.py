@@ -8,6 +8,7 @@ from typing import Callable, Optional
 import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_ints import uint32
 
 import chia._tests.util
 from chia.simulator.keyring import TempKeyring
@@ -20,7 +21,6 @@ from chia.util.errors import (
     KeychainLabelInvalid,
     KeychainSecretsMissing,
 )
-from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
     KeyData,
@@ -233,7 +233,7 @@ class TestKeychain:
         # Test code from trezor:
         # Copyright (c) 2013 Pavol Rusnak
         # Copyright (c) 2017 mruddy
-        # https://github.com/trezor/python-mnemonic/blob/master/test_mnemonic.py
+        # https://github.com/trezor/python-mnemonic/blob/master/tests/test_mnemonic.py
         # The same sentence in various UTF-8 forms
         words_nfkd = "Pr\u030ci\u0301s\u030cerne\u030c z\u030clut\u030couc\u030cky\u0301 ku\u030an\u030c u\u0301pe\u030cl d\u030ca\u0301belske\u0301 o\u0301dy za\u0301ker\u030cny\u0301 uc\u030cen\u030c be\u030cz\u030ci\u0301 pode\u0301l zo\u0301ny u\u0301lu\u030a"  # noqa: E501
         words_nfc = "P\u0159\xed\u0161ern\u011b \u017elu\u0165ou\u010dk\xfd k\u016f\u0148 \xfap\u011bl \u010f\xe1belsk\xe9 \xf3dy z\xe1ke\u0159n\xfd u\u010de\u0148 b\u011b\u017e\xed pod\xe9l z\xf3ny \xfal\u016f"  # noqa: E501

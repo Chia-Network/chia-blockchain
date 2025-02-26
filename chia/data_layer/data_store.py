@@ -12,7 +12,7 @@ from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 import chia_rs.datalayer
-from chia_rs.datalayer import KeyId, TreeIndex, ValueId
+from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, TreeIndex, ValueId
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -397,7 +397,6 @@ class DataStore:
         read_only: bool = False,
         update_cache: bool = True,
     ) -> MerkleBlobHint:
-        # print(f".get_merkle_blob() getting blob for: {root_hash}")
         if root_hash is None:
             return chia_rs.datalayer.MerkleBlob(blob=bytearray())
 
@@ -1160,13 +1159,7 @@ class DataStore:
                 seed = leaf_hash(key=key, value=value)
                 reference_kid, side = self.get_reference_kid_side(merkle_blob, seed)
 
-            try:
-                merkle_blob.insert(kid, vid, hash, reference_kid, side)
-            except Exception as e:
-                # TODO: this exception should just be more specific to avoid the case sensitivity concerns
-                if str(e).casefold() == "Key already present".casefold():
-                    raise Exception(f"Key already present: {key.hex()}")
-                raise
+            merkle_blob.insert(kid, vid, hash, reference_kid, side)
 
             new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status)
             return InsertResult(node_hash=hash, root=new_root)
@@ -1263,10 +1256,10 @@ class DataStore:
                     kid, vid = await self.add_key_value(key, value, store_id)
                     try:
                         merkle_blob.get_key_index(kid)
-                    except (KeyError, chia_rs.datalayer.UnknownKeyError):
+                    except chia_rs.datalayer.UnknownKeyError:
                         pass
                     else:
-                        raise Exception(f"Key already present: {key.hex()}")
+                        raise KeyAlreadyPresentError(kid)
                     hash = leaf_hash(key, value)
 
                     if reference_node_hash is None and side is None:

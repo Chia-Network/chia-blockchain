@@ -25,6 +25,8 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest import MonkeyPatch
 
 from chia._tests import ether
@@ -51,7 +53,6 @@ from chia._tests.util.setup_nodes import (
 )
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -83,7 +84,6 @@ from chia.types.aliases import (
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
@@ -94,12 +94,13 @@ multiprocessing.set_start_method("spawn")
 from dataclasses import replace
 from pathlib import Path
 
+from chia_rs.sized_ints import uint128
+
 from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
-from chia.util.ints import uint128
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
