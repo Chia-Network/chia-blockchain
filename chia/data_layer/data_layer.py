@@ -35,6 +35,7 @@ from chia.data_layer.data_layer_util import (
     ProofOfInclusionLayer,
     Root,
     ServerInfo,
+    Side,
     Status,
     StoreProofs,
     Subscription,
@@ -1065,7 +1066,7 @@ class DataLayer:
                         node_hash=proof_of_inclusion.node_hash,
                         layers=tuple(
                             Layer(
-                                other_hash_side=layer.other_hash_side,
+                                other_hash_side=Side(layer.other_hash_side),
                                 other_hash=layer.other_hash,
                                 combined_hash=layer.combined_hash,
                             )
