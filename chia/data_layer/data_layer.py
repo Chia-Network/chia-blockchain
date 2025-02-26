@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast, final
 
 import aiohttp
+from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError
@@ -31,8 +32,6 @@ from chia.data_layer.data_layer_util import (
     PluginRemote,
     PluginStatus,
     Proof,
-    ProofOfInclusion,
-    ProofOfInclusionLayer,
     Root,
     ServerInfo,
     Side,

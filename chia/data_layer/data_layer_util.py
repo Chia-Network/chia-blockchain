@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import aiosqlite
-import chia_rs.datalayer
+from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_ints import uint8, uint64
 from typing_extensions import final
 
@@ -24,9 +24,6 @@ from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
     from chia.wallet.wallet_node import WalletNode
-
-ProofOfInclusionHint = Union["ProofOfInclusion", chia_rs.datalayer.ProofOfInclusion]
-ProofOfInclusionLayerHint = Union["ProofOfInclusionLayer", chia_rs.datalayer.ProofOfInclusionLayer]
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
@@ -252,88 +249,12 @@ class TerminalNode:
         )
 
 
-@final
-@dataclass(frozen=True)
-class ProofOfInclusionLayer:
-    other_hash_side: Side
-    other_hash: bytes32
-    combined_hash: bytes32
-
-    @classmethod
-    def from_internal_node(
-        cls,
-        internal_node: InternalNode,
-        traversal_child_hash: bytes32,
-    ) -> ProofOfInclusionLayer:
-        return ProofOfInclusionLayer(
-            other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
-            other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
-            combined_hash=internal_node.hash,
-        )
-
-    @classmethod
-    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> ProofOfInclusionLayer:
-        combined_hash = calculate_internal_hash(
-            hash=primary_hash,
-            other_hash_side=other_hash_side,
-            other_hash=other_hash,
-        )
-
-        return cls(other_hash_side=other_hash_side, other_hash=other_hash, combined_hash=combined_hash)
+def calculate_sibling_sides_integer(proof: ProofOfInclusion) -> int:
+    return sum((1 << index if layer.other_hash_side == Side.LEFT else 0) for index, layer in enumerate(proof.layers))
 
 
-def calculate_sibling_sides_integer(proof: ProofOfInclusionHint) -> int:
-    # casting to workaround this
-    # class C: ...
-    # class D: ...
-    #
-    # m: list[C | D]
-    # reveal_type(enumerate(m))
-    # # main.py:5: note: Revealed type is "builtins.enumerate[Union[__main__.C, __main__.D]]"
-    #
-    # n: list[C] | list[D]
-    # reveal_type(enumerate(n))
-    # main.py:9: note: Revealed type is "builtins.enumerate[builtins.object]"
-
-    return sum(
-        (1 << index if cast(ProofOfInclusionLayerHint, layer).other_hash_side == Side.LEFT else 0)
-        for index, layer in enumerate(proof.layers)
-    )
-
-
-def collect_sibling_hashes(proof: ProofOfInclusionHint) -> list[bytes32]:
+def collect_sibling_hashes(proof: ProofOfInclusion) -> list[bytes32]:
     return [layer.other_hash for layer in proof.layers]
-
-
-@dataclass(frozen=True)
-class ProofOfInclusion:
-    node_hash: bytes32
-    # children before parents
-    layers: list[ProofOfInclusionLayer]
-
-    def root_hash(self) -> bytes32:
-        if len(self.layers) == 0:
-            return self.node_hash
-
-        return self.layers[-1].combined_hash
-
-    def valid(self) -> bool:
-        existing_hash = self.node_hash
-
-        for layer in self.layers:
-            calculated_hash = calculate_internal_hash(
-                hash=existing_hash, other_hash_side=layer.other_hash_side, other_hash=layer.other_hash
-            )
-
-            if calculated_hash != layer.combined_hash:
-                return False
-
-            existing_hash = calculated_hash
-
-        if existing_hash != self.root_hash():
-            return False
-
-        return True
 
 
 @final
