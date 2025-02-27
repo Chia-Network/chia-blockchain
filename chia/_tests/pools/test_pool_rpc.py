@@ -21,6 +21,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, get_plot_dir
@@ -1120,3 +1121,39 @@ class TestPoolWalletRpc:
 
         # Eventually, leaves pool
         assert await status_is_farming_to_pool()
+
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [
+            {
+                "num_environments": 1,
+                "blocks_needed": [10],
+            }
+        ],
+        indirect=True,
+    )
+    @pytest.mark.anyio
+    async def test_join_pool_twice(
+        self,
+        fee: uint64,
+        wallet_environments: WalletTestFramework,
+    ) -> None:
+        wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+        wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+
+        wallet_state_manager.config["reuse_public_key_for_change"][
+            str(wallet_state_manager.root_pubkey.get_fingerprint())
+        ] = wallet_environments.tx_config.reuse_puzhash
+
+        # Create a farming plotnft to url http://pool.example.com
+        wallet_id = await create_new_plotnft(wallet_environments)
+
+        # Test joining the same pool via the RPC client
+        with pytest.raises(ResponseFailureError, match="Already farming to pool"):
+            await wallet_rpc.pw_join_pool(
+                wallet_id=wallet_id,
+                target_puzzlehash=bytes32.zeros,
+                pool_url="http://pool.example.com",
+                relative_lock_height=uint32(10),
+                fee=uint64(0),
+            )
