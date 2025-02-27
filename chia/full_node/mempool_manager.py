@@ -25,7 +25,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
+from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolConfig, MempoolRemoveInfo, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
@@ -159,6 +159,7 @@ class MempoolManager:
         *,
         single_threaded: bool = False,
         max_tx_clvm_cost: Optional[uint64] = None,
+        mempool_config: MempoolConfig = MempoolConfig(),
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -201,7 +202,7 @@ class MempoolManager:
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(self.max_block_clvm_cost)),
         )
-        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
+        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator, mempool_config)
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
@@ -721,7 +722,7 @@ class MempoolManager:
                 f"coins: {'not set' if spent_coins is None else 'set'}"
             )
             old_pool = self.mempool
-            self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
+            self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator, old_pool.config)
             self.seen_bundle_hashes = {}
 
             # in order to make this a bit quicker, we look-up all the spends in

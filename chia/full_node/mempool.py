@@ -69,6 +69,11 @@ class MempoolRemoveReason(Enum):
     EXPIRED = 4
 
 
+@dataclass
+class MempoolConfig:
+    minimum_fpc_for_block_inclusion: float = 0.0
+
+
 class Mempool:
     _db_conn: sqlite3.Connection
     # it's expensive to serialize and deserialize G2Element, so we keep those in
@@ -82,13 +87,16 @@ class Mempool:
     _total_fee: int
     _total_cost: int
 
-    def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
+    config: MempoolConfig
+
+    def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface, config: MempoolConfig = MempoolConfig()):
         self._db_conn = sqlite3.connect(":memory:")
         self._items = {}
         self._block_height = uint32(0)
         self._timestamp = uint64(0)
         self._total_fee = 0
         self._total_cost = 0
+        self.config = config
 
         with self._db_conn:
             # name means SpendBundle hash
@@ -543,6 +551,11 @@ class Mempool:
             fee = int(row[1])
             item = self._items[name]
 
+            assert item.conds is not None
+
+            if fee / item.conds.cost < self.config.minimum_fpc_for_block_inclusion:
+                continue
+
             current_time = monotonic()
             if current_time - bundle_creation_start > 1:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
@@ -550,7 +563,6 @@ class Mempool:
             if item_inclusion_filter is not None and not item_inclusion_filter(name):
                 continue
             try:
-                assert item.conds is not None
                 cost = item.conds.cost
                 if skipped_items >= PRIORITY_TX_THRESHOLD:
                     # If we've encountered `PRIORITY_TX_THRESHOLD` number of
