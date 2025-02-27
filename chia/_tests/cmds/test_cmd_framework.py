@@ -602,13 +602,13 @@ def test_old_decorator_support() -> None:
     def tx_config_cmd(**kwargs: Any) -> None:
         pass  # pragma: no cover
 
-    @cmd.command("tx_cmd_dec")  # type: ignore[arg-type]
-    @tx_out_cmd(enable_timelock_args=False)
+    @cmd.command("tx_cmd_dec")
+    @tx_out_cmd(enable_timelock_args=False)  # type: ignore[arg-type]
     def tx_cmd(**kwargs: Any) -> None:
         pass  # pragma: no cover
 
-    @cmd.command("tx_w_tl_cmd_dec")  # type: ignore[arg-type]
-    @tx_out_cmd(enable_timelock_args=True)
+    @cmd.command("tx_w_tl_cmd_dec")
+    @tx_out_cmd(enable_timelock_args=True)  # type: ignore[arg-type]
     def tx_w_tl_cmd(**kwargs: Any) -> None:
         pass  # pragma: no cover
 
