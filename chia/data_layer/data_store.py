@@ -13,7 +13,7 @@ from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 import chia_rs.datalayer
-from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, TreeIndex, ValueId
+from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, ProofOfInclusion, TreeIndex, ValueId
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -27,7 +27,6 @@ from chia.data_layer.data_layer_util import (
     Node,
     NodeType,
     OperationType,
-    ProofOfInclusionHint,
     Root,
     SerializedNode,
     ServerInfo,
@@ -1412,7 +1411,7 @@ class DataStore:
         node_hash: bytes32,
         store_id: bytes32,
         root_hash: Optional[bytes32] = None,
-    ) -> ProofOfInclusionHint:
+    ) -> ProofOfInclusion:
         if root_hash is None:
             root = await self.get_tree_root(store_id=store_id)
             root_hash = root.node_hash
@@ -1424,7 +1423,7 @@ class DataStore:
         self,
         key: bytes,
         store_id: bytes32,
-    ) -> ProofOfInclusionHint:
+    ) -> ProofOfInclusion:
         root = await self.get_tree_root(store_id=store_id)
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
         kvid = await self.get_kvid(key, store_id)
