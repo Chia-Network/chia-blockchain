@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, TypeVar, final
 
 from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import dataclass_transform
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes

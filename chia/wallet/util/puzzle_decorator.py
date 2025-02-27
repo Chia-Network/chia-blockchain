@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from chia_rs.sized_bytes import bytes32
 from typing_extensions import Protocol
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.puzzles.clawback.puzzle_decorator import ClawbackPuzzleDecorator
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType

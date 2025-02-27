@@ -3,12 +3,12 @@ from __future__ import annotations
 import random
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.wallet_node import WalletNode

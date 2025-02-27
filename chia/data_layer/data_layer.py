@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast, final
 
 import aiohttp
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError
@@ -61,7 +62,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.async_pool import Job, QueuedAsyncPool
 from chia.util.path import path_from_root
 from chia.util.task_referencer import create_referenced_task

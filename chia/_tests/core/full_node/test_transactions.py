@@ -5,6 +5,7 @@ import random
 from typing import Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia._tests.util.time_out_assert import time_out_assert
@@ -12,7 +13,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 

@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from queue import SimpleQueue
 from typing import Optional
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
+
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 
 

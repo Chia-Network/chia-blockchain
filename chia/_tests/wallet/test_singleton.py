@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from clvm_tools import binutils
 
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.wallet.conditions import AssertPuzzleAnnouncement
 from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_MOD, SINGLETON_MOD, SINGLETON_MOD_HASH

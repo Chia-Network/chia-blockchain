@@ -6,13 +6,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.simulator.simulator_test_tools import get_full_chia_simulator, get_puzzle_hash_from_key
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 

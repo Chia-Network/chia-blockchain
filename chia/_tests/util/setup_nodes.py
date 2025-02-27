@@ -11,6 +11,7 @@ from typing import Optional, Union
 
 import anyio
 from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.environments.full_node import FullNodeEnvironment
@@ -40,7 +41,6 @@ from chia.simulator.setup_services import (
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain

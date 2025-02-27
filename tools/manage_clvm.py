@@ -12,8 +12,7 @@ import typing
 
 import click
 import typing_extensions
-
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
 
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent

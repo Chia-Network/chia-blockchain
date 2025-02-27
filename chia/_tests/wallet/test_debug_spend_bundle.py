@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 from chia_rs import AugSchemeMPL, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash

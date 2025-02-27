@@ -4,11 +4,11 @@ import sqlite3
 from typing import Any
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import add_01234567_example, create_valid_node_values
 from chia.data_layer.data_layer_util import NodeType, Side, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 pytestmark = pytest.mark.data_layer
 

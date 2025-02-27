@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Optional
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.protocols.wallet_protocol import CoinState
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 
 

@@ -5,6 +5,7 @@ import random
 from typing import Any
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -16,7 +17,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.wallet.did_wallet.did_wallet import DIDWallet

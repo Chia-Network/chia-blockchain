@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Optional
 
 from chia_rs import CoinState
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 
 

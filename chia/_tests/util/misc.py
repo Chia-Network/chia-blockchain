@@ -29,6 +29,7 @@ import pytest
 from _pytest.nodes import Node
 from aiohttp import web
 from chia_rs import Coin
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 import chia
@@ -40,7 +41,6 @@ from chia.full_node.mempool import Mempool
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.outbound_message import Message
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.network import WebServer

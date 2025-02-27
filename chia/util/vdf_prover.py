@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 from chiavdf import prove
 
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 
 

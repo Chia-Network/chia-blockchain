@@ -3,9 +3,9 @@ from __future__ import annotations
 import random
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 
 from chia.full_node.sync_store import SyncStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 

@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Optional
 
 import aiofiles
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.files import write_file_async

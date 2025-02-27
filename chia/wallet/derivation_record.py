@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from typing import Union
 
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.util.wallet_types import WalletType
 
 

@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Optional, Protocol
 
 from chia_rs import SubEpochChallengeSegment
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
 

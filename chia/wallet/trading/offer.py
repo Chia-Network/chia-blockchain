@@ -5,13 +5,13 @@ from typing import Any, BinaryIO, Optional, Union
 
 from chia_puzzles_py.programs import SETTLEMENT_PAYMENT, SETTLEMENT_PAYMENT_HASH
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError

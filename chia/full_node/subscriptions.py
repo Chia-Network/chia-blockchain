@@ -4,9 +4,9 @@ import logging
 from dataclasses import dataclass, field
 
 from chia_rs import Coin
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 
 log = logging.getLogger(__name__)

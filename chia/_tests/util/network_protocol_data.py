@@ -12,6 +12,7 @@ from chia_rs import (
     SubSlotData,
     TransactionsInfo,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64, uint128
 
 from chia.protocols import (
@@ -30,7 +31,6 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,

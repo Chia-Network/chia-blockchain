@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections.abc import Awaitable
 from typing import Callable, Optional
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.types.block_protocol import BlockInfo
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 
 

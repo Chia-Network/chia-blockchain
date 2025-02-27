@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.data_layer.data_layer_wallet import DataLayerWallet
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer

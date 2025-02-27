@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.streamable import Streamable, streamable

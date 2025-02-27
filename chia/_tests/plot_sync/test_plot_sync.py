@@ -11,6 +11,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.plot_sync.util import start_harvester_service
@@ -30,7 +31,6 @@ from chia.protocols.harvester_protocol import Plot
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.types.aliases import FarmerService, HarvesterService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.streamable import _T_Streamable
 

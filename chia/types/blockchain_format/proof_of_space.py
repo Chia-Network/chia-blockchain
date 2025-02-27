@@ -6,10 +6,10 @@ from typing import Optional, cast
 import chia_rs
 from bitstring import BitArray
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 from chiapos import Verifier
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 ProofOfSpace = chia_rs.ProofOfSpace

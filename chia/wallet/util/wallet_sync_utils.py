@@ -6,6 +6,7 @@ import random
 from typing import Any, Optional, Union
 
 from chia_rs import compute_merkle_set_root, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.full_node.full_node_api import FullNodeAPI
@@ -33,7 +34,6 @@ from chia.protocols.wallet_protocol import (
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.header_block import HeaderBlock
 from chia.util.task_referencer import create_referenced_task
