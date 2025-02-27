@@ -192,8 +192,8 @@ class NodeType(IntEnum):
 
 @final
 class Side(uint8, Enum):
-    LEFT = 0
-    RIGHT = 1
+    LEFT = uint8(0)
+    RIGHT = uint8(1)
 
     def other(self) -> Side:
         if self == Side.LEFT:
