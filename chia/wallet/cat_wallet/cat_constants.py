@@ -61,6 +61,36 @@ ETH_WARPED_USDT = {
     "symbol": "wUSDT",
 }
 
+SH_REFOREST_2021 = {
+    "asset_id": "5af8db0b15e0de99ad1eff02486bb1998602053c56dfb22dc04e0f5e17ccec8d",
+    "name": "Smallholder Reforestation Project 2021",
+    "symbol": "ECO.29.2021",
+}
+
+SH_REFOREST_2022 = {
+    "asset_id": "9d9264c542c2a3108c7b8f74cad82b60dcbb6e50b328e9cdbaa7acb468a5707f",
+    "name": "Smallholder Reforestation Project 2022",
+    "symbol": "ECO.29.2022",
+}
+
+AG_REFOREST_2020 = {
+    "asset_id": "e257aca547a83020e537e87f8c83e9332d2c3adb729c052e6f04971317084327",
+    "name": "Agricultural Reforestation Project 2020",
+    "symbol": "ECO.181.2020",
+}
+
+AG_REFOREST_2022 = {
+    "asset_id": "4a168910b533e6bb9ddf82a776f8d6248308abd3d56b6f4423a3e1de88f466e7",
+    "name": "Agricultural Reforestation Project 2022",
+    "symbol": "ECO.181.2022",
+}
+
+AC_REFOREST_2022 = {
+    "asset_id": "9720fcb8333984c72f914fc5090509ae9f7b1ff72eff2ed6825d944d7a571066",
+    "name": "Antioquia and Caldas Reforestation 2022",
+    "symbol": "ECO.49.2022",
+}
+
 DEFAULT_CATS = {
     SPACEBUCKS["asset_id"]: SPACEBUCKS,
     MARMOT["asset_id"]: MARMOT,
@@ -72,4 +102,9 @@ DEFAULT_CATS = {
     ETH_WARPED_USDC["asset_id"]: ETH_WARPED_USDC,
     ETH_WARPED_MILLIETH["asset_id"]: ETH_WARPED_MILLIETH,
     ETH_WARPED_USDT["asset_id"]: ETH_WARPED_USDT,
+    SH_REFOREST_2021["asset_id"]: SH_REFOREST_2021,
+    SH_REFOREST_2022["asset_id"]: SH_REFOREST_2022,
+    AG_REFOREST_2020["asset_id"]: AG_REFOREST_2020,
+    AG_REFOREST_2022["asset_id"]: AG_REFOREST_2022,
+    AC_REFOREST_2022["asset_id"]: AC_REFOREST_2022,
 }
