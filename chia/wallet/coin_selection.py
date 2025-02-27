@@ -61,8 +61,7 @@ async def select_coins(
         )
     if amount == 0 and len(spendable_coins) == 0:
         raise ValueError(
-            "No coins available to spend, you can not create a coin with an amount of 0,"
-            " without already having coins."
+            "No coins available to spend, you can not create a coin with an amount of 0, without already having coins."
         )
 
     # Sort the coins by amount

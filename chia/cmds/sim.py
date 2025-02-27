@@ -17,8 +17,7 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
     "-p",
     "--rpc-port",
     help=(
-        "Set the port where the Simulator is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml"
+        "Set the port where the Simulator is hosting the RPC interface. See the rpc_port under full_node in config.yaml"
     ),
     type=int,
     default=None,

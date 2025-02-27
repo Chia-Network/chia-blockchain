@@ -634,8 +634,7 @@ class Farmer:
                             )
                             if post_response is not None and "error_code" not in post_response:
                                 self.log.info(
-                                    f"Welcome message from {pool_config.pool_url}: "
-                                    f"{post_response['welcome_message']}"
+                                    f"Welcome message from {pool_config.pool_url}: {post_response['welcome_message']}"
                                 )
                                 # Now we should be able to update the local farmer info
                                 farmer_info, farmer_is_known = await update_pool_farmer_info()

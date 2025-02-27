@@ -269,8 +269,7 @@ class TestBlockHeaderValidation:
                 )
             await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
             log.info(
-                f"Added block {block.height} total iters {block.total_iters} "
-                f"new slot? {len(block.finished_sub_slots)}"
+                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
         peak = empty_blockchain.get_peak()
         assert peak is not None
@@ -3477,11 +3476,7 @@ class TestReorgs:
             if (block.height % 128) == 0:
                 peak = b.get_peak()
                 assert peak is not None
-                print(
-                    f"original chain: {block.height:4} "
-                    f"weight: {block.weight:7} "
-                    f"peak: {str(peak.header_hash)[:6]}"
-                )
+                print(f"original chain: {block.height:4} weight: {block.weight:7} peak: {str(peak.header_hash)[:6]}")
             if block.height <= chain_1_height:
                 expect = AddBlockResult.ALREADY_HAVE_BLOCK
             elif block.weight < chain_2_weight:

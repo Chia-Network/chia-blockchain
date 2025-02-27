@@ -380,8 +380,6 @@ def _resolve_fingerprint_and_sk(
     if non_observer_derivation and resolved_sk is None:
         print("Could not resolve private key for non-observer derivation")
         raise ResolutionError()
-    else:
-        pass
 
     if reolved_fp is None:
         print("A fingerprint of a root key to derive from is required")

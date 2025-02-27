@@ -46,7 +46,7 @@ class HintStore:
                 hints_db: tuple[bytes, ...] = tuple(batch.entries)
                 cursor = await conn.execute(
                     f"SELECT coin_id from hints INDEXED BY hint_index "
-                    f'WHERE hint IN ({"?," * (len(batch.entries) - 1)}?) LIMIT ?',
+                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?) LIMIT ?",
                     (*hints_db, max_items),
                 )
                 rows = await cursor.fetchall()
@@ -62,7 +62,7 @@ class HintStore:
             for batch in to_batches(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: tuple[bytes32, ...] = tuple(batch.entries)
                 cursor = await conn.execute(
-                    f'SELECT hint from hints WHERE coin_id IN ({"?," * (len(batch.entries) - 1)}?)',
+                    f"SELECT hint from hints WHERE coin_id IN ({'?,' * (len(batch.entries) - 1)}?)",
                     coin_ids_db,
                 )
                 rows = await cursor.fetchall()

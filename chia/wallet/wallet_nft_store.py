@@ -219,8 +219,7 @@ class WalletNftStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await execute_fetchone(
                 conn,
-                "SELECT EXISTS(SELECT nft_id"
-                " from users_nfts WHERE removed_height is NULL and nft_coin_id=? LIMIT 1)",
+                "SELECT EXISTS(SELECT nft_id from users_nfts WHERE removed_height is NULL and nft_coin_id=? LIMIT 1)",
                 (coin_id.hex(),),
             )
             return True if rows and rows[0] == 1 else False

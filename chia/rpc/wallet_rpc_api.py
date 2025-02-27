@@ -2022,7 +2022,7 @@ class WalletRpcApi:
             pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, mode)
             latest_coin_id = target_nft.coin.name()
         else:
-            return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
+            return {"success": False, "error": f"Unknown ID type, {request['id']}"}
 
         return {
             "success": True,
@@ -3742,9 +3742,9 @@ class WalletRpcApi:
         else:
             wallet = self.service.wallet_state_manager.main_wallet
 
-        assert isinstance(
-            wallet, (Wallet, CATWallet, CRCATWallet)
-        ), "create_signed_transaction only works for standard and CAT wallets"
+        assert isinstance(wallet, (Wallet, CATWallet, CRCATWallet)), (
+            "create_signed_transaction only works for standard and CAT wallets"
+        )
 
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")

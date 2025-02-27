@@ -34,8 +34,7 @@ class NeedsWalletRPC:
         "-wp",
         "--wallet-rpc_port",
         help=(
-            "Set the port where the Wallet is hosting the RPC interface."
-            "See the rpc_port under wallet in config.yaml."
+            "Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml."
         ),
         type=int,
         default=None,

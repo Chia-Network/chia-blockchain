@@ -1954,7 +1954,7 @@ class FullNodeAPI:
                 hints_db: tuple[bytes, ...] = tuple(batch.entries)
                 cursor = await conn.execute(
                     f"SELECT coin_id from hints INDEXED BY hint_index "
-                    f'WHERE hint IN ({"?," * (len(batch.entries) - 1)}?)',
+                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?)",
                     hints_db,
                 )
                 for row in await cursor.fetchall():
