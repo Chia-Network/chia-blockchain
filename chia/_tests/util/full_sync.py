@@ -229,7 +229,7 @@ async def run_sync_test(
                             assert summary is not None
 
                         time_per_block = (time.monotonic() - batch_start_time) / len(block_batch)
-                        if not worst_batch_height or worst_batch_time_per_block > time_per_block:
+                        if worst_batch_time_per_block is None or worst_batch_time_per_block > time_per_block:
                             worst_batch_height = height
                             worst_batch_time_per_block = time_per_block
 

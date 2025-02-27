@@ -489,6 +489,7 @@ class DIDWallet:
 
             children_state: CoinState = children[0]
             child_coin = children_state.coin
+            assert did_info.current_inner is not None
             future_parent = LineageProof(
                 parent_name=child_coin.parent_coin_info,
                 inner_puzzle_hash=did_info.current_inner.get_tree_hash(),

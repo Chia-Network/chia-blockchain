@@ -275,7 +275,7 @@ def chia_command(
                 frozen=True,
             )(cls)
         else:
-            wrapped_cls: type[ChiaCommand] = dataclass(  # type: ignore[assignment]
+            wrapped_cls: type[ChiaCommand] = dataclass(
                 frozen=True,
                 kw_only=True,
             )(cls)
