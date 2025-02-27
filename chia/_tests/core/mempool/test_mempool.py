@@ -3213,9 +3213,9 @@ async def test_create_block_generator() -> None:
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
 
-    generator, signature, additions = await mempool.create_block_generator(
-        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
-    )
+    block = await mempool.create_block_generator(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0))
+    assert block is not None
+    generator, signature, additions = block
 
     assert set(additions) == expected_additions
 
