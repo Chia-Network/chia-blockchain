@@ -863,13 +863,11 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        (
-                            block_generator,
-                            aggregate_signature,
-                            additions,
-                        ) = await self.full_node.mempool_manager.create_block_generator(
+                        block = await self.full_node.mempool_manager.create_block_generator(
                             curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
                         )
+                        if block is not None:
+                            block_generator, aggregate_signature, additions = block
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")

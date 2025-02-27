@@ -478,7 +478,7 @@ class Mempool:
         constants: ConsensusConstants,
         height: uint32,
         item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> tuple[BlockGenerator, G2Element, list[Coin]]:
+    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
         """
         height is needed in case we fast-forward a transaction and we need to
         re-run its puzzle.
@@ -488,7 +488,7 @@ class Mempool:
             get_unspent_lineage_info_for_puzzle_hash, constants, height, item_inclusion_filter
         )
         if mempool_bundle is None:
-            return (BlockGenerator(), G2Element(), [])
+            return None
 
         spend_bundle, additions = mempool_bundle
         removals = spend_bundle.removals()
