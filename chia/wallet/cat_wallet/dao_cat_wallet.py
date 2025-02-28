@@ -399,10 +399,7 @@ class DAOCATWallet:
         spent_coins = []
         for lci in coins:
             coin = lci.coin
-            if action_scope.config.tx_config.reuse_puzhash:  # pragma: no cover
-                new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=False)
-            else:
-                new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+            new_inner_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
 
             # CREATE_COIN new_puzzle coin.amount
             primaries = [

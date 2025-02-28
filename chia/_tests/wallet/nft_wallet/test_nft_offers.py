@@ -53,8 +53,10 @@ async def test_nft_offer_with_fee(
 
     tx_config = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
 
-    maker_ph = await wallet_maker.get_new_puzzlehash()
-    taker_ph = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        maker_ph = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        taker_ph = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     token_ph = bytes32.random(seeded_random)
 
     if trusted:
@@ -259,8 +261,10 @@ async def test_nft_offer_cancellations(
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
 
-    maker_ph = await wallet_maker.get_new_puzzlehash()
-    taker_ph = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        maker_ph = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        taker_ph = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     token_ph = bytes32.random(seeded_random)
 
     if trusted:
@@ -378,8 +382,10 @@ async def test_nft_offer_with_metadata_update(
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
 
-    maker_ph = await wallet_maker.get_new_puzzlehash()
-    taker_ph = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        maker_ph = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        taker_ph = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     token_ph = bytes32.random(seeded_random)
 
     if trusted:
@@ -528,8 +534,10 @@ async def test_nft_offer_nft_for_cat(
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
 
-    maker_ph = await wallet_maker.get_new_puzzlehash()
-    taker_ph = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        maker_ph = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        taker_ph = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     token_ph = bytes32.random(seeded_random)
 
     if trusted:
@@ -798,8 +806,10 @@ async def test_nft_offer_nft_for_nft(
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
 
-    maker_ph = await wallet_maker.get_new_puzzlehash()
-    taker_ph = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        maker_ph = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        taker_ph = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     token_ph = bytes32.random(seeded_random)
 
     if trusted:
@@ -949,8 +959,10 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
 
-    maker_ph = await wallet_maker.get_new_puzzlehash()
-    taker_ph = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        maker_ph = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        taker_ph = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     token_ph = bytes32.random(seeded_random)
 
     if trusted:

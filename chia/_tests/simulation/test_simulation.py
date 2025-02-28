@@ -196,7 +196,8 @@ class TestSimulation:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, _server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         wallet_node.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
@@ -215,7 +216,7 @@ class TestSimulation:
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(10),
-                await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
                 action_scope,
                 uint64(0),
             )
@@ -391,7 +392,7 @@ class TestSimulation:
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
                     amount=uint64(tx_amount),
-                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    puzzle_hash=await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
                     action_scope=action_scope,
                     coins={coin},
                 )
@@ -440,7 +441,7 @@ class TestSimulation:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
                         amount=uint64(tx_amount),
-                        puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                        puzzle_hash=await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
                         action_scope=action_scope,
                         coins={coin},
                     )

@@ -177,38 +177,6 @@ class Wallet:
         public_key = await self.wallet_state_manager.get_public_key(puzzle_hash)
         return puzzle_for_pk(G1Element.from_bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        puzzle = puzzle_for_pk(dr.pubkey)
-        return puzzle
-
-    async def get_puzzle(self, new: bool) -> Program:
-        if new:
-            return await self.get_new_puzzle()
-        else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            if record is None:
-                return await self.get_new_puzzle()  # pragma: no cover
-            puzzle = puzzle_for_pk(record.pubkey)
-            return puzzle
-
-    async def get_puzzle_hash(self, new: bool) -> bytes32:
-        if new:
-            return await self.get_new_puzzlehash()
-        else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            if record is None:
-                return await self.get_new_puzzlehash()
-            return record.puzzle_hash
-
-    async def get_new_puzzlehash(self) -> bytes32:
-        puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
-        return puzhash
-
     def make_solution(
         self,
         primaries: list[CreateCoin],
@@ -332,15 +300,14 @@ class Wallet:
                     target_primary.append(CreateCoin(newpuzzlehash, amount, memos))
 
                 if change > 0:
-                    if action_scope.config.tx_config.reuse_puzhash:
-                        change_puzzle_hash: bytes32 = coin.puzzle_hash
-                        for primary in primaries:
-                            if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
-                                # We cannot create two coins has same id, create a new puzhash for the change:
-                                change_puzzle_hash = await self.get_new_puzzlehash()
-                                break
-                    else:
-                        change_puzzle_hash = await self.get_new_puzzlehash()
+                    change_puzzle_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
+                    for primary in primaries:
+                        if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
+                            # We cannot create two coins has same id, create a new puzhash for the change:
+                            change_puzzle_hash = await action_scope.get_puzzle_hash(
+                                self.wallet_state_manager, override_reuse_puzhash_with=False
+                            )
+                            break
                     primaries.append(CreateCoin(change_puzzle_hash, uint64(change)))
                 message_list: list[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
@@ -481,7 +448,7 @@ class Wallet:
         chia_coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(
             uint64(0),
-            (await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+            await action_scope.get_puzzle_hash(self.wallet_state_manager),
             action_scope,
             fee=fee,
             coins=chia_coins,

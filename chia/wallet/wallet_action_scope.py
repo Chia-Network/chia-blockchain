@@ -6,12 +6,14 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Callable, Optional, cast, final
 
 from chia_rs.chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
@@ -69,7 +71,44 @@ class WalletActionConfig:
         )
 
 
-WalletActionScope = ActionScope[WalletSideEffects, WalletActionConfig]
+class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
+    async def _get_new_puzzle(self, wallet_state_manager: WalletStateManager) -> Program:
+        # TODO: need to save side effects from private_method
+        dr = await wallet_state_manager.get_unused_derivation_record(wallet_state_manager.main_wallet.id())
+        puzzle = self.config.puzzle_for_pk(dr.pubkey)
+        return puzzle
+
+    async def _get_new_puzzle_hash(self, wallet_state_manager: WalletStateManager) -> bytes32:
+        # TODO: need to save side effects from private_method
+        dr = await wallet_state_manager.get_unused_derivation_record(wallet_state_manager.main_wallet.id())
+        return dr.puzzle_hash
+
+    async def get_puzzle(
+        self, wallet_state_manager: WalletStateManager, override_reuse_puzhash_with: Optional[bool] = None
+    ) -> Program:
+        if self.config.tx_config.reuse_puzhash:
+            record: Optional[DerivationRecord] = await wallet_state_manager.get_current_derivation_record_for_wallet(
+                wallet_state_manager.main_wallet.id()
+            )
+            if record is None:
+                return await self._get_new_puzzle(wallet_state_manager)  # pragma: no cover
+            puzzle = self.config.puzzle_for_pk(record.pubkey)
+            return puzzle
+        else:
+            return await self._get_new_puzzle(wallet_state_manager)
+
+    async def get_puzzle_hash(
+        self, wallet_state_manager: WalletStateManager, override_reuse_puzhash_with: Optional[bool] = None
+    ) -> bytes32:
+        if self.config.tx_config.reuse_puzhash:
+            record: Optional[DerivationRecord] = await wallet_state_manager.get_current_derivation_record_for_wallet(
+                wallet_state_manager.main_wallet.id()
+            )
+            if record is None:
+                return await self._get_new_puzzle_hash(wallet_state_manager)  # pragma: no cover
+            return record.puzzle_hash
+        else:
+            return await self._get_new_puzzle_hash(wallet_state_manager)
 
 
 @contextlib.asynccontextmanager

@@ -26,7 +26,9 @@ class TestTransactions:
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
+
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
         await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
         for i in range(num_blocks):
@@ -54,8 +56,10 @@ class TestTransactions:
         full_node_api_2 = full_nodes[2]
         server_2 = full_node_api_2.server
 
-        ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
-        ph1 = await wallet_1.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph1 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
         #
         # wallet0 <-> sever0 <-> server1 <-> server2 <-> wallet1
@@ -133,7 +137,8 @@ class TestTransactions:
         full_node_api_2 = full_nodes[2]
         server_2 = full_node_api_2.server
 
-        ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
 
         # wallet0 <-> sever0 <-> server1
 

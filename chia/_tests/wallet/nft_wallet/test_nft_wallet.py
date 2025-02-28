@@ -154,12 +154,14 @@ async def test_nft_wallet_creation_automatically(wallet_environments: WalletTest
     coins = await nft_wallet_0.get_current_nfts()
     assert len(coins) == 1, "nft not generated"
 
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     async with nft_wallet_0.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_0.generate_signed_transaction(
             [uint64(coins[0].coin.amount)],
-            [await wallet_1.get_puzzle_hash(new=False)],
+            [wallet_1_ph],
             action_scope,
             coins={coins[0].coin},
         )
@@ -375,12 +377,14 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
         wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
     )
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     async with nft_wallet_0.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_0.generate_signed_transaction(
             [uint64(coins[1].coin.amount)],
-            [await wallet_1.get_puzzle_hash(False)],
+            [wallet_1_ph],
             action_scope,
             coins={coins[1].coin},
         )
@@ -432,12 +436,14 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     assert len(coins) == 1
 
     # Send it back to original owner
+    async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_0_ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
     async with nft_wallet_1.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_1.generate_signed_transaction(
             [uint64(coins[0].coin.amount)],
-            [await wallet_0.get_puzzle_hash(False)],
+            [wallet_0_ph],
             action_scope,
             coins={coins[0].coin},
         )
@@ -525,11 +531,11 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     assert nft_wallet_0.get("success")
     assert env.wallet_aliases["nft"] == nft_wallet_0["wallet_id"]
 
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await env.rpc_client.mint_nft(
         wallet_id=env.wallet_aliases["nft"],
-        royalty_address=encode_puzzle_hash(
-            await wallet.get_puzzle_hash(new=False), AddressType.NFT.hrp(wallet_node.config)
-        ),
+        royalty_address=encode_puzzle_hash(wallet_ph, AddressType.NFT.hrp(wallet_node.config)),
         target_address=None,
         hash="0xD4584AD463139FA8C0D9F68F4B59F185",
         uris=["https://www.chia.net/img/branding/chia-logo.svg"],
@@ -559,9 +565,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     )
     second_mint = await env.rpc_client.mint_nft(
         wallet_id=env.wallet_aliases["nft"],
-        royalty_address=encode_puzzle_hash(
-            await wallet.get_puzzle_hash(new=False), AddressType.NFT.hrp(wallet_node.config)
-        ),
+        royalty_address=encode_puzzle_hash(wallet_ph, AddressType.NFT.hrp(wallet_node.config)),
         target_address=None,
         tx_config=wallet_environments.tx_config,
         hash="0xD4584AD463139FA8C0D9F68F4B59F184",
@@ -846,7 +850,8 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     assert res.get("did_id") == hmr_did_id
 
     # Create a NFT with DID
-    nft_ph = await wallet.get_puzzle_hash(new=False)
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        nft_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     resp = await env.rpc_client.mint_nft(
         wallet_id=nft_wallet.id(),
         royalty_address=None,
@@ -1006,7 +1011,8 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
     )
 
     # Create a NFT with DID
-    royalty_address = await wallet.get_puzzle_hash(new=False)
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        royalty_address = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     royalty_bech32 = encode_puzzle_hash(royalty_address, AddressType.NFT.hrp(env.node.config))
     data_hash_param = "0xD4584AD463139FA8C0D9F68F4B59F185"
     license_uris = ["http://mylicenseuri"]
@@ -1212,10 +1218,12 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     assert len(env_0.wallet_state_manager.wallets) == 3
 
     # transfer DID to the other wallet
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     async with did_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
-        await did_wallet.transfer_did(await wallet_1.get_puzzle_hash(new=False), uint64(0), True, action_scope)
+        await did_wallet.transfer_did(wallet_1_ph, uint64(0), True, action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -1243,10 +1251,12 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     )
 
     # Transfer NFT, wallet will be deleted
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     mint_resp = await env_0.rpc_client.transfer_nft(
         wallet_id=env_0.wallet_aliases["nft"],
         nft_coin_id=coin.nft_coin_id.hex(),
-        target_address=encode_puzzle_hash(await wallet_1.get_puzzle_hash(new=False), "xch"),
+        target_address=encode_puzzle_hash(wallet_1_ph, "xch"),
         fee=fee,
         tx_config=wallet_environments.tx_config,
     )
@@ -2051,8 +2061,10 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
         NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_no_did"]), nft_coin_id=nft2.nft_coin_id.hex()),
     ]
 
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     fee = uint64(1000)
-    address = encode_puzzle_hash(await wallet_1.get_puzzle_hash(new=False), AddressType.XCH.hrp(env_1.node.config))
+    address = encode_puzzle_hash(wallet_1_ph, AddressType.XCH.hrp(env_1.node.config))
     bulk_transfer_resp = await env_0.rpc_client.transfer_nft_bulk(
         NFTTransferBulk(target_address=address, nft_coin_list=nft_coin_list, fee=fee, push=True),
         wallet_environments.tx_config,

@@ -237,26 +237,36 @@ async def test_cat_trades(
         )
 
         # Mint some VCs that can spend the CR-CATs
-        vc_record_maker = (
-            await client_maker.vc_mint(
-                VCMint(
-                    did_id=encode_puzzle_hash(did_id_maker, "did"),
-                    target_address=encode_puzzle_hash(await wallet_maker.get_new_puzzlehash(), "txch"),
-                    push=True,
-                ),
-                wallet_environments.tx_config,
-            )
-        ).vc_record
-        vc_record_taker = (
-            await client_taker.vc_mint(
-                VCMint(
-                    did_id=encode_puzzle_hash(did_id_taker, "did"),
-                    target_address=encode_puzzle_hash(await wallet_taker.get_new_puzzlehash(), "txch"),
-                    push=True,
-                ),
-                wallet_environments.tx_config,
-            )
-        ).vc_record
+        async with env_maker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            vc_record_maker = (
+                await client_maker.vc_mint(
+                    VCMint(
+                        did_id=encode_puzzle_hash(did_id_maker, "did"),
+                        target_address=encode_puzzle_hash(
+                            await action_scope.get_puzzle_hash(env_maker.wallet_state_manager), "txch"
+                        ),
+                        push=True,
+                    ),
+                    wallet_environments.tx_config,
+                )
+            ).vc_record
+        async with env_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            vc_record_taker = (
+                await client_taker.vc_mint(
+                    VCMint(
+                        did_id=encode_puzzle_hash(did_id_taker, "did"),
+                        target_address=encode_puzzle_hash(
+                            await action_scope.get_puzzle_hash(env_taker.wallet_state_manager), "txch"
+                        ),
+                        push=True,
+                    ),
+                    wallet_environments.tx_config,
+                )
+            ).vc_record
         await wallet_environments.process_pending_states(
             [
                 # Balance checking for this scenario is covered in tests/wallet/vc_wallet/test_vc_lifecycle

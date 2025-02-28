@@ -92,8 +92,8 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, 0)
         await time_out_assert(10, wallet_0.get_confirmed_balance, 0)
 
-        new_puz = await dl_wallet.get_new_puzzle()
-        assert new_puz
+        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await action_scope.get_puzzle(dl_wallet.wallet_state_manager)
 
     @pytest.mark.parametrize(
         "trusted",

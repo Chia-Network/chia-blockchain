@@ -187,7 +187,8 @@ class TestWalletSimulator:
         wsm_1 = env_1.wallet_state_manager
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
         # Transfer to normal wallet
         for _ in range(0, number_of_coins):
@@ -337,7 +338,9 @@ class TestWalletSimulator:
         api_1 = env_2.rpc_api
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
@@ -479,9 +482,9 @@ class TestWalletSimulator:
         api_0 = env.rpc_api
 
         tx_amount = 500
-        normal_puzhash = await wallet.get_new_puzzlehash()
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
             await wallet.generate_signed_transaction(
                 uint64(tx_amount),
                 normal_puzhash,
@@ -596,7 +599,8 @@ class TestWalletSimulator:
         api_1 = env_2.rpc_api
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
@@ -728,7 +732,8 @@ class TestWalletSimulator:
         wallet_1 = env_2.xch_wallet
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
@@ -976,8 +981,10 @@ class TestWalletSimulator:
         wallet_2 = env_2.xch_wallet
         api_1 = env_1.rpc_api
 
-        wallet_1_puzhash = await wallet_1.get_new_puzzlehash()
-        wallet_2_puzhash = await wallet_2.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            wallet_1_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+        async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            wallet_2_puzhash = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
 
         tx_amount = 500
         # Transfer to normal wallet
@@ -1332,10 +1339,14 @@ class TestWalletSimulator:
         wallet_1 = env_1.xch_wallet
 
         tx_amount = 10
+        async with wallet_1.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
                 uint64(tx_amount),
-                await wallet_1.get_puzzle_hash(False),
+                wallet_1_ph,
                 action_scope,
                 uint64(0),
             )
@@ -1378,10 +1389,12 @@ class TestWalletSimulator:
         )
 
         tx_amount = 5
+        async with wallet_0.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_0_ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
         async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet_1.generate_signed_transaction(
-                uint64(tx_amount), await wallet_0.get_puzzle_hash(False), action_scope, uint64(0)
-            )
+            await wallet_1.generate_signed_transaction(uint64(tx_amount), wallet_0_ph, action_scope, uint64(0))
 
         await wallet_environments.process_pending_states(
             [
@@ -1429,16 +1442,15 @@ class TestWalletSimulator:
     @pytest.mark.anyio
     async def test_wallet_make_transaction_with_fee(self, wallet_environments: WalletTestFramework) -> None:
         env_0 = wallet_environments.environments[0]
-        env_1 = wallet_environments.environments[1]
+        wallet_environments.environments[1]
         wallet_0 = env_0.xch_wallet
-        wallet_1 = env_1.xch_wallet
 
         tx_amount = 1_750_000_000_000  # ensures we grab both coins
         tx_fee = 10
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
                 uint64(tx_amount),
-                await wallet_1.get_new_puzzlehash(),
+                await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager),
                 action_scope,
                 uint64(tx_fee),
             )
@@ -1501,7 +1513,8 @@ class TestWalletSimulator:
 
         tx_amount = 1_750_000_000_000  # ensures we grab both coins
         tx_fee = 10
-        ph_2 = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph_2 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
                 uint64(tx_amount), ph_2, action_scope, uint64(tx_fee), memos=[ph_2]
@@ -1578,9 +1591,9 @@ class TestWalletSimulator:
         env = wallet_environments.environments[0]
         wallet = env.xch_wallet
 
-        ph = await wallet.get_puzzle_hash(False)
-        primaries = [CreateCoin(ph, uint64(1000000000 + i)) for i in range(int(wallet.max_send_quantity) + 1)]
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+            primaries = [CreateCoin(ph, uint64(1000000000 + i)) for i in range(int(wallet.max_send_quantity) + 1)]
             await wallet.generate_signed_transaction(uint64(1), ph, action_scope, uint64(0), primaries=primaries)
 
         await wallet_environments.process_pending_states(
@@ -1738,10 +1751,12 @@ class TestWalletSimulator:
         assert reorg_height is not None
         await full_node_api.farm_blocks_to_puzzlehash(count=3)
 
+        async with wallet_2.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_2_ph = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(
-                uint64(tx_amount), await wallet_2.get_puzzle_hash(False), action_scope, coins={coin}
-            )
+            await wallet.generate_signed_transaction(uint64(tx_amount), wallet_2_ph, action_scope, coins={coin})
 
         await wallet_environments.process_pending_states(
             [
@@ -1968,7 +1983,9 @@ class TestWalletSimulator:
 
         # Test general string
         message = "Hello World"
-        ph = await env.xch_wallet.get_puzzle_hash(False)
+
+        async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
         response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
