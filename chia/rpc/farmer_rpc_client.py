@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Optional, cast
 
+from chia_rs.sized_bytes import bytes32
+
 from chia.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from chia.rpc.rpc_client import RpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import recurse_jsonify
 
 

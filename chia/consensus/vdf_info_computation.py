@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Optional
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64, uint128
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 
 

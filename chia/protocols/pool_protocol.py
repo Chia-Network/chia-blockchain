@@ -6,10 +6,10 @@ from enum import Enum
 from typing import Optional
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, streamable
 
 POOL_PROTOCOL_VERSION = uint8(1)

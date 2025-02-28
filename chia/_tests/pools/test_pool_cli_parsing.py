@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
@@ -16,7 +17,6 @@ from chia.cmds.plotnft import (
     LeavePlotNFTCMD,
     ShowPlotNFTCMD,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.util.address_type import AddressType
 

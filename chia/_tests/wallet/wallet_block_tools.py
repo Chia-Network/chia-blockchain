@@ -13,6 +13,7 @@ from chia_rs import (
     TransactionsInfo,
     compute_merkle_set_root,
 )
+from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
@@ -27,7 +28,6 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
