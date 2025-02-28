@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -37,7 +37,6 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
