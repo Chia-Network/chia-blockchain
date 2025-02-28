@@ -253,7 +253,8 @@ async def create_new_plotnft(
     wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
-    our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_state_manager.new_action_scope(wallet_test_framework.tx_config, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
 
     await wallet_rpc.create_new_pool_wallet(
         target_puzzlehash=our_ph,
@@ -283,7 +284,8 @@ class TestPoolWalletRpc:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
@@ -335,7 +337,8 @@ class TestPoolWalletRpc:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -390,8 +393,9 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph_1 = await wallet.get_new_puzzlehash()
-        our_ph_2 = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph_1 = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+            our_ph_2 = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -500,7 +504,8 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -590,7 +595,8 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -660,7 +666,8 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(

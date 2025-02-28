@@ -358,7 +358,7 @@ class NFTWallet:
         launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(amount))
         self.log.debug("Generating NFT with launcher coin %s and metadata: %s", launcher_coin, metadata)
 
-        p2_inner_puzzle = await self.standard_wallet.get_puzzle(new=not action_scope.config.tx_config.reuse_puzhash)
+        p2_inner_puzzle = await action_scope.get_puzzle(self.wallet_state_manager)
         if not target_puzzle_hash:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         self.log.debug("Attempt to generate a new NFT to %s", target_puzzle_hash.hex())
@@ -820,9 +820,7 @@ class NFTWallet:
                 royalty_payments[asset] = payment_list
 
         # Generate the requested_payments to be notarized
-        p2_ph = await wallet_state_manager.main_wallet.get_puzzle_hash(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
+        p2_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
         requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {}
         for asset, amount in offer_dict.items():
             if amount > 0:
@@ -1242,7 +1240,7 @@ class NFTWallet:
         intermediate_coin_spends = []
         launcher_spends = []
         launcher_ids = []
-        p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
+        p2_inner_puzzle = await action_scope.get_puzzle(self.wallet_state_manager)
         p2_inner_ph = p2_inner_puzzle.get_tree_hash()
 
         # Loop to create each intermediate coin, launcher, eve and (optional) transfer spends
@@ -1348,7 +1346,7 @@ class NFTWallet:
         spend_value = sum(coin.amount for coin in xch_coins)
         change: uint64 = uint64(spend_value - total_amount)
         if xch_change_ph is None:
-            xch_change_ph = await self.standard_wallet.get_new_puzzlehash()
+            xch_change_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         xch_payment = CreateCoin(xch_change_ph, change, [xch_change_ph])
 
         xch_coins_iter = iter(xch_coins)
@@ -1500,7 +1498,7 @@ class NFTWallet:
         intermediate_coin_spends = []
         launcher_spends = []
         launcher_ids = []
-        p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
+        p2_inner_puzzle = await action_scope.get_puzzle(self.wallet_state_manager)
         p2_inner_ph = p2_inner_puzzle.get_tree_hash()
 
         # Loop to create each intermediate coin, launcher, eve and (optional) transfer spends
@@ -1606,7 +1604,7 @@ class NFTWallet:
         change: uint64 = uint64(spend_value - total_amount)
         xch_spends = []
         if xch_change_ph is None:
-            xch_change_ph = await self.standard_wallet.get_new_puzzlehash()
+            xch_change_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         xch_payment = CreateCoin(xch_change_ph, change, [xch_change_ph])
 
         first = True

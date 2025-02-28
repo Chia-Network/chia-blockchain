@@ -54,6 +54,13 @@ class InternalError(DBWrapperError):
     pass
 
 
+class PurposefulAbort(DBWrapperError):
+    obj: object
+
+    def __init__(self, obj: object) -> None:
+        self.obj = obj
+
+
 def generate_in_memory_db_uri() -> str:
     # We need to use shared cache as our DB wrapper uses different types of connections
     return f"file:db_{secrets.token_hex(16)}?mode=memory&cache=shared"

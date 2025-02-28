@@ -47,7 +47,8 @@ async def test_wallet_tx_retry(
     wallet_node_1.config["tx_resend_timeout_secs"] = 5
     wallet_server_1 = wallets[0][1]
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-    reward_ph = await wallet_1.get_new_puzzlehash()
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        reward_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
     await wallet_server_1.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
@@ -74,7 +75,8 @@ async def test_wallet_tx_retry(
     # Wait some time so wallet will retry
     await asyncio.sleep(2)
 
-    our_ph = await wallet_1.get_new_puzzlehash()
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     await farm_blocks(full_node_1, our_ph, 2)
 
     # Wait for wallet to catch up

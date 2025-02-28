@@ -195,7 +195,8 @@ async def test_block_compression(
     _ = await connect_and_get_peer(server_1, server_2, self_hostname)
     _ = await connect_and_get_peer(server_1, server_3, self_hostname)
 
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     for i in range(4):
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))

@@ -65,8 +65,10 @@ async def test_notifications(
     wallet_1 = wsm_1.main_wallet
     wallet_2 = wsm_2.main_wallet
 
-    ph_1 = await wallet_1.get_new_puzzlehash()
-    ph_2 = await wallet_2.get_new_puzzlehash()
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_1 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_2 = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:

@@ -108,7 +108,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
         wallet_id=MagicMock(),
     )
 
-    await wallet.update_pool_config()
+    await wallet.update_pool_config(MagicMock())
 
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id
@@ -191,7 +191,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
         wallet_id=MagicMock(),
     )
 
-    await wallet.update_pool_config()
+    await wallet.update_pool_config(MagicMock())
 
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id
