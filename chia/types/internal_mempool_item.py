@@ -17,3 +17,5 @@ class InternalMempoolItem:
     height_added_to_mempool: uint32
     # Map of coin ID to coin spend data between the bundle and its NPCResult
     bundle_coin_spends: dict[bytes32, BundleCoinSpend]
+    # Map of latest unspent ID to its puzzle hash and item's spends
+    fast_forward_unspents_map: dict[bytes32, tuple[bytes32, set[bytes32]]]

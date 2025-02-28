@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
@@ -16,6 +16,8 @@ from chia._tests.core.mempool.test_mempool_manager import (
     TEST_COIN,
     TEST_COIN_ID,
     TEST_HEIGHT,
+    TestBlockRecord,
+    height_hash,
     mempool_item_from_spendbundle,
     spend_bundle_from_conditions,
 )
@@ -56,7 +58,9 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     item = mempool_item_from_spendbundle(sb)
     # This coin is not eligible for fast forward
     assert item.bundle_coin_spends[TEST_COIN_ID].eligible_for_fast_forward is False
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
+    internal_mempool_item = InternalMempoolItem(
+        sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends, item.fast_forward_unspents_map
+    )
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
     bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
@@ -87,7 +91,9 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
     item = mempool_item_from_spendbundle(sb)
     # The coin is eligible for fast forward
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
+    internal_mempool_item = InternalMempoolItem(
+        sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends, item.fast_forward_unspents_map
+    )
     eligible_coin_spends = EligibleCoinSpends()
     # We have no fast forward records yet, so we'll process this coin for the
     # first time here, but the DB lookup will return None
@@ -129,7 +135,9 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
+    internal_mempool_item = InternalMempoolItem(
+        sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends, item.fast_forward_unspents_map
+    )
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
     bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
@@ -741,3 +749,104 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         # It fails validation because it doesn't currently have a latest unspent
         assert status == MempoolInclusionStatus.FAILED
         assert error == Err.DOUBLE_SPEND
+
+
+@pytest.mark.parametrize("optimized_path", [True, False])
+@pytest.mark.anyio
+async def test_items_eviction_on_new_peak_with_melted_singleton(optimized_path: bool) -> None:
+    """
+    This test covers the scenario where a singleton gets melted and we receive
+    it as a spent coin on new peak, to make sure all existing mempool items
+    with spends that belong to this singleton, get removed from the mempool.
+    """
+    test_amount = uint64(1337)
+    async with sim_and_client() as (sim, sim_client):
+        # Prepare a singleton spend
+        singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
+            sim, sim_client, True, start_amount=test_amount, singleton_amount=test_amount
+        )
+        singleton_name = singleton.name()
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        sk = AugSchemeMPL.key_gen(b"9" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+        inner_conditions: list[list[Any]] = [
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, test_amount],
+        ]
+        singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
+        # Let's spend it to create a new version
+        remaining_spend_solution = SerializedProgram.from_program(
+            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        )
+        remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
+        status, error = await make_and_send_spend_bundle(
+            sim, sim_client, [singleton_coin_spend, remaining_coin_spend], aggsig=sig
+        )
+        assert error is None
+        assert status == MempoolInclusionStatus.SUCCESS
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton.puzzle_hash
+        )
+        singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
+        singleton_child_name = singleton_child.name()
+        assert singleton_child.amount == test_amount
+        assert unspent_lineage_info == UnspentLineageInfo(
+            coin_id=singleton_child_name,
+            coin_amount=singleton_child.amount,
+            parent_id=singleton_name,
+            parent_amount=singleton.amount,
+            parent_parent_id=eve_coin_spend.coin.name(),
+        )
+        sb_names = []
+        # Send 3 items that spend the original (spent) singleton version
+        for i in range(3):
+            inner_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"] for _ in range(i + 1)]
+            aggsig = G2Element()
+            for _ in range(i + 1):
+                aggsig += sig
+            inner_conditions.append([ConditionOpcode.CREATE_COIN, inner_puzzle_hash, test_amount])
+            singleton_coin_spend, _ = make_singleton_coin_spend(
+                eve_coin_spend, singleton, inner_puzzle, inner_conditions
+            )
+            remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
+            sb = SpendBundle([singleton_coin_spend, remaining_coin_spend], aggsig)
+            await sim_client.push_tx(sb)
+            sb_names.append(sb.name())
+        # Make sure these items have the latest unspent ID for this singleton
+        # in their fast forward unspents map.
+        for sb_name in sb_names:
+            mi = sim.mempool_manager.mempool.get_item_by_id(sb_name)
+            assert mi is not None
+            assert singleton_name not in mi.fast_forward_unspents_map
+            assert singleton_child_name in mi.fast_forward_unspents_map
+        # Now let's form a new peak with this singleton marked as a spent coin
+        # Before calling new peak, let's remove the singleton from the coin
+        # store, so that when we process spent coins, we check if this
+        # singleton still has a latest unspent and we don't find any, so we
+        # concluded that it melted.
+        async with sim_client.service.coin_store.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute("DELETE FROM coin_record WHERE coin_name = ?", (singleton_child_name,))
+        # Ensure this singleton no longer has a latest unspent coin
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton.puzzle_hash
+        )
+        assert unspent_lineage_info is None
+        current_peak = sim_client.service.block_records[-1]
+        test_new_peak = TestBlockRecord(
+            header_hash=height_hash(current_peak.height + 1),
+            height=uint32(current_peak.height + 1),
+            timestamp=uint64(current_peak.timestamp + 10),
+            prev_transaction_block_height=current_peak.height,
+            prev_transaction_block_hash=current_peak.header_hash,
+        )
+        if optimized_path:
+            # Mark the singleton's latest version as spent
+            spent_coins = [singleton_child_name]
+        else:
+            # Trigger a rebuild of the mempool (slow path)
+            spent_coins = None
+        await sim.mempool_manager.new_peak(test_new_peak, spent_coins)
+        # Make sure all items with spends that belong to this singleton got removed
+        for sb_name in sb_names:
+            assert sim.mempool_manager.mempool.get_item_by_id(sb_name) is None

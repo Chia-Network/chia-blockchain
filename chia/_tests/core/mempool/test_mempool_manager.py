@@ -148,12 +148,12 @@ async def instantiate_mempool_manager(
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: Optional[uint64] = None,
+    get_unspent_lineage_info_for_puzzle_hash: Callable[
+        [bytes32], Awaitable[Optional[UnspentLineageInfo]]
+    ] = zero_calls_get_unspent_lineage_info_for_puzzle_hash,
 ) -> MempoolManager:
     mempool_manager = MempoolManager(
-        get_coin_records,
-        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
-        constants,
-        max_tx_clvm_cost=max_tx_clvm_cost,
+        get_coin_records, get_unspent_lineage_info_for_puzzle_hash, constants, max_tx_clvm_cost=max_tx_clvm_cost
     )
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
@@ -2142,3 +2142,90 @@ async def test_height_added_to_mempool(optimized_path: bool) -> None:
     mempool_item = mempool_manager.get_mempool_item(sb_name)
     assert mempool_item is not None
     assert mempool_item.height_added_to_mempool == original_height
+
+
+@pytest.mark.anyio
+async def test_revisit_items_with_related_ff_spends_singleton_melts() -> None:
+    """
+    This test covers calling `revisit_items_with_related_ff_spends` with a
+    melted singleton as a spent coin, to make sure that mempool items
+    that spend any of the singleton's versions get removed from the mempool.
+    """
+
+    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+        if puzzle_hash == IDENTITY_PUZZLE_HASH:
+            return None
+        assert False  # pragma: no cover
+
+    mempool_manager = await instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+    )
+    singleton_puzzle_hash = IDENTITY_PUZZLE_HASH
+    singleton_latest_unspent_id = TEST_COIN_ID
+    # Create a test item with an older version of the singleton
+    test_item = mk_item([TEST_COIN2])
+    test_item = dataclasses.replace(
+        test_item, fast_forward_unspents_map={singleton_latest_unspent_id: (singleton_puzzle_hash, {TEST_COIN_ID3})}
+    )
+    mempool_manager.mempool.add_to_pool(test_item)
+    assert mempool_manager.mempool.get_item_by_id(test_item.name) is not None
+    # Calling `revisit_items_with_related_ff_spends` with the singleton's
+    # latest version as a spent coin should remove our test item.
+    spent_coins_ids = [singleton_latest_unspent_id]
+    await mempool_manager.revisit_items_with_related_ff_spends(spent_coins_ids)
+    assert mempool_manager.mempool.get_item_by_id(test_item.name) is None
+
+
+@pytest.mark.anyio
+async def test_revisit_items_with_related_ff_spends_singleton_stays() -> None:
+    """
+    This test covers calling `revisit_items_with_related_ff_spends` with a
+    singleton that got spent into a new version, to make sure that mempool
+    items that spend any of this singleton's previous versions get updated
+    with this latest unspent version.
+    """
+    latest_unspent_id_after_current_one = bytes32([1] * 32)
+    unspent_lineage_info_after_current_one = UnspentLineageInfo(
+        coin_id=latest_unspent_id_after_current_one,
+        coin_amount=uint64(1337),
+        parent_id=TEST_COIN_ID2,
+        parent_amount=TEST_COIN2.amount,
+        parent_parent_id=TEST_COIN_ID3,
+    )
+
+    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> UnspentLineageInfo | None:
+        # This is latest version after the current latest unspent gets spent
+        if puzzle_hash == IDENTITY_PUZZLE_HASH:
+            return unspent_lineage_info_after_current_one
+        assert False  # pragma: no cover
+
+    mempool_manager: MempoolManager = await instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+    )
+    singleton_current_unspent_id = TEST_COIN_ID
+    singleton_puzzle_hash = IDENTITY_PUZZLE_HASH
+    # Create a test item with an older version of the singleton
+    spends_ids_before_update = {TEST_COIN_ID3}
+    test_item = mk_item([TEST_COIN2])
+    test_item = dataclasses.replace(
+        test_item,
+        fast_forward_unspents_map={singleton_current_unspent_id: (singleton_puzzle_hash, spends_ids_before_update)},
+    )
+    mempool_manager.mempool.add_to_pool(test_item)
+    assert mempool_manager.mempool.get_item_by_id(test_item.name) is not None
+    # Calling `revisit_items_with_related_ff_spends` with the singleton's
+    # latest version as a spent coin should update our test item accordingly.
+    spent_coins_ids = [singleton_current_unspent_id]
+    await mempool_manager.revisit_items_with_related_ff_spends(spent_coins_ids)
+    # The test item that spends a previous version of the singleton should
+    # remain in mempool and get updated properly.
+    updated_item = mempool_manager.mempool.get_item_by_id(test_item.name)
+    assert updated_item is not None
+    # The previously latest unspent version should have been replaced
+    assert singleton_current_unspent_id not in updated_item.fast_forward_unspents_map
+    # The current latest unspent version should exist instead
+    new_unspent_info = updated_item.fast_forward_unspents_map.get(latest_unspent_id_after_current_one)
+    # Spends IDs should be preserved
+    assert new_unspent_info == (singleton_puzzle_hash, spends_ids_before_update)
