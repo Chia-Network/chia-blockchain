@@ -13,6 +13,7 @@ from unittest.mock import patch
 import aiosqlite
 import pytest
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -85,7 +86,6 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -510,8 +510,8 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     fee_amount = 100
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            amount=uint64(5),
-            puzzle_hash=bytes32.zeros,
+            amounts=[uint64(5)],
+            puzzle_hashes=[bytes32.zeros],
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
@@ -1844,8 +1844,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
     )
-    assert min_coins is not None
-    assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
+    assert len(min_coins) == 1
+    assert min_coins[0].amount == uint64(10_000)
 
     # test max coin amount
     max_coins: list[Coin] = await client_2.select_coins(
@@ -1855,8 +1855,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
         ),
     )
-    assert max_coins is not None
-    assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
+    assert len(max_coins) == 2
+    assert max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
     non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
@@ -1865,11 +1865,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
-    assert excluded_amt_coins is not None
-    assert (
-        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
-        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
-    )
+    assert len(excluded_amt_coins) == len([a for a in tx_amounts if a != 1000])
+    assert sum(c.amount for c in excluded_amt_coins) == non_1000_amt
 
     # test excluded coins
     with pytest.raises(ValueError):
@@ -2183,8 +2180,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4c65742773206561742c204772616e646d61",  # Let's eat, Grandma
                 "pubkey": (
-                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
-                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
                 ),
                 "signature": (
                     "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
@@ -2200,8 +2196,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2218,8 +2213,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2235,8 +2229,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4f7a6f6e65",  # Ozone
                 "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab3524e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
                     "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
@@ -2254,8 +2247,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4c6574277320656174204772616e646d61",  # Let's eat Grandma
                 "pubkey": (
-                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
-                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
                 ),
                 "signature": (
                     "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
@@ -2270,8 +2262,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2287,8 +2278,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4f7a6f6e65",  # Ozone
                 "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab3524e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
                     "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"

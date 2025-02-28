@@ -5,6 +5,7 @@ import pathlib
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
 from chia._tests.core.make_block_generator import make_block_generator
@@ -21,7 +22,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)

@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from chia_rs.sized_ints import uint32
 from sortedcontainers import SortedDict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint32
 
 
 @dataclass

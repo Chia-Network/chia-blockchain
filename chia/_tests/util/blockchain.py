@@ -7,8 +7,9 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools

@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Optional, Union
 
 import click
+from chia_rs.sized_ints import uint64
 
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.units import units
@@ -12,7 +13,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 
 one_decimal_mojo = Decimal("1e-12")

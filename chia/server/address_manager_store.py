@@ -8,6 +8,7 @@ from timeit import default_timer as timer
 from typing import Any, Optional
 
 import aiofiles
+from chia_rs.sized_ints import uint64
 
 from chia.server.address_manager import (
     BUCKET_SIZE,
@@ -17,7 +18,6 @@ from chia.server.address_manager import (
     ExtendedPeerInfo,
 )
 from chia.util.files import write_file_async
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)

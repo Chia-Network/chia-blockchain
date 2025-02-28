@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from chia_rs import AugSchemeMPL, G1Element
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.clvm.coin_store import CoinStore, CoinTimestamp
 from chia._tests.core.make_block_generator import int_to_public_key
@@ -13,7 +14,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,

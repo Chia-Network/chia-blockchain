@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from chia_rs.sized_ints import uint128
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.util.ints import uint128
 
 
 def get_prev_transaction_block(

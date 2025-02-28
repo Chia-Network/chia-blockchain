@@ -8,9 +8,9 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 
 import aiosqlite
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

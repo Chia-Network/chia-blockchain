@@ -11,6 +11,7 @@ from pprint import pprint
 from typing import Any, Callable, Optional
 
 import aiohttp
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import (
@@ -32,7 +33,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType

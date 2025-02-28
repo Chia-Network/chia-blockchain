@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import click
 import pytest
+from chia_rs.sized_ints import uint64
 from click.testing import CliRunner
 
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
@@ -26,7 +27,6 @@ from chia.cmds.cmd_helpers import (
 from chia.cmds.cmds_util import coin_selection_args, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import CliAmount
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig

@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from chia_rs import G1Element, PrivateKey
+from chia_rs.sized_ints import uint32
 from chiapos import DiskProver
 from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, lock_and_load_config, save_config
-from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)

@@ -10,7 +10,6 @@ from chia.cmds.beta import beta_cmd
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
-from chia.cmds.dao import dao_cmd
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
 from chia.cmds.dev import dev_cmd
@@ -139,7 +138,6 @@ cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
 cli.add_command(completion)
-cli.add_command(dao_cmd)
 cli.add_command(dev_cmd)
 
 

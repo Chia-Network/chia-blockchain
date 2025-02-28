@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 
 import aiohttp
 import pytest
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.setup_nodes import FullSystem, OldSimulatorsAndWallets
@@ -25,7 +26,6 @@ from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
@@ -215,8 +215,8 @@ class TestSimulation:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(10),
-                await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
+                [uint64(10)],
+                [await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
                 action_scope,
                 uint64(0),
             )
@@ -391,8 +391,8 @@ class TestSimulation:
         for coin in coins:
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
-                    amount=uint64(tx_amount),
-                    puzzle_hash=await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
+                    amounts=[uint64(tx_amount)],
+                    puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
                     action_scope=action_scope,
                     coins={coin},
                 )
@@ -440,8 +440,8 @@ class TestSimulation:
             ) as action_scope:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
-                        amount=uint64(tx_amount),
-                        puzzle_hash=await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
+                        amounts=[uint64(tx_amount)],
+                        puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
                         action_scope=action_scope,
                         coins={coin},
                     )

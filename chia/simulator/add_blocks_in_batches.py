@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
+from chia_rs.sized_ints import uint32
+
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode, PeakPostProcessingResult
@@ -10,7 +12,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.batches import to_batches
-from chia.util.ints import uint32
 
 
 async def add_blocks_in_batches(
@@ -35,13 +36,12 @@ async def add_blocks_in_batches(
     fork_info = ForkInfo(fork_height, blocks[0].height - 1, peak_hash)
 
     vs = ValidationState(ssi, diff, None)
-
+    blockchain = AugmentedBlockchain(full_node.blockchain)
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
         # vs is updated by the call to add_block_batch()
-        blockchain = AugmentedBlockchain(full_node.blockchain)
         success, state_change_summary = await full_node.add_block_batch(
             block_batch.entries, PeerInfo("0.0.0.0", 0), fork_info, vs, blockchain
         )

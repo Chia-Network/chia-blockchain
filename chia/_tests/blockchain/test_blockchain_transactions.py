@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -19,7 +20,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)

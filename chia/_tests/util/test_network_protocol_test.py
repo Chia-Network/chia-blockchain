@@ -223,34 +223,34 @@ def test_missing_messages() -> None:
     # if these asserts fail, make sure to add the new network protocol messages
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
-    assert (
-        types_in_module(wallet_protocol) == wallet_msgs
-    ), f"message types were added or removed from wallet_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(wallet_protocol) == wallet_msgs, (
+        f"message types were added or removed from wallet_protocol. {STANDARD_ADVICE}"
+    )
 
-    assert (
-        types_in_module(farmer_protocol) == farmer_msgs
-    ), f"message types were added or removed from farmer_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(farmer_protocol) == farmer_msgs, (
+        f"message types were added or removed from farmer_protocol. {STANDARD_ADVICE}"
+    )
 
-    assert (
-        types_in_module(full_node_protocol) == full_node_msgs
-    ), f"message types were added or removed from full_node_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(full_node_protocol) == full_node_msgs, (
+        f"message types were added or removed from full_node_protocol. {STANDARD_ADVICE}"
+    )
 
-    assert (
-        types_in_module(harvester_protocol) == harvester_msgs
-    ), f"message types were added or removed from harvester_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(harvester_protocol) == harvester_msgs, (
+        f"message types were added or removed from harvester_protocol. {STANDARD_ADVICE}"
+    )
 
-    assert (
-        types_in_module(introducer_protocol) == introducer_msgs
-    ), f"message types were added or removed from introducer_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(introducer_protocol) == introducer_msgs, (
+        f"message types were added or removed from introducer_protocol. {STANDARD_ADVICE}"
+    )
 
-    assert (
-        types_in_module(pool_protocol) == pool_msgs
-    ), f"message types were added or removed from pool_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(pool_protocol) == pool_msgs, (
+        f"message types were added or removed from pool_protocol. {STANDARD_ADVICE}"
+    )
 
-    assert (
-        types_in_module(timelord_protocol) == timelord_msgs
-    ), f"message types were added or removed from timelord_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(timelord_protocol) == timelord_msgs, (
+        f"message types were added or removed from timelord_protocol. {STANDARD_ADVICE}"
+    )
 
-    assert (
-        types_in_module(shared_protocol) == shared_msgs
-    ), f"message types were added or removed from shared_protocol. {STANDARD_ADVICE}"
+    assert types_in_module(shared_protocol) == shared_msgs, (
+        f"message types were added or removed from shared_protocol. {STANDARD_ADVICE}"
+    )

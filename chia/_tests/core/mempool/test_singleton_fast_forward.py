@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import copy
 import dataclasses
 from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint64
+from chiabip158 import PyBIP158
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.core.mempool.test_mempool_manager import (
@@ -31,7 +34,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
 from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
 
@@ -57,14 +59,14 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
-    await eligible_coin_spends.process_fast_forward_spends(
+    bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
         mempool_item=internal_mempool_item,
         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
         height=TEST_HEIGHT,
         constants=DEFAULT_CONSTANTS,
     )
     assert eligible_coin_spends == EligibleCoinSpends()
-    assert internal_mempool_item == original_version
+    assert bundle_coin_spends == original_version.bundle_coin_spends
 
 
 @pytest.mark.anyio
@@ -130,7 +132,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
-    await eligible_coin_spends.process_fast_forward_spends(
+    bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
         mempool_item=internal_mempool_item,
         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
         height=TEST_HEIGHT,
@@ -149,7 +151,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     # We have set the next version from our additions to chain ff spends
     assert eligible_coin_spends.fast_forward_spends == expected_fast_forward_spends
     # We didn't need to fast forward the item so it stays as is
-    assert internal_mempool_item == original_version
+    assert bundle_coin_spends == original_version.bundle_coin_spends
 
 
 def test_perform_the_fast_forward() -> None:
@@ -382,6 +384,47 @@ async def prepare_and_test_singleton(
 
 
 @pytest.mark.anyio
+async def test_singleton_fast_forward_solo() -> None:
+    """
+    We don't allow a spend bundle with *only* fast forward spends, since those
+    are difficult to evict from the mempool. They would always be valid as long as
+    the singleton exists.
+    """
+    SINGLETON_AMOUNT = uint64(1337)
+    async with sim_and_client() as (sim, sim_client):
+        singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
+            sim, sim_client, True, SINGLETON_AMOUNT, SINGLETON_AMOUNT
+        )
+        singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        inner_conditions: list[list[Any]] = [
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_AMOUNT],
+        ]
+        singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
+        # spending the eve coin is not eligible for fast forward, so we need to make this spend first, to test FF
+        await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=G2Element())
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton_puzzle_hash
+        )
+        singleton_child, _ = await get_singleton_and_remaining_coins(sim)
+        assert singleton_child.amount == SINGLETON_AMOUNT
+        assert unspent_lineage_info == UnspentLineageInfo(
+            coin_id=singleton_child.name(),
+            coin_amount=singleton_child.amount,
+            parent_id=eve_coin_spend.coin.name(),
+            parent_amount=singleton.amount,
+            parent_parent_id=eve_coin_spend.coin.parent_coin_info,
+        )
+
+        inner_conditions = [[ConditionOpcode.CREATE_COIN, inner_puzzle_hash, 21]]
+        # this is a FF spend that isn't combined with any other spend. It's not allowed
+        singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
+        status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], G2Element()))
+        assert error is Err.INVALID_SPEND_BUNDLE
+        assert status == MempoolInclusionStatus.FAILED
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("is_eligible_for_ff", [True, False])
 async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) -> None:
     """
@@ -544,7 +587,8 @@ async def test_singleton_fast_forward_same_block() -> None:
             singleton_coin_spend, _ = make_singleton_coin_spend(
                 eve_coin_spend, singleton, inner_puzzle, inner_conditions
             )
-            status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], aggsig))
+            remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
+            status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend, remaining_coin_spend], aggsig))
             assert error is None
             assert status == MempoolInclusionStatus.SUCCESS
 
@@ -565,3 +609,135 @@ async def test_singleton_fast_forward_same_block() -> None:
         assert unspent_lineage_info.parent_id == latest_singleton.parent_coin_info
         # The one before it should have the second last random amount
         assert unspent_lineage_info.parent_amount == random_amounts[-2]
+
+
+@pytest.mark.anyio
+async def test_mempool_items_immutability_on_ff() -> None:
+    """
+    This tests processing singleton fast forward spends for mempool items using
+    modified copies, without altering those original mempool items.
+    """
+    SINGLETON_AMOUNT = uint64(1337)
+    async with sim_and_client() as (sim, sim_client):
+        singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
+            sim, sim_client, True, SINGLETON_AMOUNT, SINGLETON_AMOUNT
+        )
+        singleton_name = singleton.name()
+        singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        sk = AugSchemeMPL.key_gen(b"1" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+        inner_conditions: list[list[Any]] = [
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_AMOUNT],
+        ]
+        singleton_coin_spend, singleton_signing_puzzle = make_singleton_coin_spend(
+            eve_coin_spend, singleton, inner_puzzle, inner_conditions
+        )
+        remaining_spend_solution = SerializedProgram.from_program(
+            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        )
+        remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
+        await make_and_send_spend_bundle(
+            sim,
+            sim_client,
+            [remaining_coin_spend, singleton_coin_spend],
+            signing_puzzle=singleton_signing_puzzle,
+            signing_coin=singleton,
+            aggsig=sig,
+        )
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton_puzzle_hash
+        )
+        singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
+        singleton_child_name = singleton_child.name()
+        assert singleton_child.amount == SINGLETON_AMOUNT
+        assert unspent_lineage_info == UnspentLineageInfo(
+            coin_id=singleton_child_name,
+            coin_amount=singleton_child.amount,
+            parent_id=singleton_name,
+            parent_amount=singleton.amount,
+            parent_parent_id=eve_coin_spend.coin.name(),
+        )
+        # Now let's spend the first version again (despite being already spent
+        # by now) to exercise its fast forward.
+        remaining_spend_solution = SerializedProgram.from_program(
+            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        )
+        remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
+        sb = SpendBundle([remaining_coin_spend, singleton_coin_spend], sig)
+        sb_name = sb.name()
+        status, error = await sim_client.push_tx(sb)
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert error is None
+        original_item = copy.copy(sim_client.service.mempool_manager.get_mempool_item(sb_name))
+        original_filter = sim_client.service.mempool_manager.get_filter()
+        # Let's trigger the fast forward by creating a mempool bundle
+        result = await sim.mempool_manager.create_bundle_from_mempool(
+            sim_client.service.block_records[-1].header_hash,
+            sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+        )
+        assert result is not None
+        bundle, _ = result
+        # Make sure the mempool bundle we created contains the result of our
+        # fast forward, instead of our original spend.
+        assert any(cs.coin.name() == singleton_child_name for cs in bundle.coin_spends)
+        assert not any(cs.coin.name() == singleton_name for cs in bundle.coin_spends)
+        # We should have processed our item without modifying it in-place
+        new_item = copy.copy(sim_client.service.mempool_manager.get_mempool_item(sb_name))
+        new_filter = sim_client.service.mempool_manager.get_filter()
+        assert new_item == original_item
+        assert new_filter == original_filter
+        sb_filter = PyBIP158(bytearray(original_filter))
+        items_not_in_sb_filter = sim_client.service.mempool_manager.get_items_not_in_filter(sb_filter)
+        assert len(items_not_in_sb_filter) == 0
+
+
+@pytest.mark.anyio
+async def test_double_spend_ff_spend_no_latest_unspent() -> None:
+    """
+    This test covers the scenario where we receive a spend bundle with a
+    singleton fast forward spend that has currently no unspent coin.
+    """
+    test_amount = uint64(1337)
+    async with sim_and_client() as (sim, sim_client):
+        # Prepare a singleton spend
+        singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
+            sim, sim_client, True, start_amount=test_amount, singleton_amount=test_amount
+        )
+        singleton_name = singleton.name()
+        singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        sk = AugSchemeMPL.key_gen(b"9" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+        inner_conditions: list[list[Any]] = [
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, test_amount],
+        ]
+        singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
+        # Get its current latest unspent info
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton_puzzle_hash
+        )
+        assert unspent_lineage_info == UnspentLineageInfo(
+            coin_id=singleton_name,
+            coin_amount=test_amount,
+            parent_id=eve_coin_spend.coin.name(),
+            parent_amount=eve_coin_spend.coin.amount,
+            parent_parent_id=eve_coin_spend.coin.parent_coin_info,
+        )
+        # Let's remove this latest unspent coin from the coin store
+        async with sim_client.service.coin_store.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute("DELETE FROM coin_record WHERE coin_name = ?", (unspent_lineage_info.coin_id,))
+        # This singleton no longer has a latest unspent coin
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton_puzzle_hash
+        )
+        assert unspent_lineage_info is None
+        # Let's attempt to spend this singleton and get get it fast forwarded
+        status, error = await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=sig)
+        # It fails validation because it doesn't currently have a latest unspent
+        assert status == MempoolInclusionStatus.FAILED
+        assert error == Err.DOUBLE_SPEND

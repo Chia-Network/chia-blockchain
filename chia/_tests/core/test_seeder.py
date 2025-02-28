@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 
 import dns
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 from dns.name import from_text
 from dns.rdataclass import IN
 from dns.rdatatype import AAAA as AAAA_TYPE
@@ -19,7 +20,6 @@ from dns.rrset import RRset
 
 from chia.seeder.dns_server import DNSServer
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.util.ints import uint32, uint64
 
 timeout = 0.5
 

@@ -264,19 +264,9 @@ timelord:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-  # fast_algorithm is a faster proof generation algorithm. This speed increase
-  # requires much less memory usage and a does not have the risk of OOM that
-  # the normal timelord has but requires significantly more cores doing
-  # parallel proof generation and creates a larger and slower to verify
-  # resulting proof.
-  # An Intel Core i9-10900K can run 2 normal vdf_clients at ~221,000 ips
-  # without slowing down but running more than 1 with fast_algorithm will
-  # run each vdf_client slower.
-  fast_algorithm: False
   # Bluebox (sanitizing timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
-  # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
-  # is running in bluebox_mode.
+  # extending the chain.
   # You must set 'send_uncompact_interval' in 'full_node' > 0 in the full_node
   # section below to have full_node send existing time proofs to be sanitized.
   bluebox_mode: False

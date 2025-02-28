@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional, Union, cast
 
 from chia_rs import Coin, G2Element
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
@@ -28,7 +29,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet

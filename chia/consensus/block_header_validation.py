@@ -4,11 +4,11 @@ import logging
 import time
 from typing import Optional
 
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, ConsensusConstants
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
@@ -32,7 +32,6 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

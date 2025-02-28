@@ -12,6 +12,7 @@ from typing import Callable, Optional, cast
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.misc import boolean_datacases
@@ -29,7 +30,6 @@ from chia.plotting.util import (
 )
 from chia.simulator.block_tools import get_plot_dir
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint16, uint32
 from chia.util.streamable import VersionedBlob
 
 log = logging.getLogger(__name__)

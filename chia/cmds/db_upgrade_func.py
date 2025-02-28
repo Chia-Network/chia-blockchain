@@ -220,7 +220,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                         br.block
                     FROM block_records br
                     JOIN full_blocks fb ON br.header_hash = fb.header_hash
-                    WHERE br.rowid IN ({','.join('?' * len(rowids))})
+                    WHERE br.rowid IN ({",".join("?" * len(rowids))})
                 """,
                 rowids,
             )
@@ -330,7 +330,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                         coin_id,
                         hint
                     FROM hints
-                    WHERE id IN ({','.join('?' * len(rows))})
+                    WHERE id IN ({",".join("?" * len(rows))})
                 """,
                 [id_tuple[0] for id_tuple in rows],
             )

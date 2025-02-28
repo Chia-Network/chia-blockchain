@@ -6,14 +6,21 @@ from collections.abc import Awaitable, Collection
 from typing import Any, Callable, ClassVar, Optional
 
 import pytest
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, AugSchemeMPL, G2Element, get_conditions_from_spendbundle
+from chia_rs import (
+    ELIGIBLE_FOR_DEDUP,
+    ELIGIBLE_FOR_FF,
+    AugSchemeMPL,
+    ConsensusConstants,
+    G2Element,
+    get_conditions_from_spendbundle,
+)
+from chia_rs.sized_ints import uint8, uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
@@ -54,8 +61,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
+from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -102,6 +108,10 @@ async def zero_calls_get_coin_records(coin_ids: Collection[bytes32]) -> list[Coi
     return []
 
 
+async def zero_calls_get_unspent_lineage_info_for_puzzle_hash(_puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+    assert False  # pragma no cover
+
+
 async def get_coin_records_for_test_coins(coin_ids: Collection[bytes32]) -> list[CoinRecord]:
     test_coin_records = {
         TEST_COIN_ID: TEST_COIN_RECORD,
@@ -139,7 +149,12 @@ async def instantiate_mempool_manager(
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: Optional[uint64] = None,
 ) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_records, constants, max_tx_clvm_cost=max_tx_clvm_cost)
+    mempool_manager = MempoolManager(
+        get_coin_records,
+        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
+        constants,
+        max_tx_clvm_cost=max_tx_clvm_cost,
+    )
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
     invariant_check_mempool(mempool_manager.mempool)
@@ -426,18 +441,18 @@ def make_bundle_spends_map_and_fee(
         eligibility_and_additions[coin_id] = EligibilityAndAdditions(
             is_eligible_for_dedup=bool(spend.flags & ELIGIBLE_FOR_DEDUP),
             spend_additions=spend_additions,
-            is_eligible_for_ff=bool(spend.flags & ELIGIBLE_FOR_FF),
+            ff_puzzle_hash=bytes32(spend.puzzle_hash) if bool(spend.flags & ELIGIBLE_FOR_FF) else None,
         )
     for coin_spend in spend_bundle.coin_spends:
         coin_id = coin_spend.coin.name()
         removals_amount += coin_spend.coin.amount
         eligibility_info = eligibility_and_additions.get(
-            coin_id, EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], is_eligible_for_ff=False)
+            coin_id, EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None)
         )
         bundle_coin_spends[coin_id] = BundleCoinSpend(
             coin_spend=coin_spend,
             eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
-            eligible_for_fast_forward=eligibility_info.is_eligible_for_ff,
+            eligible_for_fast_forward=eligibility_info.ff_puzzle_hash is not None,
             additions=eligibility_info.spend_additions,
         )
     fee = uint64(removals_amount - additions_amount)
@@ -1136,7 +1151,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     skipped_due_to_eligible_coins = sum(
         1
         for line in caplog.text.split("\n")
-        if "DEBUG Exception while checking a mempool item for deduplication: Skipping transaction with eligible coin(s)"
+        if "Exception while checking a mempool item for deduplication: Skipping transaction with eligible coin(s)"
         in line
     )
     if num_skipped_items == PRIORITY_TX_THRESHOLD:
@@ -1653,11 +1668,10 @@ async def test_identical_spend_aggregation_e2e(
             phs = [await action_scope.get_puzzle_hash(wallet.wallet_state_manager) for _ in range(3)]
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
-        other_recipients = [CreateCoin(puzzle_hash=p, amount=uint64(200)) for p in phs[1:]]
         async with wallet.wallet_state_manager.new_action_scope(
             DEFAULT_TX_CONFIG, push=False, sign=True
         ) as action_scope:
-            await wallet.generate_signed_transaction(uint64(200), phs[0], action_scope, primaries=other_recipients)
+            await wallet.generate_signed_transaction([uint64(200)] * len(phs), phs, action_scope)
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
@@ -1676,9 +1690,9 @@ async def test_identical_spend_aggregation_e2e(
     async with wallet.wallet_state_manager.new_action_scope(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
-        await wallet.generate_signed_transaction(uint64(30), ph, action_scope, coins={coins[0].coin})
-        await wallet.generate_signed_transaction(uint64(30), ph, action_scope, coins={coins[1].coin})
-        await wallet.generate_signed_transaction(uint64(30), ph, action_scope, coins={coins[2].coin})
+        await wallet.generate_signed_transaction([uint64(30)], [ph], action_scope, coins={coins[0].coin})
+        await wallet.generate_signed_transaction([uint64(30)], [ph], action_scope, coins={coins[1].coin})
+        await wallet.generate_signed_transaction([uint64(30)], [ph], action_scope, coins={coins[2].coin})
     [tx_a, tx_b, tx_c] = action_scope.side_effects.transactions
     assert tx_a.spend_bundle is not None
     assert tx_b.spend_bundle is not None
@@ -1696,7 +1710,9 @@ async def test_identical_spend_aggregation_e2e(
     async with wallet.wallet_state_manager.new_action_scope(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
-        await wallet.generate_signed_transaction(uint64(200), IDENTITY_PUZZLE_HASH, action_scope, coins={coins[3].coin})
+        await wallet.generate_signed_transaction(
+            [uint64(200)], [IDENTITY_PUZZLE_HASH], action_scope, coins={coins[3].coin}
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await send_to_mempool(full_node_api, tx.spend_bundle)
@@ -1723,16 +1739,16 @@ async def test_identical_spend_aggregation_e2e(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
         await wallet.generate_signed_transaction(
-            uint64(100),
-            ph,
+            [uint64(100)],
+            [ph],
             action_scope,
             fee=uint64(0),
             coins={coins[4].coin},
             extra_conditions=(e_announcement,),
         )
         await wallet.generate_signed_transaction(
-            uint64(150),
-            ph,
+            [uint64(150)],
+            [ph],
             action_scope,
             fee=uint64(0),
             coins={coins[5].coin},
@@ -1768,7 +1784,7 @@ async def test_identical_spend_aggregation_e2e(
         DEFAULT_TX_CONFIG, push=False, merge_spends=False, sign=True
     ) as action_scope:
         await wallet.generate_signed_transaction(
-            uint64(13), ph, action_scope, coins={g_coin}, extra_conditions=(e_announcement,)
+            [uint64(13)], [ph], action_scope, coins={g_coin}, extra_conditions=(e_announcement,)
         )
     [tx_g] = action_scope.side_effects.transactions
     assert tx_g.spend_bundle is not None
@@ -2082,3 +2098,48 @@ async def test_fill_rate_block_validation(
         rb_res_parsed = RespondBlock.from_bytes(rb_res.data)
         assert rb_res_parsed.block.transactions_info is not None
         assert rb_res_parsed.block.transactions_info.cost == expected_block_cost
+
+
+@pytest.mark.parametrize("optimized_path", [True, False])
+@pytest.mark.anyio
+async def test_height_added_to_mempool(optimized_path: bool) -> None:
+    """
+    This test covers scenarios when the mempool is updated or rebuilt, to make
+    sure that mempool items maintain correct height added to mempool values.
+    We control whether we're updating the mempool or rebuilding it, through the
+    `optimized_path` param.
+    """
+    mempool_manager = await instantiate_mempool_manager(get_coin_records_for_test_coins)
+    assert mempool_manager.peak is not None
+    assert mempool_manager.peak.height == TEST_HEIGHT
+    assert mempool_manager.peak.header_hash == height_hash(TEST_HEIGHT)
+    # Create a mempool item and keep track of its height added to mempool
+    _, sb_name, _ = await generate_and_add_spendbundle(
+        mempool_manager, [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    )
+    mi = mempool_manager.get_mempool_item(sb_name)
+    assert mi is not None
+    original_height = mi.height_added_to_mempool
+    # Let's get a new peak that doesn't include our item, and make sure the
+    # height added to mempool remains correct.
+    test_new_peak = TestBlockRecord(
+        header_hash=height_hash(TEST_HEIGHT + 1),
+        height=uint32(TEST_HEIGHT + 1),
+        timestamp=uint64(TEST_TIMESTAMP + 42),
+        prev_transaction_block_height=TEST_HEIGHT,
+        prev_transaction_block_hash=height_hash(TEST_HEIGHT),
+    )
+    if optimized_path:
+        # Spend an unrelated coin to get the mempool updated
+        spent_coins = [TEST_COIN_ID2]
+    else:
+        # Trigger the slow path to get the mempool rebuilt
+        spent_coins = None
+    await mempool_manager.new_peak(test_new_peak, spent_coins)
+    assert mempool_manager.peak.height == TEST_HEIGHT + 1
+    assert mempool_manager.peak.header_hash == height_hash(TEST_HEIGHT + 1)
+    # Make sure our item is still in the mempool, and that its height added to
+    # mempool value is still correct.
+    mempool_item = mempool_manager.get_mempool_item(sb_name)
+    assert mempool_item is not None
+    assert mempool_item.height_added_to_mempool == original_height

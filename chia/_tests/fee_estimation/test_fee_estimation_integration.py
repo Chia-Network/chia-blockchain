@@ -4,6 +4,7 @@ import types
 
 import pytest
 from chia_rs import Coin
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.core.mempool.test_mempool_manager import (
     create_test_block_record,
@@ -28,7 +29,6 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
-from chia.util.ints import uint32, uint64
 
 
 def make_mempoolitem() -> MempoolItem:

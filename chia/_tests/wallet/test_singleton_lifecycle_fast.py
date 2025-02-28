@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional, TypeVar, cast, get_args, get_origin
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
 from chia._tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.singleton_top_layer import (
     P2_SINGLETON_OR_DELAYED_MOD as P2_SINGLETON_MOD,

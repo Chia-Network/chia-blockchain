@@ -161,8 +161,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
                 return
             elif len(self.output_file) != len(outputs):
                 print(
-                    "Incorrect number of file outputs specified, "
-                    f"expected: {len(outputs)} got {len(self.output_file)}"
+                    f"Incorrect number of file outputs specified, expected: {len(outputs)} got {len(self.output_file)}"
                 )
                 return
             else:

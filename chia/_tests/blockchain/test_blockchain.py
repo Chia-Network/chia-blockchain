@@ -10,7 +10,8 @@ from dataclasses import replace
 from typing import Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, MerkleSet
+from chia_rs import AugSchemeMPL, ConsensusConstants, G2Element, MerkleSet, TransactionsInfo
+from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
@@ -29,7 +30,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_generator import get_block_generator
@@ -40,7 +40,6 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
@@ -57,7 +56,6 @@ from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
@@ -271,8 +269,7 @@ class TestBlockHeaderValidation:
                 )
             await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
             log.info(
-                f"Added block {block.height} total iters {block.total_iters} "
-                f"new slot? {len(block.finished_sub_slots)}"
+                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
         peak = empty_blockchain.get_peak()
         assert peak is not None
@@ -3479,11 +3476,7 @@ class TestReorgs:
             if (block.height % 128) == 0:
                 peak = b.get_peak()
                 assert peak is not None
-                print(
-                    f"original chain: {block.height:4} "
-                    f"weight: {block.weight:7} "
-                    f"peak: {str(peak.header_hash)[:6]}"
-                )
+                print(f"original chain: {block.height:4} weight: {block.weight:7} peak: {str(peak.header_hash)[:6]}")
             if block.height <= chain_1_height:
                 expect = AddBlockResult.ALREADY_HAVE_BLOCK
             elif block.weight < chain_2_weight:

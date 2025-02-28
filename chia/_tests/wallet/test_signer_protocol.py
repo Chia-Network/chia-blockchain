@@ -6,6 +6,7 @@ from typing import Optional
 import click
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint64
 from click.testing import CliRunner
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
@@ -37,7 +38,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord
@@ -615,7 +615,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
 
     AMOUNT = uint64(1)
     async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, sign=False, push=False) as action_scope:
-        await wallet.generate_signed_transaction(AMOUNT, bytes32.zeros, action_scope)
+        await wallet.generate_signed_transaction([AMOUNT], [bytes32.zeros], action_scope)
     [tx] = action_scope.side_effects.transactions
 
     runner = CliRunner()

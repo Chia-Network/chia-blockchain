@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 from colorlog import getLogger
 
@@ -21,7 +22,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 
@@ -172,7 +172,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(10), puzzle_hash, action_scope, uint64(0))
+        await wallet.generate_signed_transaction([uint64(10)], [puzzle_hash], action_scope, uint64(0))
     [tx_record] = action_scope.side_effects.transactions
     assert tx_record.spend_bundle is not None
     assert len(tx_record.spend_bundle.removals()) == 1
@@ -187,7 +187,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, action_scope, uint64(0))
+        await wallet.generate_signed_transaction([uint64(10)], [SINGLETON_LAUNCHER_HASH], action_scope, uint64(0))
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
@@ -195,7 +195,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     # Send a transaction to make sure the wallet is still running
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(10), junk_ph, action_scope, uint64(0))
+        await wallet.generate_signed_transaction([uint64(10)], [junk_ph], action_scope, uint64(0))
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
@@ -255,7 +255,9 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     coins = set()
     coins.add(coin_to_spend)
     async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, action_scope, uint64(0), coins=coins)
+        await standard_wallet.generate_signed_transaction(
+            [uint64(10)], [puzzle_hash], action_scope, uint64(0), coins=coins
+        )
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
@@ -275,7 +277,7 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-        await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, action_scope, uint64(0))
+        await standard_wallet.generate_signed_transaction([uint64(10)], [puzzle_hash], action_scope, uint64(0))
 
     [tx_record] = action_scope.side_effects.transactions
 

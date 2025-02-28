@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs.sized_ints import uint16
 
 from chia.protocols.shared_protocol import Capability
 from chia.server.capabilities import known_active_capabilities
-from chia.util.ints import uint16
 
 
 @pytest.mark.parametrize(
