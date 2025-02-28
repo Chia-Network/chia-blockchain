@@ -152,6 +152,7 @@ class Mempool:
             assert_before_height,
             assert_before_seconds,
             bundle_coin_spends=item.bundle_coin_spends,
+            fast_forward_unspents_map=item.fast_forward_unspents_map,
         )
 
     def total_mempool_fees(self) -> int:
@@ -456,7 +457,11 @@ class Mempool:
             conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
 
         self._items[item.name] = InternalMempoolItem(
-            item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
+            item.spend_bundle,
+            item.conds,
+            item.height_added_to_mempool,
+            item.bundle_coin_spends,
+            item.fast_forward_unspents_map,
         )
         self._total_cost += item.cost
         self._total_fee += item.fee

@@ -43,6 +43,9 @@ class MempoolItem:
     # SpendBundleConditions
     bundle_coin_spends: dict[bytes32, BundleCoinSpend] = field(default_factory=dict)
 
+    # Map of latest unspent ID to its puzzle hash and item's spends
+    fast_forward_unspents_map: dict[bytes32, tuple[bytes32, set[bytes32]]] = field(default_factory=dict)
+
     def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost
 

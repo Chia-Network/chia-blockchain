@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import copy
+import dataclasses
 import logging
 import time
 from collections.abc import Awaitable, Collection
@@ -32,7 +34,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
-from chia.types.eligible_coin_spends import EligibilityAndAdditions, UnspentLineageInfo
+from chia.types.eligible_coin_spends import EligibilityAndAdditions, EligibleCoinSpends, UnspentLineageInfo
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -455,6 +457,10 @@ class MempoolManager:
         removal_names_from_coin_spends: set[bytes32] = set()
         fast_forward_coin_ids: set[bytes32] = set()
         bundle_coin_spends: dict[bytes32, BundleCoinSpend] = {}
+        # Map of latest unspent ID to its puzzle hash and item's spends
+        fast_forward_unspents_map: dict[bytes32, tuple[bytes32, set[bytes32]]] = {}
+        # Map of singleton puzzle hash to its latest unspent linage info
+        singleton_latest_unspent_info_map: dict[bytes32, UnspentLineageInfo] = {}
         for coin_spend in new_spend.coin_spends:
             coin_id = coin_spend.coin.name()
             removal_names_from_coin_spends.add(coin_id)
@@ -463,13 +469,27 @@ class MempoolManager:
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
             mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
+            unspent_lineage_info = None
             if mark_as_fast_forward:
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been melted, the
                 # fast forward spend will never become valid.
                 assert eligibility_info.ff_puzzle_hash is not None
-                if await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash) is None:
-                    return Err.DOUBLE_SPEND, None, []
+                # Have we already seen this singleton?
+                unspent_lineage_info = singleton_latest_unspent_info_map.get(eligibility_info.ff_puzzle_hash)
+                if unspent_lineage_info is None:
+                    # We haven't, so let's look it up
+                    unspent_lineage_info = await get_unspent_lineage_info_for_puzzle_hash(
+                        eligibility_info.ff_puzzle_hash
+                    )
+                    if unspent_lineage_info is None:
+                        # This singleton has been melted
+                        return Err.DOUBLE_SPEND, None, []
+                    singleton_latest_unspent_info_map[eligibility_info.ff_puzzle_hash] = unspent_lineage_info
+                # Keep track of the latest unspent info for this fast forward
+                fast_forward_unspents_map.setdefault(
+                    unspent_lineage_info.coin_id, (eligibility_info.ff_puzzle_hash, {coin_id})
+                )[1].add(coin_id)
                 fast_forward_coin_ids.add(coin_id)
             # We are now able to check eligibility of both dedup and fast forward
             if not (eligibility_info.is_eligible_for_dedup or mark_as_fast_forward):
@@ -596,6 +616,7 @@ class MempoolManager:
             timelocks.assert_before_height,
             timelocks.assert_before_seconds,
             bundle_coin_spends,
+            fast_forward_unspents_map,
         )
 
         if tl_error:
@@ -713,6 +734,9 @@ class MempoolManager:
             mempool_item_removals.append(
                 self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
             )
+            # If we have singletons among these spent coins, revisit mempool
+            # items that have fast forward spends related to them.
+            await self.revisit_items_with_related_ff_spends(spent_coins)
         else:
             log.warning(
                 "updating the mempool using the slow-path. "
@@ -799,6 +823,87 @@ class MempoolManager:
             items.append(item.spend_bundle)
 
         return items
+
+    async def revisit_items_with_related_ff_spends(self, spent_coins_ids: list[bytes32]) -> None:
+        """
+        Revisits mempool items that have fast forward spends related to any
+        singletons among the input spent coins IDs. If a singleton is melted,
+        the mempool items with spends related to it get removed, otherwise they
+        get their latest unspent ID for that singleton updated in the item's
+        map of latest unspent ID to its puzzle hash and item's spends.
+        """
+        mempool_items_to_remove: list[bytes32] = []
+        # Map of puzzle hash to the latest unspent ID for that puzzle hash, so
+        # we can cache the results of DB lookups.
+        ph_to_latest_unspent_info: dict[bytes32, UnspentLineageInfo] = {}
+        for item_id, item in self.mempool._items.items():
+            # See if this item has any singletons to update
+            singletons_ids = set(item.fast_forward_unspents_map.keys()).intersection(spent_coins_ids)
+            if len(singletons_ids) == 0:
+                # This item doesn't have any, nothing to do
+                continue
+            # Group this item's singletons by puzzle hash to its spent versions IDs
+            singletons_by_ph: dict[bytes32, set[bytes32]] = {}
+            for spent_singleton_version_id in singletons_ids:
+                # The intersection above means this key exists here
+                singleton_ph, _ = item.fast_forward_unspents_map[spent_singleton_version_id]
+                singletons_by_ph.setdefault(singleton_ph, set()).add(spent_singleton_version_id)
+            # Start with a copy of the item's map of latest unspent ID to its
+            # puzzle hash and item's spends, so we can update it.
+            updated_ff_unspents_map = copy.copy(item.fast_forward_unspents_map)
+            # We'll mark the item for removal if it spends a melted singleton
+            remove_item = False
+            for singleton_ph, singleton_coin_ids in singletons_by_ph.items():
+                # Lookup the latest unspent info for this singleton from the DB
+                # Did we do this before?
+                lineage_info = ph_to_latest_unspent_info.get(singleton_ph)
+                if lineage_info is None:
+                    # We didn't, let's do the DB lookup
+                    lineage_info = await self.get_unspent_lineage_info_for_puzzle_hash(singleton_ph)
+                    if lineage_info is None:
+                        # This singleton melted, let's mark this item for removal
+                        remove_item = True
+                        break
+                # The singleton still exists, let's setup an update for it
+                ph_to_latest_unspent_info[singleton_ph] = lineage_info
+                # Collect all spend IDs related to this singleton in this item
+                spend_ids_related_to_singleton: set[bytes32] = set()
+                for spent_singleton_version_id in singleton_coin_ids:
+                    _, spends_ids = item.fast_forward_unspents_map[spent_singleton_version_id]
+                    spend_ids_related_to_singleton.update(spends_ids)
+                    # Remove the spent version entry
+                    updated_ff_unspents_map.pop(spent_singleton_version_id, None)
+                # Insert the updated singleton version entry
+                updated_ff_unspents_map[lineage_info.coin_id] = (singleton_ph, spend_ids_related_to_singleton)
+            # If the item is marked for removal, add it to the list of items to
+            # remove from mempool.
+            if remove_item:
+                mempool_items_to_remove.append(item_id)
+            else:
+                # Otherwise, validate this mempool item again to see if we can
+                # still keep it, and on success, update it with the new map of
+                # latest unspent ID to its puzzle hash and item's spends.
+                item_with_updated_ff_unspents_map = dataclasses.replace(
+                    item, fast_forward_unspents_map=updated_ff_unspents_map
+                )
+                try:
+                    eligible_coin_spends = EligibleCoinSpends()
+                    assert self.peak is not None
+                    # Running fast forward processing revalidates the item, and
+                    # on failure it raises a ValueError exception.
+                    await eligible_coin_spends.process_fast_forward_spends(
+                        mempool_item=item_with_updated_ff_unspents_map,
+                        get_unspent_lineage_info_for_puzzle_hash=self.get_unspent_lineage_info_for_puzzle_hash,
+                        height=self.peak.height,
+                        constants=self.constants,
+                    )
+                except ValueError:
+                    # The updated item is no longer valid, let's remove it
+                    mempool_items_to_remove.append(item_id)
+                    continue
+                # The updated item is still valid, let's replace the old one
+                self.mempool._items[item_id] = item_with_updated_ff_unspents_map
+        self.mempool.remove_from_pool(list(mempool_items_to_remove), MempoolRemoveReason.CONFLICT)
 
 
 T = TypeVar("T", uint32, uint64)
