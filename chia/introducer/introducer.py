@@ -35,7 +35,7 @@ class Introducer:
 
         return self._server
 
-    def __init__(self, max_peers_to_send: int, recent_peer_threshold: int, default_port: int, dns_servers: List[str]):
+    def __init__(self, max_peers_to_send: int, recent_peer_threshold: int, default_port: int, dns_servers: list[str]):
         self.max_peers_to_send = max_peers_to_send
         self.recent_peer_threshold = recent_peer_threshold
         self.default_port = uint16(default_port)

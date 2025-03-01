@@ -37,12 +37,12 @@ def create_introducer_service(
         advertised_port = service_config["port"]
 
     try:
-        default_port = self.service_config["network_overrides"]["config"][network_name]["default_full_node_port"]
+        default_port = service_config["network_overrides"]["config"][network_id]["default_full_node_port"]
     except KeyError:
         raise Exception(f"Specify default_full_node_port for network {network_id}")
 
     dns_servers = service_config.get("dns_servers", [])
-    if dns_servers == [] and network_name == "mainnet":
+    if dns_servers == [] and network_id == "mainnet":
         dns_servers.append("dns-introducer.chia.net")
     
     node = Introducer(
