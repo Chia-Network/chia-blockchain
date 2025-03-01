@@ -45,7 +45,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
+from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
@@ -59,7 +59,7 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
-from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.derivation_record import DerivationRecord, StreamableDerivationRecord
 from chia.wallet.derive_keys import (
     _derive_path,
     _derive_pk_unhardened,
@@ -144,6 +144,35 @@ if TYPE_CHECKING:
 PendingTxCallback = Callable[[], None]
 
 
+@streamable
+@dataclasses.dataclass(frozen=True)
+class StreamableCreateMorePuzzleHashesResult(Streamable):
+    derivation_paths: list[StreamableDerivationRecord]
+    mark_existing_as_used: bool
+    unused: int
+    new_unhardened_keys: bool
+    last_index: int
+
+    @classmethod
+    def from_standard(cls, result: CreateMorePuzzleHashesResult) -> StreamableCreateMorePuzzleHashesResult:
+        return cls(
+            [StreamableDerivationRecord.from_standard(path) for path in result.derivation_paths],
+            result.mark_existing_as_used,
+            result.unused,
+            result.new_unhardened_keys,
+            result.last_index,
+        )
+
+    def to_standard(self) -> CreateMorePuzzleHashesResult:
+        return CreateMorePuzzleHashesResult(
+            [path.to_standard() for path in self.derivation_paths],
+            self.mark_existing_as_used,
+            self.unused,
+            self.new_unhardened_keys,
+            self.last_index,
+        )
+
+
 @dataclasses.dataclass(frozen=True)
 class CreateMorePuzzleHashesResult:
     derivation_paths: list[DerivationRecord]
@@ -168,6 +197,26 @@ class CreateMorePuzzleHashesResult:
         if self.mark_existing_as_used and self.unused > 0 and self.new_unhardened_keys:
             wallet_state_manager.log.info(f"Updating last used derivation index: {self.unused - 1}")
             await wallet_state_manager.puzzle_store.set_used_up_to(uint32(self.unused - 1))
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class StreambleGetUnusedDerivationRecordResult(Streamable):
+    record: StreamableDerivationRecord
+    create_more_puzzle_hashes_result: StreamableCreateMorePuzzleHashesResult
+
+    @classmethod
+    def from_standard(cls, result: GetUnusedDerivationRecordResult) -> StreambleGetUnusedDerivationRecordResult:
+        return cls(
+            StreamableDerivationRecord.from_standard(result.record),
+            StreamableCreateMorePuzzleHashesResult.from_standard(result.create_more_puzzle_hashes_result),
+        )
+
+    def to_standard(self) -> GetUnusedDerivationRecordResult:
+        return GetUnusedDerivationRecordResult(
+            self.record.to_standard(),
+            self.create_more_puzzle_hashes_result.to_standard(),
+        )
 
 
 @dataclasses.dataclass(frozen=True)

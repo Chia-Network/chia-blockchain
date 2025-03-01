@@ -18,6 +18,7 @@ from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import GetUnusedDerivationRecordResult, StreambleGetUnusedDerivationRecordResult
 
 if TYPE_CHECKING:
     # Avoid a circular import here
@@ -32,6 +33,7 @@ class _StreamableWalletSideEffects(Streamable):
     extra_spends: list[WalletSpendBundle]
     selected_coins: list[Coin]
     singleton_records: list[SingletonRecord]
+    get_unused_derivation_record_result: Optional[StreambleGetUnusedDerivationRecordResult]
 
 
 @dataclass
@@ -41,6 +43,7 @@ class WalletSideEffects:
     extra_spends: list[WalletSpendBundle] = field(default_factory=list)
     selected_coins: list[Coin] = field(default_factory=list)
     singleton_records: list[SingletonRecord] = field(default_factory=list)
+    get_unused_derivation_record_result: Optional[StreambleGetUnusedDerivationRecordResult] = None
 
     def __bytes__(self) -> bytes:
         return bytes(_StreamableWalletSideEffects(**self.__dict__))
@@ -72,16 +75,27 @@ class WalletActionConfig:
 
 
 class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
+    async def _get_unused_derivation_path(
+        self, wallet_state_manager: WalletStateManager
+    ) -> GetUnusedDerivationRecordResult:
+        async with self.use() as interface:
+            result = await wallet_state_manager._get_unused_derivation_record(
+                wallet_state_manager.main_wallet.id(),
+                previous_result=interface.side_effects.get_unused_derivation_record_result.to_standard()
+                if interface.side_effects.get_unused_derivation_record_result is not None
+                else None,
+            )
+            interface.side_effects.get_unused_derivation_record_result = (
+                StreambleGetUnusedDerivationRecordResult.from_standard(result)
+            )
+        return result
+
     async def _get_new_puzzle(self, wallet_state_manager: WalletStateManager) -> Program:
-        # TODO: need to save side effects from private_method
-        dr = await wallet_state_manager.get_unused_derivation_record(wallet_state_manager.main_wallet.id())
-        puzzle = self.config.puzzle_for_pk(dr.pubkey)
+        puzzle = self.config.puzzle_for_pk((await self._get_unused_derivation_path(wallet_state_manager)).record.pubkey)
         return puzzle
 
     async def _get_new_puzzle_hash(self, wallet_state_manager: WalletStateManager) -> bytes32:
-        # TODO: need to save side effects from private_method
-        dr = await wallet_state_manager.get_unused_derivation_record(wallet_state_manager.main_wallet.id())
-        return dr.puzzle_hash
+        return (await self._get_unused_derivation_path(wallet_state_manager)).record.puzzle_hash
 
     async def get_puzzle(
         self, wallet_state_manager: WalletStateManager, override_reuse_puzhash_with: Optional[bool] = None
@@ -147,3 +161,5 @@ async def new_wallet_action_scope(
         extra_spends=self.side_effects.extra_spends,
         singleton_records=self.side_effects.singleton_records,
     )
+    if self.side_effects.get_unused_derivation_record_result is not None:
+        await self.side_effects.get_unused_derivation_record_result.to_standard().commit(wallet_state_manager)
