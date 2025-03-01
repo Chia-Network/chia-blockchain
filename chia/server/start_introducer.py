@@ -44,7 +44,7 @@ def create_introducer_service(
     dns_servers = service_config.get("dns_servers", [])
     if dns_servers == [] and network_id == "mainnet":
         dns_servers.append("dns-introducer.chia.net")
-    
+
     node = Introducer(
         service_config["max_peers_to_send"], service_config["recent_peer_threshold"], default_port, dns_servers
     )
