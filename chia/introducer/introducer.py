@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import dns.asyncresolver
 import logging
 import random
 import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+import dns.asyncresolver
 from chia_rs.sized_ints import uint16, uint64
 
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
