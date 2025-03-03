@@ -1404,7 +1404,9 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
     cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[uint32(2)]
     assert isinstance(cat_wallet_2, CATWallet)
 
-    async with cat_wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True):
+    async with cat_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         cat_hash = await action_scope.get_puzzle_hash(cat_wallet.wallet_state_manager)
     async with cat_wallet_2.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -1818,7 +1820,7 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework) -> No
         async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             await cat_wallet.generate_signed_transaction(
                 [uint64(50)],
-                [await action_scope.get_puzzle_hash(cat_wallet.wallet_state_manager, override_reuse_puzhash_with=True)],
+                [await action_scope.get_puzzle_hash(cat_wallet.wallet_state_manager)],
                 action_scope,
             )
 

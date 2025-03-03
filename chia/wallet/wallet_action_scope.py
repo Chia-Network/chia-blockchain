@@ -100,7 +100,9 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
     async def get_puzzle(
         self, wallet_state_manager: WalletStateManager, override_reuse_puzhash_with: Optional[bool] = None
     ) -> Program:
-        if self.config.tx_config.reuse_puzhash:
+        if (
+            self.config.tx_config.reuse_puzhash or override_reuse_puzhash_with is True
+        ) and override_reuse_puzhash_with is not False:
             record: Optional[DerivationRecord] = await wallet_state_manager.get_current_derivation_record_for_wallet(
                 wallet_state_manager.main_wallet.id()
             )
@@ -114,7 +116,9 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
     async def get_puzzle_hash(
         self, wallet_state_manager: WalletStateManager, override_reuse_puzhash_with: Optional[bool] = None
     ) -> bytes32:
-        if self.config.tx_config.reuse_puzhash:
+        if (
+            self.config.tx_config.reuse_puzhash or override_reuse_puzhash_with is True
+        ) and override_reuse_puzhash_with is not False:
             record: Optional[DerivationRecord] = await wallet_state_manager.get_current_derivation_record_for_wallet(
                 wallet_state_manager.main_wallet.id()
             )
