@@ -18,7 +18,16 @@ from typing import Any, Callable, Optional
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
-from chia_rs import MEMPOOL_MODE, AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey, solution_generator
+from chia_rs import (
+    MEMPOOL_MODE,
+    AugSchemeMPL,
+    ConsensusConstants,
+    G1Element,
+    G2Element,
+    PoolTarget,
+    PrivateKey,
+    solution_generator,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -66,7 +75,6 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,

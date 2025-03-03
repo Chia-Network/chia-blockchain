@@ -15,6 +15,7 @@ from chia_rs import (
     FoliageTransactionBlock,
     G1Element,
     G2Element,
+    PoolTarget,
     TransactionsInfo,
     compute_merkle_set_root,
     get_flags_for_height_and_constants,
@@ -31,7 +32,6 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof

@@ -10,6 +10,7 @@ from chia_rs import (
     FoliageTransactionBlock,
     G1Element,
     G2Element,
+    PoolTarget,
     TransactionsInfo,
     compute_merkle_set_root,
 )
@@ -25,7 +26,6 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
