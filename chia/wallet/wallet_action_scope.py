@@ -18,7 +18,7 @@ from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from chia.wallet.wallet_state_manager import GetUnusedDerivationRecordResult, StreambleGetUnusedDerivationRecordResult
+from chia.wallet.wsm_apis import GetUnusedDerivationRecordResult, StreambleGetUnusedDerivationRecordResult
 
 if TYPE_CHECKING:
     # Avoid a circular import here
