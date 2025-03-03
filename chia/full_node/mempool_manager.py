@@ -5,7 +5,7 @@ import logging
 import time
 from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor, ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Optional, TypeVar
 
 from chia_rs import (
@@ -56,6 +56,24 @@ class TimelockConditions:
     assert_seconds: uint64 = uint64(0)
     assert_before_height: Optional[uint32] = None
     assert_before_seconds: Optional[uint64] = None
+
+
+@dataclass
+class LineageInfoCache:
+    _fun: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]]
+    _cache: dict[bytes32, Optional[UnspentLineageInfo]] = field(default_factory=dict)
+
+    async def get_unspent_lineage_info(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+        # we rely on KeyError to distinguish between a stored
+        # None value and a missing entry
+        try:
+            return self._cache[puzzle_hash]
+        except KeyError:
+            pass
+
+        ret = await self._fun(puzzle_hash)
+        self._cache[puzzle_hash] = ret
+        return ret
 
 
 def compute_assert_height(
@@ -217,10 +235,12 @@ class MempoolManager:
         additions and removals in that spend_bundle
         """
 
+        lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
+
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
         return await self.mempool.create_bundle_from_mempool_items(
-            self.get_unspent_lineage_info_for_puzzle_hash, self.constants, self.peak.height, item_inclusion_filter
+            lineage_cache.get_unspent_lineage_info, self.constants, self.peak.height, item_inclusion_filter
         )
 
     async def create_block_generator(
@@ -234,8 +254,10 @@ class MempoolManager:
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
 
+        lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
+
         return await self.mempool.create_block_generator(
-            self.get_unspent_lineage_info_for_puzzle_hash,
+            lineage_cache.get_unspent_lineage_info,
             self.constants,
             self.peak.height,
             item_inclusion_filter,
@@ -702,6 +724,8 @@ class MempoolManager:
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
 
+        lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
+
         if use_optimization and spent_coins is not None:
             # We don't reinitialize a mempool, just kick removed items
             # transactions in the mempool may be spending multiple coins,
@@ -757,7 +781,7 @@ class MempoolManager:
                     item.spend_bundle_name,
                     item.height_added_to_mempool,
                     local_get_coin_records,
-                    self.get_unspent_lineage_info_for_puzzle_hash,
+                    lineage_cache.get_unspent_lineage_info,
                 )
                 # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
                 if info.status == MempoolInclusionStatus.SUCCESS:
@@ -779,6 +803,7 @@ class MempoolManager:
                 item.spend_bundle_name,
                 item.height_added_to_mempool,
                 self.get_coin_records,
+                lineage_cache.get_unspent_lineage_info,
             )
             if info.status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append(NewPeakItem(item.spend_bundle_name, item.spend_bundle, item.conds))
