@@ -18,18 +18,18 @@ if TYPE_CHECKING:
 class StreamableCreateMorePuzzleHashesResult(Streamable):
     derivation_paths: list[StreamableDerivationRecord]
     mark_existing_as_used: bool
-    unused: int
+    unused: uint32
     new_unhardened_keys: bool
-    last_index: int
+    last_index: uint32
 
     @classmethod
     def from_standard(cls, result: CreateMorePuzzleHashesResult) -> StreamableCreateMorePuzzleHashesResult:
         return cls(
             [StreamableDerivationRecord.from_standard(path) for path in result.derivation_paths],
             result.mark_existing_as_used,
-            result.unused,
+            uint32(result.unused),
             result.new_unhardened_keys,
-            result.last_index,
+            uint32(result.last_index),
         )
 
     def to_standard(self) -> CreateMorePuzzleHashesResult:
