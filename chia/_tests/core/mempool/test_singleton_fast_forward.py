@@ -676,7 +676,6 @@ async def test_mempool_items_immutability_on_ff() -> None:
         # Let's trigger the fast forward by creating a mempool bundle
         result = await sim.mempool_manager.create_bundle_from_mempool(
             sim_client.service.block_records[-1].header_hash,
-            sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash,
         )
         assert result is not None
         bundle, _ = result

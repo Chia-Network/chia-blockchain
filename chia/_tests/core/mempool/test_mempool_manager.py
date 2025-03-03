@@ -1012,9 +1012,6 @@ async def test_total_mempool_fees() -> None:
 @pytest.mark.parametrize("reverse_tx_order", [True, False])
 @pytest.mark.anyio
 async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
     async def make_coin_spends(coins: list[Coin], *, high_fees: bool = True) -> list[CoinSpend]:
         spends_list = []
         for i in range(0, len(coins)):
@@ -1041,9 +1038,7 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     spends = low_rate_spends + high_rate_spends if reverse_tx_order else high_rate_spends + low_rate_spends
     await send_spends_to_mempool(spends)
     assert mempool_manager.peak is not None
-    result = await mempool_manager.create_bundle_from_mempool(
-        mempool_manager.peak.header_hash, get_unspent_lineage_info_for_puzzle_hash
-    )
+    result = await mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     # Make sure we filled the block with only high rate spends
     assert len([s for s in high_rate_spends if s in result[0].coin_spends]) == len(result[0].coin_spends)
@@ -1061,9 +1056,6 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
       1. After PRIORITY_TX_THRESHOLD, we skip items with eligible coins.
       2. After skipping MAX_SKIPPED_ITEMS, we stop processing further items.
     """
-
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
 
     MAX_BLOCK_CLVM_COST = 550_000_000
 
@@ -1143,9 +1135,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
 
     assert mempool_manager.peak is not None
     caplog.set_level(logging.DEBUG)
-    result = await mempool_manager.create_bundle_from_mempool(
-        mempool_manager.peak.header_hash, get_unspent_lineage_info_for_puzzle_hash
-    )
+    result = await mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     agg, additions = result
     skipped_due_to_eligible_coins = sum(
