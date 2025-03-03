@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
 
 TupleTree = Any  # Union[bytes32, tuple["TupleTree", "TupleTree"]]
 Proof_Tree_Type = Any  # Union[bytes32, tuple[bytes32, "Proof_Tree_Type"]]

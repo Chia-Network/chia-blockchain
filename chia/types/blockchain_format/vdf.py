@@ -7,11 +7,11 @@ from functools import lru_cache
 from typing import Optional
 
 from chia_rs import ConsensusConstants, VDFInfo, VDFProof
+from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint64
 from chiavdf import create_discriminant, verify_n_wesolowski
 
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 
 log = logging.getLogger(__name__)
 

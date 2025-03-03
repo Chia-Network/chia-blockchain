@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -14,7 +15,6 @@ from chia.rpc.wallet_request_types import (
     NFTSetNFTDIDResponse,
     NFTTransferNFTResponse,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import ConditionValidTimes

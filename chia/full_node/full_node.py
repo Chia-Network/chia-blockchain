@@ -19,10 +19,12 @@ from chia_rs import (
     AugSchemeMPL,
     BLSCache,
     ConsensusConstants,
+    PoolTarget,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from packaging.version import Version
 
@@ -62,8 +64,6 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
 from chia.types.coin_record import CoinRecord

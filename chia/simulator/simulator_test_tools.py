@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from chia_rs import PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -22,7 +23,6 @@ from chia.simulator.ssl_certs import (
 )
 from chia.simulator.start_simulator import async_main as start_simulator_main
 from chia.ssl.create_ssl import create_all_ssl
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import create_default_chia_config, load_config, save_config
 from chia.util.errors import KeychainFingerprintExists

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 from colorlog import getLogger
@@ -18,7 +19,6 @@ from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates
 from chia.server.outbound_message import Message, NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo

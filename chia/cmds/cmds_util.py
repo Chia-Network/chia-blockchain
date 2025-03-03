@@ -11,6 +11,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
@@ -24,7 +25,6 @@ from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.errors import CliRpcConnectionError, InvalidPathError

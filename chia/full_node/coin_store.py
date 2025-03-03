@@ -9,12 +9,12 @@ from typing import Any, Optional
 
 import typing_extensions
 from aiosqlite import Cursor
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.util.batches import to_batches

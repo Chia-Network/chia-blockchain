@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from typing import Callable, Optional, Union
 
+from chia_rs.sized_bytes import bytes32
 from clvm.CLVMObject import CLVMStorage
 from clvm.SExp import SExp
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 ValueType = Union[bytes, CLVMStorage]

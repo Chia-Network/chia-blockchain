@@ -9,6 +9,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.connection_utils import add_dummy_connection
@@ -25,7 +26,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle

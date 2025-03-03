@@ -20,7 +20,7 @@ else:
     # adapt the conflated API on Windows.
     import threading
 
-    sigmap = {
+    sigmap: dict[signal.Signals, signal.Signals] = {
         signal.SIGINT: signal.CTRL_C_EVENT,
         signal.SIGBREAK: signal.CTRL_BREAK_EVENT,
     }

@@ -8,10 +8,10 @@ from typing import Optional
 import typing_extensions
 import zstd
 from chia_rs import SubEpochChallengeSegment, SubEpochSegments
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err

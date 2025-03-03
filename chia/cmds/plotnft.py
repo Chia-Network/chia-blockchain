@@ -4,6 +4,7 @@ from dataclasses import field
 from typing import Optional
 
 import click
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
@@ -14,7 +15,6 @@ from chia.cmds.param_types import (
     CliAddress,
     TransactionFeeParamType,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import CliRpcConnectionError
 
 

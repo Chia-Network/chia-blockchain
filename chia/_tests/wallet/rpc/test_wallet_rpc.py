@@ -13,6 +13,7 @@ from unittest.mock import patch
 import aiosqlite
 import pytest
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -77,7 +78,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.peer_info import PeerInfo
@@ -2499,9 +2499,9 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     fingerprint = wallet_node.logged_in_fingerprint
     assert fingerprint
     db_path = wallet_node.wallet_state_manager.db_path
-    assert await wallet_node.reset_sync_db(
-        db_path, fingerprint
-    ), "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
+    assert await wallet_node.reset_sync_db(db_path, fingerprint), (
+        "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
+    )
     dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
     conn: aiosqlite.Connection
     async with dbw.writer() as conn:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from chia_rs import AugSchemeMPL, G1Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.clvm.coin_store import CoinStore, CoinTimestamp
@@ -10,7 +11,6 @@ from chia._tests.core.make_block_generator import int_to_public_key
 from chia._tests.util.key_tool import KeyTool
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash

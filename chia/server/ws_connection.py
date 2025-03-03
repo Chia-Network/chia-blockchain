@@ -12,6 +12,7 @@ from typing import Any, Callable, Optional, Union
 from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint16
 from packaging.version import Version
 from typing_extensions import Protocol, final
@@ -30,7 +31,6 @@ from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.log_exceptions import log_exceptions

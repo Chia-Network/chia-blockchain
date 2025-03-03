@@ -4,12 +4,12 @@ import logging
 from typing import Any, Optional
 
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition

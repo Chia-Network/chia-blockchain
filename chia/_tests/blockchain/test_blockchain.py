@@ -11,6 +11,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, ConsensusConstants, G2Element, MerkleSet, TransactionsInfo
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm.casts import int_to_bytes
 
@@ -41,7 +42,6 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.condition_opcodes import ConditionOpcode

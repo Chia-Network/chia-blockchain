@@ -16,12 +16,12 @@ from chia_puzzles_py.programs import (
 from chia_puzzles_py.programs import (
     CREDENTIAL_RESTRICTION_HASH as CREDENTIAL_RESTRICTION_HASH_BYTES,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable

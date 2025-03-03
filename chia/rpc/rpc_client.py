@@ -10,12 +10,12 @@ from ssl import SSLContext
 from typing import Any, Optional, TypeVar
 
 import aiohttp
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
 from chia.server.outbound_message import NodeType
 from chia.server.server import ssl_context_for_client
 from chia.server.ssl_context import private_ssl_ca_paths
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.task_referencer import create_referenced_task
 

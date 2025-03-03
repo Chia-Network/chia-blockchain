@@ -8,11 +8,11 @@ from typing import Callable, Optional
 import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 import chia._tests.util
 from chia.simulator.keyring import TempKeyring
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainFingerprintExists,
     KeychainFingerprintNotFound,

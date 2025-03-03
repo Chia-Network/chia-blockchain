@@ -8,6 +8,7 @@ from typing import Any, Optional, Union
 import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from click.testing import CliRunner
 
@@ -34,7 +35,6 @@ from chia.rpc.wallet_request_types import (
 )
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import ConditionValidTimes

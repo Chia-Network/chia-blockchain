@@ -6,6 +6,7 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Literal
 
@@ -14,7 +15,6 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash

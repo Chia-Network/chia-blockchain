@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from chia_rs import Coin, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.signer_protocol import KeyHints, SigningInstructions, TransactionInfo, UnsignedTransaction
 from chia.wallet.transaction_record import TransactionRecord

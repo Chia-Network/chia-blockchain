@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 from typing_extensions import Literal
 
@@ -16,7 +17,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash

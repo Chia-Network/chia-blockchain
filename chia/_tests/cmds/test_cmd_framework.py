@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import click
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 from click.testing import CliRunner
 
@@ -26,7 +27,6 @@ from chia.cmds.cmd_helpers import (
 )
 from chia.cmds.cmds_util import coin_selection_args, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import CliAmount
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
@@ -602,13 +602,13 @@ def test_old_decorator_support() -> None:
     def tx_config_cmd(**kwargs: Any) -> None:
         pass  # pragma: no cover
 
-    @cmd.command("tx_cmd_dec")  # type: ignore[arg-type]
-    @tx_out_cmd(enable_timelock_args=False)
+    @cmd.command("tx_cmd_dec")
+    @tx_out_cmd(enable_timelock_args=False)  # type: ignore[arg-type]
     def tx_cmd(**kwargs: Any) -> None:
         pass  # pragma: no cover
 
-    @cmd.command("tx_w_tl_cmd_dec")  # type: ignore[arg-type]
-    @tx_out_cmd(enable_timelock_args=True)
+    @cmd.command("tx_w_tl_cmd_dec")
+    @tx_out_cmd(enable_timelock_args=True)  # type: ignore[arg-type]
     def tx_w_tl_cmd(**kwargs: Any) -> None:
         pass  # pragma: no cover
 

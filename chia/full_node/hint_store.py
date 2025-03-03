@@ -4,8 +4,8 @@ import dataclasses
 import logging
 
 import typing_extensions
+from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
 from chia_rs import ConsensusConstants, SpendBundleConditions, compute_merkle_set_root
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
@@ -16,7 +17,6 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
