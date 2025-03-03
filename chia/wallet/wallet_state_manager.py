@@ -436,7 +436,7 @@ class WalletStateManager:
                 if len(start_index_by_wallet) == 0:
                     raise PurposefulAbort(
                         CreateMorePuzzleHashesResult(
-                            derivation_paths=[],
+                            derivation_paths=[] if previous_result is None else previous_result.derivation_paths,
                             mark_existing_as_used=mark_existing_as_used,
                             unused=unused,
                             new_unhardened_keys=False,
@@ -567,12 +567,18 @@ class WalletStateManager:
             async with self.db_wrapper.writer():
                 if previous_result is not None:
                     await previous_result.commit(self)
-                create_more_puzzle_hashes_result: Optional[CreateMorePuzzleHashesResult] = None
+                    create_more_puzzle_hashes_result: Optional[CreateMorePuzzleHashesResult] = (
+                        previous_result.create_more_puzzle_hashes_result
+                    )
+                else:
+                    create_more_puzzle_hashes_result = None
                 # If we have no unused public keys, we will create new ones
                 unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
                 if unused is None:
                     self.log.debug("No unused paths, generate more ")
-                    create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes()
+                    create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
+                        previous_result=create_more_puzzle_hashes_result
+                    )
                     await create_more_puzzle_hashes_result.commit(self)
                     # Now we must have unused public keys
                     unused = await self.puzzle_store.get_unused_derivation_path()
