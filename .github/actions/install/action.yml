@@ -40,7 +40,9 @@ runs:
   using: "composite"
   steps:
     - name: Set up rust
-      uses: dtolnay/rust-toolchain@stable
+      # TODO: figure out how to get maturin to install this maybe?
+      #       or otherwise get this matching the 'other project's' rust expectations?
+      uses: dtolnay/rust-toolchain@1.85.0
 
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
