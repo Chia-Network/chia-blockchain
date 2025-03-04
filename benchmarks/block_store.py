@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from time import monotonic
 
-from chia_rs import Foliage, FoliageBlockData, FoliageTransactionBlock, PoolTarget, TransactionsInfo
+from chia_rs import Foliage, FoliageBlockData, FoliageTransactionBlock, PoolTarget, RewardChainBlock, TransactionsInfo
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -26,7 +26,6 @@ from chia._tests.util.benchmarks import (
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
