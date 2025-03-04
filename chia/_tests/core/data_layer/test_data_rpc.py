@@ -457,7 +457,7 @@ async def test_keys_values_ancestors(
             assert key in dic
         val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": reference_hashes[4].hex()})
         # todo better assertions for get_ancestors result
-        assert len(val["ancestors"]) == 1
+        assert len(val["ancestors"]) == 2
         res_before = await data_rpc_api.get_root({"id": store_id.hex()})
         assert res_before["confirmed"] is True
         assert res_before["timestamp"] > 0

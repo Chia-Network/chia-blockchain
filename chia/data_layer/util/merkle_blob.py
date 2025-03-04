@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass, field
 from enum import Enum
+from queue import Queue
 from typing import TYPE_CHECKING, ClassVar, Optional, Protocol, SupportsBytes, TypeVar, Union, cast, final
 
 from chia_rs.datalayer import (
@@ -572,16 +573,17 @@ class MerkleBlob:
             self.mark_lineage_as_dirty(node.parent)
 
     def get_min_height_leaf(self) -> RawLeafMerkleNode:
-        queue: list[TreeIndex] = [TreeIndex(0)]
-        while len(queue) > 0:
-            node_index = queue.pop()
+        queue: Queue[TreeIndex] = Queue()
+        queue.put(TreeIndex(0))
+        while not queue.empty():
+            node_index = queue.get()
             node = self.get_raw_node(node_index)
             if isinstance(node, RawLeafMerkleNode):
                 return node
             else:
                 assert isinstance(node, RawInternalMerkleNode)
-                queue.append(node.left)
-                queue.append(node.right)
+                queue.put(node.left)
+                queue.put(node.right)
 
         raise Exception("Cannot find a leaf in the tree")
 
