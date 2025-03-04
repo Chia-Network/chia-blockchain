@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
 

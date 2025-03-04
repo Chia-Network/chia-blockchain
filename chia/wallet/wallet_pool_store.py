@@ -60,9 +60,7 @@ class WalletPoolStore:
             else:
                 existing = list(
                     await conn.execute_fetchall(
-                        "SELECT COUNT(*) "
-                        "FROM pool_state_transitions "
-                        "WHERE wallet_id=? AND height=? AND coin_spend=?",
+                        "SELECT COUNT(*) FROM pool_state_transitions WHERE wallet_id=? AND height=? AND coin_spend=?",
                         (wallet_id, height, serialized_spend),
                     )
                 )

@@ -10,13 +10,13 @@ from time import monotonic
 from typing import Callable, Optional
 
 from chia_rs import AugSchemeMPL, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo
@@ -478,7 +478,7 @@ class Mempool:
         constants: ConsensusConstants,
         height: uint32,
         item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> tuple[BlockGenerator, G2Element, list[Coin]]:
+    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
         """
         height is needed in case we fast-forward a transaction and we need to
         re-run its puzzle.
@@ -488,7 +488,7 @@ class Mempool:
             get_unspent_lineage_info_for_puzzle_hash, constants, height, item_inclusion_filter
         )
         if mempool_bundle is None:
-            return (BlockGenerator(), G2Element(), [])
+            return None
 
         spend_bundle, additions = mempool_bundle
         removals = spend_bundle.removals()

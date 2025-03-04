@@ -77,8 +77,7 @@ class TimelordAPI:
             else:
                 log.info("Skipping peak, block has equal or lower weight then our peak.")
                 log.debug(
-                    f"new peak height {new_peak.reward_chain_block.height} "
-                    f"weight {new_peak.reward_chain_block.weight}"
+                    f"new peak height {new_peak.reward_chain_block.height} weight {new_peak.reward_chain_block.weight}"
                 )
 
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})

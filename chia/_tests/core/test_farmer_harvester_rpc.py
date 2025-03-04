@@ -13,6 +13,7 @@ from shutil import copy
 from typing import Any, Callable, Union, cast
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
@@ -35,7 +36,6 @@ from chia.rpc.farmer_rpc_api import (
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.simulator.block_tools import get_plot_dir
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash

@@ -17,6 +17,7 @@ from chia_rs import (
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -30,7 +31,6 @@ from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
@@ -276,7 +276,6 @@ class SpendSim:
             if peak is not None:
                 result = await self.mempool_manager.create_bundle_from_mempool(
                     last_tb_header_hash=peak.header_hash,
-                    get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                     item_inclusion_filter=item_inclusion_filter,
                 )
 

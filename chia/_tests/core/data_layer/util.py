@@ -10,10 +10,11 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
+from chia_rs.sized_bytes import bytes32
+
 from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 # from subprocess.pyi
 _FILE = Union[int, IO[Any], None]

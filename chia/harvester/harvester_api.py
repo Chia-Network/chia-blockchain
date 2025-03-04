@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
@@ -25,7 +26,6 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     passes_plot_filter,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 

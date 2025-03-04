@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from chia_rs import Coin
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -25,7 +26,6 @@ from chia.rpc.wallet_request_types import (
     VCSpend,
     VCSpendResponse,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.lineage_proof import LineageProof

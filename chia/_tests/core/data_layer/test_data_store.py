@@ -17,6 +17,7 @@ import aiohttp
 import chia_rs.datalayer
 import pytest
 from chia_rs.datalayer import KeyAlreadyPresentError, TreeIndex
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
@@ -42,7 +43,6 @@ from chia.data_layer.data_store import DataStore, InternalTypes, LeafTypes, Merk
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.lru_cache import LRUCache

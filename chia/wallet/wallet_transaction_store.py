@@ -6,9 +6,9 @@ import time
 from typing import Optional
 
 import aiosqlite
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err

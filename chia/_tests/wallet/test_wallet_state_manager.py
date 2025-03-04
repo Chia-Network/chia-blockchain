@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -14,7 +15,6 @@ from chia.rpc.wallet_request_types import PushTransactions
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.wallet.derivation_record import DerivationRecord

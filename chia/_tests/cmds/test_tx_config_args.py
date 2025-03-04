@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Optional
 
 import click
+from chia_rs.sized_bytes import bytes32
 from click.testing import CliRunner
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, coin_selection_args, tx_config_args
 from chia.cmds.param_types import CliAmount
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, load_config
 
 
