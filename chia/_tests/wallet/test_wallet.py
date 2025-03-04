@@ -1442,15 +1442,20 @@ class TestWalletSimulator:
     @pytest.mark.anyio
     async def test_wallet_make_transaction_with_fee(self, wallet_environments: WalletTestFramework) -> None:
         env_0 = wallet_environments.environments[0]
-        wallet_environments.environments[1]
+        env_1 = wallet_environments.environments[1]
         wallet_0 = env_0.xch_wallet
+        wallet_1 = env_1.xch_wallet
 
         tx_amount = 1_750_000_000_000  # ensures we grab both coins
         tx_fee = 10
+        async with wallet_1.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
                 [uint64(tx_amount)],
-                [await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)],
+                [wallet_1_ph],
                 action_scope,
                 uint64(tx_fee),
             )

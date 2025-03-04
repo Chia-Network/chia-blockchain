@@ -376,6 +376,7 @@ class WalletStateManager:
         up_to_index: Optional[uint32] = None,
         num_additional_phs: Optional[int] = None,
         previous_result: Optional[CreateMorePuzzleHashesResult] = None,
+        _commit_previous_result: bool = True,
     ) -> CreateMorePuzzleHashesResult:
         """
         For all wallets in the user store, generates the first few puzzle hashes so
@@ -388,17 +389,14 @@ class WalletStateManager:
                         raise ValueError(
                             "Called `create_more_puzzle_hashes` with a previous result and different configuration"
                         )
-                    await previous_result.commit(self)
+                    if _commit_previous_result:
+                        await previous_result.commit(self)
                 targets = list(self.wallets.keys())
                 self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
                 unused: Optional[uint32] = (
-                    (
-                        uint32(up_to_index + 1)
-                        if up_to_index is not None
-                        else await self.puzzle_store.get_unused_derivation_path()
-                    )
-                    if previous_result is None
-                    else uint32(previous_result.unused)
+                    uint32(up_to_index + 1)
+                    if up_to_index is not None
+                    else await self.puzzle_store.get_unused_derivation_path()
                 )
                 if unused is None:
                     # This handles the case where the database has entries but they have all been used
@@ -577,7 +575,7 @@ class WalletStateManager:
                 if unused is None:
                     self.log.debug("No unused paths, generate more ")
                     create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
-                        previous_result=create_more_puzzle_hashes_result
+                        previous_result=create_more_puzzle_hashes_result, _commit_previous_result=False
                     )
                     await create_more_puzzle_hashes_result.commit(self)
                     # Now we must have unused public keys
@@ -596,7 +594,7 @@ class WalletStateManager:
 
                 # Create more puzzle hashes / keys
                 create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
-                    previous_result=create_more_puzzle_hashes_result
+                    previous_result=create_more_puzzle_hashes_result, _commit_previous_result=False
                 )
                 await create_more_puzzle_hashes_result.commit(self)
                 raise PurposefulAbort(GetUnusedDerivationRecordResult(record, create_more_puzzle_hashes_result))
@@ -2690,6 +2688,7 @@ class WalletStateManager:
         sign: Optional[bool] = None,
         additional_signing_responses: list[SigningResponse] = [],
         extra_spends: list[WalletSpendBundle] = [],
+        puzzle_for_pk: Optional[Callable[[G1Element], Program]] = None,
     ) -> AsyncIterator[WalletActionScope]:
         async with new_wallet_action_scope(
             self,
@@ -2699,6 +2698,7 @@ class WalletStateManager:
             sign=sign,
             additional_signing_responses=additional_signing_responses,
             extra_spends=extra_spends,
+            puzzle_for_pk=puzzle_for_pk,
         ) as action_scope:
             yield action_scope
 

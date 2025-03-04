@@ -42,7 +42,7 @@ class StreamableCreateMorePuzzleHashesResult(Streamable):
         )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class CreateMorePuzzleHashesResult:
     derivation_paths: list[DerivationRecord]
     mark_existing_as_used: bool
@@ -88,7 +88,7 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
         )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class GetUnusedDerivationRecordResult:
     record: DerivationRecord
     create_more_puzzle_hashes_result: CreateMorePuzzleHashesResult

@@ -912,7 +912,11 @@ class TestDIDWallet:
         # Delete the coin and change inner puzzle
         coin = await did_wallet.get_coin()
         await wallet_node_0.wallet_state_manager.coin_store.delete_coin_record(coin.name())
-        new_inner_puzzle = await did_wallet.get_did_innerpuz(new=True)
+        with wallet_environments.new_puzzle_hashes_allowed():
+            async with did_wallet.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                new_inner_puzzle = await did_wallet.get_did_innerpuz(action_scope, override_reuse_puzhash_with=False)
         did_wallet.did_info = dataclasses.replace(did_wallet.did_info, current_inner=new_inner_puzzle)
         # Recovery the coin
         assert did_wallet.did_info.origin_coin is not None  # mypy
@@ -1061,7 +1065,13 @@ class TestDIDWallet:
                 backup_data,
             )
         env_0.wallet_aliases["did_2"] = 3
-        new_ph = await did_wallet_3.get_did_inner_hash(new=True)
+        with wallet_environments.new_puzzle_hashes_allowed():
+            async with did_wallet_3.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                new_ph = (
+                    await did_wallet_3.get_did_innerpuz(action_scope, override_reuse_puzhash_with=False)
+                ).get_tree_hash()
         coin = await did_wallet_2.get_coin()
         pubkey = (
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
@@ -1148,7 +1158,13 @@ class TestDIDWallet:
             )
         env_1.wallet_aliases["did_2"] = 3
         coin = await did_wallet.get_coin()
-        new_ph = await did_wallet_4.get_did_inner_hash(new=True)
+        with wallet_environments.new_puzzle_hashes_allowed():
+            async with did_wallet_4.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                new_ph = (
+                    await did_wallet_4.get_did_innerpuz(action_scope, override_reuse_puzhash_with=False)
+                ).get_tree_hash()
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
         ).pubkey

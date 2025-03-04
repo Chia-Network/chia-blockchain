@@ -448,9 +448,12 @@ class CRCATWallet(CATWallet):
             )
             if origin_crcat_record is None:
                 raise RuntimeError("A CR-CAT coin was selected that we don't have a record for")  # pragma: no cover
-            self.coin_record_to_crcat(origin_crcat_record)
+            origin_crcat = self.coin_record_to_crcat(origin_crcat_record)
 
-            change_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
+            if add_authorizations_to_cr_cats:
+                change_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
+            else:
+                change_puzhash = origin_crcat.inner_puzzle_hash
             for payment in payments:
                 if change_puzhash == payment.puzzle_hash and change == payment.amount:
                     # We cannot create two coins has same id, create a new puzhash for the change

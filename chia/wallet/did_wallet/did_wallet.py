@@ -1117,7 +1117,12 @@ class DIDWallet:
         )
         await self.save_info(new_did_info)
 
-    async def get_did_innerpuz(self, action_scope: WalletActionScope, origin_id: Optional[bytes32] = None) -> Program:
+    async def get_did_innerpuz(
+        self,
+        action_scope: WalletActionScope,
+        origin_id: Optional[bytes32] = None,
+        override_reuse_puzhash_with: Optional[bool] = None,
+    ) -> Program:
         if self.did_info.origin_coin is not None:
             launcher_id = self.did_info.origin_coin.name()
         elif origin_id is not None:
@@ -1125,7 +1130,9 @@ class DIDWallet:
         else:
             raise ValueError("must have origin coin")
         return did_wallet_puzzles.create_innerpuz(
-            p2_puzzle_or_hash=await action_scope.get_puzzle(self.wallet_state_manager),
+            p2_puzzle_or_hash=await action_scope.get_puzzle(
+                self.wallet_state_manager, override_reuse_puzhash_with=override_reuse_puzhash_with
+            ),
             recovery_list=self.did_info.backup_ids,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
             launcher_id=launcher_id,

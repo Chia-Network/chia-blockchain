@@ -536,7 +536,6 @@ async def test_nft_mint_from_did_multiple_xch(
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-    ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
