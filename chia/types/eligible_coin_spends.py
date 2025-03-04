@@ -142,6 +142,12 @@ def perform_the_fast_forward(
 
 
 @dataclasses.dataclass(frozen=True)
+class SkipDedup(BaseException):
+    msg: str
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
 class EligibleCoinSpends:
     deduplication_spends: dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
     fast_forward_spends: dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
@@ -198,7 +204,7 @@ class EligibleCoinSpends:
                 # even if they end up saving more cost, as we're going for the first
                 # solution we see from the relatively highest FPC item, to avoid
                 # severe performance and/or time-complexity impact
-                raise ValueError("Solution is different from what we're deduplicating on")
+                raise SkipDedup("Solution is different from what we're deduplicating on")
             # Let's calculate the saved cost if we never did that before
             if duplicate_cost is None:
                 # See first if this mempool item had this cost computed before
