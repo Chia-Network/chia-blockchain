@@ -45,7 +45,7 @@ from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE
+from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
@@ -3315,3 +3315,50 @@ def test_keccak() -> None:
     cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK | ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
     assert cost == 994
     assert ret.atom == b""
+
+
+@pytest.mark.anyio
+async def test_lineage_cache(seeded_random: random.Random) -> None:
+    called = 0
+
+    info1 = UnspentLineageInfo(
+        bytes32.random(seeded_random),
+        uint64.from_bytes(seeded_random.randbytes(8)),
+        bytes32.random(seeded_random),
+        uint64.from_bytes(seeded_random.randbytes(8)),
+        bytes32.random(seeded_random),
+    )
+
+    async def callback1(ph: bytes32) -> Optional[UnspentLineageInfo]:
+        nonlocal called
+        called += 1
+        return info1
+
+    cache = LineageInfoCache(callback1)
+
+    ph = bytes32.random(seeded_random)
+
+    # cache miss
+    assert await cache.get_unspent_lineage_info(ph) == info1
+    assert called == 1
+
+    # cache hit
+    assert await cache.get_unspent_lineage_info(ph) == info1
+    assert called == 1
+
+    called = 0
+
+    async def callback_none(ph: bytes32) -> Optional[UnspentLineageInfo]:
+        nonlocal called
+        called += 1
+        return None
+
+    cache = LineageInfoCache(callback_none)
+
+    # cache miss
+    assert await cache.get_unspent_lineage_info(ph) is None
+    assert called == 1
+
+    # cache hit
+    assert await cache.get_unspent_lineage_info(ph) is None
+    assert called == 1

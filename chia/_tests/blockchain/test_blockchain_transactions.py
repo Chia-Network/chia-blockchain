@@ -65,9 +65,7 @@ class TestBlockchainTransactions:
         assert sb == spend_bundle
 
         last_block = blocks[-1]
-        result = await full_node_1.mempool_manager.create_bundle_from_mempool(
-            last_block.header_hash, full_node_1.coin_store.get_unspent_lineage_info_for_puzzle_hash
-        )
+        result = await full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header_hash)
         assert result is not None
         next_spendbundle, _ = result
 

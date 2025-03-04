@@ -5,7 +5,7 @@ import logging
 import time
 from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor, ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Optional, TypeVar
 
 from chia_rs import (
@@ -56,6 +56,24 @@ class TimelockConditions:
     assert_seconds: uint64 = uint64(0)
     assert_before_height: Optional[uint32] = None
     assert_before_seconds: Optional[uint64] = None
+
+
+@dataclass
+class LineageInfoCache:
+    _fun: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]]
+    _cache: dict[bytes32, Optional[UnspentLineageInfo]] = field(default_factory=dict)
+
+    async def get_unspent_lineage_info(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+        # we rely on KeyError to distinguish between a stored
+        # None value and a missing entry
+        try:
+            return self._cache[puzzle_hash]
+        except KeyError:
+            pass
+
+        ret = await self._fun(puzzle_hash)
+        self._cache[puzzle_hash] = ret
+        return ret
 
 
 def compute_assert_height(
@@ -210,7 +228,6 @@ class MempoolManager:
     async def create_bundle_from_mempool(
         self,
         last_tb_header_hash: bytes32,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         """
@@ -218,16 +235,17 @@ class MempoolManager:
         additions and removals in that spend_bundle
         """
 
+        lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
+
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
         return await self.mempool.create_bundle_from_mempool_items(
-            get_unspent_lineage_info_for_puzzle_hash, self.constants, self.peak.height, item_inclusion_filter
+            lineage_cache.get_unspent_lineage_info, self.constants, self.peak.height, item_inclusion_filter
         )
 
     async def create_block_generator(
         self,
         last_tb_header_hash: bytes32,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
         """
@@ -236,8 +254,10 @@ class MempoolManager:
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
 
+        lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
+
         return await self.mempool.create_block_generator(
-            get_unspent_lineage_info_for_puzzle_hash,
+            lineage_cache.get_unspent_lineage_info,
             self.constants,
             self.peak.height,
             item_inclusion_filter,
@@ -342,6 +362,9 @@ class MempoolManager:
         spend_name: bytes32,
         first_added_height: uint32,
         get_coin_records: Optional[Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]]] = None,
+        get_unspent_lineage_info_for_puzzle_hash: Optional[
+            Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]]
+        ] = None,
     ) -> SpendBundleAddInfo:
         """
         Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
@@ -368,13 +391,17 @@ class MempoolManager:
 
         if get_coin_records is None:
             get_coin_records = self.get_coin_records
+
+        if get_unspent_lineage_info_for_puzzle_hash is None:
+            get_unspent_lineage_info_for_puzzle_hash = self.get_unspent_lineage_info_for_puzzle_hash
+
         err, item, remove_items = await self.validate_spend_bundle(
             new_spend,
             conds,
             spend_name,
             first_added_height,
             get_coin_records,
-            self.get_unspent_lineage_info_for_puzzle_hash,
+            get_unspent_lineage_info_for_puzzle_hash,
         )
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
@@ -697,6 +724,8 @@ class MempoolManager:
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
 
+        lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
+
         if use_optimization and spent_coins is not None:
             # We don't reinitialize a mempool, just kick removed items
             # transactions in the mempool may be spending multiple coins,
@@ -752,6 +781,7 @@ class MempoolManager:
                     item.spend_bundle_name,
                     item.height_added_to_mempool,
                     local_get_coin_records,
+                    lineage_cache.get_unspent_lineage_info,
                 )
                 # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
                 if info.status == MempoolInclusionStatus.SUCCESS:
@@ -773,6 +803,7 @@ class MempoolManager:
                 item.spend_bundle_name,
                 item.height_added_to_mempool,
                 self.get_coin_records,
+                lineage_cache.get_unspent_lineage_info,
             )
             if info.status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append(NewPeakItem(item.spend_bundle_name, item.spend_bundle, item.conds))
