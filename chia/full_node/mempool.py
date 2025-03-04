@@ -565,6 +565,7 @@ class Mempool:
                             item.bundle_coin_spends.values(),
                         )
                     ):
+                        log.info("Skipping transaction with dedup or FF spends {item.name}")
                         continue
 
                     unique_coin_spends = []
@@ -617,7 +618,8 @@ class Mempool:
                 # find transactions small enough to fit at this point
                 if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
                     break
-            except SkipDedup:
+            except SkipDedup as e:
+                log.info(f"{e}")
                 continue
             except Exception as e:
                 log.info(f"Exception while checking a mempool item for deduplication: {e}")

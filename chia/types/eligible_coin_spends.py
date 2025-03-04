@@ -141,10 +141,9 @@ def perform_the_fast_forward(
     return new_coin_spend, patched_additions
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class SkipDedup(BaseException):
     msg: str
-    pass
 
 
 @dataclasses.dataclass(frozen=True)
