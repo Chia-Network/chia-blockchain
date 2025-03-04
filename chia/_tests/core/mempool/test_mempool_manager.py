@@ -52,6 +52,7 @@ from chia.types.eligible_coin_spends import (
     DedupCoinSpend,
     EligibilityAndAdditions,
     EligibleCoinSpends,
+    SkipDedup,
     UnspentLineageInfo,
     run_for_cost,
 )
@@ -1185,10 +1186,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     assert result is not None
     agg, additions = result
     skipped_due_to_eligible_coins = sum(
-        1
-        for line in caplog.text.split("\n")
-        if "Exception while checking a mempool item for deduplication: Skipping transaction with eligible coin(s)"
-        in line
+        1 for line in caplog.text.split("\n") if "Skipping transaction with dedup or FF spends" in line
     )
     if num_skipped_items == PRIORITY_TX_THRESHOLD:
         # We skipped enough big cost items to reach `PRIORITY_TX_THRESHOLD`,
@@ -1511,7 +1509,7 @@ def test_dedup_info_eligible_but_different_solution() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT]]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
-    with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
+    with pytest.raises(SkipDedup, match="Solution is different from what we're deduplicating on"):
         eligible_coin_spends.get_deduplication_info(
             bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
         )
