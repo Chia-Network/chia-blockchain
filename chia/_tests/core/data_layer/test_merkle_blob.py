@@ -454,7 +454,9 @@ def test_insert_with_reference_key_and_side(merkle_types: MerkleTypes) -> None:
             assert side is not None
             index = merkle_blob.get_key_index(key)
             node = merkle_blob.get_raw_node(index)
+            assert node.parent is not None
             parent = merkle_blob.get_raw_node(node.parent)
+            assert isinstance(parent, (RawInternalMerkleNode, chia_rs.datalayer.InternalNode))
             if side == Side.LEFT:
                 assert parent.left == index
             else:
