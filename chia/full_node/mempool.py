@@ -559,11 +559,17 @@ class Mempool:
                     # we want to keep looking for smaller transactions that
                     # might fit, but we also want to avoid spending too much
                     # time on potentially expensive ones, hence this shortcut.
+                    if any(
+                        map(
+                            lambda spend_data: (spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward),
+                            item.bundle_coin_spends.values(),
+                        )
+                    ):
+                        continue
+
                     unique_coin_spends = []
                     unique_additions = []
                     for spend_data in item.bundle_coin_spends.values():
-                        if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
-                            raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
                         unique_coin_spends.append(spend_data.coin_spend)
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
