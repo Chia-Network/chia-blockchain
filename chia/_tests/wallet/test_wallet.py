@@ -1625,7 +1625,7 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                            "unspent_coin_count": wallet.max_send_quantity + 4,
+                            "unspent_coin_count": wallet.max_send_quantity + 2,
                         }
                     },
                 ),

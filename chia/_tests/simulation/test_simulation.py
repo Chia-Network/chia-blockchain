@@ -196,6 +196,7 @@ class TestSimulation:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, _server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         wallet_node.config["trusted_peers"] = {}
@@ -213,10 +214,12 @@ class TestSimulation:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+        async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph_2 = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 [uint64(10)],
-                [await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
+                [ph_2],
                 action_scope,
                 uint64(0),
             )
