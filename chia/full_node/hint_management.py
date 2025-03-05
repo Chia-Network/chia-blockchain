@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
+from chia_rs.sized_bytes import bytes32
+
 from chia.consensus.blockchain import StateChangeSummary
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 def get_hints_and_subscription_coin_ids(

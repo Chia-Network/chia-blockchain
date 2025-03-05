@@ -7,6 +7,7 @@ from collections.abc import Collection
 from typing import Any, Optional, Union
 
 import anyio
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo
@@ -22,7 +23,6 @@ from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -205,9 +205,7 @@ class FullNodeSimulator(FullNodeAPI):
                     await asyncio.sleep(1)
                 else:
                     current_time = False
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                curr.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
-            )
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
             else:
@@ -260,9 +258,7 @@ class FullNodeSimulator(FullNodeAPI):
                     await asyncio.sleep(1)
                 else:
                     current_time = False
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                curr.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
-            )
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
             else:

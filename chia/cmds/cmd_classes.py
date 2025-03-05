@@ -21,9 +21,9 @@ from typing import (
 )
 
 import click
+from chia_rs.sized_bytes import bytes32
 from typing_extensions import dataclass_transform
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.streamable import is_type_SpecificOptional
@@ -271,11 +271,11 @@ def chia_command(
         # passed through the dataclass wrapper.  Not sure what to do about this right now.
         if sys.version_info < (3, 10):  # pragma: no cover
             # stuff below 3.10 doesn't know about kw_only
-            wrapped_cls: type[ChiaCommand] = dataclass(  # type: ignore[assignment]
+            wrapped_cls: type[ChiaCommand] = dataclass(
                 frozen=True,
             )(cls)
         else:
-            wrapped_cls: type[ChiaCommand] = dataclass(  # type: ignore[assignment]
+            wrapped_cls: type[ChiaCommand] = dataclass(
                 frozen=True,
                 kw_only=True,
             )(cls)

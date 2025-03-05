@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional, Union, cast
 
 from chia_rs import Coin, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
@@ -24,7 +25,6 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash

@@ -12,12 +12,17 @@ from typing import Any, Optional
 import pytest
 from chia_rs import (
     AugSchemeMPL,
+    Foliage,
+    FoliageTransactionBlock,
     G2Element,
     PrivateKey,
+    RewardChainBlockUnfinished,
     SpendBundleConditions,
+    TransactionsInfo,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from clvm.casts import int_to_bytes
 from packaging.version import Version
@@ -64,7 +69,6 @@ from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
@@ -72,9 +76,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_pk,
     calculate_pos_challenge,
 )
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend

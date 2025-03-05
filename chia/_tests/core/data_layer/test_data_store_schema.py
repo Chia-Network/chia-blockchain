@@ -3,11 +3,11 @@ from __future__ import annotations
 import sqlite3
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import add_01234567_example
 from chia.data_layer.data_layer_util import Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 pytestmark = pytest.mark.data_layer
 

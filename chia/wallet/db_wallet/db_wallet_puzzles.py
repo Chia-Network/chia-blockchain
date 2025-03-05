@@ -5,11 +5,11 @@ from typing import Union
 
 from chia_puzzles_py.programs import GRAFTROOT_DL_OFFERS as GRAFTROOT_DL_OFFERS_BYTES
 from chia_puzzles_py.programs import P2_PARENT as P2_PARENT_BYTES
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.nft_wallet.nft_puzzle_utils import create_nft_layer_puzzle_with_curry_params
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD

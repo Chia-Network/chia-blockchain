@@ -12,6 +12,7 @@ import pytest
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 from chia_rs.datalayer import KeyId, TreeIndex, ValueId
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int64
 
 from chia._tests.util.misc import DataCase, Marks, datacases
@@ -33,7 +34,6 @@ from chia.data_layer.util.merkle_blob import (
     undefined_index,
     unpack_raw_node,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 pytestmark = pytest.mark.data_layer
 
@@ -454,7 +454,9 @@ def test_insert_with_reference_key_and_side(merkle_types: MerkleTypes) -> None:
             assert side is not None
             index = merkle_blob.get_key_index(key)
             node = merkle_blob.get_raw_node(index)
+            assert node.parent is not None
             parent = merkle_blob.get_raw_node(node.parent)
+            assert isinstance(parent, (RawInternalMerkleNode, chia_rs.datalayer.InternalNode))
             if side == Side.LEFT:
                 assert parent.left == index
             else:

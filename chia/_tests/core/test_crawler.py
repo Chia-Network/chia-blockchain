@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import cast
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -17,7 +18,6 @@ from chia.protocols.wallet_protocol import RequestChildren
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import make_msg
 from chia.types.aliases import CrawlerService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 
 

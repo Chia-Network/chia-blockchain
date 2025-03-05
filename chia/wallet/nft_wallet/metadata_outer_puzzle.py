@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from chia_rs.sized_bytes import bytes32
+
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_STATE_LAYER_MOD,
     NFT_STATE_LAYER_MOD_HASH,

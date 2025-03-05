@@ -4,6 +4,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
@@ -13,7 +14,6 @@ from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus

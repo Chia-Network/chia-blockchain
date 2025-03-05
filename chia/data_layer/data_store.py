@@ -14,6 +14,7 @@ from typing import Any, BinaryIO, Callable, Optional, Union
 import aiosqlite
 import chia_rs.datalayer
 from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, ProofOfInclusion, TreeIndex, ValueId
+from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -49,7 +50,6 @@ from chia.data_layer.util.merkle_blob import (
     RawInternalMerkleNode,
     RawLeafMerkleNode,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.lru_cache import LRUCache

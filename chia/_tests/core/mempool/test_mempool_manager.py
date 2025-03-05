@@ -14,6 +14,7 @@ from chia_rs import (
     G2Element,
     get_conditions_from_spendbundle,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from chiabip158 import PyBIP158
 
@@ -43,7 +44,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, make_spend
@@ -1012,9 +1012,6 @@ async def test_total_mempool_fees() -> None:
 @pytest.mark.parametrize("reverse_tx_order", [True, False])
 @pytest.mark.anyio
 async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
     async def make_coin_spends(coins: list[Coin], *, high_fees: bool = True) -> list[CoinSpend]:
         spends_list = []
         for i in range(0, len(coins)):
@@ -1041,9 +1038,7 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     spends = low_rate_spends + high_rate_spends if reverse_tx_order else high_rate_spends + low_rate_spends
     await send_spends_to_mempool(spends)
     assert mempool_manager.peak is not None
-    result = await mempool_manager.create_bundle_from_mempool(
-        mempool_manager.peak.header_hash, get_unspent_lineage_info_for_puzzle_hash
-    )
+    result = await mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     # Make sure we filled the block with only high rate spends
     assert len([s for s in high_rate_spends if s in result[0].coin_spends]) == len(result[0].coin_spends)
@@ -1061,9 +1056,6 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
       1. After PRIORITY_TX_THRESHOLD, we skip items with eligible coins.
       2. After skipping MAX_SKIPPED_ITEMS, we stop processing further items.
     """
-
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
 
     MAX_BLOCK_CLVM_COST = 550_000_000
 
@@ -1128,7 +1120,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
     g1 = sk.get_g1()
     sig = AugSchemeMPL.sign(sk, b"foobar", g1)
     for i in range(num_skipped_items + 1, num_skipped_items + 5):
-        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coins[i].amount - 30_000]]
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coins[i].amount]]
         # Make the first of these without eligible coins
         if i == num_skipped_items + 1:
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"])
@@ -1137,15 +1129,13 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
             aggsig = G2Element()
         sb, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, coins[i], aggsig)
         extra_sbs.append(sb)
-        coin = Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, uint64(coins[i].amount - 30_000))
+        coin = Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, uint64(coins[i].amount))
         extra_additions.append(coin)
         assert res[1] == MempoolInclusionStatus.SUCCESS
 
     assert mempool_manager.peak is not None
     caplog.set_level(logging.DEBUG)
-    result = await mempool_manager.create_bundle_from_mempool(
-        mempool_manager.peak.header_hash, get_unspent_lineage_info_for_puzzle_hash
-    )
+    result = await mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     agg, additions = result
     skipped_due_to_eligible_coins = sum(
@@ -1445,7 +1435,7 @@ def test_dedup_info_eligible_1st_time() -> None:
     # Eligible coin encountered for the first time
     conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1],
     ]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
@@ -1459,7 +1449,7 @@ def test_dedup_info_eligible_1st_time() -> None:
     assert cost_saving == 0
     assert set(unique_additions) == {
         Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1)),
-        Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(2)),
+        Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(TEST_COIN_AMOUNT - 1)),
     }
     assert eligible_coin_spends == EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=None)})
 
@@ -1468,11 +1458,11 @@ def test_dedup_info_eligible_but_different_solution() -> None:
     # Eligible coin but different solution from the one we encountered
     initial_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT],
     ]
     initial_solution = SerializedProgram.to(initial_conditions)
     eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT]]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
@@ -1485,12 +1475,12 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     # Eligible coin encountered a second time, and another for the first time
     initial_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1],
     ]
     initial_solution = SerializedProgram.to(initial_conditions)
     eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
-    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2]]
     second_solution = SerializedProgram.to(second_conditions)
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
@@ -1503,7 +1493,7 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     assert unique_coin_spends == sb2.coin_spends
     saved_cost = uint64(3600044)
     assert cost_saving == saved_cost
-    assert unique_additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, uint64(3))]
+    assert unique_additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2)]
     # The coin we encountered a second time has its cost and additions properly updated
     # The coin we encountered for the first time gets cost None and an empty set of additions
     expected_eligible_spends = EligibleCoinSpends(
@@ -1519,10 +1509,10 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     # Eligible coin encountered a third time, another for the second time and one non eligible
     initial_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1],
     ]
     initial_solution = SerializedProgram.to(initial_conditions)
-    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2]]
     second_solution = SerializedProgram.to(second_conditions)
     saved_cost = uint64(3600044)
     eligible_coin_spends = EligibleCoinSpends(
@@ -1538,7 +1528,7 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     sig = AugSchemeMPL.sign(sk, b"foobar", g1)
     sb3_conditions = [
         [ConditionOpcode.AGG_SIG_UNSAFE, g1, b"foobar"],
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 4],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3],
     ]
     sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3, sig)
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
@@ -1550,7 +1540,7 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     assert unique_coin_spends == sb3.coin_spends
     saved_cost2 = uint64(1800044)
     assert cost_saving == saved_cost + saved_cost2
-    assert unique_additions == [Coin(TEST_COIN_ID3, IDENTITY_PUZZLE_HASH, uint64(4))]
+    assert unique_additions == [Coin(TEST_COIN_ID3, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)]
     expected_eligible_spends = EligibleCoinSpends(
         {
             TEST_COIN_ID: DedupCoinSpend(initial_solution, saved_cost),
@@ -1586,7 +1576,12 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     # Create a bunch of mempool items that spend the coin in different ways
     for i in range(3):
         _, _, result = await generate_and_add_spendbundle(
-            mempool_manager, [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i]], coin
+            mempool_manager,
+            [
+                [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, uint64(i)],
+            ],
+            coin,
         )
         assert result[1] == MempoolInclusionStatus.SUCCESS
     assert len(list(mempool_manager.mempool.get_items_by_coin_id(coin_id))) == 3
@@ -1720,9 +1715,8 @@ async def test_identical_spend_aggregation_e2e(
     coins_with_identity_ph = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
         False, IDENTITY_PUZZLE_HASH
     )
-    sb = spend_bundle_from_conditions(
-        [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 110]], coins_with_identity_ph[0].coin
-    )
+    coin = coins_with_identity_ph[0].coin
+    sb = spend_bundle_from_conditions([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount]], coin)
     await send_to_mempool(full_node_api, sb)
     await farm_a_block(full_node_api, wallet_node, ph)
     # Grab the eligible coin to spend as E in DE and EF transactions
@@ -1759,7 +1753,7 @@ async def test_identical_spend_aggregation_e2e(
     # Create transaction E now that spends e_coin to create another eligible
     # coin as well as the announcement consumed by D and F
     conditions: list[list[Any]] = [
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, e_coin.amount],
         [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message],
     ]
     sb_e = spend_bundle_from_conditions(conditions, e_coin)
@@ -1773,7 +1767,8 @@ async def test_identical_spend_aggregation_e2e(
     # Send also a transaction EG that spends E differently from DE and EF,
     # so that it doesn't get deduplicated on E with them
     conditions = [
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, e_coin.amount - 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, e_coin.amount],
+        [ConditionOpcode.ASSERT_MY_COIN_ID, e_coin.name()],
         [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message],
     ]
     sb_e2 = spend_bundle_from_conditions(conditions, e_coin)
@@ -1814,7 +1809,7 @@ async def test_identical_spend_aggregation_e2e(
         False, IDENTITY_PUZZLE_HASH
     )
     assert len(eligible_coins) == 1
-    assert eligible_coins[0].coin.amount == 42
+    assert eligible_coins[0].coin.amount == e_coin.amount
 
 
 # we have two coins in this test. They have different birth heights (and

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 import aiohttp
+from chia_rs.sized_bytes import bytes32
 from typing_extensions import Literal
 
 from chia.data_layer.data_layer_util import (
@@ -20,7 +21,6 @@ from chia.data_layer.data_layer_util import (
     get_full_tree_filename_path,
 )
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:

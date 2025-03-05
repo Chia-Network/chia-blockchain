@@ -16,10 +16,10 @@ from chia_rs.datalayer import (
     UnknownKeyError,
     ValueId,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int64, uint8, uint32
 
 from chia.data_layer.data_layer_util import Side, internal_hash
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 
