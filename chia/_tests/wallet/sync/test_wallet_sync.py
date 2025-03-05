@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 from aiosqlite import Error as AIOSqliteError
 from chia_rs import ConsensusConstants, G2Element, confirm_not_included_already_hashed
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from chiabip158 import PyBIP158
 from colorlog import getLogger
@@ -48,7 +49,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock

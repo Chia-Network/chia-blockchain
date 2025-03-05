@@ -16,11 +16,13 @@ from chia_rs import (
     FoliageTransactionBlock,
     G2Element,
     PrivateKey,
+    RewardChainBlockUnfinished,
     SpendBundleConditions,
     TransactionsInfo,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from clvm.casts import int_to_bytes
 from packaging.version import Version
@@ -74,9 +76,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_pk,
     calculate_pos_challenge,
 )
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend

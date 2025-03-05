@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 from clvm.casts import int_to_bytes
 
 from chia.consensus.get_block_generator import get_block_generator
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 
 

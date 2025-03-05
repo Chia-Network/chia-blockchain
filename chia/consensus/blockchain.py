@@ -10,7 +10,13 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import ConsensusConstants, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import (
+    ConsensusConstants,
+    SubEpochChallengeSegment,
+    additions_and_removals,
+    get_flags_for_height_and_constants,
+)
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
@@ -26,7 +32,6 @@ from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
@@ -37,7 +42,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
-from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header

@@ -20,11 +20,11 @@ from chia_rs import (
     SpendBundleConditions,
     run_block_generator,
 )
+from chia_rs.sized_bytes import bytes32
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.full_block_utils import block_info_from_block, generator_from_block

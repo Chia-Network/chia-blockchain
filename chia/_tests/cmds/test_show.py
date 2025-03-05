@@ -5,13 +5,13 @@ from pathlib import Path
 from typing import Any, Optional
 
 from chia_rs import FoliageTransactionBlock
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, run_cli_command_and_assert
 from chia._tests.cmds.testing_classes import hash_to_height, height_hash
 from chia._tests.util.test_full_block_utils import get_foliage, get_reward_chain_block, get_transactions_info, vdf_proof
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 
 

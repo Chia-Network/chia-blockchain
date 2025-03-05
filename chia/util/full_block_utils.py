@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 
 from chia_rs import G1Element, G2Element, TransactionsInfo, serialized_length
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 from chiabip158 import PyBIP158
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
