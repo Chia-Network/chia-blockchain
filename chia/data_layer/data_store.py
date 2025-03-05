@@ -13,7 +13,7 @@ from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 import chia_rs.datalayer
-from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, ProofOfInclusion, TreeIndex, ValueId
+from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, MerkleBlob, ProofOfInclusion, TreeIndex, ValueId
 from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
@@ -46,7 +46,6 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.util.merkle_blob import (
     KeyOrValueId,
-    MerkleBlob,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
 )
