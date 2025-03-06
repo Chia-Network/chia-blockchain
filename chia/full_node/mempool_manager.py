@@ -877,14 +877,14 @@ def can_replace(
         # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
-        for spend in item.conds.spends:
-            if spend.coin_id not in removal_names:
-                log.debug("Rejecting conflicting tx as it does not spend conflicting coin %s", spend.coin_id)
+        for coin_id, bcs in item.bundle_coin_spends.items():
+            if coin_id not in removal_names:
+                log.debug("Rejecting conflicting tx as it does not spend conflicting coin %s", coin_id)
                 return False
-            if (spend.flags & ELIGIBLE_FOR_FF) != 0:
-                existing_ff_spends.add(bytes32(spend.coin_id))
-            if (spend.flags & ELIGIBLE_FOR_DEDUP) != 0:
-                existing_dedup_spends.add(bytes32(spend.coin_id))
+            if bcs.eligible_for_fast_forward:
+                existing_ff_spends.add(bytes32(coin_id))
+            if bcs.eligible_for_dedup:
+                existing_dedup_spends.add(bytes32(coin_id))
 
         assert_height = optional_max(assert_height, item.assert_height)
         assert_before_height = optional_min(assert_before_height, item.assert_before_height)
@@ -931,13 +931,13 @@ def can_replace(
         return False
 
     if len(existing_ff_spends) > 0 or len(existing_dedup_spends) > 0:
-        for spend in new_item.conds.spends:
-            if (spend.flags & ELIGIBLE_FOR_FF) == 0 and spend.coin_id in existing_ff_spends:
-                log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_FF of coin spend %s", spend.coin_id)
+        for coin_id, bcs in new_item.bundle_coin_spends.items():
+            if not bcs.eligible_for_fast_forward and coin_id in existing_ff_spends:
+                log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_FF of coin spend %s", coin_id)
                 return False
 
-            if (spend.flags & ELIGIBLE_FOR_DEDUP) == 0 and spend.coin_id in existing_dedup_spends:
-                log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_DEDUP of coin spend %s", spend.coin_id)
+            if not bcs.eligible_for_dedup and coin_id in existing_dedup_spends:
+                log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_DEDUP of coin spend %s", coin_id)
                 return False
 
     log.info(f"Replacing conflicting tx in mempool. New tx fee: {new_item.fee}, old tx fees: {conflicting_fees}")
