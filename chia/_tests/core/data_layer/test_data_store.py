@@ -16,7 +16,7 @@ from typing import Any, BinaryIO, Callable, Optional
 import aiohttp
 import chia_rs.datalayer
 import pytest
-from chia_rs.datalayer import KeyAlreadyPresentError, TreeIndex
+from chia_rs.datalayer import KeyAlreadyPresentError, MerkleBlob, TreeIndex
 from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
@@ -39,7 +39,7 @@ from chia.data_layer.data_layer_util import (
     get_full_tree_filename_path,
     leaf_hash,
 )
-from chia.data_layer.data_store import DataStore, InternalTypes, LeafTypes, MerkleBlobHint
+from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.benchmark import generate_datastore
 from chia.types.blockchain_format.program import Program
@@ -490,8 +490,8 @@ async def test_insert_batch_reference_and_side(
     nodes_with_indexes = merkle_blob.get_nodes_with_indexes()
     nodes = [pair[1] for pair in nodes_with_indexes]
     assert len(nodes) == 3
-    assert isinstance(nodes[1], LeafTypes)
-    assert isinstance(nodes[2], LeafTypes)
+    assert isinstance(nodes[1], chia_rs.datalayer.LeafNode)
+    assert isinstance(nodes[2], chia_rs.datalayer.LeafNode)
     left_terminal_node = await data_store.get_terminal_node(nodes[1].key, nodes[1].value, store_id)
     right_terminal_node = await data_store.get_terminal_node(nodes[2].key, nodes[2].value, store_id)
     if side == Side.LEFT:
@@ -1244,7 +1244,7 @@ async def write_tree_to_file_old_format(
     node_hash: bytes32,
     store_id: bytes32,
     writer: BinaryIO,
-    merkle_blob: Optional[MerkleBlobHint] = None,
+    merkle_blob: Optional[MerkleBlob] = None,
     hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
 ) -> None:
     if node_hash == bytes32.zeros:
@@ -1264,13 +1264,13 @@ async def write_tree_to_file_old_format(
     raw_node = merkle_blob.get_raw_node(raw_index)
 
     to_write = b""
-    if isinstance(raw_node, InternalTypes):
+    if isinstance(raw_node, chia_rs.datalayer.InternalNode):
         left_hash = merkle_blob.get_hash_at_index(raw_node.left)
         right_hash = merkle_blob.get_hash_at_index(raw_node.right)
         await write_tree_to_file_old_format(data_store, root, left_hash, store_id, writer, merkle_blob, hash_to_index)
         await write_tree_to_file_old_format(data_store, root, right_hash, store_id, writer, merkle_blob, hash_to_index)
         to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
-    elif isinstance(raw_node, LeafTypes):
+    elif isinstance(raw_node, chia_rs.datalayer.LeafNode):
         node = await data_store.get_terminal_node(raw_node.key, raw_node.value, store_id)
         to_write = bytes(SerializedNode(True, node.key, node.value))
     else:
