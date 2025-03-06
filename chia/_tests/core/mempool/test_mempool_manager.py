@@ -207,7 +207,7 @@ def make_test_conds(
     before_seconds_relative: Optional[int] = None,
     before_seconds_absolute: Optional[int] = None,
     cost: int = 0,
-    spend_ids: list[bytes32] = [TEST_COIN_ID],
+    spend_ids: list[tuple[bytes32, int]] = [(TEST_COIN_ID, 0)],
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
         [
@@ -230,9 +230,9 @@ def make_test_conds(
                 [],
                 [],
                 [],
-                0,
+                flags,
             )
-            for spend_id in spend_ids
+            for spend_id, flags in spend_ids
         ],
         0,
         uint32(height_absolute),
@@ -751,19 +751,25 @@ def mk_item(
     assert_height: Optional[int] = None,
     assert_before_height: Optional[int] = None,
     assert_before_seconds: Optional[int] = None,
+    flags: list[int] = [],
 ) -> MempoolItem:
     # we don't actually care about the puzzle and solutions for the purpose of
     # can_replace()
-    spend_ids = []
+    spend_ids: list[tuple[bytes32, int]] = []
     coin_spends = []
     bundle_coin_spends = {}
-    for c in coins:
+    if len(flags) < len(coins):
+        flags.extend([0] * (len(coins) - len(flags)))
+    for c, f in zip(coins, flags):
         coin_id = c.name()
-        spend_ids.append(coin_id)
+        spend_ids.append((coin_id, f))
         spend = make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None))
         coin_spends.append(spend)
         bundle_coin_spends[coin_id] = BundleCoinSpend(
-            coin_spend=spend, eligible_for_dedup=False, eligible_for_fast_forward=False, additions=[]
+            coin_spend=spend,
+            eligible_for_dedup=bool(f & ELIGIBLE_FOR_DEDUP),
+            eligible_for_fast_forward=bool(f & ELIGIBLE_FOR_FF),
+            additions=[],
         )
     spend_bundle = SpendBundle(coin_spends, G2Element())
     conds = make_test_conds(cost=cost, spend_ids=spend_ids)
@@ -817,6 +823,46 @@ coins = make_test_coins()
         ([mk_item(coins[0:2])], mk_item(coins[0:2], fee=10000000), True),
         # or if we spend the same coins with additional coins
         ([mk_item(coins[0:2])], mk_item(coins[0:3], fee=10000000), True),
+        # you're not allowed to clear the fast-forward or dedup flag. It's OK to set it
+        # and leave it unchanged
+        ([mk_item(coins[0:2])], mk_item(coins[0:3], flags=[ELIGIBLE_FOR_DEDUP, 0, 0], fee=10000000), True),
+        ([mk_item(coins[0:2])], mk_item(coins[0:3], flags=[ELIGIBLE_FOR_FF, 0, 0], fee=10000000), True),
+        # flag cleared
+        ([mk_item(coins[0:2], flags=[ELIGIBLE_FOR_DEDUP, 0])], mk_item(coins[0:3], fee=10000000), False),
+        ([mk_item(coins[0:2], flags=[ELIGIBLE_FOR_FF, 0])], mk_item(coins[0:3], fee=10000000), False),
+        # unchanged
+        (
+            [mk_item(coins[0:2], flags=[ELIGIBLE_FOR_DEDUP, 0])],
+            mk_item(coins[0:3], flags=[ELIGIBLE_FOR_DEDUP, 0, 0], fee=10000000),
+            True,
+        ),
+        (
+            [mk_item(coins[0:2], flags=[ELIGIBLE_FOR_FF, 0])],
+            mk_item(coins[0:3], flags=[ELIGIBLE_FOR_FF, 0, 0], fee=10000000),
+            True,
+        ),
+        # the spends are independent
+        (
+            [mk_item(coins[0:2], flags=[ELIGIBLE_FOR_DEDUP, 0])],
+            mk_item(coins[0:3], flags=[0, ELIGIBLE_FOR_DEDUP, 0], fee=10000000),
+            False,
+        ),
+        (
+            [mk_item(coins[0:2], flags=[ELIGIBLE_FOR_FF, 0])],
+            mk_item(coins[0:3], flags=[0, ELIGIBLE_FOR_FF, 0], fee=10000000),
+            False,
+        ),
+        # the bits are independent
+        (
+            [mk_item(coins[0:2], flags=[ELIGIBLE_FOR_DEDUP, 0])],
+            mk_item(coins[0:3], flags=[ELIGIBLE_FOR_FF, 0, 0], fee=10000000),
+            False,
+        ),
+        (
+            [mk_item(coins[0:2], flags=[ELIGIBLE_FOR_DEDUP, 0])],
+            mk_item(coins[0:3], flags=[ELIGIBLE_FOR_FF, 0, 0], fee=10000000),
+            False,
+        ),
         # FEE- AND FEE RATE RULES
         # if we're replacing two items, each paying a fee of 100, we need to
         # spend (at least) the same coins and pay at least 10000000 higher fee

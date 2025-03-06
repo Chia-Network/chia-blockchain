@@ -861,6 +861,13 @@ def can_replace(
     assert_height: Optional[uint32] = None
     assert_before_height: Optional[uint32] = None
     assert_before_seconds: Optional[uint64] = None
+    # we don't allow replacing mempool items with new ones that remove
+    # eligibility for dedup and fast-forward. Doing so could be abused by
+    # denying such spends from operating as intended
+    # collect all coins that are eligible for dedup and FF in the existing items
+    existing_ff_spends: set[bytes32] = set()
+    existing_dedup_spends: set[bytes32] = set()
+
     for item in conflicting_items:
         conflicting_fees += item.fee
         conflicting_cost += item.cost
@@ -870,10 +877,14 @@ def can_replace(
         # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
-        for coin in item.removals:
-            if coin.name() not in removal_names:
-                log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
+        for coin_id, bcs in item.bundle_coin_spends.items():
+            if coin_id not in removal_names:
+                log.debug("Rejecting conflicting tx as it does not spend conflicting coin %s", coin_id)
                 return False
+            if bcs.eligible_for_fast_forward:
+                existing_ff_spends.add(bytes32(coin_id))
+            if bcs.eligible_for_dedup:
+                existing_dedup_spends.add(bytes32(coin_id))
 
         assert_height = optional_max(assert_height, item.assert_height)
         assert_before_height = optional_min(assert_before_height, item.assert_before_height)
@@ -918,6 +929,16 @@ def can_replace(
             new_item.assert_before_seconds,
         )
         return False
+
+    if len(existing_ff_spends) > 0 or len(existing_dedup_spends) > 0:
+        for coin_id, bcs in new_item.bundle_coin_spends.items():
+            if not bcs.eligible_for_fast_forward and coin_id in existing_ff_spends:
+                log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_FF of coin spend %s", coin_id)
+                return False
+
+            if not bcs.eligible_for_dedup and coin_id in existing_dedup_spends:
+                log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_DEDUP of coin spend %s", coin_id)
+                return False
 
     log.info(f"Replacing conflicting tx in mempool. New tx fee: {new_item.fee}, old tx fees: {conflicting_fees}")
     return True
