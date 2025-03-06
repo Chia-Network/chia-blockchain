@@ -15,6 +15,7 @@ import aiosqlite
 import chia_rs.datalayer
 from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, MerkleBlob, ProofOfInclusion, TreeIndex, ValueId
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int64
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -44,11 +45,6 @@ from chia.data_layer.data_layer_util import (
     row_to_node,
     unspecified,
 )
-from chia.data_layer.util.merkle_blob import (
-    KeyOrValueId,
-    RawInternalMerkleNode,
-    RawLeafMerkleNode,
-)
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.lru_cache import LRUCache
@@ -60,8 +56,9 @@ log = logging.getLogger(__name__)
 # TODO: pick exception types other than Exception
 
 MerkleBlobHint = Union[MerkleBlob, chia_rs.datalayer.MerkleBlob]
-LeafTypes = (RawLeafMerkleNode, chia_rs.datalayer.LeafNode)
-InternalTypes = (RawInternalMerkleNode, chia_rs.datalayer.InternalNode)
+LeafTypes = (chia_rs.datalayer.LeafNode,)
+InternalTypes = (chia_rs.datalayer.InternalNode,)
+KeyOrValueId = int64
 
 
 @dataclass
