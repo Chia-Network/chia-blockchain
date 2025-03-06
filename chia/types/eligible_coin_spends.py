@@ -14,7 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend
 from chia.types.internal_mempool_item import InternalMempoolItem
-from chia.types.mempool_item import BundleCoinSpend
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 
@@ -217,7 +217,7 @@ class EligibleCoinSpends:
                     bundle_coin_spends[coin_id] = BundleCoinSpend(
                         coin_spend=spend_data.coin_spend,
                         eligible_for_dedup=spend_data.eligible_for_dedup,
-                        eligible_for_fast_forward=spend_data.eligible_for_fast_forward,
+                        ff_latest_version=spend_data.ff_latest_version,
                         additions=spend_data.additions,
                         cost=spend_cost,
                     )
@@ -266,7 +266,7 @@ class EligibleCoinSpends:
         ff_bundle_coin_spends = {}
         replaced_coin_ids = []
         for coin_id, spend_data in bundle_coin_spends.items():
-            if not spend_data.eligible_for_fast_forward:
+            if spend_data.ff_latest_version is None:
                 # Nothing to do for this spend, moving on
                 new_coin_spends.append(spend_data.coin_spend)
                 continue
@@ -307,7 +307,7 @@ class EligibleCoinSpends:
                 ff_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                     coin_spend=new_coin_spend,
                     eligible_for_dedup=spend_data.eligible_for_dedup,
-                    eligible_for_fast_forward=spend_data.eligible_for_fast_forward,
+                    ff_latest_version=spend_data.ff_latest_version,
                     additions=patched_additions,
                     cost=spend_data.cost,
                 )
@@ -331,7 +331,7 @@ class EligibleCoinSpends:
             ff_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                 coin_spend=new_coin_spend,
                 eligible_for_dedup=spend_data.eligible_for_dedup,
-                eligible_for_fast_forward=spend_data.eligible_for_fast_forward,
+                ff_latest_version=spend_data.ff_latest_version,
                 additions=patched_additions,
                 cost=spend_data.cost,
             )
@@ -366,3 +366,77 @@ class EligibleCoinSpends:
             bundle_coin_spends.pop(coin_id, None)
         bundle_coin_spends.update(ff_bundle_coin_spends)
         return bundle_coin_spends
+
+
+async def update_item_on_spent_singleton(
+    mempool_item: MempoolItem,
+    spent_coin_id: bytes32,
+    get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+    height: uint32,
+    constants: ConsensusConstants,
+) -> Optional[list[tuple[bytes32, bytes32, bytes32]]]:
+    """
+    Revisits mempool items that have fast forward spends related to a
+    singleton with the input spent coin ID. If the singleton melted, the
+    mempool item gets marked for removal, otherwise it gets its singleton
+    fast forward spends updated to the latest coin ID.
+
+    Args:
+        mempool_item: The mempool item to update if needed
+        spent_coin_id: the singleton version that got spent
+        get_unspent_lineage_info_for_puzzle_hash: to lookup the most recent
+            version of the singleton
+        height: needed in case we want to revalidate the mempool item
+        constants: needed in case we want to revalidate the mempool item
+    Returns:
+        `None` if the singleton melted, and a list of updates to the mempool
+        spends index if the singleton still exists
+    """
+    singleton_ph = next(
+        (
+            spend_data.coin_spend.coin.puzzle_hash
+            for spend_data in mempool_item.bundle_coin_spends.values()
+            if spend_data.ff_latest_version == spent_coin_id
+        ),
+        None,
+    )
+    assert singleton_ph is not None
+    lineage_info = await get_unspent_lineage_info_for_puzzle_hash(singleton_ph)
+    if lineage_info is None:
+        # This singleton melted, let's mark this item for removal
+        return None
+    # The singleton still exists, let's setup an update for it
+    updated_coin_spends = set()
+    # Fast forward spends are indexed under the latest singleton coin ID. If
+    # it's spent, we need to update the index in the mempool. This list lets us
+    # perform a bulk update: (new coin id, current coin id, mempool item name)
+    spends_index_updates: list[tuple[bytes32, bytes32, bytes32]] = []
+    mempool_item_updates: dict[bytes32, bytes32] = {}
+    item_name = mempool_item.name
+    for coin_id, spend_data in mempool_item.bundle_coin_spends.items():
+        if spend_data.ff_latest_version == spent_coin_id:
+            try:
+                new_coin_spend, _ = perform_the_fast_forward(lineage_info, spend_data, {})
+            except Exception:
+                return None
+            updated_coin_spends.add(new_coin_spend)
+            spends_index_updates.append((lineage_info.coin_id, coin_id, item_name))
+            mempool_item_updates[coin_id] = lineage_info.coin_id
+        else:
+            updated_coin_spends.add(spend_data.coin_spend)
+    updated_sb = SpendBundle(
+        coin_spends=list(updated_coin_spends), aggregated_signature=mempool_item.spend_bundle.aggregated_signature
+    )
+    try:
+        # Run the new spend bundle to make sure it remains valid. What we
+        # care about here is whether this call throws or not.
+        get_conditions_from_spendbundle(updated_sb, mempool_item.conds.cost, constants, height)
+    except Exception:
+        return None
+    # The item is still valid after rebasing all the ff spends, so let's update
+    # its bundle_coin_spends map.
+    for coin_id, latest_id in mempool_item_updates.items():
+        mempool_item.bundle_coin_spends[coin_id] = dataclasses.replace(
+            mempool_item.bundle_coin_spends[coin_id], ff_latest_version=latest_id
+        )
+    return spends_index_updates

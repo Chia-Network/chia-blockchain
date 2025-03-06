@@ -17,7 +17,7 @@ from chia.util.streamable import recurse_jsonify
 class BundleCoinSpend:
     coin_spend: CoinSpend
     eligible_for_dedup: bool
-    eligible_for_fast_forward: bool
+    ff_latest_version: Optional[bytes32]
     additions: list[Coin]
     # cost on the specific solution in this item
     cost: Optional[uint64] = None

@@ -86,6 +86,46 @@ TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIM
 TEST_HEIGHT = uint32(5)
 
 
+# This spend setup makes us eligible for fast forward so that we perform a
+# meaningful fast forward on the rust side. It was generated using the
+# singleton/child/grandchild dynamics that we have in
+# `test_singleton_fast_forward_different_block` to get a realistic test case
+TEST_FF_SINGLETON_PUZZLE = SerializedProgram.fromhex(
+    "ff02ffff01ff02ffff01ff02ffff03ffff18ff2fff3480ffff01ff04ffff04ff20ffff04ff2fff808080ffff04ffff02ff3effff04ff0"
+    "2ffff04ff05ffff04ffff02ff2affff04ff02ffff04ff27ffff04ffff02ffff03ff77ffff01ff02ff36ffff04ff02ffff04ff09ffff04"
+    "ff57ffff04ffff02ff2effff04ff02ffff04ff05ff80808080ff808080808080ffff011d80ff0180ffff04ffff02ffff03ff77ffff018"
+    "1b7ffff015780ff0180ff808080808080ffff04ff77ff808080808080ffff02ff3affff04ff02ffff04ff05ffff04ffff02ff0bff5f80"
+    "ffff01ff8080808080808080ffff01ff088080ff0180ffff04ffff01ffffffff4947ff0233ffff0401ff0102ffffff20ff02ffff03ff0"
+    "5ffff01ff02ff32ffff04ff02ffff04ff0dffff04ffff0bff3cffff0bff34ff2480ffff0bff3cffff0bff3cffff0bff34ff2c80ff0980"
+    "ffff0bff3cff0bffff0bff34ff8080808080ff8080808080ffff010b80ff0180ffff02ffff03ffff22ffff09ffff0dff0580ff2280fff"
+    "f09ffff0dff0b80ff2280ffff15ff17ffff0181ff8080ffff01ff0bff05ff0bff1780ffff01ff088080ff0180ff02ffff03ff0bffff01"
+    "ff02ffff03ffff02ff26ffff04ff02ffff04ff13ff80808080ffff01ff02ffff03ffff20ff1780ffff01ff02ffff03ffff09ff81b3fff"
+    "f01818f80ffff01ff02ff3affff04ff02ffff04ff05ffff04ff1bffff04ff34ff808080808080ffff01ff04ffff04ff23ffff04ffff02"
+    "ff36ffff04ff02ffff04ff09ffff04ff53ffff04ffff02ff2effff04ff02ffff04ff05ff80808080ff808080808080ff738080ffff02f"
+    "f3affff04ff02ffff04ff05ffff04ff1bffff04ff34ff8080808080808080ff0180ffff01ff088080ff0180ffff01ff04ff13ffff02ff"
+    "3affff04ff02ffff04ff05ffff04ff1bffff04ff17ff8080808080808080ff0180ffff01ff02ffff03ff17ff80ffff01ff088080ff018"
+    "080ff0180ffffff02ffff03ffff09ff09ff3880ffff01ff02ffff03ffff18ff2dffff010180ffff01ff0101ff8080ff0180ff8080ff01"
+    "80ff0bff3cffff0bff34ff2880ffff0bff3cffff0bff3cffff0bff34ff2c80ff0580ffff0bff3cffff02ff32ffff04ff02ffff04ff07f"
+    "fff04ffff0bff34ff3480ff8080808080ffff0bff34ff8080808080ffff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff2eff"
+    "ff04ff02ffff04ff09ff80808080ffff02ff2effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff02fff"
+    "f03ffff21ff17ffff09ff0bff158080ffff01ff04ff30ffff04ff0bff808080ffff01ff088080ff0180ff018080ffff04ffff01ffa07f"
+    "aa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9fffa030d940e53ed5b56fee3ae46ba5f4e59da5e2cc9242f"
+    "6e482fe1f1e4d9a463639a0eff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9ffff04ffff010dff018080"
+    "80"
+)
+TEST_FF_SINGLETON_PH = bytes32.from_hexstr("0x9ae0917f3ca301f934468ec60412904c0a88b232aeabf220c01ef53054e0281a")
+TEST_FF_SINGLETON_SOLUTION = SerializedProgram.fromhex(
+    "ffffa030d940e53ed5b56fee3ae46ba5f4e59da5e2cc9242f6e482fe1f1e4d9a463639ffa0c7b89cfb9abf2c4cb212a4840b37d762f4c"
+    "880b8517b0dadb0c310ded24dd86dff82053980ff820539ffff80ffff01ffff33ffa0c7b89cfb9abf2c4cb212a4840b37d762f4c880b8"
+    "517b0dadb0c310ded24dd86dff8205398080ff808080"
+)
+TEST_FF_SINGLETON_PARENT_ID = bytes32.from_hexstr("0x039759eda861cd44c0af6c9501300f66fe4f5de144b8ae4fc4e8da35701f38ac")
+TEST_FF_SINGLETON_AMOUNT = uint64(1337)
+TEST_FF_SINGLETON = Coin(TEST_FF_SINGLETON_PARENT_ID, TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
+TEST_FF_SINGLETON_NAME = TEST_FF_SINGLETON.name()
+TEST_FF_SINGLETON_SPEND = CoinSpend(TEST_FF_SINGLETON, TEST_FF_SINGLETON_PUZZLE, TEST_FF_SINGLETON_SOLUTION)
+
+
 @dataclasses.dataclass(frozen=True)
 class TestBlockRecord:
     """
@@ -148,12 +188,12 @@ async def instantiate_mempool_manager(
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: Optional[uint64] = None,
+    get_unspent_lineage_info_for_puzzle_hash: Callable[
+        [bytes32], Awaitable[Optional[UnspentLineageInfo]]
+    ] = zero_calls_get_unspent_lineage_info_for_puzzle_hash,
 ) -> MempoolManager:
     mempool_manager = MempoolManager(
-        get_coin_records,
-        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
-        constants,
-        max_tx_clvm_cost=max_tx_clvm_cost,
+        get_coin_records, get_unspent_lineage_info_for_puzzle_hash, constants, max_tx_clvm_cost=max_tx_clvm_cost
     )
     test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
@@ -452,7 +492,7 @@ def make_bundle_spends_map_and_fee(
         bundle_coin_spends[coin_id] = BundleCoinSpend(
             coin_spend=coin_spend,
             eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
-            eligible_for_fast_forward=eligibility_info.ff_puzzle_hash is not None,
+            ff_latest_version=coin_id if eligibility_info.ff_puzzle_hash is not None else None,
             additions=eligibility_info.spend_additions,
         )
     fee = uint64(removals_amount - additions_amount)
@@ -763,7 +803,7 @@ def mk_item(
         spend = make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None))
         coin_spends.append(spend)
         bundle_coin_spends[coin_id] = BundleCoinSpend(
-            coin_spend=spend, eligible_for_dedup=False, eligible_for_fast_forward=False, additions=[]
+            coin_spend=spend, eligible_for_dedup=False, ff_latest_version=None, additions=[]
         )
     spend_bundle = SpendBundle(coin_spends, G2Element())
     conds = make_test_conds(cost=cost, spend_ids=spend_ids)
@@ -1614,13 +1654,13 @@ async def test_bundle_coin_spends() -> None:
         assert mi123e.bundle_coin_spends[coins[i].name()] == BundleCoinSpend(
             coin_spend=sb123.coin_spends[i],
             eligible_for_dedup=False,
-            eligible_for_fast_forward=False,
+            ff_latest_version=None,
             additions=[Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, coins[i].amount)],
         )
     assert mi123e.bundle_coin_spends[coins[3].name()] == BundleCoinSpend(
         coin_spend=eligible_sb.coin_spends[0],
         eligible_for_dedup=True,
-        eligible_for_fast_forward=False,
+        ff_latest_version=None,
         additions=[Coin(coins[3].name(), IDENTITY_PUZZLE_HASH, coins[3].amount)],
     )
 
@@ -2137,3 +2177,116 @@ async def test_height_added_to_mempool(optimized_path: bool) -> None:
     mempool_item = mempool_manager.get_mempool_item(sb_name)
     assert mempool_item is not None
     assert mempool_item.height_added_to_mempool == original_height
+
+
+@pytest.mark.anyio
+async def test_new_peak_singleton_melts() -> None:
+    """
+    This test covers sending a new peak with a melted singleton as a spent coin
+    to make sure that mempool items that spend any of the singleton's versions
+    get removed from the mempool.
+    """
+
+    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+        if puzzle_hash == IDENTITY_PUZZLE_HASH:
+            return None
+        assert False  # pragma: no cover
+
+    mempool_manager = await instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+    )
+    singleton_latest_unspent = TEST_COIN3
+    singleton_latest_unspent_id = TEST_COIN_ID3
+    other_coin = TEST_COIN2
+    # Create a test item with an older version of the singleton
+    test_item = mk_item([singleton_latest_unspent, other_coin])
+    test_item.bundle_coin_spends[singleton_latest_unspent_id] = dataclasses.replace(
+        test_item.bundle_coin_spends[singleton_latest_unspent_id], ff_latest_version=singleton_latest_unspent_id
+    )
+    mempool_manager.mempool.add_to_pool(test_item)
+    assert mempool_manager.mempool.get_item_by_id(test_item.name) is not None
+    # Sending a new peak with the singleton's latest version marked as a spent
+    # coin should remove our test item.
+    spent_coins = [singleton_latest_unspent_id]
+    assert mempool_manager.peak is not None
+    assert mempool_manager.peak.timestamp is not None
+    test_new_peak = TestBlockRecord(
+        header_hash=height_hash(mempool_manager.peak.height + 1),
+        height=uint32(mempool_manager.peak.height + 1),
+        timestamp=uint64(mempool_manager.peak.timestamp + 10),
+        prev_transaction_block_height=mempool_manager.peak.height,
+        prev_transaction_block_hash=mempool_manager.peak.header_hash,
+    )
+    await mempool_manager.new_peak(test_new_peak, spent_coins)
+    assert mempool_manager.mempool.get_item_by_id(test_item.name) is None
+
+
+@pytest.mark.anyio
+async def test_new_peak_singleton_stays() -> None:
+    """
+    This test covers sending a new peak with a singleton that got spent into a
+    new version, to make sure that mempool items that spend any of this
+    singleton's previous versions get updated with this latest unspent version.
+    """
+    singleton_child_coin = Coin(TEST_FF_SINGLETON_NAME, TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
+    singleton_child_coin_id = singleton_child_coin.name()
+    latest_unspent_coin = Coin(singleton_child_coin_id, TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
+    latest_unspent_id = latest_unspent_coin.name()
+    unspent_lineage_info_after_current_one = UnspentLineageInfo(
+        coin_id=latest_unspent_id,
+        coin_amount=TEST_FF_SINGLETON_AMOUNT,
+        parent_id=singleton_child_coin_id,
+        parent_amount=TEST_FF_SINGLETON_AMOUNT,
+        parent_parent_id=TEST_FF_SINGLETON_NAME,
+    )
+
+    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> UnspentLineageInfo | None:
+        # This is latest version after the current latest unspent gets spent
+        if puzzle_hash == TEST_FF_SINGLETON_PH:
+            return unspent_lineage_info_after_current_one
+        assert False  # pragma: no cover
+
+    mempool_manager: MempoolManager = await instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+    )
+    # Create a test item with an older version of the singleton
+    other_coin = TEST_COIN2
+    other_coin_name = TEST_COIN_ID2
+    conds = make_test_conds(cost=123456789, spend_ids=[TEST_FF_SINGLETON_NAME, other_coin_name])
+    other_coin_spend = make_spend(other_coin, IDENTITY_PUZZLE, SerializedProgram.to([]))
+    sb = SpendBundle([TEST_FF_SINGLETON_SPEND, other_coin_spend], G2Element())
+    bundle_coin_spends = {
+        TEST_FF_SINGLETON_NAME: BundleCoinSpend(
+            coin_spend=TEST_FF_SINGLETON_SPEND,
+            eligible_for_dedup=False,
+            ff_latest_version=TEST_FF_SINGLETON_NAME,
+            additions=[singleton_child_coin],
+        ),
+        other_coin_name: BundleCoinSpend(
+            coin_spend=other_coin_spend, eligible_for_dedup=False, ff_latest_version=None, additions=[]
+        ),
+    }
+    test_item = MempoolItem(sb, uint64(0), conds, sb.name(), uint32(0), bundle_coin_spends=bundle_coin_spends)
+    mempool_manager.mempool.add_to_pool(test_item)
+    assert mempool_manager.mempool.get_item_by_id(test_item.name) is not None
+    # Sending a new peak with the singleton's latest version marked as a spent
+    # coin should update our test item accordingly.
+    spent_coins = [TEST_FF_SINGLETON_NAME]
+    assert mempool_manager.peak is not None
+    assert mempool_manager.peak.timestamp is not None
+    test_new_peak = TestBlockRecord(
+        header_hash=height_hash(mempool_manager.peak.height + 1),
+        height=uint32(mempool_manager.peak.height + 1),
+        timestamp=uint64(mempool_manager.peak.timestamp + 10),
+        prev_transaction_block_height=mempool_manager.peak.height,
+        prev_transaction_block_hash=mempool_manager.peak.header_hash,
+    )
+    await mempool_manager.new_peak(test_new_peak, spent_coins)
+    # The test item that spends a previous version of the singleton should
+    # remain in mempool and get updated properly.
+    updated_item = mempool_manager.mempool.get_item_by_id(test_item.name)
+    assert updated_item is not None
+    # The singleton spend should have the latest version
+    assert updated_item.bundle_coin_spends[TEST_FF_SINGLETON_NAME].ff_latest_version == latest_unspent_id

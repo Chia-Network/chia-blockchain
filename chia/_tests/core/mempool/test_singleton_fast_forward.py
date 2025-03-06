@@ -7,7 +7,7 @@ from typing import Any, Optional
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
@@ -15,9 +15,21 @@ from chia._tests.core.mempool.test_mempool_manager import (
     IDENTITY_PUZZLE,
     IDENTITY_PUZZLE_HASH,
     TEST_COIN,
+    TEST_COIN2,
+    TEST_COIN3,
     TEST_COIN_ID,
+    TEST_COIN_ID2,
+    TEST_COIN_ID3,
+    TEST_FF_SINGLETON_AMOUNT,
+    TEST_FF_SINGLETON_NAME,
+    TEST_FF_SINGLETON_PH,
+    TEST_FF_SINGLETON_SPEND,
     TEST_HEIGHT,
+    TestBlockRecord,
+    height_hash,
+    make_test_conds,
     mempool_item_from_spendbundle,
+    mk_item,
     spend_bundle_from_conditions,
 )
 from chia._tests.util.key_tool import KeyTool
@@ -28,10 +40,15 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo, perform_the_fast_forward
+from chia.types.eligible_coin_spends import (
+    EligibleCoinSpends,
+    UnspentLineageInfo,
+    perform_the_fast_forward,
+    update_item_on_spent_singleton,
+)
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import BundleCoinSpend
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
@@ -55,7 +72,7 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN, sig)
     item = mempool_item_from_spendbundle(sb)
     # This coin is not eligible for fast forward
-    assert item.bundle_coin_spends[TEST_COIN_ID].eligible_for_fast_forward is False
+    assert item.bundle_coin_spends[TEST_COIN_ID].ff_latest_version is None
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
@@ -82,11 +99,12 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
         assert False  # pragma: no cover
 
     test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))
+    test_coin_name = test_coin.name()
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
     # The coin is eligible for fast forward
-    assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
+    assert item.bundle_coin_spends[test_coin_name].ff_latest_version == test_coin_name
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     eligible_coin_spends = EligibleCoinSpends()
     # We have no fast forward records yet, so we'll process this coin for the
@@ -109,8 +127,9 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     """
     test_amount = uint64(3)
     test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, test_amount)
+    test_coin_name = test_coin.name()
     test_unspent_lineage_info = UnspentLineageInfo(
-        coin_id=test_coin.name(),
+        coin_id=test_coin_name,
         coin_amount=test_coin.amount,
         parent_id=test_coin.parent_coin_info,
         parent_amount=test_coin.amount,
@@ -128,7 +147,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, test_amount]]
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
-    assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
+    assert item.bundle_coin_spends[test_coin_name].ff_latest_version == test_coin_name
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
@@ -138,12 +157,12 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
         height=TEST_HEIGHT,
         constants=DEFAULT_CONSTANTS,
     )
-    child_coin = item.bundle_coin_spends[test_coin.name()].additions[0]
+    child_coin = item.bundle_coin_spends[test_coin_name].additions[0]
     expected_fast_forward_spends = {
         IDENTITY_PUZZLE_HASH: UnspentLineageInfo(
             coin_id=child_coin.name(),
             coin_amount=child_coin.amount,
-            parent_id=test_coin.name(),
+            parent_id=test_coin_name,
             parent_amount=test_coin.amount,
             parent_parent_id=test_coin.parent_coin_info,
         )
@@ -160,51 +179,15 @@ def test_perform_the_fast_forward() -> None:
     unspent version is its grandchild. We fast forward the test coin spend into
     a spend of that latest unspent
     """
-    test_parent_id = bytes32.from_hexstr("0x039759eda861cd44c0af6c9501300f66fe4f5de144b8ae4fc4e8da35701f38ac")
-    test_ph = bytes32.from_hexstr("0x9ae0917f3ca301f934468ec60412904c0a88b232aeabf220c01ef53054e0281a")
-    test_amount = uint64(1337)
-    test_coin = Coin(test_parent_id, test_ph, test_amount)
-    test_child_coin = Coin(test_coin.name(), test_ph, test_amount)
-    latest_unspent_coin = Coin(test_child_coin.name(), test_ph, test_amount)
-    # This spend setup makes us eligible for fast forward so that we perform a
-    # meaningful fast forward on the rust side. It was generated using the
-    # singleton/child/grandchild dynamics that we have in
-    # `test_singleton_fast_forward_different_block` to get a realistic test case
-    test_puzzle_reveal = SerializedProgram.fromhex(
-        "ff02ffff01ff02ffff01ff02ffff03ffff18ff2fff3480ffff01ff04ffff04ff20ffff04ff2fff808080ffff04ffff02ff3effff04ff0"
-        "2ffff04ff05ffff04ffff02ff2affff04ff02ffff04ff27ffff04ffff02ffff03ff77ffff01ff02ff36ffff04ff02ffff04ff09ffff04"
-        "ff57ffff04ffff02ff2effff04ff02ffff04ff05ff80808080ff808080808080ffff011d80ff0180ffff04ffff02ffff03ff77ffff018"
-        "1b7ffff015780ff0180ff808080808080ffff04ff77ff808080808080ffff02ff3affff04ff02ffff04ff05ffff04ffff02ff0bff5f80"
-        "ffff01ff8080808080808080ffff01ff088080ff0180ffff04ffff01ffffffff4947ff0233ffff0401ff0102ffffff20ff02ffff03ff0"
-        "5ffff01ff02ff32ffff04ff02ffff04ff0dffff04ffff0bff3cffff0bff34ff2480ffff0bff3cffff0bff3cffff0bff34ff2c80ff0980"
-        "ffff0bff3cff0bffff0bff34ff8080808080ff8080808080ffff010b80ff0180ffff02ffff03ffff22ffff09ffff0dff0580ff2280fff"
-        "f09ffff0dff0b80ff2280ffff15ff17ffff0181ff8080ffff01ff0bff05ff0bff1780ffff01ff088080ff0180ff02ffff03ff0bffff01"
-        "ff02ffff03ffff02ff26ffff04ff02ffff04ff13ff80808080ffff01ff02ffff03ffff20ff1780ffff01ff02ffff03ffff09ff81b3fff"
-        "f01818f80ffff01ff02ff3affff04ff02ffff04ff05ffff04ff1bffff04ff34ff808080808080ffff01ff04ffff04ff23ffff04ffff02"
-        "ff36ffff04ff02ffff04ff09ffff04ff53ffff04ffff02ff2effff04ff02ffff04ff05ff80808080ff808080808080ff738080ffff02f"
-        "f3affff04ff02ffff04ff05ffff04ff1bffff04ff34ff8080808080808080ff0180ffff01ff088080ff0180ffff01ff04ff13ffff02ff"
-        "3affff04ff02ffff04ff05ffff04ff1bffff04ff17ff8080808080808080ff0180ffff01ff02ffff03ff17ff80ffff01ff088080ff018"
-        "080ff0180ffffff02ffff03ffff09ff09ff3880ffff01ff02ffff03ffff18ff2dffff010180ffff01ff0101ff8080ff0180ff8080ff01"
-        "80ff0bff3cffff0bff34ff2880ffff0bff3cffff0bff3cffff0bff34ff2c80ff0580ffff0bff3cffff02ff32ffff04ff02ffff04ff07f"
-        "fff04ffff0bff34ff3480ff8080808080ffff0bff34ff8080808080ffff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff2eff"
-        "ff04ff02ffff04ff09ff80808080ffff02ff2effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff02fff"
-        "f03ffff21ff17ffff09ff0bff158080ffff01ff04ff30ffff04ff0bff808080ffff01ff088080ff0180ff018080ffff04ffff01ffa07f"
-        "aa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9fffa030d940e53ed5b56fee3ae46ba5f4e59da5e2cc9242f"
-        "6e482fe1f1e4d9a463639a0eff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9ffff04ffff010dff018080"
-        "80"
-    )
-    test_solution = SerializedProgram.fromhex(
-        "ffffa030d940e53ed5b56fee3ae46ba5f4e59da5e2cc9242f6e482fe1f1e4d9a463639ffa0c7b89cfb9abf2c4cb212a4840b37d762f4c"
-        "880b8517b0dadb0c310ded24dd86dff82053980ff820539ffff80ffff01ffff33ffa0c7b89cfb9abf2c4cb212a4840b37d762f4c880b8"
-        "517b0dadb0c310ded24dd86dff8205398080ff808080"
-    )
-    test_coin_spend = CoinSpend(test_coin, test_puzzle_reveal, test_solution)
-    test_spend_data = BundleCoinSpend(test_coin_spend, False, True, [test_child_coin])
+    test_child_coin = Coin(TEST_FF_SINGLETON_NAME, TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
+    latest_unspent_coin = Coin(test_child_coin.name(), TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
+    test_coin_spend = TEST_FF_SINGLETON_SPEND
+    test_spend_data = BundleCoinSpend(test_coin_spend, False, TEST_FF_SINGLETON_NAME, [test_child_coin])
     test_unspent_lineage_info = UnspentLineageInfo(
         coin_id=latest_unspent_coin.name(),
-        coin_amount=latest_unspent_coin.amount,
+        coin_amount=TEST_FF_SINGLETON_AMOUNT,
         parent_id=latest_unspent_coin.parent_coin_info,
-        parent_amount=test_child_coin.amount,
+        parent_amount=TEST_FF_SINGLETON_AMOUNT,
         parent_parent_id=test_child_coin.parent_coin_info,
     )
     # Start from a fresh state of fast forward spends
@@ -220,19 +203,19 @@ def test_perform_the_fast_forward() -> None:
     # Make sure the solution got patched
     assert new_coin_spend.solution != test_coin_spend.solution
     # Make sure the additions got patched
-    expected_child_coin = Coin(latest_unspent_coin.name(), test_ph, test_amount)
+    expected_child_coin = Coin(latest_unspent_coin.name(), TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
     assert patched_additions == [expected_child_coin]
     # Make sure the new fast forward state got updated with the latest unspent
     # becoming the new child, with its parent being the version we just spent
     # (previously latest unspent)
     expected_unspent_lineage_info = UnspentLineageInfo(
         coin_id=expected_child_coin.name(),
-        coin_amount=expected_child_coin.amount,
+        coin_amount=TEST_FF_SINGLETON_AMOUNT,
         parent_id=latest_unspent_coin.name(),
-        parent_amount=latest_unspent_coin.amount,
+        parent_amount=TEST_FF_SINGLETON_AMOUNT,
         parent_parent_id=latest_unspent_coin.parent_coin_info,
     )
-    assert fast_forward_spends == {test_ph: expected_unspent_lineage_info}
+    assert fast_forward_spends == {TEST_FF_SINGLETON_PH: expected_unspent_lineage_info}
 
 
 def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
@@ -735,3 +718,194 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         # It fails validation because it doesn't currently have a latest unspent
         assert status == MempoolInclusionStatus.FAILED
         assert error == Err.DOUBLE_SPEND
+
+
+@pytest.mark.parametrize("optimized_path", [True, False])
+@pytest.mark.anyio
+async def test_items_eviction_on_new_peak_with_melted_singleton(optimized_path: bool) -> None:
+    """
+    This test covers the scenario where a singleton gets melted and we receive
+    it as a spent coin on new peak, to make sure all existing mempool items
+    with spends that belong to this singleton, get removed from the mempool.
+    """
+    test_amount = uint64(1337)
+    async with sim_and_client() as (sim, sim_client):
+        # Prepare a singleton spend
+        singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
+            sim, sim_client, True, start_amount=test_amount, singleton_amount=test_amount
+        )
+        singleton_name = singleton.name()
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        sk = AugSchemeMPL.key_gen(b"9" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+        inner_conditions: list[list[Any]] = [
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, test_amount],
+        ]
+        singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
+        # Let's spend it to create a new version
+        remaining_spend_solution = SerializedProgram.from_program(
+            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        )
+        remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
+        status, error = await make_and_send_spend_bundle(
+            sim, sim_client, [singleton_coin_spend, remaining_coin_spend], aggsig=sig
+        )
+        assert error is None
+        assert status == MempoolInclusionStatus.SUCCESS
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton.puzzle_hash
+        )
+        singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
+        singleton_child_name = singleton_child.name()
+        assert singleton_child.amount == test_amount
+        assert unspent_lineage_info == UnspentLineageInfo(
+            coin_id=singleton_child_name,
+            coin_amount=singleton_child.amount,
+            parent_id=singleton_name,
+            parent_amount=singleton.amount,
+            parent_parent_id=eve_coin_spend.coin.name(),
+        )
+        sb_names = []
+        # Send 3 items that spend the original (spent) singleton version
+        for i in range(3):
+            inner_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"] for _ in range(i + 1)]
+            aggsig = G2Element()
+            for _ in range(i + 1):
+                aggsig += sig
+            inner_conditions.append([ConditionOpcode.CREATE_COIN, inner_puzzle_hash, test_amount])
+            singleton_coin_spend, _ = make_singleton_coin_spend(
+                eve_coin_spend, singleton, inner_puzzle, inner_conditions
+            )
+            remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
+            sb = SpendBundle([singleton_coin_spend, remaining_coin_spend], aggsig)
+            await sim_client.push_tx(sb)
+            sb_names.append(sb.name())
+        for sb_name in sb_names:
+            mi = sim.mempool_manager.mempool.get_item_by_id(sb_name)
+            assert mi is not None
+            assert singleton_name in mi.bundle_coin_spends
+        # Now let's form a new peak with this singleton marked as a spent coin
+        # Before calling new peak, let's remove the singleton from the coin
+        # store, so that when we process spent coins, we check if this
+        # singleton still has a latest unspent and we don't find any, so we
+        # concluded that it melted.
+        async with sim_client.service.coin_store.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute("DELETE FROM coin_record WHERE coin_name = ?", (singleton_child_name,))
+        # Ensure this singleton no longer has a latest unspent coin
+        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+            singleton.puzzle_hash
+        )
+        assert unspent_lineage_info is None
+        current_peak = sim_client.service.block_records[-1]
+        test_new_peak = TestBlockRecord(
+            header_hash=height_hash(current_peak.height + 1),
+            height=uint32(current_peak.height + 1),
+            timestamp=uint64(current_peak.timestamp + 10),
+            prev_transaction_block_height=current_peak.height,
+            prev_transaction_block_hash=current_peak.header_hash,
+        )
+        if optimized_path:
+            # Mark the singleton's latest version as spent
+            spent_coins = [singleton_child_name]
+        else:
+            # Trigger a rebuild of the mempool (slow path)
+            spent_coins = None
+        await sim.mempool_manager.new_peak(test_new_peak, spent_coins)
+        # Make sure all items with spends that belong to this singleton got removed
+        for sb_name in sb_names:
+            assert sim.mempool_manager.mempool.get_item_by_id(sb_name) is None
+
+
+@pytest.mark.anyio
+async def test_revisit_item_with_related_ff_spends_singleton_melts() -> None:
+    """
+    This test covers calling `revisit_item_with_related_ff_spends` with a
+    melted singleton as a spent coin, to make sure that mempool items
+    that spend any of the singleton's versions get marked for removal.
+    """
+
+    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+        if puzzle_hash == IDENTITY_PUZZLE_HASH:
+            return None
+        assert False  # pragma: no cover
+
+    singleton_latest_unspent = TEST_COIN3
+    singleton_latest_unspent_id = TEST_COIN_ID3
+    another_coin = TEST_COIN2
+    # Create a test item with an older version of the singleton
+    test_item = mk_item([singleton_latest_unspent, another_coin])
+    test_item.bundle_coin_spends[singleton_latest_unspent_id] = dataclasses.replace(
+        test_item.bundle_coin_spends[singleton_latest_unspent_id], ff_latest_version=singleton_latest_unspent_id
+    )
+    # Calling `revisit_item_with_related_ff_spends` with the singleton's
+    # latest version as a spent coin should mark our test item for removal.
+    item_spends_to_update = await update_item_on_spent_singleton(
+        mempool_item=test_item,
+        spent_coin_id=singleton_latest_unspent_id,
+        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+        height=uint32(5),
+        constants=DEFAULT_CONSTANTS,
+    )
+    # We mark this item for removal without updating it
+    assert item_spends_to_update is None
+    assert test_item.bundle_coin_spends[singleton_latest_unspent_id].ff_latest_version == singleton_latest_unspent_id
+
+
+@pytest.mark.anyio
+async def test_revisit_item_with_related_ff_spends_singleton_stays() -> None:
+    """
+    This test covers calling `revisit_item_with_related_ff_spends` with a
+    singleton that got spent into a new version, to make sure that mempool
+    items that spend any of this singleton's previous versions get updated
+    with this latest unspent version.
+    """
+    singleton_child_coin = Coin(TEST_FF_SINGLETON_NAME, TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
+    singleton_child_coin_id = singleton_child_coin.name()
+    latest_unspent_coin = Coin(singleton_child_coin_id, TEST_FF_SINGLETON_PH, TEST_FF_SINGLETON_AMOUNT)
+    latest_unspent_id = latest_unspent_coin.name()
+    unspent_lineage_info_after_current_one = UnspentLineageInfo(
+        coin_id=latest_unspent_id,
+        coin_amount=TEST_FF_SINGLETON_AMOUNT,
+        parent_id=singleton_child_coin_id,
+        parent_amount=TEST_FF_SINGLETON_AMOUNT,
+        parent_parent_id=TEST_FF_SINGLETON_NAME,
+    )
+
+    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> UnspentLineageInfo | None:
+        # This is latest version after the current latest unspent gets spent
+        if puzzle_hash == TEST_FF_SINGLETON_PH:
+            return unspent_lineage_info_after_current_one
+        assert False  # pragma: no cover
+
+    # Create a test item with an older version of the singleton
+    other_coin = TEST_COIN2
+    other_coin_id = TEST_COIN_ID2
+    conds = make_test_conds(cost=123456789, spend_ids=[TEST_FF_SINGLETON_NAME, other_coin_id])
+    other_coin_spend = make_spend(other_coin, IDENTITY_PUZZLE, SerializedProgram.to([]))
+    sb = SpendBundle([TEST_FF_SINGLETON_SPEND, other_coin_spend], G2Element())
+    bundle_coin_spends = {
+        TEST_FF_SINGLETON_NAME: BundleCoinSpend(
+            coin_spend=TEST_FF_SINGLETON_SPEND,
+            eligible_for_dedup=False,
+            ff_latest_version=TEST_FF_SINGLETON_NAME,
+            additions=[singleton_child_coin],
+        ),
+        other_coin_id: BundleCoinSpend(
+            coin_spend=other_coin_spend, eligible_for_dedup=False, ff_latest_version=None, additions=[]
+        ),
+    }
+    test_item = MempoolItem(sb, uint64(0), conds, sb.name(), uint32(0), bundle_coin_spends=bundle_coin_spends)
+    # Calling `revisit_item_with_related_ff_spends` with the singleton's
+    # latest version as a spent coin should give us an updated internal item.
+    item_spends_to_update = await update_item_on_spent_singleton(
+        mempool_item=test_item,
+        spent_coin_id=TEST_FF_SINGLETON_NAME,
+        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+        height=uint32(5),
+        constants=DEFAULT_CONSTANTS,
+    )
+    # We updated the singleton spend with the latest unspent version
+    assert item_spends_to_update == [(latest_unspent_id, TEST_FF_SINGLETON_NAME, test_item.name)]
+    assert test_item.bundle_coin_spends[TEST_FF_SINGLETON_NAME].ff_latest_version == latest_unspent_id

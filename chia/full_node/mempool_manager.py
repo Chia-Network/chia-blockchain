@@ -32,7 +32,11 @@ from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
-from chia.types.eligible_coin_spends import EligibilityAndAdditions, UnspentLineageInfo
+from chia.types.eligible_coin_spends import (
+    EligibilityAndAdditions,
+    UnspentLineageInfo,
+    update_item_on_spent_singleton,
+)
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -490,12 +494,15 @@ class MempoolManager:
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
             mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
+            unspent_lineage_info = None
             if mark_as_fast_forward:
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been melted, the
                 # fast forward spend will never become valid.
                 assert eligibility_info.ff_puzzle_hash is not None
-                if await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash) is None:
+                unspent_lineage_info = await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash)
+                if unspent_lineage_info is None:
+                    # This singleton has been melted
                     return Err.DOUBLE_SPEND, None, []
                 fast_forward_coin_ids.add(coin_id)
             # We are now able to check eligibility of both dedup and fast forward
@@ -504,7 +511,9 @@ class MempoolManager:
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
-                eligible_for_fast_forward=mark_as_fast_forward,
+                ff_latest_version=unspent_lineage_info.coin_id
+                if mark_as_fast_forward and unspent_lineage_info is not None
+                else None,
                 additions=eligibility_info.spend_additions,
             )
 
@@ -515,7 +524,7 @@ class MempoolManager:
         # fast forward spends are only allowed when bundled with other, non-FF, spends
         # in order to evict an FF spend, it must be associated with a normal
         # spend that can be included in a block or invalidated some other way
-        if all([s.eligible_for_fast_forward for s in bundle_coin_spends.values()]):
+        if all([s.ff_latest_version is not None for s in bundle_coin_spends.values()]):
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
@@ -733,15 +742,44 @@ class MempoolManager:
             # find the same transaction multiple times. We put them in a set
             # to deduplicate
             spendbundle_ids_to_remove: set[bytes32] = set()
+            item_ids_to_evict = set()
+            spends_to_update: list[tuple[bytes32, bytes32, bytes32]] = []
             for spend in spent_coins:
                 items = self.mempool.get_items_by_coin_id(spend)
                 for item in items:
-                    included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
-                    self.remove_seen(item.name)
-                    spendbundle_ids_to_remove.add(item.name)
-            mempool_item_removals.append(
-                self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
+                    item_name = item.name
+                    # If we marked this item for removal already, because of
+                    # another spend, there is nothing more to do.
+                    if item_name in spendbundle_ids_to_remove or item_name in item_ids_to_evict:
+                        continue
+                    bundle_coin_spend = item.bundle_coin_spends.get(spend)
+                    if bundle_coin_spend is not None and bundle_coin_spend.ff_latest_version is None:
+                        # This item needs to be removed for block inclusion
+                        included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
+                        self.remove_seen(item_name)
+                        spendbundle_ids_to_remove.add(item_name)
+                        continue
+                    # This item needs to be revisited for ff related spends
+                    item_spends_to_update = await update_item_on_spent_singleton(
+                        mempool_item=item,
+                        spent_coin_id=spend,
+                        get_unspent_lineage_info_for_puzzle_hash=lineage_cache.get_unspent_lineage_info,
+                        height=self.peak.height,
+                        constants=self.constants,
+                    )
+                    if item_spends_to_update is None:
+                        self.remove_seen(item_name)
+                        item_ids_to_evict.add(item_name)
+                        continue
+                    spends_to_update.extend(item_spends_to_update)
+
+            mempool_item_removals.extend(
+                [
+                    self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION),
+                    self.mempool.remove_from_pool(list(item_ids_to_evict), MempoolRemoveReason.CONFLICT),
+                ]
             )
+            self.mempool.update_spend_index(spends_to_update)
         else:
             log.warning(
                 "updating the mempool using the slow-path. "

@@ -435,6 +435,7 @@ class Mempool:
             to_remove = [bytes32(row[0]) for row in cursor]
             removals.append(self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL))
 
+        item_name = item.name
         with self._db_conn as conn:
             # TODO: In the future, for the "fee_per_cost" field, opt for
             # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
@@ -443,7 +444,7 @@ class Mempool:
                 "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,fee_per_cost) "
                 "VALUES(?, ?, ?, ?, ?, ?, ?)",
                 (
-                    item.name,
+                    item_name,
                     item.cost,
                     item.fee,
                     item.assert_height,
@@ -452,8 +453,15 @@ class Mempool:
                     item.fee / item.cost,
                 ),
             )
-            all_coin_spends = [(s.coin_id, item.name) for s in item.conds.spends]
-            conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
+            all_coin_spends = []
+            for coin_id, bundle_coin_spend in item.bundle_coin_spends.items():
+                # Any FF spend should be indexed by its latest singleton coin
+                # ID, this way we'll find it when the singleton is spent.
+                if bundle_coin_spend.ff_latest_version is not None:
+                    all_coin_spends.append((bundle_coin_spend.ff_latest_version, item_name))
+                else:
+                    all_coin_spends.append((coin_id, item_name))
+            conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
 
         self._items[item.name] = InternalMempoolItem(
             item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
@@ -561,7 +569,7 @@ class Mempool:
                     unique_coin_spends = []
                     unique_additions = []
                     for spend_data in item.bundle_coin_spends.values():
-                        if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
+                        if spend_data.eligible_for_dedup or spend_data.ff_latest_version is not None:
                             raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
                         unique_coin_spends.append(spend_data.coin_spend)
                         unique_additions.extend(spend_data.additions)
@@ -628,3 +636,8 @@ class Mempool:
             f"create_bundle_from_mempool_items took {duration:0.4f} seconds",
         )
         return agg, additions
+
+    def update_spend_index(self, spends_to_update: list[tuple[bytes32, bytes32, bytes32]]) -> None:
+        self._db_conn.executemany(
+            "UPDATE OR REPLACE spends SET coin_id = ? WHERE coin_id = ? AND tx = ?", spends_to_update
+        )
