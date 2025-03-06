@@ -519,8 +519,7 @@ class TestSimulation:
     @pytest.mark.anyio
     async def test_introducer_fallback_to_dns(self, simulation):
         full_system: FullSystem
-        bt: BlockTools
-        full_system, bt = simulation
+        full_system, _ = simulation
         introducer = full_system.introducer
         introducer.introducer.dns_servers = ["127.0.0.1"]
         introducer.introducer.resolver = FakeDNSResolver()
