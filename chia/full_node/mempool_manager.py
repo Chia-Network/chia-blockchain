@@ -738,11 +738,10 @@ class MempoolManager:
             # to deduplicate
             spendbundle_ids_to_remove: set[bytes32] = set()
 
-            # fast forward spends are indexed under the latest singleton coin ID
-            # if it's spent, we need to update the index in the mempool. This
-            # list lets us perform a bulk update
-            # new_coin_id, current_coin_id, mempool item name
-            spends_to_update: list[tuple[bytes32, bytes32, bytes32]] = []
+            # rebasing a fast forward spend is more expensive than to just
+            # evict the item. So, any FF spend we may need to rebase, defer
+            # them until after we've gone through all spends
+            deferred_ff_items: set[tuple[bytes32, bytes32]] = set()
 
             for spend in spent_coins:
                 items = self.mempool.get_items_by_coin_id(spend)
@@ -765,40 +764,50 @@ class MempoolManager:
                         spendbundle_ids_to_remove.add(item_name)
                         continue
 
-                    # there may be multiple matching spends in the mempool
-                    # item, for the same singleton
-                    found_matches = 0
-                    for bcs in item.bundle_coin_spends.values():
-                        if bcs.latest_singleton_coin != spend:
-                            continue
-                        found_matches += 1
+                    deferred_ff_items.add((spend, item_name))
 
-                        # TODO: in the future, we could pass this new coin ID
-                        # into new_peak() and avoid this DB lookup
-                        lineage_info = await lineage_cache.get_unspent_lineage_info(bcs.coin_spend.coin.puzzle_hash)
-                        if lineage_info is None:
-                            # this singleton no longer has an unspent coin with
-                            # this puzzle-hash. FF is not longer available and we
-                            # just need to evict this mempool item
-                            self.remove_seen(item_name)
-                            spendbundle_ids_to_remove.add(item_name)
-                            break
+            # fast forward spends are indexed under the latest singleton coin ID
+            # if it's spent, we need to update the index in the mempool. This
+            # list lets us perform a bulk update
+            # new_coin_id, current_coin_id, mempool item name
+            spends_to_update: list[tuple[bytes32, bytes32, bytes32]] = []
 
-                        spends_to_update.append((lineage_info.coin_id, spend, item_name))
-                        bcs.latest_singleton_coin = lineage_info.coin_id
-
-                    if found_matches == 0:  # pragma: no cover
-                        # We are not expected to get here. this is all
-                        # defensive to get rid of the spend bundle or patch
-                        # it up
-                        log.warning(
-                            f"MempoolItem indexed as spending coin: {spend}, "
-                            f"but spend is not found in item: {item_name}. Evicting mempool item"
-                        )
-                        # we don't expect this to happen, so evict the
-                        # item as a precaution
-                        spendbundle_ids_to_remove.add(item_name)
+            for spend, item_name in deferred_ff_items:
+                if item_name in spendbundle_ids_to_remove:
+                    continue
+                # there may be multiple matching spends in the mempool
+                # item, for the same singleton
+                found_matches = 0
+                for bcs in item.bundle_coin_spends.values():
+                    if bcs.latest_singleton_coin != spend:
                         continue
+                    found_matches += 1
+
+                    # TODO: in the future, we could pass this new coin ID
+                    # into new_peak() and avoid this DB lookup
+                    lineage_info = await lineage_cache.get_unspent_lineage_info(bcs.coin_spend.coin.puzzle_hash)
+                    if lineage_info is None:
+                        # this singleton no longer has an unspent coin with
+                        # this puzzle-hash. FF is not longer available and we
+                        # just need to evict this mempool item
+                        self.remove_seen(item_name)
+                        spendbundle_ids_to_remove.add(item_name)
+                        break
+
+                    spends_to_update.append((lineage_info.coin_id, spend, item_name))
+                    bcs.latest_singleton_coin = lineage_info.coin_id
+
+                if found_matches == 0:  # pragma: no cover
+                    # We are not expected to get here. this is all
+                    # defensive to get rid of the spend bundle or patch
+                    # it up
+                    log.warning(
+                        f"MempoolItem indexed as spending coin: {spend}, "
+                        f"but spend is not found in item: {item_name}. Evicting mempool item"
+                    )
+                    # we don't expect this to happen, so evict the
+                    # item as a precaution
+                    spendbundle_ids_to_remove.add(item_name)
 
             if len(spends_to_update) > 0:
                 self.mempool.update_spend_index(spends_to_update)
