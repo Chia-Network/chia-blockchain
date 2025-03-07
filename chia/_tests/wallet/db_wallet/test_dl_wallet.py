@@ -101,8 +101,8 @@ class TestDLWallet:
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
 
-        new_puz = await dl_wallet.get_new_puzzle()
-        assert new_puz
+        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await action_scope.get_puzzle(dl_wallet.wallet_state_manager)
 
     @pytest.mark.parametrize(
         "wallet_environments",

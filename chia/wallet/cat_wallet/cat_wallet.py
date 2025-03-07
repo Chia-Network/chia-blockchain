@@ -583,7 +583,7 @@ class CATWallet:
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
                     [uint64(selected_amount + amount_to_claim - fee)],
-                    [(await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash))],
+                    [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
                     coins=chia_coins,
                     negative_change_allowed=True,
@@ -657,10 +657,12 @@ class CATWallet:
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
                         # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+                        change_puzhash = await action_scope.get_puzzle_hash(
+                            self.wallet_state_manager, override_reuse_puzhash_with=False
+                        )
                         break
             else:
-                change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+                change_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
             primaries.append(CreateCoin(change_puzhash, uint64(change), [change_puzhash]))
 
         # Loop through the coins we've selected and gather the information we need to spend them
