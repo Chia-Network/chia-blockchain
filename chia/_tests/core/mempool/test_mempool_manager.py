@@ -2264,11 +2264,50 @@ def make_singleton_spend(launcher_id: bytes32, parent_parent_id: bytes32 = bytes
     return ret
 
 
+async def setup_mempool(coins: TestCoins) -> MempoolManager:
+    mempool_manager = MempoolManager(
+        coins.get_coin_records,
+        coins.get_unspent_lineage_info,
+        DEFAULT_CONSTANTS,
+    )
+    test_block_record = create_test_block_record(height=uint32(10), timestamp=uint64(12345678))
+    await mempool_manager.new_peak(test_block_record, None)
+    return mempool_manager
+
+
+# adds a new peak to the memepool manager with the specified coin IDs spent
+async def advance_mempool(
+    mempool: MempoolManager, spent_coins: list[bytes32], *, use_optimization: bool = True
+) -> None:
+    br = mempool.peak
+    assert br is not None
+
+    if use_optimization:
+        next_height = uint32(br.height + 1)
+    else:
+        next_height = uint32(br.height + 2)
+
+    assert br.timestamp is not None
+    prev_block_hash = br.header_hash
+    br = create_test_block_record(height=next_height, timestamp=uint64(br.timestamp + 10))
+
+    if use_optimization:
+        assert prev_block_hash == br.prev_transaction_block_hash
+    else:
+        assert prev_block_hash != br.prev_transaction_block_hash
+
+    await mempool.new_peak(br, spent_coins)
+    invariant_check_mempool(mempool.mempool)
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("spend_singleton", [True, False])
 @pytest.mark.parametrize("spend_plain", [True, False])
 @pytest.mark.parametrize("use_optimization", [True, False])
-async def test_new_peak_ff_eviction(spend_singleton: bool, spend_plain: bool, use_optimization: bool) -> None:
+@pytest.mark.parametrize("reverse_spend_order", [True, False])
+async def test_new_peak_ff_eviction(
+    spend_singleton: bool, spend_plain: bool, use_optimization: bool, reverse_spend_order: bool
+) -> None:
     LAUNCHER_ID = bytes32([1] * 32)
     singleton_spend = make_singleton_spend(LAUNCHER_ID)
 
@@ -2281,13 +2320,7 @@ async def test_new_peak_ff_eviction(spend_singleton: bool, spend_plain: bool, us
 
     coins = TestCoins([singleton_spend.coin, TEST_COIN], {singleton_spend.coin.puzzle_hash: singleton_spend.coin})
 
-    mempool_manager = MempoolManager(
-        coins.get_coin_records,
-        coins.get_unspent_lineage_info,
-        DEFAULT_CONSTANTS,
-    )
-    test_block_record = create_test_block_record(height=uint32(10), timestamp=uint64(12345678))
-    await mempool_manager.new_peak(test_block_record, None)
+    mempool_manager = await setup_mempool(coins)
 
     bundle_add_info = await mempool_manager.add_spend_bundle(
         bundle,
@@ -2304,31 +2337,24 @@ async def test_new_peak_ff_eviction(spend_singleton: bool, spend_plain: bool, us
 
     spent_coins: list[bytes32] = []
 
-    if use_optimization:
-        next_height = uint32(11)
-    else:
-        next_height = uint32(12)
-
     if spend_singleton:
         # pretend that we melted the singleton, the FF spend
         coins.update_lineage(singleton_spend.coin.puzzle_hash, None)
-        coins.spend_coin(singleton_spend.coin.name(), next_height)
+        coins.spend_coin(singleton_spend.coin.name(), uint32(11))
         spent_coins.append(singleton_spend.coin.name())
 
     if spend_plain:
         # pretend that we spend singleton, the FF spend
-        coins.spend_coin(coin_spend.coin.name(), next_height)
+        coins.spend_coin(coin_spend.coin.name(), uint32(11))
         spent_coins.append(coin_spend.coin.name())
 
     assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
+    invariant_check_mempool(mempool_manager.mempool)
 
-    prev_block_hash = test_block_record.header_hash
-    test_block_record = create_test_block_record(height=next_height, timestamp=uint64(12345678))
-    if use_optimization:
-        assert prev_block_hash == test_block_record.prev_transaction_block_hash
-    else:
-        assert prev_block_hash != test_block_record.prev_transaction_block_hash
-    await mempool_manager.new_peak(test_block_record, spent_coins)
+    if reverse_spend_order:
+        spent_coins.reverse()
+
+    await advance_mempool(mempool_manager, spent_coins, use_optimization=use_optimization)
 
     # make sure the mempool item is evicted
     if spend_singleton or spend_plain:
@@ -2371,13 +2397,7 @@ async def test_multiple_ff(use_optimization: bool) -> None:
     singleton_ph = singleton_spend2.coin.puzzle_hash
     coins = TestCoins([singleton_spend1.coin, singleton_spend2.coin, TEST_COIN], {singleton_ph: singleton_spend2.coin})
 
-    mempool_manager = MempoolManager(
-        coins.get_coin_records,
-        coins.get_unspent_lineage_info,
-        DEFAULT_CONSTANTS,
-    )
-    test_block_record = create_test_block_record(height=uint32(10), timestamp=uint64(12345678))
-    await mempool_manager.new_peak(test_block_record, None)
+    mempool_manager = await setup_mempool(coins)
 
     bundle_add_info = await mempool_manager.add_spend_bundle(
         bundle,
@@ -2393,11 +2413,7 @@ async def test_multiple_ff(use_optimization: bool) -> None:
         first_added_height=uint32(1),
     )
     assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
-
-    if use_optimization:
-        next_height = uint32(11)
-    else:
-        next_height = uint32(12)
+    invariant_check_mempool(mempool_manager.mempool)
 
     item = mempool_manager.get_mempool_item(bundle.name())
     assert item is not None
@@ -2407,16 +2423,9 @@ async def test_multiple_ff(use_optimization: bool) -> None:
 
     # spend the singleton coin2 and make coin3 the latest version
     coins.update_lineage(singleton_ph, singleton_spend3.coin)
-    coins.spend_coin(singleton_spend2.coin.name(), next_height)
+    coins.spend_coin(singleton_spend2.coin.name(), uint32(11))
 
-    prev_block_hash = test_block_record.header_hash
-    test_block_record = create_test_block_record(height=next_height, timestamp=uint64(12345688))
-    if use_optimization:
-        assert prev_block_hash == test_block_record.prev_transaction_block_hash
-    else:
-        assert prev_block_hash != test_block_record.prev_transaction_block_hash
-
-    await mempool_manager.new_peak(test_block_record, [singleton_spend2.coin.name()])
+    await advance_mempool(mempool_manager, [singleton_spend2.coin.name()], use_optimization=use_optimization)
 
     # we can still fast-forward the singleton spends, the bundle should still be valid
     item = mempool_manager.get_mempool_item(bundle.name())
@@ -2456,13 +2465,7 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     singleton_ph = spend_a.coin.puzzle_hash
     coins = TestCoins([spend_a.coin, spend_b.coin, spend_c.coin, TEST_COIN], {singleton_ph: spend_a.coin})
 
-    mempool_manager = MempoolManager(
-        coins.get_coin_records,
-        coins.get_unspent_lineage_info,
-        DEFAULT_CONSTANTS,
-    )
-    test_block_record = create_test_block_record(height=uint32(10), timestamp=uint64(12345678))
-    await mempool_manager.new_peak(test_block_record, None)
+    mempool_manager = await setup_mempool(coins)
 
     bundle_add_info = await mempool_manager.add_spend_bundle(
         bundle,
@@ -2471,11 +2474,7 @@ async def test_advancing_ff(use_optimization: bool) -> None:
         first_added_height=uint32(1),
     )
     assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
-
-    # now that the spend has been added, advance it twice via new_peak
-
-    # the first time
-    next_height = uint32(11)
+    invariant_check_mempool(mempool_manager.mempool)
 
     item = mempool_manager.get_mempool_item(bundle.name())
     assert item is not None
@@ -2484,12 +2483,9 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert spend.latest_singleton_coin == spend_a.coin.name()
 
     coins.update_lineage(singleton_ph, spend_b.coin)
-    coins.spend_coin(spend_a.coin.name(), next_height)
+    coins.spend_coin(spend_a.coin.name(), uint32(11))
 
-    prev_block_hash = test_block_record.header_hash
-    test_block_record = create_test_block_record(height=next_height, timestamp=uint64(12345688))
-    assert prev_block_hash == test_block_record.prev_transaction_block_hash
-    await mempool_manager.new_peak(test_block_record, [spend_a.coin.name()])
+    await advance_mempool(mempool_manager, [spend_a.coin.name()])
 
     item = mempool_manager.get_mempool_item(bundle.name())
     assert item is not None
@@ -2497,22 +2493,10 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert spend.eligible_for_fast_forward
     assert spend.latest_singleton_coin == spend_b.coin.name()
 
-    # the second time
-    if use_optimization:
-        next_height = uint32(12)
-    else:
-        next_height = uint32(14)
-
     coins.update_lineage(singleton_ph, spend_c.coin)
-    coins.spend_coin(spend_b.coin.name(), next_height)
+    coins.spend_coin(spend_b.coin.name(), uint32(12))
 
-    prev_block_hash = test_block_record.header_hash
-    test_block_record = create_test_block_record(height=next_height, timestamp=uint64(12345698))
-    if use_optimization:
-        assert prev_block_hash == test_block_record.prev_transaction_block_hash
-    else:
-        assert prev_block_hash != test_block_record.prev_transaction_block_hash
-    await mempool_manager.new_peak(test_block_record, [spend_b.coin.name()])
+    await advance_mempool(mempool_manager, [spend_b.coin.name()], use_optimization=use_optimization)
 
     item = mempool_manager.get_mempool_item(bundle.name())
     assert item is not None
