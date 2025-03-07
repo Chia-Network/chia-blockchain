@@ -490,13 +490,16 @@ class MempoolManager:
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
             mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
+            latest_singleton_coin = None
             if mark_as_fast_forward:
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been melted, the
                 # fast forward spend will never become valid.
                 assert eligibility_info.ff_puzzle_hash is not None
-                if await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash) is None:
+                lineage_info = await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash)
+                if lineage_info is None:
                     return Err.DOUBLE_SPEND, None, []
+                latest_singleton_coin = lineage_info.coin_id
                 fast_forward_coin_ids.add(coin_id)
             # We are now able to check eligibility of both dedup and fast forward
             if not (eligibility_info.is_eligible_for_dedup or mark_as_fast_forward):
@@ -506,6 +509,7 @@ class MempoolManager:
                 eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
                 eligible_for_fast_forward=mark_as_fast_forward,
                 additions=eligibility_info.spend_additions,
+                latest_singleton_coin=latest_singleton_coin,
             )
 
         if removal_names != removal_names_from_coin_spends:
@@ -733,12 +737,81 @@ class MempoolManager:
             # find the same transaction multiple times. We put them in a set
             # to deduplicate
             spendbundle_ids_to_remove: set[bytes32] = set()
+
+            # rebasing a fast forward spend is more expensive than to just
+            # evict the item. So, any FF spend we may need to rebase, defer
+            # them until after we've gone through all spends
+            deferred_ff_items: set[tuple[bytes32, bytes32]] = set()
+
             for spend in spent_coins:
                 items = self.mempool.get_items_by_coin_id(spend)
                 for item in items:
-                    included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
-                    self.remove_seen(item.name)
-                    spendbundle_ids_to_remove.add(item.name)
+                    # this is a property, compute it once
+                    item_name = item.name
+
+                    # if we've already decided to remove this mempool item
+                    # because of some other coin, we don't need to do any more
+                    # work
+                    if item_name in spendbundle_ids_to_remove:
+                        continue
+
+                    bcs = item.bundle_coin_spends.get(spend)
+                    if bcs is not None and bcs.latest_singleton_coin is None:
+                        # this is a regular coin spend that's now made it into
+                        # a block and we just evict its mempool item
+                        included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
+                        self.remove_seen(item_name)
+                        spendbundle_ids_to_remove.add(item_name)
+                        continue
+
+                    deferred_ff_items.add((spend, item_name))
+
+            # fast forward spends are indexed under the latest singleton coin ID
+            # if it's spent, we need to update the index in the mempool. This
+            # list lets us perform a bulk update
+            # new_coin_id, current_coin_id, mempool item name
+            spends_to_update: list[tuple[bytes32, bytes32, bytes32]] = []
+
+            for spend, item_name in deferred_ff_items:
+                if item_name in spendbundle_ids_to_remove:
+                    continue
+                # there may be multiple matching spends in the mempool
+                # item, for the same singleton
+                found_matches = 0
+                for bcs in item.bundle_coin_spends.values():
+                    if bcs.latest_singleton_coin != spend:
+                        continue
+                    found_matches += 1
+
+                    # TODO: in the future, we could pass this new coin ID
+                    # into new_peak() and avoid this DB lookup
+                    lineage_info = await lineage_cache.get_unspent_lineage_info(bcs.coin_spend.coin.puzzle_hash)
+                    if lineage_info is None:
+                        # this singleton no longer has an unspent coin with
+                        # this puzzle-hash. FF is not longer available and we
+                        # just need to evict this mempool item
+                        self.remove_seen(item_name)
+                        spendbundle_ids_to_remove.add(item_name)
+                        break
+
+                    spends_to_update.append((lineage_info.coin_id, spend, item_name))
+                    bcs.latest_singleton_coin = lineage_info.coin_id
+
+                if found_matches == 0:  # pragma: no cover
+                    # We are not expected to get here. this is all
+                    # defensive to get rid of the spend bundle or patch
+                    # it up
+                    log.warning(
+                        f"MempoolItem indexed as spending coin: {spend}, "
+                        f"but spend is not found in item: {item_name}. Evicting mempool item"
+                    )
+                    # we don't expect this to happen, so evict the
+                    # item as a precaution
+                    spendbundle_ids_to_remove.add(item_name)
+
+            if len(spends_to_update) > 0:
+                self.mempool.update_spend_index(spends_to_update)
+
             mempool_item_removals.append(
                 self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
             )

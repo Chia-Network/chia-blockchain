@@ -452,10 +452,20 @@ class Mempool:
                     item.fee / item.cost,
                 ),
             )
-            all_coin_spends = [(s.coin_id, item.name) for s in item.conds.spends]
-            conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
+            all_coin_spends = []
+            # item.name is a property
+            # only compute its name once (the spend bundle name)
+            item_name = item.name
+            for coin_id, bcs in item.bundle_coin_spends.items():
+                # any FF spend should be indexed by its latest singleton coin
+                # ID, this way we'll find it when the singleton is spent
+                if bcs.latest_singleton_coin is not None:
+                    all_coin_spends.append((bcs.latest_singleton_coin, item_name))
+                else:
+                    all_coin_spends.append((coin_id, item_name))
+            conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
 
-        self._items[item.name] = InternalMempoolItem(
+        self._items[item_name] = InternalMempoolItem(
             item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
         )
         self._total_cost += item.cost
@@ -464,6 +474,11 @@ class Mempool:
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
         self.fee_estimator.add_mempool_item(info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
         return MempoolAddInfo(removals, None)
+
+    # each tuple holds new_coin_id, current_coin_id, mempool item name
+    def update_spend_index(self, spends_to_update: list[tuple[bytes32, bytes32, bytes32]]) -> None:
+        with self._db_conn as conn:
+            conn.executemany("UPDATE OR REPLACE spends SET coin_id=? WHERE coin_id=? AND tx=?", spends_to_update)
 
     def at_full_capacity(self, cost: int) -> bool:
         """
