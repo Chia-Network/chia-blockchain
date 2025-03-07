@@ -454,7 +454,7 @@ class Mempool:
             )
             all_coin_spends = []
             # item.name is a property
-            # only compute it name once (the spend bundle name)
+            # only compute its name once (the spend bundle name)
             item_name = item.name
             for coin_id, bcs in item.bundle_coin_spends.items():
                 # any FF spend should be indexed by its latest singleton coin
