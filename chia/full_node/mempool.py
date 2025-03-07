@@ -19,7 +19,7 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
-from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo
+from chia.types.eligible_coin_spends import EligibleCoinSpends, SkipDedup, UnspentLineageInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
@@ -558,11 +558,18 @@ class Mempool:
                     # we want to keep looking for smaller transactions that
                     # might fit, but we also want to avoid spending too much
                     # time on potentially expensive ones, hence this shortcut.
+                    if any(
+                        map(
+                            lambda spend_data: (spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward),
+                            item.bundle_coin_spends.values(),
+                        )
+                    ):
+                        log.info("Skipping transaction with dedup or FF spends {item.name}")
+                        continue
+
                     unique_coin_spends = []
                     unique_additions = []
                     for spend_data in item.bundle_coin_spends.values():
-                        if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
-                            raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
                         unique_coin_spends.append(spend_data.coin_spend)
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
@@ -610,8 +617,12 @@ class Mempool:
                 # find transactions small enough to fit at this point
                 if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
                     break
+            except SkipDedup as e:
+                log.info(f"{e}")
+                continue
             except Exception as e:
                 log.info(f"Exception while checking a mempool item for deduplication: {e}")
+                skipped_items += 1
                 continue
         if processed_spend_bundles == 0:
             return None

@@ -7,6 +7,7 @@ from typing import Callable, Optional
 
 import pytest
 from chia_rs import (
+    ELIGIBLE_FOR_FF,
     ENABLE_KECCAK,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
@@ -2929,6 +2930,39 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
         assert mi.spend_bundle.coin_spends[0].coin == expected_coin
         assert last_fpc is None or last_fpc >= mi.fee_per_cost
         last_fpc = mi.fee_per_cost
+
+
+# make sure that after failing to pick 3 fast-forward spends, we skip
+# FF spends
+@pytest.mark.anyio
+async def test_skip_error_items() -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # all 50 items support fast forward
+    for i in range(50):
+        item = mk_item(coins[i : i + 1], flags=[ELIGIBLE_FOR_FF], fee=0, cost=50)
+        add_info = mempool.add_to_pool(item)
+        assert add_info.error is None
+
+    called = 0
+
+    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:
+        nonlocal called
+        called += 1
+        raise RuntimeError("failed to find fast forward coin")
+
+    result = await mempool.create_block_generator(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
+    assert result is not None
+    generator, _, _ = result
+
+    assert called == 3
+    assert generator.program == SerializedProgram.from_bytes(bytes.fromhex("ff01ff8080"))
 
 
 def rand_hash() -> bytes32:
