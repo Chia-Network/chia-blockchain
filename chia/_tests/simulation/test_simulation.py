@@ -5,6 +5,10 @@ import json
 from collections.abc import AsyncIterator
 
 import aiohttp
+import dns.rdataclass
+import dns.rdatatype
+import dns.rdtypes.IN.A
+import dns.rdtypes.IN.AAAA
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
@@ -62,6 +66,17 @@ async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimul
             db_version=2,
         ) as service:
             yield service._api
+
+
+class FakeDNSResolver:
+    async def resolve(self, qname, rdtype, lifetime):
+        if rdtype == "A":
+            record = dns.rdtypes.IN.A.A(dns.rdataclass.IN, dns.rdatatype.A, "1.2.3.4")
+            return [record]
+        elif rdtype == "AAAA":
+            record = dns.rdtypes.IN.AAAA.AAAA(dns.rdataclass.IN, dns.rdatatype.AAAA, "::1")
+            return [record]
+        return []
 
 
 class TestSimulation:
@@ -499,3 +514,16 @@ class TestSimulation:
 
         with pytest.raises(Exception, match="Coins must have a positive value"):
             await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
+
+    @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
+    @pytest.mark.anyio
+    async def test_introducer_fallback_to_dns(self, simulation):
+        full_system: FullSystem
+        full_system, _ = simulation
+        introducer = full_system.introducer
+        introducer.introducer.dns_servers = ["127.0.0.1"]
+        introducer.introducer.resolver = FakeDNSResolver()
+        peers = await introducer.introducer.get_peers_from_dns(num_peers=10)
+        assert len(peers) == 2
+        assert any(peer.host == "1.2.3.4" for peer in peers)
+        assert any(peer.host == "::1" for peer in peers)

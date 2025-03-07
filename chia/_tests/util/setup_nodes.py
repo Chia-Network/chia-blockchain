@@ -390,6 +390,7 @@ async def setup_full_system_inner(
         introducer_service = await async_exit_stack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
         introducer = introducer_service._api
         introducer_server = introducer_service._node.server
+        introducer.introducer.dns_servers = []
 
         # Then start the full node so we can use the port for the farmer and timelord
         node_1 = await async_exit_stack.enter_async_context(
