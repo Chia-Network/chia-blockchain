@@ -863,9 +863,17 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        block = await self.full_node.mempool_manager.create_block_generator(curr_l_tb.header_hash)
+                        # TODO: once we're confident in the new block creation,
+                        # switch to it by default
+                        if self.full_node.config.get("original_block_creation", True):
+                            create_block = self.full_node.mempool_manager.create_block_generator
+                        else:
+                            create_block = self.full_node.mempool_manager.create_block_generator2
+
+                        block = await create_block(curr_l_tb.header_hash)
                         if block is not None:
                             block_generator, aggregate_signature, additions = block
+
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
