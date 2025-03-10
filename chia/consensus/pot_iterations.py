@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from chia_rs import expected_plot_size as _expected_plot_size
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint64, uint128
+from chia_rs.sized_ints import uint64, uint128
 
 
 def calculate_iterations_quality(
