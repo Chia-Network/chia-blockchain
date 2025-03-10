@@ -6,8 +6,7 @@ from collections.abc import AsyncIterator
 from typing import Optional
 
 import pytest
-from chia_rs import ConsensusConstants
-from chia_rs import is_overflow_block
+from chia_rs import ConsensusConstants, is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 

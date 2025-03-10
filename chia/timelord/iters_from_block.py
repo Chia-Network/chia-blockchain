@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from chia_rs import ConsensusConstants, RewardChainBlock, RewardChainBlockUnfinished
 from chia_rs import (
+    ConsensusConstants,
+    RewardChainBlock,
+    RewardChainBlockUnfinished,
     calculate_ip_iters,
     calculate_sp_iters,
 )

@@ -4,8 +4,8 @@ import logging
 import random
 
 import pytest
-from chia_rs.sized_ints import uint64
 from chia_rs import is_overflow_block
+from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.connection_utils import add_dummy_connection
