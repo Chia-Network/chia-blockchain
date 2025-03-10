@@ -55,8 +55,8 @@ async def create_block_async(
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, _):
         start = time.monotonic()
-        bundle = await node_client.create_block_bundle()
+        block = await node_client.create_block_generator()
         end = time.monotonic()
-        assert bundle is not None
-        spends = len(bundle["mempool_bundle"]["coin_spends"])
-        print(f"Successfully created block bundle in {end - start} seconds with {spends} coin spends")
+        assert block is not None
+        gen = block["generator"]
+        print(f"Successfully created block generator in {end - start} seconds of {len(gen)} bytes")
