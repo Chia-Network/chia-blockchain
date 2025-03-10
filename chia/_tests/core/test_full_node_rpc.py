@@ -62,7 +62,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         for block in blocks:
             if is_overflow_block(
                 bt.constants.NUM_SPS_SUB_SLOT,
-                bt.constants.NUM_SP_INTERVAL_EXTRA,
+                bt.constants.NUM_SP_INTERVALS_EXTRA,
                 block.reward_chain_block.signage_point_index,
             ):
                 finished_ss = block.finished_sub_slots[:-1]
