@@ -1115,7 +1115,7 @@ def _validate_sub_slot_data(
             assert sub_slot_data.cc_sp_vdf_info
             input = ClassgroupElement.get_default_element()
             if not sub_slot_data.cc_signage_point.normalized_to_identity:
-                is_overflow = is_overflow_block(constants, sub_slot_data.signage_point_index)
+                is_overflow = is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, sub_slot_data.signage_point_index)
                 input = sub_slot_data_vdf_input(
                     constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, prev_ssd.is_end_of_slot(), ssi
                 )
@@ -1252,7 +1252,7 @@ def validate_recent_blocks(
                 diff = sub_slot.challenge_chain.new_difficulty
 
         if (challenge is not None) and (prev_challenge is not None):
-            overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+            overflow = is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, block.reward_chain_block.signage_point_index)
             if not adjusted:
                 assert prev_block_record is not None
                 prev_block_record = prev_block_record.replace(
@@ -1358,7 +1358,7 @@ def __validate_pospace(
 
     sub_slot_data: SubSlotData = segment.sub_slots[idx]
 
-    if sub_slot_data.signage_point_index and is_overflow_block(constants, sub_slot_data.signage_point_index):
+    if sub_slot_data.signage_point_index and is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, sub_slot_data.signage_point_index):
         curr_slot = segment.sub_slots[idx - 1]
         assert curr_slot.cc_slot_end_info
         challenge = curr_slot.cc_slot_end_info.challenge
@@ -1415,14 +1415,14 @@ def __get_rc_sub_slot(
     slots_n = 1
     assert first
     assert first.signage_point_index is not None
-    if is_overflow_block(constants, first.signage_point_index):
+    if is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, first.signage_point_index):
         if idx >= 2 and slots[idx - 2].cc_slot_end is None:
             slots_n = 2
 
     new_diff = None if ses is None else ses.new_difficulty
     new_ssi = None if ses is None else ses.new_sub_slot_iters
     ses_hash: Optional[bytes32] = None if ses is None else ses.get_hash()
-    overflow = is_overflow_block(constants, first.signage_point_index)
+    overflow = is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, first.signage_point_index)
     if overflow:
         if idx >= 2 and slots[idx - 2].cc_slot_end is not None and slots[idx - 1].cc_slot_end is not None:
             ses_hash = None

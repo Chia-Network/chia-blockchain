@@ -1014,8 +1014,8 @@ async def test_basic_store(
         i1 = blocks[-1].reward_chain_block.signage_point_index
         if (
             len(blocks[-2].finished_sub_slots) == len(blocks[-1].finished_sub_slots) == 0
-            and not is_overflow_block(custom_block_tools.constants, signage_point_index=i2)
-            and not is_overflow_block(custom_block_tools.constants, signage_point_index=i1)
+            and not is_overflow_block(custom_block_tools.constants.NUM_SPS_SUB_SLOT, custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA, signage_point_index=i2)
+            and not is_overflow_block(custom_block_tools.constants.NUM_SPS_SUB_SLOT, custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA, signage_point_index=i1)
             and i2 > i3 + 3
             and i1 > (i2 + 3)
         ):
@@ -1069,7 +1069,7 @@ async def test_basic_store(
                 assert_sp_none(i1 + 4, True)
 
             for i in range(i2, custom_block_tools.constants.NUM_SPS_SUB_SLOT):
-                if is_overflow_block(custom_block_tools.constants, uint8(i)):
+                if is_overflow_block(custom_block_tools.constants.NUM_SPS_SUB_SLOT, custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA, uint8(i)):
                     blocks_alt = custom_block_tools.get_consecutive_blocks(
                         1, block_list_input=blocks[:-1], skip_slots=1
                     )
