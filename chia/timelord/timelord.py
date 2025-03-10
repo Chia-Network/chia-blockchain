@@ -15,13 +15,11 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import ConsensusConstants, RewardChainBlock
+from chia_rs import ConsensusConstants, RewardChainBlock, calculate_sp_iters, is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from chia_rs import calculate_sp_iters, is_overflow_block
 from chiavdf import create_discriminant, prove
 
-from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections

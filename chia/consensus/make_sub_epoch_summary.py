@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Optional, Union
 
-from chia_rs import ConsensusConstants
 from chia_rs import (
+    ConsensusConstants,
     calculate_ip_iters,
     calculate_sp_iters,
     is_overflow_block,

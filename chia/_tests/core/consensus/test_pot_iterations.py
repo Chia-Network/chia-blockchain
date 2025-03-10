@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chia_rs import (
     calculate_ip_iters,
     calculate_sp_iters,
     is_overflow_block,
 )
 from chia_rs import expected_plot_size as _expected_plot_size
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

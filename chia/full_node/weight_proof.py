@@ -10,8 +10,12 @@ from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
 from typing import IO, Optional
 
-from chia_rs import ConsensusConstants, SubEpochChallengeSegment, SubEpochData, SubEpochSegments, SubSlotData
 from chia_rs import (
+    ConsensusConstants,
+    SubEpochChallengeSegment,
+    SubEpochData,
+    SubEpochSegments,
+    SubSlotData,
     calculate_ip_iters,
     calculate_sp_iters,
     is_overflow_block,

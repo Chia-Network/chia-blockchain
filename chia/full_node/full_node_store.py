@@ -6,10 +6,9 @@ import logging
 import time
 from typing import Optional
 
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, calculate_sp_interval_iters
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
-from chia_rs import calculate_sp_interval_iters
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol

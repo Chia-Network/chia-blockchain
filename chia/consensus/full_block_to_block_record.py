@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from chia_rs import is_overflow_block
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
