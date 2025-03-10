@@ -69,11 +69,11 @@ else
 fi
 echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
   --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="11" \
+  --config.mac.minimumSystemVersion="13" \
   --config ../../../build_scripts/electron-builder.json
 "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
   --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="11" \
+  --config.mac.minimumSystemVersion="13" \
   --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar
