@@ -2896,19 +2896,7 @@ async def test_declare_proof_of_space_no_overflow(
 ) -> None:
     full_node_api, _, server_1, _, _, _, _ = wallet_nodes
     blocks: list[FullBlock] = []
-    sub_slot_sps: dict[bytes32, None] = {}
-    for i in range(0, 50):
-        new_block = bt.get_consecutive_blocks(block_list_input=blocks, num_blocks=1, skip_overflow=True)[-1]
-        if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
-            cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            while cc_sp_hash in sub_slot_sps:
-                new_block = bt.get_consecutive_blocks(block_list_input=blocks, num_blocks=1, skip_overflow=True)[-1]
-                assert new_block.reward_chain_block.challenge_chain_sp_vdf is not None
-                cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-                if len(new_block.finished_sub_slots) >= 0:
-                    sub_slot_sps = {}
-                sub_slot_sps[cc_sp_hash] = None
-        blocks.append(new_block)
+    blocks = get_blocks_for_test(50, bt, False)
 
     await add_blocks_in_batches(blocks[:2], full_node_api.full_node)
     _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
@@ -2930,23 +2918,7 @@ async def test_declare_proof_of_space_overflow(
     bt: BlockTools,
 ) -> None:
     full_node_api, _, server_1, _, _, _, _ = wallet_nodes
-    blocks: list[FullBlock] = []
-    sub_slot_sps: dict[bytes32, None] = {}
-    for i in range(0, 50):
-        new_block = bt.get_consecutive_blocks(block_list_input=blocks, num_blocks=1, skip_overflow=True)[-1]
-        if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
-            cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            while cc_sp_hash in sub_slot_sps:
-                overflow = i % 10 == 0
-                new_block = bt.get_consecutive_blocks(block_list_input=blocks, num_blocks=1, force_overflow=overflow)[
-                    -1
-                ]
-                assert new_block.reward_chain_block.challenge_chain_sp_vdf is not None
-                cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-                if len(new_block.finished_sub_slots) >= 0:
-                    sub_slot_sps = {}
-                sub_slot_sps[cc_sp_hash] = None
-        blocks.append(new_block)
+    blocks = get_blocks_for_test(10, bt, True)
 
     await add_blocks_in_batches(blocks[:2], full_node_api.full_node)
     _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
@@ -2957,6 +2929,28 @@ async def test_declare_proof_of_space_overflow(
         assert unfinished_from_full_block(block) == unfinised_block
         await full_node_api.full_node.add_block(block)
         assert full_node_api.full_node.blockchain.get_peak_height() == block.height
+
+
+def get_blocks_for_test(num_of_blocks: int, bt: BlockTools, force_overflow: bool = False) -> list[FullBlock]:
+    blocks: list[FullBlock] = []
+    sub_slot_sps: dict[bytes32, None] = {}
+    for i in range(0, num_of_blocks):
+        new_block = bt.get_consecutive_blocks(block_list_input=blocks, num_blocks=1, skip_overflow=True)[-1]
+        if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
+            cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+            while cc_sp_hash in sub_slot_sps:
+                if force_overflow:
+                    overflow = i % 10 == 0
+                    new_block = bt.get_consecutive_blocks(
+                        block_list_input=blocks, num_blocks=1, force_overflow=overflow
+                    )[-1]
+                assert new_block.reward_chain_block.challenge_chain_sp_vdf is not None
+                cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+                if len(new_block.finished_sub_slots) >= 0:
+                    sub_slot_sps = {}
+                sub_slot_sps[cc_sp_hash] = None
+        blocks.append(new_block)
+    return blocks
 
 
 def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
