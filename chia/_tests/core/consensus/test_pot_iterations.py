@@ -107,6 +107,13 @@ class TestPotIterations:
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
+    def test_expected_plot_size(self):
+        assert _expected_plot_size(32) == uint64(139586437120)
+        assert _expected_plot_size(33) == uint64(287762808832)
+        assert _expected_plot_size(34) == uint64(592705486848)
+        assert _expected_plot_size(35) == uint64(1219770712064)
+        assert _expected_plot_size(36) == uint64(2508260900864)
+
     def test_win_percentage(self):
         """
         Tests that the percentage of blocks won is proportional to the space of each farmer,
