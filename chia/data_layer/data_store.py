@@ -42,7 +42,7 @@ from chia.data_layer.data_layer_util import (
     unspecified,
 )
 from chia.types.blockchain_format.program import Program
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2, Reader, Writer
 
 log = logging.getLogger(__name__)
 
@@ -756,7 +756,7 @@ class DataStore:
 
     async def get_keys_values_cursor(
         self,
-        reader: aiosqlite.Connection,
+        reader: Reader,
         root_hash: Optional[bytes32],
         only_keys: bool = False,
     ) -> aiosqlite.Cursor:
@@ -1404,7 +1404,7 @@ class DataStore:
 
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
-    async def clean_node_table(self, writer: Optional[aiosqlite.Connection] = None) -> None:
+    async def clean_node_table(self, writer: Optional[Writer] = None) -> None:
         query = """
             WITH RECURSIVE pending_nodes AS (
                 SELECT node_hash AS hash FROM root

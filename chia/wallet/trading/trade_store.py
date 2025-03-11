@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, Writer
 from chia.util.errors import Err
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord, TradeRecordOld
@@ -17,7 +17,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 
 
-async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection) -> None:
+async def migrate_coin_of_interest(log: logging.Logger, db: Writer) -> None:
     log.info("Beginning migration of coin_of_interest_to_trade_record lookup table")
 
     start_time = perf_counter()
@@ -45,7 +45,7 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
     )
 
 
-async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Connection) -> None:  # pragma: no cover
+async def migrate_is_my_offer(log: logging.Logger, db_connection: Writer) -> None:  # pragma: no cover
     """
     Migrate the is_my_offer property contained in the serialized TradeRecord (trade_record column)
     to the is_my_offer column in the trade_records table.

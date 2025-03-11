@@ -5,9 +5,7 @@ from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, field
 from typing import Callable, Generic, Optional, Protocol, TypeVar, final
 
-import aiosqlite
-
-from chia.util.db_wrapper import DBWrapper2, execute_fetchone
+from chia.util.db_wrapper import DBWrapper2, Writer, execute_fetchone
 
 
 class ResourceManager(Protocol):
@@ -30,9 +28,9 @@ class ResourceManager(Protocol):
 @dataclass
 class SQLiteResourceManager:
     _db: DBWrapper2
-    _active_writer: Optional[aiosqlite.Connection] = field(init=False, default=None)
+    _active_writer: Optional[Writer] = field(init=False, default=None)
 
-    def get_active_writer(self) -> aiosqlite.Connection:
+    def get_active_writer(self) -> Writer:
         if self._active_writer is None:
             raise RuntimeError("Can only access resources while under `use()` context manager")
 
