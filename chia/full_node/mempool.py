@@ -492,7 +492,6 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
         """
         height is needed in case we fast-forward a transaction and we need to
@@ -500,7 +499,7 @@ class Mempool:
         """
 
         mempool_bundle = await self.create_bundle_from_mempool_items(
-            get_unspent_lineage_info_for_puzzle_hash, constants, height, item_inclusion_filter
+            get_unspent_lineage_info_for_puzzle_hash, constants, height
         )
         if mempool_bundle is None:
             return None
@@ -532,7 +531,6 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -562,8 +560,6 @@ class Mempool:
             if current_time - bundle_creation_start > 1:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
                 break
-            if item_inclusion_filter is not None and not item_inclusion_filter(name):
-                continue
             try:
                 assert item.conds is not None
                 cost = item.conds.cost

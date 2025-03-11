@@ -226,9 +226,7 @@ class MempoolManager:
 
     # TODO: remove this, use create_generator() instead
     async def create_bundle_from_mempool(
-        self,
-        last_tb_header_hash: bytes32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
+        self, last_tb_header_hash: bytes32
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
@@ -240,13 +238,12 @@ class MempoolManager:
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
         return await self.mempool.create_bundle_from_mempool_items(
-            lineage_cache.get_unspent_lineage_info, self.constants, self.peak.height, item_inclusion_filter
+            lineage_cache.get_unspent_lineage_info, self.constants, self.peak.height
         )
 
     async def create_block_generator(
         self,
         last_tb_header_hash: bytes32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
         """
         Returns a block generator program, the aggregate signature and all additions, for a new block
@@ -257,10 +254,7 @@ class MempoolManager:
         lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
 
         return await self.mempool.create_block_generator(
-            lineage_cache.get_unspent_lineage_info,
-            self.constants,
-            self.peak.height,
-            item_inclusion_filter,
+            lineage_cache.get_unspent_lineage_info, self.constants, self.peak.height
         )
 
     def get_filter(self) -> bytes:
