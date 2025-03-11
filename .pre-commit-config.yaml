@@ -85,3 +85,8 @@ repos:
         entry: ./activated.py mypy
         language: system
         pass_filenames: false
+  - repo: https://github.com/rubik/xenon
+    rev: v0.9.3
+    hooks:
+      - id: xenon
+        args: ["--max-absolute=B", "--max-modules=B", "--max-average=A"]
