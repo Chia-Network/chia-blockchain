@@ -493,7 +493,7 @@ class Mempool:
         constants: ConsensusConstants,
         height: uint32,
         item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
+    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin], list[Coin]]]:
         """
         height is needed in case we fast-forward a transaction and we need to
         re-run its puzzle.
@@ -525,6 +525,7 @@ class Mempool:
             BlockGenerator(SerializedProgram.from_bytes(block_program), []),
             spend_bundle.aggregated_signature,
             additions,
+            removals,
         )
 
     async def create_bundle_from_mempool_items(
