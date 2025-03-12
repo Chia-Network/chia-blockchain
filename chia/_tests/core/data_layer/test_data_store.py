@@ -1438,6 +1438,20 @@ class BatchesInsertBenchmarkCase:
         return f"count={self.count},batch_count={self.batch_count}"
 
 
+@dataclass
+class BatchUpdateBenchmarkCase:
+    pre: int
+    num_inserts: int
+    num_deletes: int
+    num_upserts: int
+    limit: float
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return f"pre={self.pre},inserts={self.num_inserts},deletes={self.num_deletes},upserts={self.num_upserts}"
+
+
 @datacases(
     BatchInsertBenchmarkCase(
         pre=0,
@@ -1492,6 +1506,87 @@ async def test_benchmark_batch_insert_speed(
             store_id=store_id,
             changelist=pre,
             status=Status.COMMITTED,
+        )
+
+    with benchmark_runner.assert_runtime(seconds=case.limit):
+        await data_store.insert_batch(
+            store_id=store_id,
+            changelist=batch,
+        )
+
+
+@datacases(
+    BatchUpdateBenchmarkCase(
+        pre=1_000,
+        num_inserts=1_000,
+        num_deletes=500,
+        num_upserts=500,
+        limit=36,
+    ),
+)
+@pytest.mark.anyio
+async def test_benchmark_batch_update_speed(
+    data_store: DataStore,
+    store_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+    case: BatchUpdateBenchmarkCase,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    pre = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(case.pre)
+    ]
+    batch = []
+
+    if case.pre > 0:
+        await data_store.insert_batch(
+            store_id=store_id,
+            changelist=pre,
+            status=Status.COMMITTED,
+        )
+
+    keys = [x.to_bytes(32, byteorder="big", signed=False) for x in range(case.pre)]
+    for operation in range(case.num_inserts):
+        key = (operation + case.pre).to_bytes(32, byteorder="big", signed=False)
+        batch.append(
+            {
+                "action": "insert",
+                "key": key,
+                "value": bytes(r.getrandbits(8) for _ in range(1200)),
+            }
+        )
+        keys.append(key)
+
+    if case.num_deletes > 0:
+        r.shuffle(keys)
+        assert len(keys) >= case.num_deletes
+        batch.extend(
+            {
+                "action": "delete",
+                "key": key,
+            }
+            for key in keys[: case.num_deletes]
+        )
+        keys = keys[case.num_deletes :]
+
+    if case.num_upserts > 0:
+        assert len(keys) > 0
+        r.shuffle(keys)
+        batch.extend(
+            [
+                {
+                    "action": "upsert",
+                    "key": keys[operation % len(keys)],
+                    "value": bytes(r.getrandbits(8) for _ in range(1200)),
+                }
+                for operation in range(case.num_upserts)
+            ]
         )
 
     with benchmark_runner.assert_runtime(seconds=case.limit):
