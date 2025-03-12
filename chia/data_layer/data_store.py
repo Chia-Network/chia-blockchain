@@ -492,7 +492,7 @@ class DataStore:
             return kv_id
 
         async with self.db_wrapper.writer() as writer:
-            await writer.execute(
+            row = await writer.execute_insert(
                 "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
                 (
                     blob,
@@ -500,9 +500,9 @@ class DataStore:
                 ),
             )
 
-        kv_id = await self.get_kvid(blob, store_id)
-        if kv_id is None:
+        if row is None:
             raise Exception("Internal error")
+        kv_id = KeyOrValueId(row[0])
         return kv_id
 
     async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> tuple[KeyId, ValueId]:
