@@ -246,11 +246,19 @@ async def refresh_plots(root_path: Path, hard: bool = False) -> None:
     Refreshes the plot list, optionally clearing the cache for a full refresh
     """
     from chia.rpc.harvester_rpc_client import HarvesterRpcClient
+    from chia.util.config import load_config
+    from chia_rs.sized_ints import uint16
 
     harvester_client = None
     try:
+        # Load the config to get the proper network configuration
+        config = load_config(root_path, "config.yaml")
+        net_config = config["full_node"]
+        # Get the harvester RPC port from the config
+        harvester_rpc_port = uint16(config["harvester"]["rpc_port"])
+        
         harvester_client = await HarvesterRpcClient.create(
-            self_hostname="localhost", port=None, root_path=root_path, net_config=None
+            self_hostname="localhost", port=harvester_rpc_port, root_path=root_path, net_config=net_config
         )
         if hard:
             print("Performing hard refresh (clearing cache)...")
