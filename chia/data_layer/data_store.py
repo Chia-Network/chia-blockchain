@@ -138,7 +138,7 @@ class DataStore:
                 await writer.execute(
                     """
                     CREATE TABLE IF NOT EXISTS ids(
-                        kv_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        kv_id INTEGER PRIMARY KEY,
                         blob BLOB,
                         store_id BLOB NOT NULL CHECK(length(store_id) == 32)
                     )
