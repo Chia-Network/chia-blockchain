@@ -53,16 +53,14 @@ class WalletUserStore:
         id: Optional[int] = None,
     ) -> WalletInfo:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
+            row = await conn.execute_insert(
                 "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
                 (id, name, wallet_type, data),
             )
-            await cursor.close()
-            wallet = await self.get_last_wallet()
-            if wallet is None:
-                raise ValueError("Failed to get the just-created wallet")
+            if row is None:
+                raise ValueError("Failed to create wallet")
 
-        return wallet
+        return WalletInfo(row[0], row[1], row[2], row[3])
 
     async def delete_wallet(self, id: int):
         async with self.db_wrapper.writer_maybe_transaction() as conn:
