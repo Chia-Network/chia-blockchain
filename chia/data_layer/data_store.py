@@ -508,8 +508,8 @@ class DataStore:
 
         if row is None:
             raise Exception("Internal error")
-
-        return KeyOrValueId(row[0])
+        kv_id = KeyOrValueId(row[0])
+        return kv_id
 
     async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> tuple[KeyId, ValueId]:
         kid = KeyId(await self.add_kvid(key, store_id))
