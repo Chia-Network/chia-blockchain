@@ -4,6 +4,7 @@ import contextlib
 import copy
 import itertools
 import logging
+import sqlite3
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
@@ -158,7 +159,7 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE INDEX IF NOT EXISTS ids_blob_index ON ids(blob, store_id)
+                    CREATE UNIQUE INDEX IF NOT EXISTS ids_blob_index ON ids(blob, store_id)
                     """
                 )
                 await writer.execute(
@@ -487,18 +488,23 @@ class DataStore:
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
     async def add_kvid(self, blob: bytes, store_id: bytes32) -> KeyOrValueId:
-        kv_id = await self.get_kvid(blob, store_id)
-        if kv_id is not None:
-            return kv_id
-
         async with self.db_wrapper.writer() as writer:
-            row = await writer.execute_insert(
-                "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
-                (
-                    blob,
-                    store_id,
-                ),
-            )
+            try:
+                row = await writer.execute_insert(
+                    "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
+                    (
+                        blob,
+                        store_id,
+                    ),
+                )
+            except sqlite3.IntegrityError as e:
+                if "UNIQUE constraint failed" in str(e):
+                    kv_id = await self.get_kvid(blob, store_id)
+                    if kv_id is None:
+                        raise Exception("Internal error") from e
+                    return kv_id
+
+                raise
 
         if row is None:
             raise Exception("Internal error")
