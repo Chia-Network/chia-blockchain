@@ -228,3 +228,38 @@ def remove_cmd(ctx: click.Context, final_dir: str) -> None:
 @click.pass_context
 def show_cmd(ctx: click.Context) -> None:
     show_plots(ChiaCliContext.set_default(ctx).root_path)
+
+
+@plots_cmd.command("refresh", help="Refresh the plot list")
+@click.option("--hard", help="Clear the plot cache and do a full refresh", is_flag=True, default=False)
+@click.pass_context
+def refresh_cmd(ctx: click.Context, hard: bool) -> None:
+    """
+    Refreshes the plot list, optionally clearing the cache for a full refresh
+    """
+    root_path = ChiaCliContext.set_default(ctx).root_path
+    asyncio.run(refresh_plots(root_path, hard))
+
+
+async def refresh_plots(root_path: Path, hard: bool = False) -> None:
+    """
+    Refreshes the plot list, optionally clearing the cache for a full refresh
+    """
+    from chia.rpc.harvester_rpc_client import HarvesterRpcClient
+
+    try:
+        harvester_client = await HarvesterRpcClient.create(
+            self_hostname="localhost", port=None, root_path=root_path, net_config=None
+        )
+        if hard:
+            print("Performing hard refresh (clearing cache)...")
+            await harvester_client.hard_refresh_plots()
+        else:
+            print("Refreshing plots...")
+            await harvester_client.refresh_plots()
+        print("Plot refresh initiated. Check logs for progress.")
+    except Exception as e:
+        print(f"Failed to refresh plots: {e}")
+    finally:
+        harvester_client.close()
+        await harvester_client.await_closed()

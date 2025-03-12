@@ -211,3 +211,9 @@ class Cache:
 
     def path(self) -> Path:
         return self._path
+
+    def clear(self) -> None:
+        """Clear all entries from the cache and mark it as changed."""
+        self._data = {}
+        self._changed = True
+        log.info(f"Cleared plot cache at {self._path}")
