@@ -109,7 +109,7 @@ class DataLayerStore:
         """
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     record.coin_id,
@@ -257,7 +257,7 @@ class DataLayerStore:
         )
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             launcher_id = launcher.name()
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
                 (launcher_id, launcher_bytes),
             )
@@ -308,7 +308,7 @@ class DataLayerStore:
         """
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO mirrors VALUES (?, ?, ?, ?, ?)",
                 (
                     mirror.coin_id,
@@ -320,7 +320,7 @@ class DataLayerStore:
                     1 if mirror.ours else 0,
                 ),
             )
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO mirror_confirmations (coin_id, confirmed_at_height) VALUES (?, ?)",
                 (
                     mirror.coin_id,
