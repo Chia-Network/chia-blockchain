@@ -13,7 +13,6 @@ from chia_rs import (
     ELIGIBLE_FOR_FF,
     BLSCache,
     ConsensusConstants,
-    G2Element,
     supports_fast_forward,
     validate_clvm_and_signature,
 )
@@ -34,7 +33,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import EligibilityAndAdditions, UnspentLineageInfo
 from chia.types.fee_rate import FeeRate
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -244,7 +243,7 @@ class MempoolManager:
     async def create_block_generator(
         self,
         last_tb_header_hash: bytes32,
-    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin], list[Coin]]]:
+    ) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions and removals, for a new block
         """
