@@ -1575,7 +1575,7 @@ async def test_benchmark_batch_update_speed(
                 for key in keys[: case.num_deletes]
             ]
         )
-        keys = keys[case.num_deletes: ]
+        keys = keys[case.num_deletes :]
 
     if case.num_upserts > 0:
         assert len(keys) > 0
