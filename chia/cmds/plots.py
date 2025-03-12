@@ -247,6 +247,7 @@ async def refresh_plots(root_path: Path, hard: bool = False) -> None:
     """
     from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 
+    harvester_client = None
     try:
         harvester_client = await HarvesterRpcClient.create(
             self_hostname="localhost", port=None, root_path=root_path, net_config=None
@@ -261,5 +262,6 @@ async def refresh_plots(root_path: Path, hard: bool = False) -> None:
     except Exception as e:
         print(f"Failed to refresh plots: {e}")
     finally:
-        harvester_client.close()
-        await harvester_client.await_closed()
+        if harvester_client is not None:
+            harvester_client.close()
+            await harvester_client.await_closed()
