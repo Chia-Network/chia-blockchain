@@ -5,6 +5,7 @@ import logging
 import os
 import random
 import re
+import shutil
 import statistics
 import time
 from collections.abc import Awaitable
@@ -61,6 +62,23 @@ table_columns: dict[str, list[str]] = {
     "ids": ["kv_id", "blob", "store_id"],
     "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
+
+
+@pytest.mark.anyio
+async def test_migrate_from_old_format(store_id: bytes32, tmp_path: Path) -> None:
+    current_dir = Path(__file__).parent.resolve()
+    old_format_dir = current_dir / "old_format"
+    db_uri = old_format_dir / "old_db.sqlite"
+    db_uri_copy = tmp_path / "old_db.sqlite"
+    shutil.copy(db_uri, db_uri_copy)
+    files_path = old_format_dir / "files"
+    assert db_uri.exists()
+    assert files_path.exists()
+
+    async with DataStore.managed(database=db_uri_copy, uri=True) as data_store:
+        await data_store.migrate_db(files_path)
+        root = await data_store.get_tree_root(store_id=store_id)
+        assert root.generation == 50
 
 
 # TODO: Someday add tests for malformed DB data to make sure we handle it gracefully

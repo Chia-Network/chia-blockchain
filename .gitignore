@@ -34,7 +34,6 @@ build_scripts/build
 **/*.egg-info
 
 # PoSpace plots
-**/*.dat
 **/*.dat.tmp
 *.mo
 *.pot
