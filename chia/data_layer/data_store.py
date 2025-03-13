@@ -488,7 +488,7 @@ class DataStore:
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
     async def add_kvid(self, blob: bytes, store_id: bytes32) -> KeyOrValueId:
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer_maybe_transaction() as writer:
             try:
                 row = await writer.execute_insert(
                     "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
