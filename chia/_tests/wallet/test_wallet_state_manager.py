@@ -222,7 +222,7 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         await env_1.xch_wallet.generate_signed_transaction(
             [uint64(1)],
-            [await env_1.xch_wallet.get_puzzle_hash(new=False)],
+            [await action_scope.get_puzzle_hash(env_1.wallet_state_manager)],
             action_scope,
         )
 

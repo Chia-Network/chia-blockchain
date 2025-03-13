@@ -237,12 +237,18 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
 
 async def create_tx_outputs(wallet: Wallet, output_args: list[tuple[int, Optional[list[str]]]]) -> list[dict[str, Any]]:
     outputs = []
-    for args in output_args:
-        output = {"amount": uint64(args[0]), "puzzle_hash": await wallet.get_new_puzzlehash()}
-        if args[1] is not None:
-            assert len(args[1]) > 0
-            output["memos"] = args[1]
-        outputs.append(output)
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        for args in output_args:
+            output = {
+                "amount": uint64(args[0]),
+                "puzzle_hash": await action_scope.get_puzzle_hash(
+                    wallet.wallet_state_manager, override_reuse_puzhash_with=False
+                ),
+            }
+            if args[1] is not None:
+                assert len(args[1]) > 0
+                output["memos"] = args[1]
+            outputs.append(output)
     return outputs
 
 
@@ -326,7 +332,8 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1)
 
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     tx_amount = uint64(15600000)
     with pytest.raises(ValueError):
         await client.send_transaction(1, uint64(100000000000000001), addr, DEFAULT_TX_CONFIG)
@@ -508,8 +515,8 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
+        our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
-    our_ph = await wallet.get_new_puzzlehash()
     await full_node_api.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -779,9 +786,11 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1, 1)
     await generate_funds(full_node_api, env.wallet_2, 1)
-    wallet_1_puzhash = await wallet_1.get_new_puzzlehash()
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        wallet_1_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
-    wallet_2_puzhash = await wallet_2.get_new_puzzlehash()
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        wallet_2_puzhash = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
     tx = (
         await wallet_1_rpc.send_transaction(
             wallet_id=1,
@@ -960,7 +969,8 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
 
     # Test RELEVANCE
-    puzhash = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        puzhash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(
         1, uint64(1), encode_puzzle_hash(puzhash, "txch"), DEFAULT_TX_CONFIG
@@ -979,7 +989,8 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_transactions == sorted_transactions
 
     # Test get_transactions to address
-    ph_by_addr = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_by_addr = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"), DEFAULT_TX_CONFIG)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -1403,7 +1414,10 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
     full_node_api = env.full_node.api
     # Generate some funds
     generated_funds = await generate_funds(full_node_api, env.wallet_1, 5)
-    address = encode_puzzle_hash(await env.wallet_1.wallet.get_new_puzzlehash(), "txch")
+    async with env.wallet_1.wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        address = encode_puzzle_hash(
+            await action_scope.get_puzzle_hash(env.wallet_1.wallet.wallet_state_manager), "txch"
+        )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     # Spend half of it back to the same wallet get some spent coins in the wallet
@@ -1518,7 +1532,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Transfer DID
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True, DEFAULT_TX_CONFIG)
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -1618,7 +1633,8 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
     assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
 
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0, DEFAULT_TX_CONFIG)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
@@ -1717,7 +1733,8 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     assert (await client.get_height_info()).height > 0
 
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     addr = encode_puzzle_hash(ph, "txch")
     tx_amount = uint64(15600000)
     await env.full_node.api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -1803,7 +1820,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     funds = await generate_funds(full_node_api, env.wallet_1)
 
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     coin_300: list[Coin]
     tx_amounts: list[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
     for tx_amount in tx_amounts:
@@ -2089,12 +2107,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     env.wallet_2.node.config["enable_notifications"] = True
     env.wallet_2.node.config["required_notification_amount"] = 100000000000
-    tx = await client.send_notification(
-        await wallet_2.get_new_puzzlehash(),
-        b"hello",
-        uint64(100000000000),
-        fee=uint64(100000000000),
-    )
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        tx = await client.send_notification(
+            await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
+            b"hello",
+            uint64(100000000000),
+            fee=uint64(100000000000),
+        )
 
     assert tx.spend_bundle is not None
     await time_out_assert(
@@ -2115,12 +2134,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert await client_2.delete_notifications()
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
-    tx = await client.send_notification(
-        await wallet_2.get_new_puzzlehash(),
-        b"hello",
-        uint64(100000000000),
-        fee=uint64(100000000000),
-    )
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        tx = await client.send_notification(
+            await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
+            b"hello",
+            uint64(100000000000),
+            fee=uint64(100000000000),
+        )
 
     assert tx.spend_bundle is not None
     await time_out_assert(
@@ -2504,7 +2524,8 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     await generate_funds(full_node_api, env.wallet_1, 1)
 
     # Send to a CAT with an anyone can spend TAIL
-    our_ph: bytes32 = await env.wallet_1.wallet.get_new_puzzlehash()
+    async with env.wallet_1.wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(env.wallet_1.wallet.wallet_state_manager)
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), Program.to(1))
     addr = encode_puzzle_hash(
         cat_puzzle.get_tree_hash(),
@@ -2930,7 +2951,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await cat_wallet.generate_signed_transaction(
             [BIG_COIN_AMOUNT, SMALL_COIN_AMOUNT, REALLY_SMALL_COIN_AMOUNT],
-            [await env.xch_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)] * 3,
+            [await action_scope.get_puzzle_hash(env.wallet_state_manager)] * 3,
             action_scope,
         )
 

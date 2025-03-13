@@ -142,7 +142,8 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     wallet = wallet_node.wallet_state_manager.wallets[uint32(1)]
     assert isinstance(wallet, Wallet)
-    puzzle_hash = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        puzzle_hash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     for i in range(num_blocks):
         if i == num_blocks - 1:
@@ -223,7 +224,8 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     fn_server = full_node_api.full_node.server
     standard_wallet = wallet_node.wallet_state_manager.wallets[uint32(1)]
     assert isinstance(standard_wallet, Wallet)
-    puzzle_hash = await standard_wallet.get_new_puzzlehash()
+    async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        puzzle_hash = await action_scope.get_puzzle_hash(standard_wallet.wallet_state_manager)
 
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
     incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
@@ -325,7 +327,8 @@ async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWall
     fn_server = full_node_api.full_node.server
     standard_wallet = wallet_node.wallet_state_manager.wallets[uint32(1)]
     assert isinstance(standard_wallet, Wallet)
-    puzzle_hash = await standard_wallet.get_new_puzzlehash()
+    async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        puzzle_hash = await action_scope.get_puzzle_hash(standard_wallet.wallet_state_manager)
 
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
     incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
@@ -400,7 +403,8 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
     fn_server = full_node_api.full_node.server
     standard_wallet = wallet_node.wallet_state_manager.wallets[uint32(1)]
     assert isinstance(standard_wallet, Wallet)
-    puzzle_hash = await standard_wallet.get_new_puzzlehash()
+    async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        puzzle_hash = await action_scope.get_puzzle_hash(standard_wallet.wallet_state_manager)
 
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
     incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
