@@ -6,7 +6,6 @@ import logging
 import os
 import random
 import re
-import shutil
 import statistics
 import time
 from collections.abc import Awaitable
