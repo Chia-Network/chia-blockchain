@@ -38,7 +38,7 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.prev_transaction_block import get_prev_transaction_block
@@ -79,10 +79,7 @@ def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> ui
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
-    block_generator: Optional[BlockGenerator],
-    aggregate_sig: G2Element,
-    additions: list[Coin],
-    removals: list[Coin],
+    new_block_gen: Optional[NewBlockGenerator],
     prev_block: Optional[BlockRecord],
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
@@ -103,8 +100,7 @@ def create_foliage(
     Args:
         constants: consensus constants being used for this chain
         reward_block_unfinished: the reward block to look at, potentially at the signage point
-        block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transactions (or infinity element)
+        new_block_gen: transactions to add to the foliage block, if created, including aggregate signature
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
@@ -165,15 +161,16 @@ def create_foliage(
     foliage_transaction_block_hash: Optional[bytes32]
 
     if is_transaction_block:
-        cost = uint64(0)
+        cost: uint64
+        spend_bundle_fees: uint64
 
         # Calculate the cost of transactions
-        if block_generator is not None:
-            cost = compute_cost(block_generator, constants, height)
-
-            spend_bundle_fees = compute_fees(additions, removals)
+        if new_block_gen is not None:
+            cost = compute_cost(new_block_gen, constants, height)
+            spend_bundle_fees = compute_fees(new_block_gen.additions, new_block_gen.removals)
         else:
             spend_bundle_fees = uint64(0)
+            cost = uint64(0)
 
         reward_claims_incorporated = []
         if height > 0:
@@ -215,14 +212,19 @@ def create_foliage(
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
                     curr = blocks.block_record(curr.prev_hash)
-        additions.extend(reward_claims_incorporated.copy())
-        for coin in additions:
+
+        for coin in reward_claims_incorporated:
             tx_additions.append(coin)
             byte_array_tx.append(bytearray(coin.puzzle_hash))
-        for coin in removals:
-            cname = coin.name()
-            tx_removals.append(cname)
-            byte_array_tx.append(bytearray(cname))
+
+        if new_block_gen is not None:
+            for coin in new_block_gen.additions:
+                tx_additions.append(coin)
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for coin in new_block_gen.removals:
+                cname = coin.name()
+                tx_removals.append(cname)
+                byte_array_tx.append(bytearray(cname))
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
@@ -247,8 +249,8 @@ def create_foliage(
         removals_root = bytes32(compute_merkle_set_root(tx_removals))
 
         generator_hash = bytes32.zeros
-        if block_generator is not None:
-            generator_hash = std_hash(block_generator.program)
+        if new_block_gen is not None:
+            generator_hash = std_hash(new_block_gen.program)
 
         generator_refs_hash = bytes32([1] * 32)
         filter_hash: bytes32 = std_hash(encoded)
@@ -256,7 +258,7 @@ def create_foliage(
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
             generator_hash,
             generator_refs_hash,
-            aggregate_sig,
+            new_block_gen.signature if new_block_gen else G2Element(),
             spend_bundle_fees,
             cost,
             reward_claims_incorporated,
@@ -318,10 +320,7 @@ def create_unfinished_block(
     timestamp: uint64,
     blocks: BlockRecordsProtocol,
     seed: bytes = b"",
-    block_generator: Optional[BlockGenerator] = None,
-    aggregate_sig: G2Element = G2Element(),
-    additions: Optional[list[Coin]] = None,
-    removals: Optional[list[Coin]] = None,
+    new_block_gen: Optional[NewBlockGenerator] = None,
     prev_block: Optional[BlockRecord] = None,
     finished_sub_slots_input: Optional[list[EndOfSubSlotBundle]] = None,
     compute_cost: Callable[[BlockGenerator, ConsensusConstants, uint32], uint64] = compute_block_cost,
@@ -347,10 +346,7 @@ def create_unfinished_block(
         signage_point: signage point information (VDFs)
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
-        block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transactions (or infinity element)
-        additions: Coins added in spend_bundle
-        removals: Coins removed in spend_bundle
+        new_block_gen: transactions to add to the foliage block, if created, including aggregate signature
         prev_block: previous block (already in chain) from the signage point
         blocks: dictionary from header hash to SBR of all included SBR
         finished_sub_slots_input: finished_sub_slots at the signage point
@@ -409,17 +405,10 @@ def create_unfinished_block(
         signage_point.rc_vdf,
         rc_sp_signature,
     )
-    if additions is None:
-        additions = []
-    if removals is None:
-        removals = []
     (foliage, foliage_transaction_block, transactions_info) = create_foliage(
         constants,
         rc_block,
-        block_generator,
-        aggregate_sig,
-        additions,
-        removals,
+        new_block_gen,
         prev_block,
         blocks,
         total_iters_sp,
@@ -440,8 +429,8 @@ def create_unfinished_block(
         foliage,
         foliage_transaction_block,
         transactions_info,
-        block_generator.program if block_generator else None,
-        [],  # generator_refs
+        new_block_gen.program if new_block_gen else None,
+        new_block_gen.block_refs if new_block_gen else [],
     )
 
 
