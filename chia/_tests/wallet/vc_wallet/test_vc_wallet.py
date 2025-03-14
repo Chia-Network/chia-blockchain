@@ -363,7 +363,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         "flags_needed": cr_cat_wallet_0.info.proofs_checker.flags,
     } == (await client_0.get_wallets(wallet_type=cr_cat_wallet_0.type()))[0]
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
-    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
     txs = (
@@ -450,7 +450,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert len(pending_tx) == 1
 
     # Send the VC to wallet_1 to use for the CR-CATs
-    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     await client_0.vc_spend(
         VCSpend(vc_id=vc_record.vc.launcher_id, new_puzhash=ph, push=True),

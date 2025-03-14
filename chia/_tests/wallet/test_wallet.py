@@ -2105,6 +2105,34 @@ class TestWalletSimulator:
             ]
         )
 
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes
+    @pytest.mark.anyio
+    async def test_forced_new_puzzle_hash(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
+
+        with wallet_environments.new_puzzle_hashes_allowed():
+            async with wallet.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                coins = await wallet.select_coins(uint64(1), action_scope)
+                coin_list = list(coins)
+                assert len(coin_list) == 1
+                await wallet.generate_signed_transaction(
+                    [uint64(coin_list[0].amount / 2)],
+                    [coin_list[0].puzzle_hash],
+                    action_scope,
+                    coins=coins,
+                )
+        [tx] = action_scope.side_effects.transactions
+        assert tx.spend_bundle is not None
+        assert len(list(set(coin.puzzle_hash for coin in tx.spend_bundle.additions()))) == 2
+
 
 def test_get_wallet_db_path_v2_r1() -> None:
     root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
