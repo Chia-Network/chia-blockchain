@@ -1377,7 +1377,7 @@ class FullNodeAPI:
             if status == MempoolInclusionStatus.SUCCESS:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
             else:
-                # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+                # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
                 if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
                     response = wallet_protocol.TransactionAck(
                         spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None
