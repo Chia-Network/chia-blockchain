@@ -348,6 +348,64 @@ class TestNewPeak:
                     == new_peak.reward_chain_block.get_hash()
                 )
 
+    @pytest.mark.anyio
+    async def test_timelord_new_peak_node_sync(
+        self,
+        one_node: tuple[list[FullNodeService], list[FullNodeSimulator], BlockTools],
+        timelord: tuple[TimelordAPI, ChiaServer],
+        default_1000_blocks: list[FullBlock],
+    ) -> None:
+        [full_node_service], _, bt = one_node
+        full_node = full_node_service._node
+        async with create_blockchain(bt.constants, 2) as (b1, _):
+            async with create_blockchain(bt.constants, 2) as (b2, _):
+                timelord_api, _ = timelord
+                for block in default_1000_blocks:
+                    await _validate_and_add_block(b1, block)
+                    await _validate_and_add_block(b2, block)
+                    await full_node.add_block(block)
+
+                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                assert peak is not None
+                assert timelord_api.timelord.new_peak is None
+                await timelord_api.new_peak_timelord(peak)
+                assert timelord_api.timelord.new_peak is not None
+                assert (
+                    timelord_api.timelord.new_peak.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
+                )
+                await time_out_assert(60, peak_new_peak_is_none, True, timelord_api)
+                # make two new blocks on tip, block_2 has higher total iterations
+                block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
+                block_2 = bt.get_consecutive_blocks(
+                    1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
+                )[-1]
+                assert block_2.weight == block_1.weight
+                # make sure block_2 has higher iterations then block_1
+                assert block_2.total_iters > block_1.total_iters
+                # make sure block_1 and block_2 have higher iterations then peak
+                assert block_1.total_iters > default_1000_blocks[-1].total_iters
+                await full_node.add_block(block_2)
+                await _validate_and_add_block(b1, block_2)
+                peak_tl = timelord_peak_from_block(b1, block_2)
+                peak = await full_node.blockchain.get_full_peak()
+                assert peak is not None
+                assert timelord_api.timelord.new_peak is None
+                await timelord_api.new_peak_timelord(peak_tl)
+                assert timelord_api.timelord.new_peak is not None
+                assert peak.header_hash == block_2.header_hash
+                assert peak_tl.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
+                await time_out_assert(60, peak_new_peak_is_none, True, timelord_api)
+
+                await full_node.add_block(block_1)
+                await _validate_and_add_block(b1, block_1)
+                peak = timelord_peak_from_block(b1, block_1)
+                assert peak is not None
+                await timelord_api.new_peak_timelord(peak)
+                peak = await full_node.blockchain.get_full_peak()
+                assert peak == block_1
+                peak_tl = timelord_api.timelord.new_peak
+                assert peak_tl.reward_chain_block.get_hash() == peak.reward_chain_block.get_hash()
+
 
 async def get_rc_prev(blockchain: Blockchain, block: FullBlock) -> bytes32:
     if block.reward_chain_block.signage_point_index == 0:
