@@ -8,6 +8,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.wallet.puzzles.clawback.puzzle_decorator import ClawbackPuzzleDecorator
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
 
@@ -74,5 +75,6 @@ async def test_decorator(
     assert isinstance(wallet_node.wallet_state_manager.decorator_manager.decorator_list[0], ClawbackPuzzleDecorator)
     clawback_decorator: ClawbackPuzzleDecorator = wallet_node.wallet_state_manager.decorator_manager.decorator_list[0]
     assert clawback_decorator.time_lock == 3600
-    puzzle = await wallet.get_new_puzzle()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        puzzle = await action_scope.get_puzzle(wallet.wallet_state_manager)
     assert puzzle == wallet_node.wallet_state_manager.decorator_manager.decorate(puzzle)

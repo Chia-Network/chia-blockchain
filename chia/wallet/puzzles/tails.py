@@ -94,9 +94,7 @@ class GenesisById(LimitationsProgram):
         origin = coins.copy().pop()
         origin_id = origin.name()
 
-        cat_inner: Program = await wallet.standard_wallet.get_puzzle(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
+        cat_inner: Program = await action_scope.get_puzzle(wallet.wallet_state_manager)
         tail: Program = cls.construct([Program.to(origin_id)])
 
         wallet.lineage_store = await CATLineageStore.create(

@@ -128,7 +128,7 @@ async def test_wait_transaction_records_entered_mempool(
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 amounts=[uint64(tx_amount)],
-                puzzle_hashes=[await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()],
+                puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
                 action_scope=action_scope,
                 coins={coin},
             )
@@ -164,7 +164,7 @@ async def test_process_transaction_records(
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 amounts=[uint64(tx_amount)],
-                puzzle_hashes=[await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()],
+                puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
                 action_scope=action_scope,
                 coins={coin},
             )

@@ -18,6 +18,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ class TestWalletRpc:
         wallet_node_2 = wallet_services[1]._node
         server_3 = wallet_node_2.server
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
         if trusted:
             wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
