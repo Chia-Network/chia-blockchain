@@ -260,6 +260,9 @@ jobs:
           - name: amazonlinux:2023
             type: amazon
             url: "docker://amazonlinux:2023"
+            # bypass this error for now: Problem: The operation would result in removing the following protected packages: systemd-udev
+            noautoremove:
+              gui: --noautoremove
           - name: fedora:37
             type: fedora
             # (37, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+37&start=0
