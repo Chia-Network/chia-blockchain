@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import Optional
 
 import aiosqlite
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class AddressManagerStore:
     @classmethod
-    async def initialise(cls, connection) -> None:
+    async def initialise(cls, connection: aiosqlite.Connection) -> None:
         await connection.execute("""
                 CREATE TABLE IF NOT EXISTS peers (
                     node_id INTEGER PRIMARY KEY,
@@ -31,14 +32,14 @@ class AddressManagerStore:
         await connection.commit()
 
     @classmethod
-    async def create_address_manager(cls, connection: aiosqlite.Connection) -> Optional[AddressManager]:
+    async def create_address_manager(cls, connection: aiosqlite.Connection) -> AddressManager:
         """
         Creates an AddressManager using data from the SQLite peer db
         """
-        return cls.deserialize(connection)
+        return await cls.deserialize(connection)
 
     @staticmethod
-    async def get_all_peers(connection: aiosqlite.Connection) -> list[tuple[int, str, bool, int, Optional[int]]]:
+    async def get_all_peers(connection: aiosqlite.Connection) -> Iterable[aiosqlite.Row]:
         cursor = await connection.execute("SELECT * FROM peers")
         return await cursor.fetchall()
 
@@ -66,7 +67,7 @@ class AddressManagerStore:
         await connection.execute("DELETE FROM peers")
         await connection.commit()
         for node_id, info in address_manager.map_info.items():
-            await cls.add_peer(node_id, str(info), info.is_tried, info.ref_count, None)
+            await cls.add_peer(node_id, str(info), info.is_tried, info.ref_count, None, connection)
         log.debug("Peer data serialized successfully")
 
     @classmethod

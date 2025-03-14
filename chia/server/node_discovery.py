@@ -89,8 +89,8 @@ class FullNodeDiscovery:
 
     async def initialize_address_manager(self) -> None:
         self.peers_db_connection = aiosqlite.connect(self.peers_file_path)
-        AddressManagerStore.initialise(self.peers_db_connection)
-        self.address_manager = await AddressManagerStore.create_address_manager(self.peers_file_path)
+        await AddressManagerStore.initialise(self.peers_db_connection)
+        self.address_manager = await AddressManagerStore.create_address_manager(self.peers_db_connection)
         if self.enable_private_networks:
             self.address_manager.make_private_subnets_valid()
         self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
@@ -417,7 +417,7 @@ class FullNodeDiscovery:
             serialize_interval = random.randint(15 * 60, 30 * 60)
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
-                await AddressManagerStore.serialize(self.address_manager, self.peers_file_path)
+                await AddressManagerStore.serialize(self.address_manager, self.peers_db_connection)
 
     async def _periodically_cleanup(self) -> None:
         while not self.is_closed:
