@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.resources as importlib_resources
 import itertools
 import logging
 import os
@@ -66,19 +67,22 @@ table_columns: dict[str, list[str]] = {
 
 @pytest.mark.anyio
 async def test_migrate_from_old_format(store_id: bytes32, tmp_path: Path) -> None:
-    current_dir = Path(__file__).parent.resolve()
-    old_format_dir = current_dir / "old_format"
-    db_uri = old_format_dir / "old_db.sqlite"
-    db_uri_copy = tmp_path / "old_db.sqlite"
-    shutil.copy(db_uri, db_uri_copy)
-    files_path = old_format_dir / "files"
-    assert db_uri.exists()
-    assert files_path.exists()
+    old_format_resources = importlib_resources.files(__name__.rpartition(".")[0]).joinpath("old_format")
+    db_uri = tmp_path / "old_db.sqlite"
+    db_uri.write_bytes(old_format_resources.joinpath("old_db.sqlite").read_bytes())
+    files_resources = old_format_resources.joinpath("files")
 
-    async with DataStore.managed(database=db_uri_copy, uri=True) as data_store:
-        await data_store.migrate_db(files_path)
-        root = await data_store.get_tree_root(store_id=store_id)
-        assert root.generation == 50
+    with importlib_resources.as_file(files_resources) as files_path:
+        async with DataStore.managed(database=db_uri, uri=True) as data_store:
+            await data_store.migrate_db(files_path)
+            root = await data_store.get_tree_root(store_id=store_id)
+            expected = Root(
+                store_id=bytes32.fromhex("2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e612073746f7265206964"),
+                node_hash=bytes32.fromhex("aa77376d1ccd3664e5c6366e010c52a978fedbf40f5ce262fee71b2e7fe0c6a9"),
+                generation=50,
+                status=Status.COMMITTED,
+            )
+            assert root == expected
 
 
 # TODO: Someday add tests for malformed DB data to make sure we handle it gracefully
