@@ -22,7 +22,7 @@ async def test_enable_private_networks(
     discovery0 = FullNodeDiscovery(
         chia_server,
         0,
-        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        SIMULATOR_ROOT_PATH / Path(chia_server.config["peer_db_path"]),
         {"host": "introducer.chia.net", "port": 8444},
         [],
         0,
@@ -40,7 +40,7 @@ async def test_enable_private_networks(
     discovery1 = FullNodeDiscovery(
         chia_server,
         0,
-        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        SIMULATOR_ROOT_PATH / Path(chia_server.config["peer_db_path"]),
         {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": False},
         [],
         0,
@@ -58,7 +58,7 @@ async def test_enable_private_networks(
     discovery2 = FullNodeDiscovery(
         chia_server,
         0,
-        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        SIMULATOR_ROOT_PATH / Path(chia_server.config["peer_db_path"]),
         {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": True},
         [],
         0,
