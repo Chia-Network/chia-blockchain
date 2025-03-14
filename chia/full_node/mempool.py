@@ -492,7 +492,7 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
+    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin], list[Coin]]]:
         """
         height is needed in case we fast-forward a transaction and we need to
         re-run its puzzle.
@@ -524,6 +524,7 @@ class Mempool:
             BlockGenerator(SerializedProgram.from_bytes(block_program), []),
             spend_bundle.aggregated_signature,
             additions,
+            removals,
         )
 
     async def create_bundle_from_mempool_items(

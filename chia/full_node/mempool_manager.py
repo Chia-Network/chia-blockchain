@@ -244,9 +244,9 @@ class MempoolManager:
     async def create_block_generator(
         self,
         last_tb_header_hash: bytes32,
-    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
+    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin], list[Coin]]]:
         """
-        Returns a block generator program, the aggregate signature and all additions, for a new block
+        Returns a block generator program, the aggregate signature and all additions and removals, for a new block
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
