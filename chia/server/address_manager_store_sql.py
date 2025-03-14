@@ -60,7 +60,7 @@ class AddressManagerStore:
         await connection.execute("DELETE FROM peers WHERE node_id = ?", (node_id,))
         await connection.commit()
 
-    # TODO: deprecate this in favour of periodic calls to add_peer() and remove_peer() 
+    # TODO: deprecate this in favour of periodic calls to add_peer() and remove_peer()
     @classmethod
     async def serialize(cls, address_manager: AddressManager, connection: aiosqlite.Connection) -> None:
         await connection.execute("DELETE FROM peers")
