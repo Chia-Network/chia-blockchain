@@ -20,7 +20,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.eligible_coin_spends import EligibleCoinSpends, SkipDedup, UnspentLineageInfo
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -492,7 +492,7 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin], list[Coin]]]:
+    ) -> Optional[NewBlockGenerator]:
         """
         height is needed in case we fast-forward a transaction and we need to
         re-run its puzzle.
@@ -520,8 +520,10 @@ class Mempool:
             logging.INFO if duration < 1 else logging.WARNING,
             f"serializing block generator took {duration:0.2f} seconds",
         )
-        return (
-            BlockGenerator(SerializedProgram.from_bytes(block_program), []),
+        return NewBlockGenerator(
+            SerializedProgram.from_bytes(block_program),
+            [],
+            [],
             spend_bundle.aggregated_signature,
             additions,
             removals,

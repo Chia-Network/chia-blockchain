@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import random
 from collections.abc import Awaitable, Collection, Sequence
 from typing import Any, Callable, ClassVar, Optional, Union
 
@@ -9,14 +10,17 @@ import pytest
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
+    MEMPOOL_MODE,
     AugSchemeMPL,
     ConsensusConstants,
     G2Element,
     get_conditions_from_spendbundle,
+    run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from chiabip158 import PyBIP158
+from clvm.casts import int_to_bytes
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import invariant_check_mempool
@@ -41,6 +45,7 @@ from chia.protocols.full_node_protocol import RequestBlock, RespondBlock
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -48,6 +53,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.eligible_coin_spends import (
     DedupCoinSpend,
     EligibilityAndAdditions,
@@ -63,6 +69,10 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import Err, ValidationError
 from chia.wallet.conditions import AssertCoinAnnouncement
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -2501,3 +2511,159 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     spend = item.bundle_coin_spends[spend_a.coin.name()]
     assert spend.eligible_for_fast_forward
     assert spend.latest_singleton_coin == spend_c.coin.name()
+
+
+@pytest.fixture(name="test_wallet", autouse=True)
+def test_wallet_fixture() -> WalletTool:
+    return WalletTool(DEFAULT_CONSTANTS)
+
+
+@pytest.fixture(name="transactions_1000", autouse=True)
+def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Random) -> list[SpendBundle]:
+    op = ConditionOpcode
+    bundles: list[SpendBundle] = []
+
+    test_conditions = [
+        op.AGG_SIG_PARENT,
+        op.AGG_SIG_PUZZLE,
+        op.AGG_SIG_AMOUNT,
+        op.AGG_SIG_PUZZLE_AMOUNT,
+        op.AGG_SIG_PARENT_AMOUNT,
+        op.AGG_SIG_PARENT_PUZZLE,
+        op.AGG_SIG_UNSAFE,
+        op.AGG_SIG_ME,
+        op.CREATE_COIN,
+        op.CREATE_COIN_ANNOUNCEMENT,
+        op.CREATE_PUZZLE_ANNOUNCEMENT,
+        op.ASSERT_MY_COIN_ID,
+        op.ASSERT_MY_PARENT_ID,
+        op.ASSERT_MY_PUZZLEHASH,
+        op.ASSERT_MY_AMOUNT,
+    ]
+
+    print("generating 1000 coins and spend bundles")
+    for i in range(1000):
+        # generate a coin with a dummy parent coin ID
+        puzzle = test_wallet.get_new_puzzle()
+        coin = Coin(bytes32(i.to_bytes(32, byteorder="big")), puzzle.get_tree_hash(), uint64(100 * i))
+
+        conditions: dict[ConditionOpcode, list[ConditionWithArgs]] = {
+            ConditionOpcode.CREATE_COIN: [
+                ConditionWithArgs(
+                    ConditionOpcode.CREATE_COIN, [test_wallet.get_new_puzzle().get_tree_hash(), int_to_bytes(25 * i)]
+                )
+            ]
+        }
+        # generate a somewhat arbitrarty set of conditions for the spend, just
+        # to have some diversity and make the block interesting
+        num_conditions = seeded_random.randint(0, 10)
+        for c in seeded_random.sample(test_conditions, num_conditions):
+            if c in set(
+                [
+                    op.AGG_SIG_PARENT,
+                    op.AGG_SIG_PUZZLE,
+                    op.AGG_SIG_AMOUNT,
+                    op.AGG_SIG_PUZZLE_AMOUNT,
+                    op.AGG_SIG_PARENT_AMOUNT,
+                    op.AGG_SIG_PARENT_PUZZLE,
+                    op.AGG_SIG_UNSAFE,
+                    op.AGG_SIG_ME,
+                ]
+            ):
+                secret_key = test_wallet.get_private_key_for_puzzle_hash(coin.puzzle_hash)
+                synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+                cond = ConditionWithArgs(c, [bytes(synthetic_secret_key.get_g1()), b"foobar"])
+            elif c == op.CREATE_COIN:
+                cond = ConditionWithArgs(c, [test_wallet.get_new_puzzle().get_tree_hash(), int_to_bytes(i)])
+            elif c in set([op.CREATE_COIN_ANNOUNCEMENT, op.CREATE_PUZZLE_ANNOUNCEMENT]):
+                cond = ConditionWithArgs(c, [b"foobar"])
+            elif c == op.ASSERT_MY_COIN_ID:
+                cond = ConditionWithArgs(c, [coin.name()])
+            elif c == op.ASSERT_MY_PARENT_ID:
+                cond = ConditionWithArgs(c, [coin.parent_coin_info])
+            elif c == op.ASSERT_MY_PUZZLEHASH:
+                cond = ConditionWithArgs(c, [coin.puzzle_hash])
+            elif c == op.ASSERT_MY_AMOUNT:
+                cond = ConditionWithArgs(c, [int_to_bytes(coin.amount)])
+            conditions.setdefault(c, []).append(cond)
+
+        # generate a spend of that coin
+        bundle = test_wallet.generate_signed_transaction(
+            uint64(50 * i), test_wallet.get_new_puzzle().get_tree_hash(), coin, conditions
+        )
+        bundles.append(bundle)
+    return bundles
+
+
+# if we try to fill the mempool with more than 550, all spends won't
+# necessarily fit in the block, which the test assumes
+@pytest.mark.anyio
+@pytest.mark.parametrize("mempool_size", [1, 2, 50, 100, 300, 400, 550])
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5, 6])
+async def test_create_block_generator(mempool_size: int, seed: int, transactions_1000: list[SpendBundle]) -> None:
+    bundles = transactions_1000
+    all_coins = [s.coin for b in bundles for s in b.coin_spends]
+    coins = TestCoins(all_coins, {})
+
+    rng = random.Random(seed)
+
+    # run the test multiple times, generating different combinations of mempools
+    mempool_manager = await setup_mempool(coins)
+
+    included_bundles = rng.sample(bundles, mempool_size)
+    expected_additions: set[Coin] = set()
+    expected_removals: set[Coin] = set()
+    expected_signature = G2Element()
+    for sb in included_bundles:
+        pre_validation = await mempool_manager.pre_validate_spendbundle(sb)
+        bundle_add_info = await mempool_manager.add_spend_bundle(
+            sb, pre_validation, sb.name(), first_added_height=uint32(1)
+        )
+        expected_additions.update(sb.additions())
+        expected_removals.update(sb.removals())
+
+        expected_signature += sb.aggregated_signature
+        assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
+        item = mempool_manager.get_mempool_item(sb.name())
+        assert item is not None
+    all_items = mempool_manager.mempool.all_items()
+    assert len(list(all_items)) == len(included_bundles)
+
+    invariant_check_mempool(mempool_manager.mempool)
+
+    assert mempool_manager.peak is not None
+    new_block_gen = await mempool_manager.create_block_generator(mempool_manager.peak.header_hash)
+    assert new_block_gen is not None
+
+    # now, make sure the generator we got is valid
+
+    assert len(expected_additions) == len(new_block_gen.additions)
+    assert expected_additions == set(new_block_gen.additions)
+    assert len(expected_removals) == len(new_block_gen.removals)
+    assert expected_removals == set(new_block_gen.removals)
+    assert expected_signature == new_block_gen.signature
+
+    err, conds = run_block_generator2(
+        bytes(new_block_gen.program),
+        new_block_gen.generator_refs,
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        MEMPOOL_MODE,
+        new_block_gen.signature,
+        None,
+        DEFAULT_CONSTANTS,
+    )
+
+    assert err is None
+    assert conds is not None
+
+    assert len(conds.spends) == len(expected_removals)
+    assert conds.cost < DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+
+    num_additions = 0
+    for spend in conds.spends:
+        assert Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount)) in expected_removals
+        for add2 in spend.create_coin:
+            assert Coin(spend.coin_id, add2[0], uint64(add2[1])) in expected_additions
+            num_additions += 1
+
+    assert num_additions == len(new_block_gen.additions)
