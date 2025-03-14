@@ -7,8 +7,6 @@ from typing import Callable, Optional
 
 import chia_rs
 from chia_rs import (
-    DONT_VALIDATE_SIGNATURE,
-    MEMPOOL_MODE,
     ConsensusConstants,
     Foliage,
     FoliageBlockData,
@@ -20,9 +18,6 @@ from chia_rs import (
     RewardChainBlockUnfinished,
     TransactionsInfo,
     compute_merkle_set_root,
-    get_flags_for_height_and_constants,
-    run_block_generator,
-    run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
@@ -38,32 +33,12 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, NewBlockGenerator
+from chia.types.generator_types import NewBlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.prev_transaction_block import get_prev_transaction_block
 
 log = logging.getLogger(__name__)
-
-
-def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants, height: uint32) -> uint64:
-    flags = get_flags_for_height_and_constants(height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
-
-    if height >= constants.HARD_FORK_HEIGHT:
-        run_block = run_block_generator2
-    else:
-        run_block = run_block_generator
-
-    _, conds = run_block(
-        bytes(generator.program),
-        generator.generator_refs,
-        constants.MAX_BLOCK_COST_CLVM,
-        flags,
-        G2Element(),
-        None,
-        constants,
-    )
-    return uint64(0 if conds is None else conds.cost)
 
 
 def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> uint64:
@@ -89,7 +64,6 @@ def create_foliage(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     seed: bytes,
-    compute_cost: Callable[[BlockGenerator, ConsensusConstants, uint32], uint64],
     compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64],
 ) -> tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
@@ -166,7 +140,7 @@ def create_foliage(
 
         # Calculate the cost of transactions
         if new_block_gen is not None:
-            cost = compute_cost(new_block_gen, constants, height)
+            cost = new_block_gen.cost
             spend_bundle_fees = compute_fees(new_block_gen.additions, new_block_gen.removals)
         else:
             spend_bundle_fees = uint64(0)
@@ -323,7 +297,6 @@ def create_unfinished_block(
     new_block_gen: Optional[NewBlockGenerator] = None,
     prev_block: Optional[BlockRecord] = None,
     finished_sub_slots_input: Optional[list[EndOfSubSlotBundle]] = None,
-    compute_cost: Callable[[BlockGenerator, ConsensusConstants, uint32], uint64] = compute_block_cost,
     compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64] = compute_block_fee,
 ) -> UnfinishedBlock:
     """
@@ -418,7 +391,6 @@ def create_unfinished_block(
         get_plot_signature,
         get_pool_signature,
         seed,
-        compute_cost,
         compute_fees,
     )
     return UnfinishedBlock(

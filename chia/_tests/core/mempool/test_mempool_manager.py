@@ -2672,6 +2672,7 @@ async def test_create_block_generator(
     else:
         assert len(conds.spends) == len(expected_removals)
     assert conds.cost < DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    assert new_block_gen.cost == conds.cost
 
     num_additions = 0
     for spend in conds.spends:
