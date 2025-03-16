@@ -52,7 +52,20 @@ class TimelordAPI:
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
                 return
-
+            if (
+                self.timelord.last_state.get_weight() == new_peak.reward_chain_block.weight
+                and self.timelord.last_state.peak.reward_chain_block.total_iters
+                >= new_peak.reward_chain_block.total_iters
+            ):
+                # new peak has equal weight but lower iterations
+                log.info("Not skipping peak, has equal weight but lower iterations")
+                log.info(
+                    f"New peak: height: {new_peak.reward_chain_block.height} weight: "
+                    f"{new_peak.reward_chain_block.weight} "
+                )
+                self.timelord.new_peak = new_peak
+                self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
+                return
             if self.timelord.last_state.get_weight() < new_peak.reward_chain_block.weight:
                 # if there is an unfinished block with less iterations, skip so we dont orphan it
                 if (
@@ -75,24 +88,10 @@ class TimelordAPI:
             if self.timelord.last_state.peak.reward_chain_block.get_hash() == new_peak.reward_chain_block.get_hash():
                 log.info("Skipping peak, already have.")
             else:
-                if (
-                    self.timelord.last_state.peak.reward_chain_block.total_iters
-                    >= new_peak.reward_chain_block.total_iters
-                ):
-                    log.info("Not skipping peak, has equal weight but lower")
-                    log.info(
-                        f"New peak: height: {new_peak.reward_chain_block.height} weight: "
-                        f"{new_peak.reward_chain_block.weight} "
-                    )
-                    self.timelord.new_peak = new_peak
-                    self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
-                    return
-
                 log.info("Skipping peak, block has equal or lower weight then our peak.")
-                log.debug(
-                    f"new peak height {new_peak.reward_chain_block.height} weight {new_peak.reward_chain_block.weight}"
-                )
-
+            log.debug(
+                f"new peak height {new_peak.reward_chain_block.height} weight {new_peak.reward_chain_block.weight}"
+            )
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
     def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord):
