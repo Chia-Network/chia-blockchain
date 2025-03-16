@@ -59,10 +59,9 @@ class TimelordAPI:
                 and self.timelord.last_state.peak.reward_chain_block.total_iters
                 >= new_peak.reward_chain_block.total_iters
             ):
-                log.info("Not skipping peak, has equal weight but lower iterations")
                 log.info(
-                    f"New peak: height: {new_peak.reward_chain_block.height} weight: "
-                    f"{new_peak.reward_chain_block.weight} "
+                    "Not skipping peak, has equal weight but lower iterations,"
+                    "current peak:{self.timelord.last_state.total_iters} new peak  {new_peak.reward_chain_block.total_iters}"
                 )
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
@@ -79,9 +78,9 @@ class TimelordAPI:
                     self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
                     return
 
-                log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(
-                    f"New peak: height: {new_peak.reward_chain_block.height} weight: "
+                    "Not skipping peak, don't have. Maybe we are not the fastest timelord "
+                    f"height: {new_peak.reward_chain_block.height} weight:"
                     f"{new_peak.reward_chain_block.weight} "
                 )
                 self.timelord.new_peak = new_peak
