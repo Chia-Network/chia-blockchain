@@ -26,6 +26,7 @@ from chia_rs import (
     G2Element,
     PoolTarget,
     PrivateKey,
+    solution_generator,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -822,6 +823,9 @@ class BlockTools:
                                 program, [], block_refs, transaction_data.aggregated_signature, additions, removals
                             )
                             transaction_data_included = False
+                        elif dummy_block_references:
+                            program = SerializedProgram.from_bytes(solution_generator([]))
+                            new_gen = NewBlockGenerator(program, [], block_refs, G2Element(), [], [])
                         else:
                             new_gen = None
 
@@ -1139,6 +1143,9 @@ class BlockTools:
                                 program, [], block_refs, transaction_data.aggregated_signature, additions, removals
                             )
                             transaction_data_included = False
+                        elif dummy_block_references:
+                            program = SerializedProgram.from_bytes(solution_generator([]))
+                            new_gen = NewBlockGenerator(program, [], block_refs, G2Element(), [], [])
                         else:
                             new_gen = None
 
