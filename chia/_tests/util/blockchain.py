@@ -95,7 +95,7 @@ def persistent_blocks(
                 # intentional, please also update the test chain cache.
                 # run: pytest -m build_test_chains
                 for i in range(5):
-                    if blocks[i] != expected_blocks[i]:
+                    if blocks[i] != expected_blocks[i]:  # pragma: no cover
                         print(
                             f"Block {i} in the block cache on disk differs "
                             "from what BlockTools generated. Please make sure "
