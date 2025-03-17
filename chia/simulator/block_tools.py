@@ -596,6 +596,8 @@ class BlockTools:
         skip_overflow: bool = False,
         min_signage_point: int = -1,
     ) -> list[FullBlock]:
+        # make a copy to not have different invocations affect each other
+        block_refs = block_refs[:]
         assert num_blocks > 0
         if block_list_input is not None:
             block_list = block_list_input.copy()
@@ -859,7 +861,6 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
-                            block_refs=block_refs,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
@@ -1181,7 +1182,6 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
-                            block_refs=block_refs,
                         )
 
                         if block_record.is_transaction_block:
@@ -1808,7 +1808,6 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
-    block_refs: list[uint32] = [],
     overflow_cc_challenge: Optional[bytes32] = None,
     overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,
