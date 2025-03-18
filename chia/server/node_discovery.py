@@ -13,7 +13,6 @@ from pathlib import Path
 from random import Random
 from typing import Any, Optional
 
-import aiosqlite
 import dns.asyncresolver
 from chia_rs.sized_ints import uint16, uint64
 
@@ -26,6 +25,7 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo, UnresolvedPeerInfo
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ip_address import IPAddress
 from chia.util.network import resolve
@@ -88,12 +88,13 @@ class FullNodeDiscovery:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[self.selected_network]
 
     async def initialize_address_manager(self) -> None:
-        self.peers_db_connection = aiosqlite.connect(self.peers_file_path)
-        await AddressManagerStore.initialise(self.peers_db_connection)
-        self.address_manager = await AddressManagerStore.create_address_manager(self.peers_db_connection)
-        if self.enable_private_networks:
-            self.address_manager.make_private_subnets_valid()
-        self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
+        async with DBWrapper2.managed(self.peers_file_path) as connection:
+            self.peers_db_connection = connection
+            await AddressManagerStore.initialise(self.peers_db_connection)
+            self.address_manager = await AddressManagerStore.create_address_manager(self.peers_db_connection)
+            if self.enable_private_networks:
+                self.address_manager.make_private_subnets_valid()
+            self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
 
     async def start_tasks(self) -> None:
         random = Random()
