@@ -87,7 +87,7 @@ class TestNewPeak:
                 blocks_2 = bt.get_consecutive_blocks(1, blocks)
                 await _validate_and_add_block(b2, blocks_2[-1])
                 await timelord_api.new_peak_timelord(timelord_peak_from_block(b2, blocks_2[-1]))
-                # await full_node.add_block(blocks[-1])
+                await full_node.add_block(blocks_2[-1])
                 await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
                 assert timelord_api.timelord.last_state.last_weight == blocks_1[-1].weight
                 assert timelord_api.timelord.last_state.total_iters == blocks_1[-1].reward_chain_block.total_iters
