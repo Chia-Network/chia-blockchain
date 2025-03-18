@@ -42,7 +42,7 @@ class AddressManagerStore:
 
     @staticmethod
     async def get_all_peers(db_wrapper: DBWrapper2) -> Iterable[aiosqlite.Row]:
-        async with db_wrapper.writer() as writer:
+        async with db_wrapper.reader() as reader:
             cursor = await writer.execute("SELECT * FROM peers")
             return await cursor.fetchall()
 
