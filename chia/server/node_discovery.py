@@ -89,7 +89,7 @@ class FullNodeDiscovery:
 
     async def initialize_address_manager(self) -> None:
         self.peers_file_path.parent.mkdir(parents=True, exist_ok=True)
-        self.peers_db_connection = aiosqlite.connect(self.peers_file_path)
+        self.peers_db_connection = await aiosqlite.connect(self.peers_file_path)
         await AddressManagerStore.initialise(self.peers_db_connection)
         self.address_manager = await AddressManagerStore.create_address_manager(self.peers_db_connection)
         if self.enable_private_networks:
