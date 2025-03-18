@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 class AddressManagerStore:
     @classmethod
     async def initialise(cls, db_wrapper: DBWrapper2) -> None:
-        async with db_wrapper.writer_maybe_transaction() as writer:
+        async with db_wrapper.writer() as writer:
             await writer.execute("""
                 CREATE TABLE IF NOT EXISTS peers (
                     node_id INTEGER PRIMARY KEY,

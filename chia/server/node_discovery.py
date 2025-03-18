@@ -88,6 +88,8 @@ class FullNodeDiscovery:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[self.selected_network]
 
     async def initialize_address_manager(self) -> None:
+        # TODO: is there a better place for this check?
+        self.peers_file_path.parent.mkdir(parents=True, exist_ok=True)
         async with DBWrapper2.managed(self.peers_file_path) as connection:
             self.peers_db_connection = connection
             await AddressManagerStore.initialise(self.peers_db_connection)
