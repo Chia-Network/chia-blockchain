@@ -59,7 +59,6 @@ jobs:
       - uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-          force-pyenv: ${{ matrix.os.matrix == 'macos' && matrix.arch.matrix == 'intel' }}
 
       - name: Setup Poetry
         if: matrix.os.matrix != 'windows'
