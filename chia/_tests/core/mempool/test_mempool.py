@@ -2959,7 +2959,7 @@ async def test_skip_error_items() -> None:
 
     result = await mempool.create_block_generator(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
     assert result is not None
-    generator, _, _ = result
+    generator, _, _, _ = result
 
     assert called == 3
     assert generator.program == SerializedProgram.from_bytes(bytes.fromhex("ff01ff8080"))
@@ -3249,7 +3249,7 @@ async def test_create_block_generator() -> None:
 
     block = await mempool.create_block_generator(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0))
     assert block is not None
-    generator, signature, additions = block
+    generator, signature, additions, _ = block
 
     assert set(additions) == expected_additions
 
