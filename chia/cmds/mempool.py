@@ -30,9 +30,8 @@ def mempool_cmd(ctx: click.Context) -> None:
 def import_mempool_cmd(ctx: click.Context, rpc_port: Optional[int], path: str) -> None:
     import asyncio
 
-    file = open(path)
-    source = file.read()
-    file.close()
+    with open(path) as file:
+        source = file.read()
 
     content = json.loads(source)
 

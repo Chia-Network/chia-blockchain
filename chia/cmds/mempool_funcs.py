@@ -20,7 +20,7 @@ async def import_mempool_async(
         success = 0
         failed = 0
 
-        for _, item in content["mempool_items"].items():
+        for item in content["mempool_items"].values():
             try:
                 await node_client.push_tx(SpendBundle.from_json_dict(item["spend_bundle"]))
                 success += 1
