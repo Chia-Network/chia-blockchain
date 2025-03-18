@@ -10,7 +10,6 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
-from chia.util.db_wrapper import DBWrapper2
 
 Node = tuple[int, ExtendedPeerInfo]
 Table = tuple[int, int]
@@ -20,9 +19,8 @@ log = logging.getLogger(__name__)
 
 class AddressManagerStore:
     @classmethod
-    async def initialise(cls, db_wrapper: DBWrapper2) -> None:
-        async with db_wrapper.writer() as writer:
-            await writer.execute("""
+    async def initialise(cls, connection: aiosqlite.Connection) -> None:
+        await connection.execute("""
                 CREATE TABLE IF NOT EXISTS peers (
                     node_id INTEGER PRIMARY KEY,
                     info TEXT,
@@ -31,56 +29,52 @@ class AddressManagerStore:
                     bucket INTEGER
                 )
             """)
-            await writer.commit()
+        await connection.commit()
 
     @classmethod
-    async def create_address_manager(cls, db_wrapper: DBWrapper2) -> AddressManager:
+    async def create_address_manager(cls, connection: aiosqlite.Connection) -> AddressManager:
         """
         Creates an AddressManager using data from the SQLite peer db
         """
-        return await cls.deserialize(db_wrapper)
+        return await cls.deserialize(connection)
 
     @staticmethod
-    async def get_all_peers(db_wrapper: DBWrapper2) -> Iterable[aiosqlite.Row]:
-        async with db_wrapper.reader() as reader:
-            cursor = await writer.execute("SELECT * FROM peers")
-            return await cursor.fetchall()
+    async def get_all_peers(connection: aiosqlite.Connection) -> Iterable[aiosqlite.Row]:
+        cursor = await connection.execute("SELECT * FROM peers")
+        return await cursor.fetchall()
 
     @staticmethod
     async def add_peer(
-        node_id: int, info: str, is_tried: bool, ref_count: int, bucket: Optional[int], db_wrapper: DBWrapper2
+        node_id: int, info: str, is_tried: bool, ref_count: int, bucket: Optional[int], connection: aiosqlite.Connection
     ) -> None:
-        async with db_wrapper.writer() as writer:
-            await writer.execute(
-                """
-                INSERT INTO peers (node_id, info, is_tried, ref_count, bucket)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (node_id, info, is_tried, ref_count, bucket),
-            )
-            await writer.commit()
+        await connection.execute(
+            """
+            INSERT INTO peers (node_id, info, is_tried, ref_count, bucket)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (node_id, info, is_tried, ref_count, bucket),
+        )
+        await connection.commit()
 
     @staticmethod
-    async def remove_peer(node_id: int, db_wrapper: DBWrapper2) -> None:
-        async with db_wrapper.writer() as writer:
-            await writer.execute("DELETE FROM peers WHERE node_id = ?", (node_id,))
-            await writer.commit()
+    async def remove_peer(node_id: int, connection: aiosqlite.Connection) -> None:
+        await connection.execute("DELETE FROM peers WHERE node_id = ?", (node_id,))
+        await connection.commit()
 
     # TODO: deprecate this in favour of periodic calls to add_peer() and remove_peer()
     @classmethod
-    async def serialize(cls, address_manager: AddressManager, db_wrapper: DBWrapper2) -> None:
-        async with db_wrapper.writer() as writer:
-            await writer.execute("DELETE FROM peers")
-            await writer.commit()
+    async def serialize(cls, address_manager: AddressManager, connection: aiosqlite.Connection) -> None:
+        await connection.execute("DELETE FROM peers")
+        await connection.commit()
         for node_id, info in address_manager.map_info.items():
-            await cls.add_peer(node_id, str(info), info.is_tried, info.ref_count, None, db_wrapper)
+            await cls.add_peer(node_id, str(info), info.is_tried, info.ref_count, None, connection)
         log.debug("Peer data serialized successfully")
 
     @classmethod
-    async def deserialize(cls, db_wrapper: DBWrapper2) -> AddressManager:
+    async def deserialize(cls, connection: aiosqlite.Connection) -> AddressManager:
         log.info("Deserializing peer data from database")
         address_manager = AddressManager()
-        peers = await cls.get_all_peers(db_wrapper)
+        peers = await cls.get_all_peers(connection)
         for node_id, info_str, is_tried, ref_count, bucket in peers:
             info = ExtendedPeerInfo.from_string(info_str)
             info.is_tried = bool(is_tried)
