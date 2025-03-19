@@ -20,8 +20,8 @@ from chia_rs.sized_ints import uint16, uint64
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.address_manager import AddressManager, ExtendedPeerInfo, Job, JobType
-from chia.server.address_manager_sql_shared import add_peer, remove_peer, update_peer
+from chia.server.address_manager import AddressManager, ExtendedPeerInfo
+# from chia.server.address_manager_sql_shared import add_peer, remove_peer, update_peer_info
 from chia.server.address_manager_store_sql import AddressManagerStore
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -100,7 +100,7 @@ class FullNodeDiscovery:
     async def start_tasks(self) -> None:
         random = Random()
         self.connect_peers_task = create_referenced_task(self._connect_to_peers(random))
-        self.serialize_task = create_referenced_task(self._periodically_serialize(random))
+        # self.serialize_task = create_referenced_task(self._periodically_serialize())
         self.cleanup_task = create_referenced_task(self._periodically_cleanup())
 
     async def _close_common(self) -> None:
@@ -112,7 +112,8 @@ class FullNodeDiscovery:
             cancel_task_safe(t, self.log)
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
-        await self.peers_db_connection.close()
+        if self.peers_db_connection is not None:
+            await self.peers_db_connection.close()  
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         if (
@@ -412,24 +413,24 @@ class FullNodeDiscovery:
                 self.log.error(f"Exception in create outbound connections: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
-    async def _periodically_serialize(self, random: Random) -> None:
-        while not self.is_closed:
-            if self.address_manager is None:
-                await asyncio.sleep(10)
-                continue
-            await asyncio.sleep(random.randint(10, 30))
-            async with self.address_manager.lock:
-                job: Job = self.address_manager.jobs.pop()
-                if job.job_type == JobType.CREATE:
-                    await add_peer(
-                        job.node_id, job.info, job.info.is_tried, job.info.ref_count, None, self.peers_db_connection
-                    )
-                elif job.job_type == JobType.UPDATE:
-                    await update_peer(job.node_id, job.info, self.peers_db_connection)
-                elif job.job_type == JobType.REMOVE:
-                    await remove_peer(job.node_id, self.peers_db_connection)
-                assert self.peers_db_connection is not None
-                await AddressManagerStore.serialize(self.address_manager, self.peers_db_connection)
+    # async def _periodically_serialize(self) -> None:
+    #     while not self.is_closed:
+    #         if self.address_manager is None:
+    #             await asyncio.sleep(10)
+    #             continue
+    #         async with self.address_manager.lock:
+    #             job: Job = self.address_manager.jobs.pop()
+    #             if job.job_type == JobType.CREATE:
+    #                 assert job.info is not None
+    #                 await add_peer(
+    #                     job.node_id, job.info, job.info.is_tried, job.info.ref_count, None, self.peers_db_connection
+    #                 )
+    #             elif job.job_type == JobType.UPDATE:
+    #                 await update_peer_info(job.node_id, job.info, self.peers_db_connection)
+    #             elif job.job_type == JobType.REMOVE:
+    #                 await remove_peer(job.node_id, self.peers_db_connection)
+    #             assert self.peers_db_connection is not None
+    #             await AddressManagerStore.serialize(self.address_manager, self.peers_db_connection)
 
     async def _periodically_cleanup(self) -> None:
         while not self.is_closed:
