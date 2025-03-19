@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import functools
+import asyncio
 import logging
 import math
 import time
 from asyncio import Lock
+from enum import Enum
 from dataclasses import dataclass, field
 from random import choice, randrange
 from secrets import randbits
@@ -12,6 +14,7 @@ from typing import Optional
 
 from chia_rs.sized_ints import uint16, uint64
 
+from chia.server.address_manager_sql_shared import update_peer_info
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 
@@ -161,6 +164,18 @@ class ExtendedPeerInfo:
         return chance
 
 
+class JobType(Enum):
+    CREATE = 0
+    UPDATE = 1
+    DELETE = 2
+
+
+class Job:
+    def __init__(self, node_id: int, job_type: JobType, info: Optional[str] = None):
+        self.node_id = node_id
+        self.job_type = job_type
+        self.info = info
+
 def create_tried_matrix() -> list[list[int]]:
     return [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
 
@@ -187,6 +202,7 @@ class AddressManager:
     used_tried_matrix_positions: set[tuple[int, int]] = field(default_factory=set)
     allow_private_subnets: bool = False
     lock: Lock = field(default_factory=Lock)
+    jobs: list[Job] = field(default_factory=list)
 
     def clear(self) -> None:
         self.id_count = 0
@@ -203,6 +219,8 @@ class AddressManager:
         self.used_new_matrix_positions = set()
         self.used_tried_matrix_positions = set()
         self.allow_private_subnets = False
+        self.jobs = []
+        # asyncio.run(clear_peers(self.db_connection))
 
     def make_private_subnets_valid(self) -> None:
         self.allow_private_subnets = True
@@ -242,10 +260,13 @@ class AddressManager:
     def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
-        self.map_info[node_id] = ExtendedPeerInfo(addr, addr_src)
+        epi = ExtendedPeerInfo(addr, addr_src)
+        self.map_info[node_id] = epi
         self.map_addr[addr.host] = node_id
         self.map_info[node_id].random_pos = len(self.random_pos)
         self.random_pos.append(node_id)
+        self.jobs.push(Job(node_id, JobType.CREATE, epi.to_string()))
+        # asyncio.run(add_peer(node_id, epi.to_string(), False, 0, None, self.db_connection))
         return (self.map_info[node_id], node_id)
 
     def find_(self, addr: PeerInfo) -> tuple[Optional[ExtendedPeerInfo], Optional[int]]:
@@ -295,6 +316,8 @@ class AddressManager:
         self._set_tried_matrix(cur_bucket, cur_bucket_pos, node_id)
         self.tried_count += 1
         info.is_tried = True
+        self.jobs.push(Job(node_id, JobType.UPDATE, info.to_string()))
+        # asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
 
     def clear_new_(self, bucket: int, pos: int) -> None:
         if self.new_matrix[bucket][pos] != -1:
@@ -328,6 +351,8 @@ class AddressManager:
 
         # if it is already in the tried set, don't do anything else
         if info.is_tried:
+            self.jobs.push(Job(node_id, JobType.UPDATE, info.to_string()))
+            asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
             return None
 
         # find a bucket it is in now
@@ -366,6 +391,8 @@ class AddressManager:
         self.random_pos = self.random_pos[:-1]
         del self.map_addr[info.peer_info.host]
         del self.map_info[node_id]
+        self.jobs.push(Job(node_id, JobType.DELETE))
+        # asyncio.run(remove_peer(node_id, self.db_connection))
         self.new_count -= 1
 
     def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
@@ -431,7 +458,7 @@ class AddressManager:
         return is_unique
 
     def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
-        info, _ = self.find_(addr)
+        info, node_id = self.find_(addr)
         if info is None:
             return None
 
@@ -442,6 +469,8 @@ class AddressManager:
         if count_failures and info.last_count_attempt < self.last_good:
             info.last_count_attempt = timestamp
             info.num_attempts += 1
+        self.jobs.push(Job(node_id, JobType.UPDATE, info.to_string()))
+        # asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
 
     def select_peer_(self, new_only: bool) -> Optional[ExtendedPeerInfo]:
         if len(self.random_pos) == 0:

@@ -20,7 +20,8 @@ from chia_rs.sized_ints import uint16, uint64
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.address_manager import AddressManager, ExtendedPeerInfo
+from chia.server.address_manager import AddressManager, ExtendedPeerInfo, Job, JobType
+from chia.server.address_manager_sql_shared import add_peer, remove_peer, update_peer
 from chia.server.address_manager_store_sql import AddressManagerStore
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -111,6 +112,7 @@ class FullNodeDiscovery:
             cancel_task_safe(t, self.log)
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
+        await self.peers_db_connection.close()
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         if (
@@ -415,9 +417,17 @@ class FullNodeDiscovery:
             if self.address_manager is None:
                 await asyncio.sleep(10)
                 continue
-            serialize_interval = random.randint(15 * 60, 30 * 60)
-            await asyncio.sleep(serialize_interval)
+            await asyncio.sleep(random.randint(10, 30))
             async with self.address_manager.lock:
+                job: Job = self.address_manager.jobs.pop()
+                if job.job_type == JobType.CREATE:
+                    await add_peer(
+                        job.node_id, job.info, job.info.is_tried, job.info.ref_count, None, self.peers_db_connection
+                    )
+                elif job.job_type == JobType.UPDATE:
+                    await update_peer(job.node_id, job.info, self.peers_db_connection)
+                elif job.job_type == JobType.REMOVE:
+                    await remove_peer(job.node_id, self.peers_db_connection)
                 assert self.peers_db_connection is not None
                 await AddressManagerStore.serialize(self.address_manager, self.peers_db_connection)
 
