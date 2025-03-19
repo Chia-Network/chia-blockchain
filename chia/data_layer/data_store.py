@@ -293,12 +293,13 @@ class DataStore:
             merkle_blob = await self.get_merkle_blob(root_hash_blob, read_only=True)
             for index in indexes:
                 nodes = merkle_blob.get_nodes_with_indexes(index=index)
-                index_to_hash = {index: bytes32(node.hash) for index, node in nodes}
+                # TODO: consider implementing all or in part in rust for potential speedup
+                index_to_hash = {index: node.hash for index, node in nodes}
                 for _, node in nodes:
                     if isinstance(node, chia_rs.datalayer.LeafNode):
-                        terminal_nodes[bytes32(node.hash)] = (node.key, node.value)
+                        terminal_nodes[node.hash] = (node.key, node.value)
                     elif isinstance(node, chia_rs.datalayer.InternalNode):
-                        internal_nodes[bytes32(node.hash)] = (index_to_hash[node.left], index_to_hash[node.right])
+                        internal_nodes[node.hash] = (index_to_hash[node.left], index_to_hash[node.right])
 
         merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
