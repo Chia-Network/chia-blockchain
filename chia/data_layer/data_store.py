@@ -366,7 +366,7 @@ class DataStore:
                         filename = get_delta_filename_path(
                             server_files_location,
                             store_id,
-                            bytes32([0] * 32) if root.node_hash is None else root.node_hash,
+                            bytes32.zeros if root.node_hash is None else root.node_hash,
                             root.generation,
                             group_by_store,
                         )
@@ -598,10 +598,6 @@ class DataStore:
         status: Status,
         generation: Optional[int] = None,
     ) -> Root:
-        # This should be replaced by an SQLite schema level check.
-        # https://github.com/Chia-Network/chia-blockchain/pull/9284
-        store_id = bytes32(store_id)
-
         async with self.db_wrapper.writer() as writer:
             if generation is None:
                 try:
@@ -1398,7 +1394,7 @@ class DataStore:
                 else:
                     assert isinstance(node, chia_rs.datalayer.LeafNode)
                     tree_node = await self.get_terminal_node(node.key, node.value, store_id)
-                hash_to_node[bytes32(node.hash)] = tree_node
+                hash_to_node[node.hash] = tree_node
 
             root_node = hash_to_node[root.node_hash]
 
