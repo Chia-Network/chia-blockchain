@@ -265,7 +265,7 @@ class AddressManager:
         self.map_addr[addr.host] = node_id
         self.map_info[node_id].random_pos = len(self.random_pos)
         self.random_pos.append(node_id)
-        self.jobs.push(Job(node_id, JobType.CREATE, epi.to_string()))
+        self.jobs.append(Job(node_id, JobType.CREATE, epi.to_string()))
         # asyncio.run(add_peer(node_id, epi.to_string(), False, 0, None, self.db_connection))
         return (self.map_info[node_id], node_id)
 
@@ -316,7 +316,7 @@ class AddressManager:
         self._set_tried_matrix(cur_bucket, cur_bucket_pos, node_id)
         self.tried_count += 1
         info.is_tried = True
-        self.jobs.push(Job(node_id, JobType.UPDATE, info.to_string()))
+        self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
         # asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
 
     def clear_new_(self, bucket: int, pos: int) -> None:
@@ -351,7 +351,7 @@ class AddressManager:
 
         # if it is already in the tried set, don't do anything else
         if info.is_tried:
-            self.jobs.push(Job(node_id, JobType.UPDATE, info.to_string()))
+            self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
             asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
             return None
 
@@ -391,7 +391,7 @@ class AddressManager:
         self.random_pos = self.random_pos[:-1]
         del self.map_addr[info.peer_info.host]
         del self.map_info[node_id]
-        self.jobs.push(Job(node_id, JobType.DELETE))
+        self.jobs.append(Job(node_id, JobType.DELETE))
         # asyncio.run(remove_peer(node_id, self.db_connection))
         self.new_count -= 1
 
@@ -469,7 +469,7 @@ class AddressManager:
         if count_failures and info.last_count_attempt < self.last_good:
             info.last_count_attempt = timestamp
             info.num_attempts += 1
-        self.jobs.push(Job(node_id, JobType.UPDATE, info.to_string()))
+        self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
         # asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
 
     def select_peer_(self, new_only: bool) -> Optional[ExtendedPeerInfo]:
