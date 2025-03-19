@@ -265,7 +265,7 @@ class DataStore:
                         SELECT hash, root_hash, idx
                         FROM nodes
                         WHERE store_id = ? AND hash IN ({placeholders})
-                        LIMIT {len(placeholders)}
+                        LIMIT {len(batch.entries)}
                     """
 
                     async with reader.execute(query, (store_id, *batch.entries)) as cursor:
