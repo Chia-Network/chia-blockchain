@@ -582,8 +582,9 @@ class DataStore:
                 """,
                 (
                     (store_id, hash, root.node_hash, generation, index.raw)
-                    for hash, index in hash_to_index.items() if hash not in existing_hashes
-                )
+                    for hash, index in hash_to_index.items()
+                    if hash not in existing_hashes
+                ),
             )
 
     async def _insert_root(
