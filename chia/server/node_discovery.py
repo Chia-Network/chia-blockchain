@@ -450,7 +450,7 @@ class FullNodeDiscovery:
             connected = [c for c in connected if c is not None]
             if self.address_manager is not None and len(connected) >= 3:
                 async with self.address_manager.lock:
-                    self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
+                    await self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
 
     def _peer_has_wrong_network_port(self, port: uint16) -> bool:
         # Check if the peer is having the default port of a network different than ours.

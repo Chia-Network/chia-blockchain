@@ -604,7 +604,7 @@ class AddressManager:
 
         return addr
 
-    def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int) -> None:
+    async def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int) -> None:
         now = int(math.floor(time.time()))
         for bucket in range(NEW_BUCKET_COUNT):
             for pos in range(BUCKET_SIZE):
@@ -615,7 +615,7 @@ class AddressManager:
                         cur_info.timestamp < now - max_timestamp_difference
                         and cur_info.num_attempts >= max_consecutive_failures
                     ):
-                        self.clear_new_(bucket, pos)
+                        await self.clear_new_(bucket, pos)
 
     def connect_(self, addr: PeerInfo, timestamp: int) -> None:
         info, _ = self.find_(addr)
