@@ -3,17 +3,20 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import random
 import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs.sized_ints import uint64
+import dns.asyncresolver
+from chia_rs.sized_ints import uint16, uint64
 
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.types.peer_info import TimestampedPeerInfo
 from chia.util.task_referencer import create_referenced_task
 
 
@@ -32,9 +35,12 @@ class Introducer:
 
         return self._server
 
-    def __init__(self, max_peers_to_send: int, recent_peer_threshold: int):
+    def __init__(self, max_peers_to_send: int, recent_peer_threshold: int, default_port: int, dns_servers: list[str]):
         self.max_peers_to_send = max_peers_to_send
         self.recent_peer_threshold = recent_peer_threshold
+        self.default_port = uint16(default_port)
+        self.dns_servers = dns_servers
+        self.resolver = dns.asyncresolver.Resolver()
         self._shut_down = False
         self._server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
@@ -121,3 +127,24 @@ class Introducer:
                     peer.vetted = max(peer.vetted + 1, 1)
             except Exception as e:
                 self.log.error(e)
+
+    async def get_peers_from_dns(self, num_peers: int) -> list[TimestampedPeerInfo]:
+        if len(self.dns_servers) == 0:
+            return []
+
+        peers: list[TimestampedPeerInfo] = []
+        dns_address = random.choice(self.dns_servers)
+        for rdtype in ("A", "AAAA"):
+            result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
+            for ip in result:
+                peers.append(
+                    TimestampedPeerInfo(
+                        ip.to_text(),
+                        self.default_port,
+                        uint64(0),
+                    )
+                )
+            if len(peers) > num_peers:
+                break
+
+        return peers
