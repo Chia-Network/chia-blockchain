@@ -21,6 +21,7 @@ from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
+
 # from chia.server.address_manager_sql_shared import add_peer, remove_peer, update_peer_info
 from chia.server.address_manager_store_sql import AddressManagerStore
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -113,7 +114,7 @@ class FullNodeDiscovery:
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
         if self.peers_db_connection is not None:
-            await self.peers_db_connection.close()  
+            await self.peers_db_connection.close()
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         if (

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Optional
 
 import aiosqlite
 
@@ -11,9 +10,7 @@ async def get_all_peers(connection: aiosqlite.Connection) -> Iterable[aiosqlite.
     return await cursor.fetchall()
 
 
-async def add_peer(
-    node_id: int, info: str, connection: aiosqlite.Connection
-) -> None:
+async def add_peer(node_id: int, info: str, connection: aiosqlite.Connection) -> None:
     await connection.execute(
         """
         INSERT INTO peers (node_id, info)
