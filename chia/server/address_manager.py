@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import math
 import time
 from asyncio import Lock
-from enum import Enum
 from random import choice, randrange
 from secrets import randbits
 from typing import Optional
@@ -161,6 +159,7 @@ class ExtendedPeerInfo:
         # but at most 1/28th to avoid the search taking forever or overly penalizing outages.
         chance *= pow(0.66, min(self.num_attempts, 8))
         return chance
+
 
 # This is a Python port from 'CAddrMan' class from Bitcoin core code.
 class AddressManager:
