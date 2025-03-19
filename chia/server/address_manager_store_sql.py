@@ -8,7 +8,7 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
-from chia.server.address_manager_sql_shared import clear_peers, get_all_peers
+from chia.server.address_manager_sql_shared import add_peer, clear_peers, get_all_peers
 
 Node = tuple[int, ExtendedPeerInfo]
 Table = tuple[int, int]
@@ -22,10 +22,7 @@ class AddressManagerStore:
         await connection.execute("""
                 CREATE TABLE IF NOT EXISTS peers (
                     node_id INTEGER PRIMARY KEY,
-                    info TEXT,
-                    is_tried BOOLEAN,
-                    ref_count INTEGER,
-                    bucket INTEGER
+                    info TEXT
                 )
             """)
         await connection.commit()
@@ -43,7 +40,7 @@ class AddressManagerStore:
         await clear_peers(connection)
         await connection.commit()
         for node_id, info in address_manager.map_info.items():
-            await cls.add_peer(node_id, str(info), info.is_tried, info.ref_count, None, connection)
+            await add_peer(node_id, str(info), info.is_tried, info.ref_count, None, connection)
         log.debug("Peer data serialized successfully")
 
     @classmethod
@@ -56,5 +53,6 @@ class AddressManagerStore:
             info.is_tried = bool(is_tried)
             info.ref_count = ref_count
             address_manager.map_info[node_id] = info
+        address_manager.db_connection = connection
         log.debug("Peer data deserialized successfully")
         return address_manager

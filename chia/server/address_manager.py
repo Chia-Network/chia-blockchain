@@ -10,9 +10,10 @@ from random import choice, randrange
 from secrets import randbits
 from typing import Optional
 
+import aiosqlite
 from chia_rs.sized_ints import uint16, uint64
 
-from chia.server.address_manager_sql_shared import update_peer_info
+from chia.server.address_manager_sql_shared import add_peer, remove_peer, update_peer_info
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 
@@ -161,20 +162,6 @@ class ExtendedPeerInfo:
         chance *= pow(0.66, min(self.num_attempts, 8))
         return chance
 
-
-class JobType(Enum):
-    CREATE = 0
-    UPDATE = 1
-    DELETE = 2
-
-
-class Job:
-    def __init__(self, node_id: int, job_type: JobType, info: Optional[str] = None):
-        self.node_id = node_id
-        self.job_type = job_type
-        self.info = info
-
-
 # This is a Python port from 'CAddrMan' class from Bitcoin core code.
 class AddressManager:
     id_count: int
@@ -191,7 +178,7 @@ class AddressManager:
     used_new_matrix_positions: set[tuple[int, int]]
     used_tried_matrix_positions: set[tuple[int, int]]
     allow_private_subnets: bool
-    jobs: list[Job]
+    db_connection: aiosqlite.Connection
 
     def __init__(self) -> None:
         self.clear()
@@ -212,8 +199,6 @@ class AddressManager:
         self.used_new_matrix_positions = set()
         self.used_tried_matrix_positions = set()
         self.allow_private_subnets = False
-        self.jobs = []
-        # asyncio.run(clear_peers(self.db_connection))
 
     def make_private_subnets_valid(self) -> None:
         self.allow_private_subnets = True
@@ -250,7 +235,7 @@ class AddressManager:
                 if self.tried_matrix[bucket][pos] != -1:
                     self.used_tried_matrix_positions.add((bucket, pos))
 
-    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
+    async def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
         epi = ExtendedPeerInfo(addr, addr_src)
@@ -258,8 +243,8 @@ class AddressManager:
         self.map_addr[addr.host] = node_id
         self.map_info[node_id].random_pos = len(self.random_pos)
         self.random_pos.append(node_id)
-        self.jobs.append(Job(node_id, JobType.CREATE, epi.to_string()))
-        # asyncio.run(add_peer(node_id, epi.to_string(), False, 0, None, self.db_connection))
+        # self.jobs.append(Job(node_id, JobType.CREATE, epi.to_string()))
+        await add_peer(node_id, epi.to_string(), self.db_connection)
         return (self.map_info[node_id], node_id)
 
     def find_(self, addr: PeerInfo) -> tuple[Optional[ExtendedPeerInfo], Optional[int]]:
@@ -281,7 +266,7 @@ class AddressManager:
         self.random_pos[rand_pos_1] = node_id_2
         self.random_pos[rand_pos_2] = node_id_1
 
-    def make_tried_(self, info: ExtendedPeerInfo, node_id: int) -> None:
+    async def make_tried_(self, info: ExtendedPeerInfo, node_id: int) -> None:
         for bucket in range(NEW_BUCKET_COUNT):
             pos = info.get_bucket_position(self.key, True, bucket)
             if self.new_matrix[bucket][pos] == node_id:
@@ -309,10 +294,10 @@ class AddressManager:
         self._set_tried_matrix(cur_bucket, cur_bucket_pos, node_id)
         self.tried_count += 1
         info.is_tried = True
-        self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
-        # asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
+        # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
+        await update_peer_info(node_id, info.to_string(), self.db_connection)
 
-    def clear_new_(self, bucket: int, pos: int) -> None:
+    async def clear_new_(self, bucket: int, pos: int) -> None:
         if self.new_matrix[bucket][pos] != -1:
             delete_id = self.new_matrix[bucket][pos]
             delete_info = self.map_info[delete_id]
@@ -320,9 +305,9 @@ class AddressManager:
             delete_info.ref_count -= 1
             self._set_new_matrix(bucket, pos, -1)
             if delete_info.ref_count == 0:
-                self.delete_new_entry_(delete_id)
+                await self.delete_new_entry_(delete_id)
 
-    def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int) -> None:
+    async def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int) -> None:
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
         if addr.ip.is_private and not self.allow_private_subnets:
@@ -344,8 +329,8 @@ class AddressManager:
 
         # if it is already in the tried set, don't do anything else
         if info.is_tried:
-            self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
-            asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
+            # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
+            await update_peer_info(node_id, info.to_string(), self.db_connection)
             return None
 
         # find a bucket it is in now
@@ -376,7 +361,7 @@ class AddressManager:
         else:
             self.make_tried_(info, node_id)
 
-    def delete_new_entry_(self, node_id: int) -> None:
+    async def delete_new_entry_(self, node_id: int) -> None:
         info = self.map_info[node_id]
         if info is None or info.random_pos is None:
             return None
@@ -384,11 +369,11 @@ class AddressManager:
         self.random_pos = self.random_pos[:-1]
         del self.map_addr[info.peer_info.host]
         del self.map_info[node_id]
-        self.jobs.append(Job(node_id, JobType.DELETE))
-        # asyncio.run(remove_peer(node_id, self.db_connection))
+        # self.jobs.append(Job(node_id, JobType.DELETE))
+        await remove_peer(node_id, self.db_connection)
         self.new_count -= 1
 
-    def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
+    async def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
         is_unique = False
         peer_info = PeerInfo(
             addr.host,
@@ -447,10 +432,10 @@ class AddressManager:
             else:
                 if info.ref_count == 0:
                     if node_id is not None:
-                        self.delete_new_entry_(node_id)
+                        await self.delete_new_entry_(node_id)
         return is_unique
 
-    def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
+    async def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
         info, node_id = self.find_(addr)
         if info is None:
             return None
@@ -462,8 +447,9 @@ class AddressManager:
         if count_failures and info.last_count_attempt < self.last_good:
             info.last_count_attempt = timestamp
             info.num_attempts += 1
-        self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
-        # asyncio.run(update_peer_info(node_id, info.to_string(), self.db_connection))
+        assert node_id is not None
+        # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
+        await update_peer_info(node_id, info.to_string(), self.db_connection)
 
     def select_peer_(self, new_only: bool) -> Optional[ExtendedPeerInfo]:
         if len(self.random_pos) == 0:
@@ -531,7 +517,7 @@ class AddressManager:
                     return info
                 chance *= 1.2
 
-    def resolve_tried_collisions_(self) -> None:
+    async def resolve_tried_collisions_(self) -> None:
         for node_id in self.tried_collisions[:]:
             resolved = False
             if node_id not in self.map_info:
@@ -548,13 +534,13 @@ class AddressManager:
                         resolved = True
                     elif time.time() - old_info.last_try < 4 * 60 * 60:
                         if time.time() - old_info.last_try > 60:
-                            self.mark_good_(peer, False, math.floor(time.time()))
+                            await self.mark_good_(peer, False, math.floor(time.time()))
                             resolved = True
                     elif time.time() - info.last_success > 40 * 60:
-                        self.mark_good_(peer, False, math.floor(time.time()))
+                        await self.mark_good_(peer, False, math.floor(time.time()))
                         resolved = True
                 else:
-                    self.mark_good_(peer, False, math.floor(time.time()))
+                    await self.mark_good_(peer, False, math.floor(time.time()))
                     resolved = True
             if resolved:
                 self.tried_collisions.remove(node_id)
@@ -634,7 +620,7 @@ class AddressManager:
         is_added = False
         async with self.lock:
             for addr in addresses:
-                cur_peer_added = self.add_to_new_table_(addr, source, penalty)
+                cur_peer_added = await self.add_to_new_table_(addr, source, penalty)
                 is_added = is_added or cur_peer_added
         return is_added
 
@@ -648,7 +634,7 @@ class AddressManager:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
-            self.mark_good_(addr, test_before_evict, timestamp)
+            await self.mark_good_(addr, test_before_evict, timestamp)
 
     # Mark an entry as connection attempted to.
     async def attempt(
@@ -660,12 +646,12 @@ class AddressManager:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
-            self.attempt_(addr, count_failures, timestamp)
+            await self.attempt_(addr, count_failures, timestamp)
 
     # See if any to-be-evicted tried table entries have been tested and if so resolve the collisions.
     async def resolve_tried_collisions(self) -> None:
         async with self.lock:
-            self.resolve_tried_collisions_()
+            await self.resolve_tried_collisions_()
 
     # Randomly select an address in tried that another address is attempting to evict.
     async def select_tried_collision(self) -> Optional[ExtendedPeerInfo]:

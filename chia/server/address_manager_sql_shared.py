@@ -12,31 +12,14 @@ async def get_all_peers(connection: aiosqlite.Connection) -> Iterable[aiosqlite.
 
 
 async def add_peer(
-    node_id: int, info: str, is_tried: bool, ref_count: int, bucket: Optional[int], connection: aiosqlite.Connection
+    node_id: int, info: str, connection: aiosqlite.Connection
 ) -> None:
     await connection.execute(
         """
-        INSERT INTO peers (node_id, info, is_tried, ref_count, bucket)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO peers (node_id, info)
+        VALUES (?, ?)
         """,
-        (node_id, info, is_tried, ref_count, bucket),
-    )
-    await connection.commit()
-
-
-async def update_peer(
-    node_id: int, info: str, is_tried: bool, ref_count: int, bucket: Optional[int], connection: aiosqlite.Connection
-) -> None:
-    await connection.execute(
-        """
-        UPDATE peers
-        SET info = ?,
-        is_tried = ?,
-        ref_count = ?
-        bucket = ?,
-        WHERE node_id = ?
-        """,
-        (info, is_tried, ref_count, bucket, node_id),
+        (node_id, info),
     )
     await connection.commit()
 
