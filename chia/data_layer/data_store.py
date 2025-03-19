@@ -221,12 +221,13 @@ class DataStore:
             merkle_blob = await self.get_merkle_blob(root_hash_blob, read_only=True)
             for index in indexes:
                 nodes = merkle_blob.get_nodes_with_indexes(index=index)
-                index_to_hash = {index: bytes32(node.hash) for index, node in nodes}
+                # TODO: consider implementing all or in part in rust for potential speedup
+                index_to_hash = {index: node.hash for index, node in nodes}
                 for _, node in nodes:
                     if isinstance(node, chia_rs.datalayer.LeafNode):
-                        terminal_nodes[bytes32(node.hash)] = (node.key, node.value)
+                        terminal_nodes[node.hash] = (node.key, node.value)
                     elif isinstance(node, chia_rs.datalayer.InternalNode):
-                        internal_nodes[bytes32(node.hash)] = (index_to_hash[node.left], index_to_hash[node.right])
+                        internal_nodes[node.hash] = (index_to_hash[node.left], index_to_hash[node.right])
 
         return internal_nodes, terminal_nodes
 
@@ -400,7 +401,7 @@ class DataStore:
                         filename = get_delta_filename_path(
                             server_files_location,
                             store_id,
-                            bytes32([0] * 32) if root.node_hash is None else root.node_hash,
+                            bytes32.zeros if root.node_hash is None else root.node_hash,
                             root.generation,
                             group_by_store,
                         )
@@ -629,10 +630,6 @@ class DataStore:
         status: Status,
         generation: Optional[int] = None,
     ) -> Root:
-        # This should be replaced by an SQLite schema level check.
-        # https://github.com/Chia-Network/chia-blockchain/pull/9284
-        store_id = bytes32(store_id)
-
         async with self.db_wrapper.writer() as writer:
             if generation is None:
                 try:
@@ -1429,7 +1426,7 @@ class DataStore:
                 else:
                     assert isinstance(node, chia_rs.datalayer.LeafNode)
                     tree_node = await self.get_terminal_node(node.key, node.value, store_id)
-                hash_to_node[bytes32(node.hash)] = tree_node
+                hash_to_node[node.hash] = tree_node
 
             root_node = hash_to_node[root.node_hash]
 
