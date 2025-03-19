@@ -309,7 +309,7 @@ class AddressManager:
             # Find its position into new table.
             new_bucket = old_info.get_new_bucket(self.key)
             new_bucket_pos = old_info.get_bucket_position(self.key, True, new_bucket)
-            self.clear_new_(new_bucket, new_bucket_pos)
+            await self.clear_new_(new_bucket, new_bucket_pos)
             old_info.ref_count = 1
             self._set_new_matrix(new_bucket, new_bucket_pos, node_id_evict)
             self.new_count += 1
@@ -381,7 +381,7 @@ class AddressManager:
                 if node_id not in self.tried_collisions:
                     self.tried_collisions.append(node_id)
         else:
-            self.make_tried_(info, node_id)
+            await self.make_tried_(info, node_id)
 
     async def delete_new_entry_(self, node_id: int) -> None:
         info = self.map_info[node_id]
@@ -433,7 +433,8 @@ class AddressManager:
             if factor > 1 and randrange(factor) != 0:
                 return False
         else:
-            (info, node_id) = self.create_(addr, source)
+            (info, node_id) = await self.create_(addr, source)
+            assert info is not None
             info.timestamp = max(0, info.timestamp - penalty)
             self.new_count += 1
             is_unique = True
@@ -447,7 +448,7 @@ class AddressManager:
                 if info_existing.is_terrible() or (info_existing.ref_count > 1 and info.ref_count == 0):
                     add_to_new = True
             if add_to_new:
-                self.clear_new_(new_bucket, new_bucket_pos)
+                await self.clear_new_(new_bucket, new_bucket_pos)
                 info.ref_count += 1
                 if node_id is not None:
                     self._set_new_matrix(new_bucket, new_bucket_pos, node_id)
