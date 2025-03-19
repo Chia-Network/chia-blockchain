@@ -4,7 +4,6 @@ import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
@@ -25,7 +24,7 @@ from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
@@ -840,8 +839,7 @@ class FullNodeRpcApi:
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
     async def create_block_generator(self, _: dict[str, Any]) -> EndpointResult:
-        mempool_generator = BlockGenerator()
-        signature = G2Element()
+        gen = NewBlockGenerator()
 
         # Grab best transactions from Mempool for given tip target
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
@@ -849,9 +847,11 @@ class FullNodeRpcApi:
 
             if peak is None:
                 return {
-                    "generator": mempool_generator.program,
-                    "refs": mempool_generator.generator_refs,
-                    "sig": signature,
+                    "generator": gen.program,
+                    "refs": gen.block_refs,
+                    "additions": gen.additions,
+                    "removals": gen.removals,
+                    "sig": gen.signature,
                 }
 
             # Finds the last transaction block before this one
@@ -863,14 +863,22 @@ class FullNodeRpcApi:
             start_time = time.monotonic()
 
             try:
-                result = await self.service.mempool_manager.create_block_generator(curr_l_tb.header_hash)
-                assert result is not None
-                mempool_generator, signature, _additions, _removals = result
+                maybe_gen = await self.service.mempool_manager.create_block_generator(curr_l_tb.header_hash)
+                if maybe_gen is None:
+                    self.service.log.error(f"failed to create block generator, peak: {peak}")
+                else:
+                    gen = maybe_gen
             except Exception:
-                self.service.log.exception(f"Error making spend bundle peak: {peak}")
+                self.service.log.exception(f"Error creating block generator, peak: {peak}")
             self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time:0.2f} seconds")
 
-        return {"generator": mempool_generator.program, "refs": mempool_generator.generator_refs, "sig": signature}
+        return {
+            "generator": gen.program,
+            "refs": gen.block_refs,
+            "additions": gen.additions,
+            "removals": gen.removals,
+            "sig": gen.signature,
+        }
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """

@@ -62,7 +62,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
@@ -835,10 +835,7 @@ class FullNodeAPI:
             # 3. In a future sub-slot that we already know of
 
             # Grab best transactions from Mempool for given tip target
-            aggregate_signature: G2Element = G2Element()
-            block_generator: Optional[BlockGenerator] = None
-            additions: Optional[list[Coin]] = []
-            removals: Optional[list[Coin]] = []
+            new_block_gen: Optional[NewBlockGenerator]
             async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
 
@@ -863,12 +860,15 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        block = await self.full_node.mempool_manager.create_block_generator(curr_l_tb.header_hash)
-                        if block is not None:
-                            block_generator, aggregate_signature, additions, removals = block
+                        new_block_gen = await self.full_node.mempool_manager.create_block_generator(
+                            curr_l_tb.header_hash
+                        )
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
+                        new_block_gen = None
+                else:
+                    new_block_gen = None
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1005,10 +1005,7 @@ class FullNodeAPI:
                 timestamp,
                 self.full_node.blockchain,
                 b"",
-                block_generator,
-                aggregate_signature,
-                additions,
-                removals,
+                new_block_gen,
                 prev_b,
                 finished_sub_slots,
             )
@@ -1064,9 +1061,6 @@ class FullNodeAPI:
                     timestamp,
                     self.full_node.blockchain,
                     b"",
-                    None,
-                    G2Element(),
-                    None,
                     None,
                     prev_b,
                     finished_sub_slots,

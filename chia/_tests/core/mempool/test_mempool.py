@@ -2957,9 +2957,8 @@ async def test_skip_error_items() -> None:
         called += 1
         raise RuntimeError("failed to find fast forward coin")
 
-    result = await mempool.create_block_generator(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
-    assert result is not None
-    generator, _, _, _ = result
+    generator = await mempool.create_block_generator(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
+    assert generator is not None
 
     assert called == 3
     assert generator.program == SerializedProgram.from_bytes(bytes.fromhex("ff01ff8080"))
@@ -3247,21 +3246,21 @@ async def test_create_block_generator() -> None:
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
 
-    block = await mempool.create_block_generator(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0))
-    assert block is not None
-    generator, signature, additions, _ = block
+    generator = await mempool.create_block_generator(
+        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
+    )
+    assert generator is not None
 
-    assert set(additions) == expected_additions
-
-    assert len(additions) == len(expected_additions)
-    assert signature == expected_signature
+    assert set(generator.additions) == expected_additions
+    assert len(generator.additions) == len(expected_additions)
+    assert generator.signature == expected_signature
 
     err, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
         test_constants.MAX_BLOCK_COST_CLVM,
         0,
-        signature,
+        generator.signature,
         None,
         test_constants,
     )
@@ -3278,7 +3277,7 @@ async def test_create_block_generator() -> None:
             assert Coin(spend.coin_id, add2[0], uint64(add2[1])) in expected_additions
             num_additions += 1
 
-    assert num_additions == len(additions)
+    assert num_additions == len(generator.additions)
     invariant_check_mempool(mempool)
 
 

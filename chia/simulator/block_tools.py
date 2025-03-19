@@ -97,7 +97,7 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
@@ -596,6 +596,8 @@ class BlockTools:
         skip_overflow: bool = False,
         min_signage_point: int = -1,
     ) -> list[FullBlock]:
+        # make a copy to not have different invocations affect each other
+        block_refs = block_refs[:]
         assert num_blocks > 0
         if block_list_input is not None:
             block_list = block_list_input.copy()
@@ -611,6 +613,9 @@ class BlockTools:
                     tx_block_heights.append(b.height)
 
         constants = self.constants
+
+        # this indicates whether the passed in transaction_data has been
+        # included in a transaction block yet
         transaction_data_included = False
         if time_per_block is None:
             time_per_block = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
@@ -767,20 +772,9 @@ class BlockTools:
                                     continue
 
                         assert latest_block.header_hash in blocks
-                        additions = None
-                        removals = None
                         if transaction_data_included:
                             transaction_data = None
                             block_refs = []
-                        if transaction_data is not None:
-                            additions = compute_additions_unchecked(transaction_data)
-                            removals = transaction_data.removals()
-                        elif include_transactions:
-                            assert wallet is not None
-                            assert rng is not None
-                            transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
-                            removals = transaction_data.removals()
-                            transaction_data_included = False
 
                         assert last_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
@@ -795,32 +789,48 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
-                        block_generator: Optional[BlockGenerator]
+                        if dummy_block_references and len(tx_block_heights) > 4:
+                            block_refs.extend(
+                                [
+                                    tx_block_heights[1],
+                                    tx_block_heights[len(tx_block_heights) // 2],
+                                    tx_block_heights[-2],
+                                ]
+                            )
+
+                        new_gen: Optional[NewBlockGenerator]
                         if transaction_data is not None:
+                            # this means the caller passed in transaction_data
+                            # to be included in the block.
+                            additions = compute_additions_unchecked(transaction_data)
+                            removals = transaction_data.removals()
                             if start_height >= constants.HARD_FORK_HEIGHT:
-                                block_generator = simple_solution_generator_backrefs(transaction_data)
-                                block_refs = []
+                                program = simple_solution_generator_backrefs(transaction_data).program
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-
-                            aggregate_signature = transaction_data.aggregated_signature
+                                program = simple_solution_generator(transaction_data).program
+                            block_refs = []
+                            new_gen = NewBlockGenerator(
+                                program, [], block_refs, transaction_data.aggregated_signature, additions, removals
+                            )
+                        elif include_transactions:
+                            # if the caller did not pass in specific
+                            # transactions, this parameter means we just want
+                            # some transactions
+                            assert wallet is not None
+                            assert rng is not None
+                            transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
+                            removals = transaction_data.removals()
+                            program = simple_solution_generator(transaction_data).program
+                            new_gen = NewBlockGenerator(
+                                program, [], block_refs, transaction_data.aggregated_signature, additions, removals
+                            )
+                            transaction_data_included = False
+                        elif dummy_block_references:
+                            program = SerializedProgram.from_bytes(solution_generator([]))
+                            new_gen = NewBlockGenerator(program, [], block_refs, G2Element(), [], [])
                         else:
-                            block_generator = None
-                            aggregate_signature = G2Element()
+                            new_gen = None
 
-                        if dummy_block_references:
-                            if block_generator is None:
-                                program = SerializedProgram.from_bytes(solution_generator([]))
-                                block_generator = BlockGenerator(program, [])
-
-                            if len(tx_block_heights) > 4:
-                                block_refs.extend(
-                                    [
-                                        tx_block_heights[1],
-                                        tx_block_heights[len(tx_block_heights) // 2],
-                                        tx_block_heights[-2],
-                                    ]
-                                )
                         (
                             full_block,
                             block_record,
@@ -838,10 +848,7 @@ class BlockTools:
                             last_timestamp,
                             start_height,
                             time_per_block,
-                            block_generator,
-                            aggregate_signature,
-                            additions,
-                            removals,
+                            new_gen,
                             height_to_hash,
                             difficulty,
                             required_iters,
@@ -854,7 +861,6 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
-                            block_refs=block_refs,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
@@ -1033,19 +1039,8 @@ class BlockTools:
             latest_block_eos = latest_block
             overflow_cc_challenge = finished_sub_slots_at_ip[-1].challenge_chain.get_hash()
             overflow_rc_challenge = finished_sub_slots_at_ip[-1].reward_chain.get_hash()
-            additions = None
-            removals = None
             if transaction_data_included:
                 transaction_data = None
-            if transaction_data is not None:
-                additions = compute_additions_unchecked(transaction_data)
-                removals = transaction_data.removals()
-            elif include_transactions:
-                assert wallet is not None
-                assert rng is not None
-                transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
-                removals = transaction_data.removals()
-                transaction_data_included = False
             sub_slots_finished += 1
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
@@ -1113,30 +1108,47 @@ class BlockTools:
                                 pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
+
+                        if dummy_block_references and len(tx_block_heights) > 4:
+                            block_refs.extend(
+                                [
+                                    tx_block_heights[1],
+                                    tx_block_heights[len(tx_block_heights) // 2],
+                                    tx_block_heights[-2],
+                                ]
+                            )
+
                         if transaction_data is not None:
+                            # this means the caller passed in transaction_data
+                            # to be included in the block.
+                            additions = compute_additions_unchecked(transaction_data)
+                            removals = transaction_data.removals()
                             if start_height >= constants.HARD_FORK_HEIGHT:
-                                block_generator = simple_solution_generator_backrefs(transaction_data)
-                                block_refs = []
+                                program = simple_solution_generator_backrefs(transaction_data).program
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-                            aggregate_signature = transaction_data.aggregated_signature
+                                program = simple_solution_generator(transaction_data).program
+                            block_refs = []
+                            new_gen = NewBlockGenerator(
+                                program, [], block_refs, transaction_data.aggregated_signature, additions, removals
+                            )
+                        elif include_transactions:
+                            # if the caller did not pass in specific
+                            # transactions, this parameter means we just want
+                            # some transactions
+                            assert wallet is not None
+                            assert rng is not None
+                            transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
+                            removals = transaction_data.removals()
+                            program = simple_solution_generator(transaction_data).program
+                            new_gen = NewBlockGenerator(
+                                program, [], block_refs, transaction_data.aggregated_signature, additions, removals
+                            )
+                            transaction_data_included = False
+                        elif dummy_block_references:
+                            program = SerializedProgram.from_bytes(solution_generator([]))
+                            new_gen = NewBlockGenerator(program, [], block_refs, G2Element(), [], [])
                         else:
-                            block_generator = None
-                            aggregate_signature = G2Element()
-
-                        if dummy_block_references:
-                            if block_generator is None:
-                                program = SerializedProgram.from_bytes(solution_generator([]))
-                                block_generator = BlockGenerator(program, [])
-
-                            if len(tx_block_heights) > 4:
-                                block_refs.extend(
-                                    [
-                                        tx_block_heights[1],
-                                        tx_block_heights[len(tx_block_heights) // 2],
-                                        tx_block_heights[-2],
-                                    ]
-                                )
+                            new_gen = None
 
                         (
                             full_block,
@@ -1155,10 +1167,7 @@ class BlockTools:
                             last_timestamp,
                             start_height,
                             time_per_block,
-                            block_generator,
-                            aggregate_signature,
-                            additions,
-                            removals,
+                            new_gen,
                             height_to_hash,
                             difficulty,
                             required_iters,
@@ -1173,7 +1182,6 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
-                            block_refs=block_refs,
                         )
 
                         if block_record.is_transaction_block:
@@ -1788,10 +1796,7 @@ def get_full_block_and_block_record(
     last_timestamp: float,
     start_height: uint32,
     time_per_block: float,
-    block_generator: Optional[BlockGenerator],
-    aggregate_signature: G2Element,
-    additions: Optional[list[Coin]],
-    removals: Optional[list[Coin]],
+    new_gen: Optional[NewBlockGenerator],
     height_to_hash: dict[uint32, bytes32],
     difficulty: uint64,
     required_iters: uint64,
@@ -1803,7 +1808,6 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
-    block_refs: list[uint32] = [],
     overflow_cc_challenge: Optional[bytes32] = None,
     overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,
@@ -1838,10 +1842,7 @@ def get_full_block_and_block_record(
         uint64(timestamp),
         BlockCache(blocks),
         seed,
-        block_generator,
-        aggregate_signature,
-        additions,
-        removals,
+        new_gen,
         prev_block,
         finished_sub_slots,
         compute_cost=compute_cost_test,
