@@ -482,6 +482,20 @@ def invariant_check_mempool(mempool: Mempool) -> None:
         val = cursor.fetchone()
         assert (mempool._total_cost, mempool._total_fee) == val
 
+    with mempool._db_conn as conn:
+        cursor = conn.execute("SELECT coin_id, tx FROM spends")
+        for coin_id, item_id in cursor.fetchall():
+            item = mempool._items.get(item_id)
+            assert item is not None
+            # item is expected to contain a spend of coin_id, but it might be a
+            # fast-forward spend, in which case the dictionary won't help us,
+            # but we'll have to do a linear search
+            if coin_id in item.bundle_coin_spends:
+                assert item.bundle_coin_spends[coin_id].coin_spend.coin.name() == coin_id
+                continue
+
+            assert any(map(lambda i: i.latest_singleton_coin == coin_id, item.bundle_coin_spends.values()))
+
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
     height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
