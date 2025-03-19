@@ -36,7 +36,18 @@ def create_introducer_service(
     if advertised_port is None:
         advertised_port = service_config["port"]
 
-    node = Introducer(service_config["max_peers_to_send"], service_config["recent_peer_threshold"])
+    try:
+        default_port = service_config["network_overrides"]["config"][network_id]["default_full_node_port"]
+    except KeyError:
+        raise Exception(f"Specify default_full_node_port for network {network_id}")
+
+    dns_servers = service_config.get("dns_servers", [])
+    if dns_servers == [] and network_id == "mainnet":
+        dns_servers.append("dns-introducer.chia.net")
+
+    node = Introducer(
+        service_config["max_peers_to_send"], service_config["recent_peer_threshold"], default_port, dns_servers
+    )
     peer_api = IntroducerAPI(node)
 
     return Service(
