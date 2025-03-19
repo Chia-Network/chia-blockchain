@@ -239,10 +239,6 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # for bionic
-          apt-get --yes update
-          apt-get install --yes software-properties-common
-          add-apt-repository --yes ppa:git-core/ppa
           apt-get --yes update
           apt-get install --yes git lsb-release sudo
           MINIMUM=3.9
