@@ -581,7 +581,7 @@ class DataStore:
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 (
-                    (store_id, hash, root.node_hash, generation, index.raw)
+                    (store_id, hash, root.node_hash, root.generation, index.raw)
                     for hash, index in hash_to_index.items()
                     if hash not in existing_hashes
                 ),
