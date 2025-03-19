@@ -865,7 +865,7 @@ class FullNodeAPI:
                     try:
                         block = await self.full_node.mempool_manager.create_block_generator(curr_l_tb.header_hash)
                         if block is not None:
-                            block_generator, aggregate_signature, additions = block
+                            block_generator, aggregate_signature, additions, removals = block
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
