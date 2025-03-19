@@ -600,18 +600,6 @@ class DataStore:
 
         return result
 
-    async def add_node_hash(
-        self, store_id: bytes32, hash: bytes32, root_hash: bytes32, generation: int, index: TreeIndex
-    ) -> None:
-        async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                """
-                INSERT INTO nodes(store_id, hash, root_hash, generation, idx)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (store_id, hash, root_hash, generation, index.raw),
-            )
-
     async def add_node_hashes(self, store_id: bytes32, generation: Optional[int] = None) -> None:
         root = await self.get_tree_root(store_id=store_id, generation=generation)
         if root.node_hash is None:
@@ -621,9 +609,18 @@ class DataStore:
         hash_to_index = merkle_blob.get_hashes_indexes()
 
         existing_hashes = await self.get_existing_hashes(list(hash_to_index.keys()), store_id)
-        for hash, index in hash_to_index.items():
-            if hash not in existing_hashes:
-                await self.add_node_hash(store_id, hash, root.node_hash, root.generation, index)
+        async with self.db_wrapper.writer() as writer:
+            await writer.executemany(
+                """
+                INSERT INTO nodes(store_id, hash, root_hash, generation, idx)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    (store_id, hash, root.node_hash, root.generation, index.raw)
+                    for hash, index in hash_to_index.items()
+                    if hash not in existing_hashes
+                ),
+            )
 
     async def _insert_root(
         self,
