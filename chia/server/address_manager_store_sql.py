@@ -40,7 +40,7 @@ class AddressManagerStore:
         await clear_peers(connection)
         await connection.commit()
         for node_id, info in address_manager.map_info.items():
-            await add_peer(node_id, str(info), info.is_tried, info.ref_count, None, connection)
+            await add_peer(node_id, str(info), connection)
         log.debug("Peer data serialized successfully")
 
     @classmethod
