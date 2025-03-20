@@ -21,6 +21,23 @@ async def add_peer(node_id: int, info: str, connection: aiosqlite.Connection) ->
     await connection.commit()
 
 
+async def set_new_table(entries: list[tuple[int, int]], connection: aiosqlite.Connection) -> None:
+    for node_id, bucket in entries:
+        cursor = await connection.execute(
+            "INSERT OR REPLACE INTO peer_new_table VALUES(?, ?)",
+            (node_id, bucket),
+        )
+        await cursor.close()
+    await connection.commit()
+
+
+async def get_new_table(connection: aiosqlite.Connection) -> list[tuple[int, int]]:
+    cursor = await connection.execute("SELECT node_id, bucket from peer_new_table")
+    entries = await cursor.fetchall()
+    await cursor.close()
+    return [(node_id, bucket) for node_id, bucket in entries]
+
+
 async def update_peer_info(node_id: int, info: str, connection: aiosqlite.Connection) -> None:
     await connection.execute("UPDATE peers SET info = ? WHERE node_id = ?", (info, node_id))
     await connection.commit()
