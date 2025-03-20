@@ -2212,9 +2212,7 @@ class TestCoins:
             self.coin_records[c.name()] = CoinRecord(c, uint32(0), uint32(0), False, TEST_TIMESTAMP)
         self.lineage_info = {}
         for ph, c in lineage.items():
-            self.lineage_info[ph] = UnspentLineageInfo(
-                c.name(), c.amount, c.parent_coin_info, uint64(1337), bytes32([42] * 32)
-            )
+            self.lineage_info[ph] = UnspentLineageInfo(c.name(), c.parent_coin_info, bytes32([42] * 32))
 
     def spend_coin(self, coin_id: bytes32, height: uint32 = uint32(10)) -> None:
         self.coin_records[coin_id] = dataclasses.replace(self.coin_records[coin_id], spent_block_index=height)
@@ -2225,9 +2223,7 @@ class TestCoins:
         else:
             assert coin.puzzle_hash == puzzle_hash
             prev = self.lineage_info[puzzle_hash]
-            self.lineage_info[puzzle_hash] = UnspentLineageInfo(
-                coin.name(), coin.amount, coin.parent_coin_info, prev.coin_amount, prev.coin_id
-            )
+            self.lineage_info[puzzle_hash] = UnspentLineageInfo(coin.name(), coin.parent_coin_info, prev.coin_id)
 
     async def get_coin_records(self, coin_ids: Collection[bytes32]) -> list[CoinRecord]:
         ret = []

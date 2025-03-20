@@ -3355,11 +3355,7 @@ async def test_lineage_cache(seeded_random: random.Random) -> None:
     called = 0
 
     info1 = UnspentLineageInfo(
-        bytes32.random(seeded_random),
-        uint64.from_bytes(seeded_random.randbytes(8)),
-        bytes32.random(seeded_random),
-        uint64.from_bytes(seeded_random.randbytes(8)),
-        bytes32.random(seeded_random),
+        bytes32.random(seeded_random), bytes32.random(seeded_random), bytes32.random(seeded_random)
     )
 
     async def callback1(ph: bytes32) -> Optional[UnspentLineageInfo]:
