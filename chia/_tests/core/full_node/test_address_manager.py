@@ -581,8 +581,8 @@ class TestPeerManager:
         assert await addrman.add_to_new_table([t_peer3], source)
         await addrman.mark_good(PeerInfo("250.7.1.1", uint16(8333)))
 
-        # These should be automatically serialized as they're added
-
+        # TODO: These should be automatically serialized as they're added
+        await AddressManagerStore.serialize(addrman, connection)
         addrman2 = await AddressManagerStore.create_address_manager(connection)
 
         retrieved_peers = []
