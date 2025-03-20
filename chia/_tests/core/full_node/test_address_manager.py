@@ -58,6 +58,7 @@ class TestPeerManager:
         assert await addrman.add_peer_info([peer1])
         assert await addrman.size() == 1
         peer1_ret = await addrman.select_peer()
+        assert peer1_ret is not None
         assert peer1_ret.peer_info == peer1
 
         # Test: Does IP address deduplication work correctly.
@@ -100,6 +101,7 @@ class TestPeerManager:
         assert not await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 1
         peer3 = await addrman.select_peer()
+        assert peer3 is not None
         assert peer3.peer_info == peer1
 
         # Test: Add same IP but diff port to tried table, it doesn't get added.
@@ -107,6 +109,7 @@ class TestPeerManager:
         await addrman.mark_good(peer2)
         assert await addrman.size() == 1
         peer3_ret = await addrman.select_peer(True)
+        assert peer3_ret is not None
         assert peer3_ret.peer_info == peer1
         await connection.close()
 
@@ -125,6 +128,7 @@ class TestPeerManager:
         assert await addrman.size() == 1
 
         peer1_ret = await addrman.select_peer(True)
+        assert peer1_ret is not None
         assert peer1_ret.peer_info == peer1
 
         # Test: move addr to tried, select from new expected nothing returned.
@@ -134,6 +138,7 @@ class TestPeerManager:
         peer2_ret = await addrman.select_peer(True)
         assert peer2_ret is None
         peer3_ret = await addrman.select_peer()
+        assert peer3_ret is not None
         assert peer3_ret.peer_info == peer1
 
         # Add three addresses to new table.
@@ -164,6 +169,7 @@ class TestPeerManager:
         ports = []
         for _ in range(200):
             peer = await addrman.select_peer()
+            assert peer is not None
             if peer.peer_info.port not in ports:
                 ports.append(peer.peer_info.port)
             if len(ports) == 3:
@@ -488,6 +494,7 @@ class TestPeerManager:
         await addrman.mark_good(peer18)
         assert await addrman.size() == 18
         collision = await addrman.select_tried_collision()
+        assert collision is not None
         assert collision.peer_info == PeerInfo("250.1.1.16", 8444)
         await addrman.resolve_tried_collisions()
         collision = await addrman.select_tried_collision()
@@ -560,6 +567,7 @@ class TestPeerManager:
         assert not await addrman.add_peer_info([addr16], source)
         await addrman.mark_good(addr16)
         collision = await addrman.select_tried_collision()
+        assert collision is not None
         assert collision.peer_info == PeerInfo("250.1.1.18", 8444)
         await addrman.resolve_tried_collisions()
         assert await addrman.select_tried_collision() is None
