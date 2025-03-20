@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-from collections.abc import Coroutine
-from typing import Any, Callable, Optional, Union
+from typing import Any, Optional, Union
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -11,8 +9,6 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -22,45 +18,12 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.wallet_node import WalletNode
-
-# from clvm_tools.binutils import disassemble
 
 logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
 
 
-def mempool_not_empty(fnapi: FullNodeSimulator) -> bool:
-    return fnapi.full_node.mempool_manager.mempool.size() > 0
-
-
-async def farm_blocks_until(
-    predicate_f: Callable[[], Coroutine[Any, Any, bool]], fnapi: FullNodeSimulator, ph: bytes32
-) -> None:
-    for i in range(50):
-        await fnapi.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        if await predicate_f():
-            return None
-        await asyncio.sleep(0.3)
-    raise TimeoutError()
-
-
 async def get_nft_count(wallet: NFTWallet) -> int:
     return await wallet.get_nft_count()
-
-
-def trusted_setup_helper(
-    trusted: bool, wallet_node_maker: WalletNode, wallet_node_taker: WalletNode, full_node_api: FullNodeSimulator
-) -> None:
-    if trusted:
-        wallet_node_maker.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_taker.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_maker.config["trusted_peers"] = {}
-        wallet_node_taker.config["trusted_peers"] = {}
 
 
 @pytest.mark.limit_consensus_modes
