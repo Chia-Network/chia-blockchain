@@ -40,7 +40,7 @@ class AddressManagerStore:
         await clear_peers(connection)
         await connection.commit()
         for node_id, info in address_manager.map_info.items():
-            await add_peer(node_id, str(info), connection)
+            await add_peer(node_id, info.to_string(), connection)
         log.debug("Peer data serialized successfully")
 
     @classmethod
@@ -48,10 +48,8 @@ class AddressManagerStore:
         log.info("Deserializing peer data from database")
         address_manager = AddressManager()
         peers = await get_all_peers(connection)
-        for node_id, info_str, is_tried, ref_count, bucket in peers:
+        for node_id, info_str in peers:
             info = ExtendedPeerInfo.from_string(info_str)
-            info.is_tried = bool(is_tried)
-            info.ref_count = ref_count
             address_manager.map_info[node_id] = info
         address_manager.db_connection = connection
         log.debug("Peer data deserialized successfully")
