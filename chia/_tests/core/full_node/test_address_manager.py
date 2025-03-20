@@ -81,7 +81,7 @@ class TestPeerManager:
         peers = [peer1, peer2]
         assert await addrman2.add_peer_info(peers)
         assert await addrman2.size() >= 1
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addr_manager_ports(self, tmp_path: Path):
@@ -108,7 +108,7 @@ class TestPeerManager:
         assert await addrman.size() == 1
         peer3_ret = await addrman.select_peer(True)
         assert peer3_ret.peer_info == peer1
-        connection.close()
+        await connection.close()
 
     # This is a fleaky test, since it uses randomness.
     # TODO: Make sure it always succeeds.
@@ -169,7 +169,7 @@ class TestPeerManager:
             if len(ports) == 3:
                 break
         assert len(ports) == 3
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_collisions_new(self, tmp_path: Path):
@@ -192,7 +192,7 @@ class TestPeerManager:
         peer2 = PeerInfo("250.1.1.9", 8444)
         assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 8
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_collisions_tried(self, tmp_path: Path):
@@ -217,7 +217,7 @@ class TestPeerManager:
         peer2 = PeerInfo("250.1.1.78", 8444)
         assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 77
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_find(self, tmp_path: Path):
@@ -251,7 +251,7 @@ class TestPeerManager:
         info3 = addrman.find_(peer3)
         assert info3[0] is not None and info3[1] is not None
         assert info3[0].peer_info == peer3
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_create(self, tmp_path: Path):
@@ -266,7 +266,7 @@ class TestPeerManager:
         assert info.peer_info == peer1
         info, _ = addrman.find_(peer1)
         assert info.peer_info == peer1
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_delete(self, tmp_path: Path):
@@ -285,7 +285,7 @@ class TestPeerManager:
         assert await addrman.size() == 0
         info2, _ = addrman.find_(peer1)
         assert info2 is None
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_get_peers(self, tmp_path: Path):
@@ -334,7 +334,7 @@ class TestPeerManager:
         percent = await addrman.size()
         percent = math.ceil(percent * 23 / 100)
         assert len(peers4) == percent
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_tried_bucket(self):
@@ -465,7 +465,7 @@ class TestPeerManager:
             assert await addrman.size() == 17
             collision = await addrman.select_tried_collision()
             assert collision is None
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_no_evict(self, tmp_path: Path):
@@ -517,7 +517,7 @@ class TestPeerManager:
         await addrman.resolve_tried_collisions()
         collision = await addrman.select_tried_collision()
         assert collision is None
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_eviction_works(self, tmp_path: Path):
@@ -563,7 +563,7 @@ class TestPeerManager:
         assert collision.peer_info == PeerInfo("250.1.1.18", 8444)
         await addrman.resolve_tried_collisions()
         assert await addrman.select_tried_collision() is None
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
@@ -609,7 +609,7 @@ class TestPeerManager:
                 ):
                     recovered += 1
         assert recovered == 3
-        connection.close()
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_cleanup(self, tmp_path: Path):
@@ -627,4 +627,4 @@ class TestPeerManager:
             await addrman.attempt(PeerInfo(peer1.host, peer1.port), True, time.time() - 61)
         await addrman.cleanup(7 * 3600 * 24, 5)
         assert await addrman.size() == 1
-        connection.close()
+        await connection.close()
