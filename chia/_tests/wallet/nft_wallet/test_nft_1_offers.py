@@ -209,7 +209,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                         "unconfirmed_wallet_balance": (xch_requested + expected_royalty) - maker_fee,
                         ">=#spendable_balance": 1,
                         ">=#max_send_amount": 1,
-                        "unspent_coin_count": 1,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
                         "pending_coin_removal_count": -1,
                     },
                     "did": {},
@@ -446,7 +446,8 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
-                        "unconfirmed_wallet_balance": xch_offered + expected_royalty - taker_fee,
+                        # royalty information doesn't show up in unconfirmed balance
+                        "unconfirmed_wallet_balance": xch_offered - taker_fee,
                         "<=#spendable_balance": -taker_fee,
                         "<=#max_send_amount": -taker_fee,
                         ">=#pending_change": 1,
@@ -460,10 +461,11 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                 post_block_balance_updates={
                     "xch": {
                         "confirmed_wallet_balance": xch_offered + expected_royalty - taker_fee,
+                        "unconfirmed_wallet_balance": expected_royalty,
                         ">=#spendable_balance": 1,
                         ">=#max_send_amount": 1,
                         "<=#pending_change": -1,
-                        "unspent_coin_count": 1,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
                         "pending_coin_removal_count": -1,
                     },
                     "did": {},
@@ -725,7 +727,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                         "unconfirmed_wallet_balance": (xch_requested + expected_royalty) - maker_fee,
                         ">=#spendable_balance": 1,
                         ">=#max_send_amount": 1,
-                        "unspent_coin_count": 1,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
                         "pending_coin_removal_count": -1,
                     },
                     "did": {},
@@ -1053,7 +1055,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                         "confirmed_wallet_balance": cats_requested + expected_royalty,
                         "spendable_balance": cats_requested + expected_royalty,
                         "max_send_amount": cats_requested + expected_royalty,
-                        "unspent_coin_count": 1,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
                     },
                     "did": {},
                     "nft": {
@@ -1339,7 +1341,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         "unconfirmed_wallet_balance": taker_diff,
                         "spendable_balance": taker_diff,
                         "max_send_amount": taker_diff,
-                        "unspent_coin_count": 1,
+                        "unspent_coin_count": 1 if test_change else 2,
                     },
                 },
             ),
