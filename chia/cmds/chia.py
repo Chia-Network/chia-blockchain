@@ -12,7 +12,7 @@ from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
-from chia.cmds.dev import dev_cmd
+from chia.cmds.dev.main import dev_cmd
 from chia.cmds.farm import farm_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
