@@ -21,6 +21,7 @@ from chia.data_layer.data_layer_util import (
     get_full_tree_filename_path,
 )
 from chia.data_layer.data_store import DataStore
+from chia.util.log_exceptions import log_exceptions
 
 
 def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
@@ -212,32 +213,33 @@ async def insert_from_delta_file(
 
         log.info(f"Successfully downloaded delta file {target_filename_path.name}.")
         try:
-            filename_full_tree = get_full_tree_filename_path(
-                client_foldername,
-                store_id,
-                root_hash,
-                existing_generation,
-                group_files_by_store,
-            )
-            await data_store.insert_into_data_store_from_file(
-                store_id,
-                None if root_hash == bytes32.zeros else root_hash,
-                target_filename_path,
-            )
-            log.info(
-                f"Successfully inserted hash {root_hash} from delta file. "
-                f"Generation: {existing_generation}. Store id: {store_id}."
-            )
+            with log_exceptions(log=log, message="exception while inserting from delta file"):
+                filename_full_tree = get_full_tree_filename_path(
+                    client_foldername,
+                    store_id,
+                    root_hash,
+                    existing_generation,
+                    group_files_by_store,
+                )
+                await data_store.insert_into_data_store_from_file(
+                    store_id,
+                    None if root_hash == bytes32.zeros else root_hash,
+                    target_filename_path,
+                )
+                log.info(
+                    f"Successfully inserted hash {root_hash} from delta file. "
+                    f"Generation: {existing_generation}. Store id: {store_id}."
+                )
 
-            if target_generation - existing_generation <= maximum_full_file_count - 1:
-                root = await data_store.get_tree_root(store_id=store_id)
-                with open(filename_full_tree, "wb") as writer:
-                    await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
-                log.info(f"Successfully written full tree filename {filename_full_tree}.")
-            else:
-                log.info(f"Skipping full file generation for {existing_generation}")
+                if target_generation - existing_generation <= maximum_full_file_count - 1:
+                    root = await data_store.get_tree_root(store_id=store_id)
+                    with open(filename_full_tree, "wb") as writer:
+                        await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
+                    log.info(f"Successfully written full tree filename {filename_full_tree}.")
+                else:
+                    log.info(f"Skipping full file generation for {existing_generation}")
 
-            await data_store.received_correct_file(store_id, server_info)
+                await data_store.received_correct_file(store_id, server_info)
         except Exception:
             try:
                 target_filename_path.unlink()
