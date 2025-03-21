@@ -94,6 +94,7 @@ async def async_main(
     plot_dir: str = "simulator/plots"
     if "simulator" in config:
         overrides = {}
+        config["peer_db_path"] = config["simulator_peer_db_path"]
         plot_dir = config["simulator"].get("plot_directory", "simulator/plots")
         if config["simulator"]["key_fingerprint"] is not None:
             fingerprint = int(config["simulator"]["key_fingerprint"])
