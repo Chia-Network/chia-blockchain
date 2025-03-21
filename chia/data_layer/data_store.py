@@ -306,37 +306,43 @@ class DataStore:
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
 
         with open(filename, "rb") as reader:
-            while True:
-                chunk = b""
-                while len(chunk) < 4:
-                    size_to_read = 4 - len(chunk)
-                    cur_chunk = reader.read(size_to_read)
-                    if cur_chunk is None or cur_chunk == b"":
-                        if size_to_read < 4:
-                            raise Exception("Incomplete read of length.")
+            async with self.db_wrapper.writer() as writer:
+                while True:
+                    chunk = b""
+                    while len(chunk) < 4:
+                        size_to_read = 4 - len(chunk)
+                        cur_chunk = reader.read(size_to_read)
+                        if cur_chunk is None or cur_chunk == b"":
+                            if size_to_read < 4:
+                                raise Exception("Incomplete read of length.")
+                            break
+                        chunk += cur_chunk
+                    if chunk == b"":
                         break
-                    chunk += cur_chunk
-                if chunk == b"":
-                    break
 
-                size = int.from_bytes(chunk, byteorder="big")
-                serialize_nodes_bytes = b""
-                while len(serialize_nodes_bytes) < size:
-                    size_to_read = size - len(serialize_nodes_bytes)
-                    cur_chunk = reader.read(size_to_read)
-                    if cur_chunk is None or cur_chunk == b"":
-                        raise Exception("Incomplete read of blob.")
-                    serialize_nodes_bytes += cur_chunk
-                serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
+                    size = int.from_bytes(chunk, byteorder="big")
+                    serialize_nodes_bytes = b""
+                    while len(serialize_nodes_bytes) < size:
+                        size_to_read = size - len(serialize_nodes_bytes)
+                        cur_chunk = reader.read(size_to_read)
+                        if cur_chunk is None or cur_chunk == b"":
+                            raise Exception("Incomplete read of blob.")
+                        serialize_nodes_bytes += cur_chunk
+                    serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
-                node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-                if node_type == NodeType.INTERNAL:
-                    node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
-                    internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
-                else:
-                    kid, vid = await self.add_key_value(serialized_node.value1, serialized_node.value2, store_id)
-                    node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
-                    terminal_nodes[node_hash] = (kid, vid)
+                    node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
+                    if node_type == NodeType.INTERNAL:
+                        node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+                        internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+                    else:
+                        kid, vid = await self.add_key_value(
+                            serialized_node.value1,
+                            serialized_node.value2,
+                            store_id,
+                            writer=writer,
+                        )
+                        node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
+                        terminal_nodes[node_hash] = (kid, vid)
 
         return internal_nodes, terminal_nodes
 
@@ -523,33 +529,35 @@ class DataStore:
 
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
-    async def add_kvid(self, blob: bytes, store_id: bytes32) -> KeyOrValueId:
-        async with self.db_wrapper.writer_maybe_transaction() as writer:
-            try:
-                row = await writer.execute_insert(
-                    "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
-                    (
-                        blob,
-                        store_id,
-                    ),
-                )
-            except sqlite3.IntegrityError as e:
-                if "UNIQUE constraint failed" in str(e):
-                    kv_id = await self.get_kvid(blob, store_id)
-                    if kv_id is None:
-                        raise Exception("Internal error") from e
-                    return kv_id
+    async def add_kvid(self, blob: bytes, store_id: bytes32, writer: aiosqlite.Connection) -> KeyOrValueId:
+        try:
+            row = await writer.execute_insert(
+                "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
+                (
+                    blob,
+                    store_id,
+                ),
+            )
+        except sqlite3.IntegrityError as e:
+            if "UNIQUE constraint failed" in str(e):
+                kv_id = await self.get_kvid(blob, store_id)
+                if kv_id is None:
+                    raise Exception("Internal error") from e
+                return kv_id
 
-                raise
+            raise
 
         if row is None:
             raise Exception("Internal error")
         kv_id = KeyOrValueId(row[0])
         return kv_id
 
-    async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> tuple[KeyId, ValueId]:
-        kid = KeyId(await self.add_kvid(key, store_id))
-        vid = ValueId(await self.add_kvid(value, store_id))
+    async def add_key_value(
+        self, key: bytes, value: bytes, store_id: bytes32, writer: aiosqlite.Connection
+    ) -> tuple[KeyId, ValueId]:
+        kid = KeyId(await self.add_kvid(key, store_id, writer=writer))
+        vid = ValueId(await self.add_kvid(value, store_id, writer=writer))
+
         return (kid, vid)
 
     async def get_terminal_node_by_hash(
@@ -589,12 +597,12 @@ class DataStore:
         result: set[bytes32] = set()
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
-        for i in range(0, len(node_hashes), batch_size):
-            chunk = node_hashes[i : i + batch_size]
-            placeholders = ",".join(["?"] * len(chunk))
-            query = f"SELECT hash FROM nodes WHERE store_id = ? AND hash IN ({placeholders}) LIMIT {len(chunk)}"
+        async with self.db_wrapper.reader() as reader:
+            for i in range(0, len(node_hashes), batch_size):
+                chunk = node_hashes[i : i + batch_size]
+                placeholders = ",".join(["?"] * len(chunk))
+                query = f"SELECT hash FROM nodes WHERE store_id = ? AND hash IN ({placeholders}) LIMIT {len(chunk)}"
 
-            async with self.db_wrapper.reader() as reader:
                 async with reader.execute(query, (store_id, *chunk)) as cursor:
                     rows = await cursor.fetchall()
                     result.update(row["hash"] for row in rows)
@@ -630,7 +638,7 @@ class DataStore:
         status: Status,
         generation: Optional[int] = None,
     ) -> Root:
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer_maybe_transaction() as writer:
             if generation is None:
                 try:
                     existing_generation = await self.get_tree_generation(store_id=store_id)
@@ -1161,12 +1169,12 @@ class DataStore:
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
-            kid, vid = await self.add_key_value(key, value, store_id)
+            kid, vid = await self.add_key_value(key, value, store_id, writer=writer)
             hash = leaf_hash(key, value)
             reference_kid = None
             if reference_node_hash is not None:
@@ -1213,12 +1221,12 @@ class DataStore:
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
-            kid, vid = await self.add_key_value(key, new_value, store_id)
+            kid, vid = await self.add_key_value(key, new_value, store_id, writer=writer)
             hash = leaf_hash(key, new_value)
             merkle_blob.upsert(kid, vid, hash)
 
@@ -1232,7 +1240,7 @@ class DataStore:
         status: Status = Status.PENDING,
         enable_batch_autoinsert: bool = True,
     ) -> Optional[bytes32]:
-        async with self.transaction():
+        async with self.db_wrapper.writer() as writer:
             old_root = await self.get_tree_root(store_id=store_id)
             pending_root = await self.get_pending_root(store_id=store_id)
             if pending_root is not None:
@@ -1274,7 +1282,7 @@ class DataStore:
                         reference_kid, _ = merkle_blob.get_node_by_hash(reference_node_hash)
 
                     key_hashed = key_hash(key)
-                    kid, vid = await self.add_key_value(key, value, store_id)
+                    kid, vid = await self.add_key_value(key, value, store_id, writer=writer)
                     try:
                         merkle_blob.get_key_index(kid)
                     except chia_rs.datalayer.UnknownKeyError:
@@ -1304,7 +1312,7 @@ class DataStore:
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
-                    kid, vid = await self.add_key_value(key, new_value, store_id)
+                    kid, vid = await self.add_key_value(key, new_value, store_id, writer=writer)
                     hash = leaf_hash(key, new_value)
                     merkle_blob.upsert(kid, vid, hash)
                 else:
