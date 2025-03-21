@@ -2959,7 +2959,7 @@ async def test_skip_error_items(old: bool) -> None:
         raise RuntimeError("failed to find fast forward coin")
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
+    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 10.0)
     assert generator is not None
 
     assert called == 3
@@ -3250,7 +3250,7 @@ async def test_create_block_generator(old: bool) -> None:
         invariant_check_mempool(mempool)
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = await create_block(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0))
+    generator = await create_block(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0), 10.0)
     assert generator is not None
 
     assert set(generator.additions) == expected_additions

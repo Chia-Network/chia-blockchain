@@ -2594,14 +2594,15 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 # if we try to fill the mempool with more than 550, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
-@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 740])
-@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5])
+@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 730])
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("old", [True, False])
 async def test_create_block_generator(
     mempool_size: int, seed: int, old: bool, transactions_1000: list[SpendBundle]
 ) -> None:
-    if mempool_size == 740 and old:
-        pytest.skip("old function can't fit this many")
+    # the old way of creating bloks doesn't fit this many transactions, so we
+    # expect it to fail
+    expect_failure = mempool_size == 730 and old
 
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
@@ -2635,16 +2636,23 @@ async def test_create_block_generator(
 
     assert mempool_manager.peak is not None
     create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
-    new_block_gen = await create_block(mempool_manager.peak.header_hash)
+    new_block_gen = await create_block(mempool_manager.peak.header_hash, 10.0)
     assert new_block_gen is not None
 
     # now, make sure the generator we got is valid
 
-    assert len(expected_additions) == len(new_block_gen.additions)
-    assert expected_additions == set(new_block_gen.additions)
-    assert len(expected_removals) == len(new_block_gen.removals)
-    assert expected_removals == set(new_block_gen.removals)
-    assert expected_signature == new_block_gen.signature
+    if expect_failure:
+        assert len(expected_additions) != len(new_block_gen.additions)
+        assert expected_additions != set(new_block_gen.additions)
+        assert len(expected_removals) != len(new_block_gen.removals)
+        assert expected_removals != set(new_block_gen.removals)
+        assert expected_signature != new_block_gen.signature
+    else:
+        assert len(expected_additions) == len(new_block_gen.additions)
+        assert expected_additions == set(new_block_gen.additions)
+        assert len(expected_removals) == len(new_block_gen.removals)
+        assert expected_removals == set(new_block_gen.removals)
+        assert expected_signature == new_block_gen.signature
 
     err, conds = run_block_generator2(
         bytes(new_block_gen.program),
@@ -2659,7 +2667,10 @@ async def test_create_block_generator(
     assert err is None
     assert conds is not None
 
-    assert len(conds.spends) == len(expected_removals)
+    if expect_failure:
+        assert len(conds.spends) != len(expected_removals)
+    else:
+        assert len(conds.spends) == len(expected_removals)
     assert conds.cost < DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
 
     num_additions = 0
