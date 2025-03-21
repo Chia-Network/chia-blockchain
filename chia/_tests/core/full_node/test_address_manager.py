@@ -272,6 +272,7 @@ class TestPeerManager:
         assert info.peer_info == peer1
         assert peer1 is not None
         info, _ = addrman.find_(peer1)
+        assert info is not None
         assert info.peer_info == peer1
         await connection.close()
 
@@ -553,6 +554,7 @@ class TestPeerManager:
         await addrman.mark_good(peer18)
         assert await addrman.size() == 18
         collision = await addrman.select_tried_collision()
+        assert collision is not None
         assert collision.peer_info == PeerInfo("250.1.1.16", 8444)
         await addrman.simulate_connection_fail(collision)
         # Should swap 18 for 16.
