@@ -58,7 +58,7 @@ CONTEXT_SETTINGS = {
 def cli(
     ctx: click.Context,
     root_path: str,
-    keys_root_path: Optional[str] = None,
+    keys_root_path: str,
     passphrase_file: Optional[TextIOWrapper] = None,
 ) -> None:
     from pathlib import Path
@@ -66,11 +66,10 @@ def cli(
     context = ChiaCliContext.set_default(ctx=ctx)
     context.root_path = Path(root_path)
 
-    # keys_root_path and passphrase_file will be None if the passphrase options have been
-    # scrubbed from the CLI options
-    if keys_root_path is not None:
-        set_keys_root_path(Path(keys_root_path))
+    set_keys_root_path(Path(keys_root_path))
 
+    # passphrase_file will be None if the passphrase options have been
+    # scrubbed from the CLI options
     if passphrase_file is not None:
         import sys
 
