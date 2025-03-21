@@ -267,9 +267,10 @@ class TestPeerManager:
         assert await addrman.size() == 0
 
         peer1 = PeerInfo("250.1.2.1", 8444)
-        t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
+        t_peer = TimestampedPeerInfo("250.1.2.1", uint16(8444), uint64(0))
         info, _node_id = await addrman.create_(t_peer, peer1)
         assert info.peer_info == peer1
+        assert peer1 is not None
         info, _ = addrman.find_(peer1)
         assert info.peer_info == peer1
         await connection.close()
@@ -282,7 +283,7 @@ class TestPeerManager:
         assert await addrman.size() == 0
 
         peer1 = PeerInfo("250.1.2.1", 8444)
-        t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
+        t_peer = TimestampedPeerInfo("250.1.2.1", uint16(8444), uint64(0))
         _info, node_id = await addrman.create_(t_peer, peer1)
 
         # Test: Delete should actually delete the addr.
@@ -302,11 +303,11 @@ class TestPeerManager:
         peers1 = await addrman.get_peers()
         assert len(peers1) == 0
 
-        peer1 = TimestampedPeerInfo("250.250.2.1", 8444, time.time())
-        peer2 = TimestampedPeerInfo("250.250.2.2", 9999, time.time())
-        peer3 = TimestampedPeerInfo("251.252.2.3", 8444, time.time())
-        peer4 = TimestampedPeerInfo("251.252.2.4", 8444, time.time())
-        peer5 = TimestampedPeerInfo("251.252.2.5", 8444, time.time())
+        peer1 = TimestampedPeerInfo("250.250.2.1", uint16(8444), uint64(time.time()))
+        peer2 = TimestampedPeerInfo("250.250.2.2", uint16(9999), uint64(time.time()))
+        peer3 = TimestampedPeerInfo("251.252.2.3", uint16(8444), uint64(time.time()))
+        peer4 = TimestampedPeerInfo("251.252.2.4", uint16(8444), uint64(time.time()))
+        peer5 = TimestampedPeerInfo("251.252.2.5", uint16(8444), uint64(time.time()))
         source1 = PeerInfo("250.1.2.1", 8444)
         source2 = PeerInfo("250.2.3.3", 8444)
 
@@ -331,7 +332,7 @@ class TestPeerManager:
         for i in range(1, 8 * 256):
             octet1 = i % 256
             octet2 = i >> 8 % 256
-            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time())
+            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", uint16(8444), uint64(time.time()))
             await addrman.add_to_new_table([peer])
             if i % 8 == 0:
                 await addrman.mark_good(PeerInfo(peer.host, peer.port))
@@ -547,6 +548,7 @@ class TestPeerManager:
 
         # Collision between 18 and 16.
         peer18 = PeerInfo("250.1.1.18", 8444)
+        assert peer18 is not None
         assert await addrman.add_peer_info([peer18], source)
         await addrman.mark_good(peer18)
         assert await addrman.size() == 18
@@ -624,15 +626,15 @@ class TestPeerManager:
         connection = await aiosqlite.connect(tmp_path / "test.db")
         addrman = AddressManagerTest(connection)
         await AddressManagerStore.initialise(addrman.db_connection)
-        peer1 = TimestampedPeerInfo("250.250.2.1", 8444, 100000)
-        peer2 = TimestampedPeerInfo("250.250.2.2", 9999, time.time())
+        peer1 = TimestampedPeerInfo("250.250.2.1", uint16(8444), uint64(100000))
+        peer2 = TimestampedPeerInfo("250.250.2.2", uint16(9999), uint64(time.time()))
         source = PeerInfo("252.5.1.1", 8333)
         assert await addrman.add_to_new_table([peer1], source)
         assert await addrman.add_to_new_table([peer2], source)
         await addrman.mark_good(PeerInfo("250.250.2.2", 9999))
         assert await addrman.size() == 2
         for _ in range(5):
-            await addrman.attempt(PeerInfo(peer1.host, peer1.port), True, time.time() - 61)
+            await addrman.attempt(PeerInfo(peer1.host, peer1.port), True, int(time.time()) - 61)
         await addrman.cleanup(7 * 3600 * 24, 5)
         assert await addrman.size() == 1
         await connection.close()
