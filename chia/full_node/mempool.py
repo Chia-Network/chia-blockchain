@@ -684,7 +684,7 @@ class Mempool:
 
         for row in cursor:
             current_time = monotonic()
-            if current_time - generator_creation_start > 2:
+            if current_time - generator_creation_start > 2:  # pragma: no cover
                 log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
                 break
 
@@ -704,7 +704,7 @@ class Mempool:
                     unique_additions = []
                     for spend_data in item.bundle_coin_spends.values():
                         if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
-                            raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
+                            raise Exception(f"Skipping transaction with fast-forward or dedup coin(s): {name.hex()}")
                         unique_coin_spends.append(spend_data.coin_spend)
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
@@ -724,6 +724,9 @@ class Mempool:
                     # accounting for it
                     break  # pragma: no cover
 
+                # if adding item would make us exceed the block cost, commit the
+                # batch we've built up first, to see if more space may be freed
+                # up by the compression
                 if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
                     added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
 

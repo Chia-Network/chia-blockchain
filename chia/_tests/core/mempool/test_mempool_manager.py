@@ -2594,12 +2594,15 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 # if we try to fill the mempool with more than 550, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
-@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550])
+@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 740])
 @pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5])
 @pytest.mark.parametrize("old", [True, False])
 async def test_create_block_generator(
     mempool_size: int, seed: int, old: bool, transactions_1000: list[SpendBundle]
 ) -> None:
+    if mempool_size == 740 and old:
+        pytest.skip("old function can't fit this many")
+
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
     coins = TestCoins(all_coins, {})
