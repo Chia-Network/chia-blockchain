@@ -492,6 +492,7 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
+        timeout: float,
     ) -> Optional[NewBlockGenerator]:
         """
         height is needed in case we fast-forward a transaction and we need to
@@ -499,7 +500,10 @@ class Mempool:
         """
 
         mempool_bundle = await self.create_bundle_from_mempool_items(
-            get_unspent_lineage_info_for_puzzle_hash, constants, height
+            get_unspent_lineage_info_for_puzzle_hash,
+            constants,
+            height,
+            timeout,
         )
         if mempool_bundle is None:
             return None
@@ -535,6 +539,7 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
+        timeout: float = 1.0,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -561,7 +566,7 @@ class Mempool:
             item = self._items[name]
 
             current_time = monotonic()
-            if current_time - bundle_creation_start > 1:
+            if current_time - bundle_creation_start > timeout:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
                 break
             try:
@@ -660,7 +665,7 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
+        timeout: float,
     ) -> Optional[NewBlockGenerator]:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []
@@ -684,7 +689,7 @@ class Mempool:
 
         for row in cursor:
             current_time = monotonic()
-            if current_time - generator_creation_start > 2:  # pragma: no cover
+            if current_time - generator_creation_start > timeout:  # pragma: no cover
                 log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
                 break
 
