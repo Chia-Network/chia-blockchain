@@ -65,8 +65,7 @@ def cli(
 
     context = ChiaCliContext.set_default(ctx=ctx)
     context.root_path = Path(root_path)
-    if keys_root_path is not None:
-        context.keys_root_path = Path(keys_root_path)
+    context.keys_root_path = Path(keys_root_path)
 
     set_keys_root_path(Path(keys_root_path))
 
