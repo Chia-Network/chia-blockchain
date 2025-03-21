@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import click
 
-from chia.cmds.gh import gh_group
-from chia.cmds.installers import installers_group
-from chia.cmds.sim import sim_cmd
+from chia.cmds.dev.gh import gh_group
+from chia.cmds.dev.installers import installers_group
+from chia.cmds.dev.sim import sim_cmd
 
 
 @click.group("dev", help="Developer commands and tools")
