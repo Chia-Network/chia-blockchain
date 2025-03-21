@@ -380,7 +380,7 @@ class WalletPuzzleStore:
             pass
         self.last_derivation_index = None
 
-    async def get_unused_count(self, wallet_id: uint32) -> int:
+    async def get_used_count(self, wallet_id: uint32) -> int:
         """
         Returns a count of unused derivation indexes
         """
