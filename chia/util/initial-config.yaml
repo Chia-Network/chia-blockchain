@@ -525,8 +525,9 @@ wallet:
   testing: False
   # v2 used by the light wallet sync protocol
   database_path: wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite
-  # wallet_peers_path is deprecated and has been replaced by wallet_peers_file_path
+  # wallet_peers_path is no longer deprecated
   wallet_peers_path: wallet/db/wallet_peers.sqlite
+  simulator_peer_db_path: sim_db/peer_table_node.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
 
   # this is a debug and profiling facility that logs all SQLite commands to a

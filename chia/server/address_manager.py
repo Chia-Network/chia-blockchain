@@ -8,8 +8,10 @@ from random import choice, randrange
 from secrets import randbits
 from typing import Optional
 
+import aiosqlite
 from chia_rs.sized_ints import uint16, uint64
 
+from chia.server.address_manager_sql_shared import add_peer, remove_peer, update_peer_info
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 
@@ -175,6 +177,7 @@ class AddressManager:
     used_new_matrix_positions: set[tuple[int, int]]
     used_tried_matrix_positions: set[tuple[int, int]]
     allow_private_subnets: bool
+    db_connection: aiosqlite.Connection
 
     def __init__(self) -> None:
         self.clear()
@@ -231,13 +234,16 @@ class AddressManager:
                 if self.tried_matrix[bucket][pos] != -1:
                     self.used_tried_matrix_positions.add((bucket, pos))
 
-    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
+    async def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
-        self.map_info[node_id] = ExtendedPeerInfo(addr, addr_src)
+        epi = ExtendedPeerInfo(addr, addr_src)
+        self.map_info[node_id] = epi
         self.map_addr[addr.host] = node_id
         self.map_info[node_id].random_pos = len(self.random_pos)
         self.random_pos.append(node_id)
+        # self.jobs.append(Job(node_id, JobType.CREATE, epi.to_string()))
+        await add_peer(node_id, epi.to_string(), self.db_connection)
         return (self.map_info[node_id], node_id)
 
     def find_(self, addr: PeerInfo) -> tuple[Optional[ExtendedPeerInfo], Optional[int]]:
@@ -259,7 +265,7 @@ class AddressManager:
         self.random_pos[rand_pos_1] = node_id_2
         self.random_pos[rand_pos_2] = node_id_1
 
-    def make_tried_(self, info: ExtendedPeerInfo, node_id: int) -> None:
+    async def make_tried_(self, info: ExtendedPeerInfo, node_id: int) -> None:
         for bucket in range(NEW_BUCKET_COUNT):
             pos = info.get_bucket_position(self.key, True, bucket)
             if self.new_matrix[bucket][pos] == node_id:
@@ -280,15 +286,17 @@ class AddressManager:
             # Find its position into new table.
             new_bucket = old_info.get_new_bucket(self.key)
             new_bucket_pos = old_info.get_bucket_position(self.key, True, new_bucket)
-            self.clear_new_(new_bucket, new_bucket_pos)
+            await self.clear_new_(new_bucket, new_bucket_pos)
             old_info.ref_count = 1
             self._set_new_matrix(new_bucket, new_bucket_pos, node_id_evict)
             self.new_count += 1
         self._set_tried_matrix(cur_bucket, cur_bucket_pos, node_id)
         self.tried_count += 1
         info.is_tried = True
+        # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
+        await update_peer_info(node_id, info.to_string(), self.db_connection)
 
-    def clear_new_(self, bucket: int, pos: int) -> None:
+    async def clear_new_(self, bucket: int, pos: int) -> None:
         if self.new_matrix[bucket][pos] != -1:
             delete_id = self.new_matrix[bucket][pos]
             delete_info = self.map_info[delete_id]
@@ -296,9 +304,9 @@ class AddressManager:
             delete_info.ref_count -= 1
             self._set_new_matrix(bucket, pos, -1)
             if delete_info.ref_count == 0:
-                self.delete_new_entry_(delete_id)
+                await self.delete_new_entry_(delete_id)
 
-    def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int) -> None:
+    async def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int) -> None:
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
         if addr.ip.is_private and not self.allow_private_subnets:
@@ -320,6 +328,8 @@ class AddressManager:
 
         # if it is already in the tried set, don't do anything else
         if info.is_tried:
+            # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
+            await update_peer_info(node_id, info.to_string(), self.db_connection)
             return None
 
         # find a bucket it is in now
@@ -348,9 +358,9 @@ class AddressManager:
                 if node_id not in self.tried_collisions:
                     self.tried_collisions.append(node_id)
         else:
-            self.make_tried_(info, node_id)
+            await self.make_tried_(info, node_id)
 
-    def delete_new_entry_(self, node_id: int) -> None:
+    async def delete_new_entry_(self, node_id: int) -> None:
         info = self.map_info[node_id]
         if info is None or info.random_pos is None:
             return None
@@ -358,9 +368,11 @@ class AddressManager:
         self.random_pos = self.random_pos[:-1]
         del self.map_addr[info.peer_info.host]
         del self.map_info[node_id]
+        # self.jobs.append(Job(node_id, JobType.DELETE))
+        await remove_peer(node_id, self.db_connection)
         self.new_count -= 1
 
-    def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
+    async def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
         is_unique = False
         peer_info = PeerInfo(
             addr.host,
@@ -398,7 +410,8 @@ class AddressManager:
             if factor > 1 and randrange(factor) != 0:
                 return False
         else:
-            (info, node_id) = self.create_(addr, source)
+            (info, node_id) = await self.create_(addr, source)
+            assert info is not None
             info.timestamp = max(0, info.timestamp - penalty)
             self.new_count += 1
             is_unique = True
@@ -412,18 +425,18 @@ class AddressManager:
                 if info_existing.is_terrible() or (info_existing.ref_count > 1 and info.ref_count == 0):
                     add_to_new = True
             if add_to_new:
-                self.clear_new_(new_bucket, new_bucket_pos)
+                await self.clear_new_(new_bucket, new_bucket_pos)
                 info.ref_count += 1
                 if node_id is not None:
                     self._set_new_matrix(new_bucket, new_bucket_pos, node_id)
             else:
                 if info.ref_count == 0:
                     if node_id is not None:
-                        self.delete_new_entry_(node_id)
+                        await self.delete_new_entry_(node_id)
         return is_unique
 
-    def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
-        info, _ = self.find_(addr)
+    async def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
+        info, node_id = self.find_(addr)
         if info is None:
             return None
 
@@ -434,6 +447,9 @@ class AddressManager:
         if count_failures and info.last_count_attempt < self.last_good:
             info.last_count_attempt = timestamp
             info.num_attempts += 1
+        assert node_id is not None
+        # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
+        await update_peer_info(node_id, info.to_string(), self.db_connection)
 
     def select_peer_(self, new_only: bool) -> Optional[ExtendedPeerInfo]:
         if len(self.random_pos) == 0:
@@ -501,7 +517,7 @@ class AddressManager:
                     return info
                 chance *= 1.2
 
-    def resolve_tried_collisions_(self) -> None:
+    async def resolve_tried_collisions_(self) -> None:
         for node_id in self.tried_collisions[:]:
             resolved = False
             if node_id not in self.map_info:
@@ -518,13 +534,13 @@ class AddressManager:
                         resolved = True
                     elif time.time() - old_info.last_try < 4 * 60 * 60:
                         if time.time() - old_info.last_try > 60:
-                            self.mark_good_(peer, False, math.floor(time.time()))
+                            await self.mark_good_(peer, False, math.floor(time.time()))
                             resolved = True
                     elif time.time() - info.last_success > 40 * 60:
-                        self.mark_good_(peer, False, math.floor(time.time()))
+                        await self.mark_good_(peer, False, math.floor(time.time()))
                         resolved = True
                 else:
-                    self.mark_good_(peer, False, math.floor(time.time()))
+                    await self.mark_good_(peer, False, math.floor(time.time()))
                     resolved = True
             if resolved:
                 self.tried_collisions.remove(node_id)
@@ -565,7 +581,7 @@ class AddressManager:
 
         return addr
 
-    def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int) -> None:
+    async def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int) -> None:
         now = int(math.floor(time.time()))
         for bucket in range(NEW_BUCKET_COUNT):
             for pos in range(BUCKET_SIZE):
@@ -576,7 +592,7 @@ class AddressManager:
                         cur_info.timestamp < now - max_timestamp_difference
                         and cur_info.num_attempts >= max_consecutive_failures
                     ):
-                        self.clear_new_(bucket, pos)
+                        await self.clear_new_(bucket, pos)
 
     def connect_(self, addr: PeerInfo, timestamp: int) -> None:
         info, _ = self.find_(addr)
@@ -604,7 +620,7 @@ class AddressManager:
         is_added = False
         async with self.lock:
             for addr in addresses:
-                cur_peer_added = self.add_to_new_table_(addr, source, penalty)
+                cur_peer_added = await self.add_to_new_table_(addr, source, penalty)
                 is_added = is_added or cur_peer_added
         return is_added
 
@@ -618,7 +634,7 @@ class AddressManager:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
-            self.mark_good_(addr, test_before_evict, timestamp)
+            await self.mark_good_(addr, test_before_evict, timestamp)
 
     # Mark an entry as connection attempted to.
     async def attempt(
@@ -630,12 +646,12 @@ class AddressManager:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
-            self.attempt_(addr, count_failures, timestamp)
+            await self.attempt_(addr, count_failures, timestamp)
 
     # See if any to-be-evicted tried table entries have been tested and if so resolve the collisions.
     async def resolve_tried_collisions(self) -> None:
         async with self.lock:
-            self.resolve_tried_collisions_()
+            await self.resolve_tried_collisions_()
 
     # Randomly select an address in tried that another address is attempting to evict.
     async def select_tried_collision(self) -> Optional[ExtendedPeerInfo]:
