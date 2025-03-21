@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import time
 from pathlib import Path
+from typing import Optional
 
 import aiosqlite
 import pytest
@@ -265,7 +266,7 @@ class TestPeerManager:
         addrman = AddressManagerTest(connection)
         await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
-
+        info: Optional[ExtendedPeerInfo]
         peer1 = PeerInfo("250.1.2.1", 8444)
         t_peer = TimestampedPeerInfo("250.1.2.1", uint16(8444), uint64(0))
         info, _node_id = await addrman.create_(t_peer, peer1)
