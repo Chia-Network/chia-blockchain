@@ -475,8 +475,8 @@ class DataStore:
         if old_root is not None and old_root.node_hash == root_hash:
             raise ValueError("Changelist resulted in no change to tree data")
 
-        if root_hash is not None:
-            async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer() as writer:
+            if root_hash is not None:
                 await writer.execute(
                     """
                     INSERT OR REPLACE INTO merkleblob (hash, blob, store_id)
@@ -484,10 +484,10 @@ class DataStore:
                     """,
                     (root_hash, merkle_blob.blob, store_id),
                 )
-            if update_cache:
-                self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+                if update_cache:
+                    self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
-        return await self._insert_root(store_id, root_hash, status)
+            return await self._insert_root(store_id, root_hash, status, writer=writer)
 
     async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
         async with self.db_wrapper.reader() as reader:
@@ -636,34 +636,34 @@ class DataStore:
         store_id: bytes32,
         node_hash: Optional[bytes32],
         status: Status,
+        writer: aiosqlite.Connection,
         generation: Optional[int] = None,
     ) -> Root:
-        async with self.db_wrapper.writer_maybe_transaction() as writer:
-            if generation is None:
-                try:
-                    existing_generation = await self.get_tree_generation(store_id=store_id)
-                except Exception as e:
-                    if not str(e).startswith("No generations found for store ID:"):
-                        raise
-                    generation = 0
-                else:
-                    generation = existing_generation + 1
+        if generation is None:
+            try:
+                existing_generation = await self.get_tree_generation(store_id=store_id)
+            except Exception as e:
+                if not str(e).startswith("No generations found for store ID:"):
+                    raise
+                generation = 0
+            else:
+                generation = existing_generation + 1
 
-            new_root = Root(
-                store_id=store_id,
-                node_hash=node_hash,
-                generation=generation,
-                status=status,
-            )
+        new_root = Root(
+            store_id=store_id,
+            node_hash=node_hash,
+            generation=generation,
+            status=status,
+        )
 
-            await writer.execute(
-                """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
-                """,
-                new_root.to_row(),
-            )
-            return new_root
+        await writer.execute(
+            """
+            INSERT INTO root(tree_id, generation, node_hash, status)
+            VALUES(:tree_id, :generation, :node_hash, :status)
+            """,
+            new_root.to_row(),
+        )
+        return new_root
 
     async def get_pending_root(self, store_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
@@ -707,10 +707,12 @@ class DataStore:
         return pending_root
 
     async def shift_root_generations(self, store_id: bytes32, shift_size: int) -> None:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             root = await self.get_tree_root(store_id=store_id)
             for _ in range(shift_size):
-                await self._insert_root(store_id=store_id, node_hash=root.node_hash, status=Status.COMMITTED)
+                await self._insert_root(
+                    store_id=store_id, node_hash=root.node_hash, status=Status.COMMITTED, writer=writer
+                )
 
     async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.writer() as writer:
@@ -750,7 +752,8 @@ class DataStore:
     _checks: tuple[Callable[[DataStore], Awaitable[None]], ...] = (_check_roots_are_incrementing,)
 
     async def create_tree(self, store_id: bytes32, status: Status = Status.PENDING) -> bool:
-        await self._insert_root(store_id=store_id, node_hash=None, status=status)
+        async with self.db_wrapper.writer() as writer:
+            await self._insert_root(store_id=store_id, node_hash=None, status=status, writer=writer)
 
         return True
 
