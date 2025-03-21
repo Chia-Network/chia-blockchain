@@ -25,7 +25,7 @@ from chia_rs.sized_bytes import bytes32
 from typing_extensions import dataclass_transform
 
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.streamable import is_type_SpecificOptional
 
 SyncCmd = Callable[..., None]
@@ -68,6 +68,7 @@ class ChiaCliContext:
     context_dict_key: ClassVar[str] = "_chia_cli_context"
 
     root_path: pathlib.Path = DEFAULT_ROOT_PATH
+    keys_root_path: pathlib.Path = DEFAULT_KEYS_ROOT_PATH
     expected_prefix: Optional[str] = None
     rpc_port: Optional[int] = None
     keys_fingerprint: Optional[int] = None
