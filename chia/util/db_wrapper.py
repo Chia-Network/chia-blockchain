@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Optional, TextIO, Union
 
 import aiosqlite
+import aiosqlite.context
 import anyio
 from typing_extensions import final
 
@@ -29,6 +30,75 @@ SQLITE_INT_MAX = 2**63 - 1
 
 class DBWrapperError(Exception):
     pass
+
+
+@final
+@dataclass
+class Reader:
+    _connection: aiosqlite.Connection
+
+    @property
+    def in_transaction(self) -> bool:
+        return self._connection.in_transaction
+
+    def execute(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[aiosqlite.Cursor]:
+        return self._connection.execute(sql=sql, parameters=parameters)
+
+    def execute_insert(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[Optional[sqlite3.Row]]:
+        return self._connection.execute_insert(sql=sql, parameters=parameters)
+
+    def execute_fetchall(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[Iterable[sqlite3.Row]]:
+        return self._connection.execute_fetchall(sql=sql, parameters=parameters)
+
+    def executemany(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[aiosqlite.Cursor]:
+        return self._connection.executemany(sql=sql, parameters=parameters)
+
+    async def close(self) -> None:
+        return await self._connection.close()
+
+
+@final
+@dataclass
+class Writer:
+    _connection: aiosqlite.Connection
+
+    @property
+    def in_transaction(self) -> bool:
+        return self._connection.in_transaction
+
+    def execute(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[aiosqlite.Cursor]:
+        return self._connection.execute(sql=sql, parameters=parameters)
+
+    def execute_insert(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[Optional[sqlite3.Row]]:
+        return self._connection.execute_insert(sql=sql, parameters=parameters)
+
+    def execute_fetchall(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[Iterable[sqlite3.Row]]:
+        return self._connection.execute_fetchall(sql=sql, parameters=parameters)
+
+    def executemany(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> aiosqlite.context.Result[aiosqlite.Cursor]:
+        return self._connection.executemany(sql=sql, parameters=parameters)
+
+    async def close(self) -> None:
+        return await self._connection.close()
+
+
+ReaderOrWriter = Union[Reader, Writer]
 
 
 class ForeignKeyError(DBWrapperError):
@@ -60,7 +130,7 @@ def generate_in_memory_db_uri() -> str:
 
 
 async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
+    c: ReaderOrWriter, sql: str, parameters: Optional[Iterable[Any]] = None
 ) -> Optional[sqlite3.Row]:
     rows = await c.execute_fetchall(sql, parameters)
     for row in rows:
@@ -132,22 +202,22 @@ def get_host_parameter_limit() -> int:
 @final
 @dataclass
 class DBWrapper2:
-    _write_connection: aiosqlite.Connection
+    _write_connection: Writer
     db_version: int = 1
     _log_file: Optional[TextIO] = None
     host_parameter_limit: int = get_host_parameter_limit()
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    _read_connections: asyncio.Queue[aiosqlite.Connection] = field(default_factory=asyncio.Queue)
+    _read_connections: asyncio.Queue[Reader] = field(default_factory=asyncio.Queue)
     _num_read_connections: int = 0
-    _in_use: dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
+    _in_use: dict[asyncio.Task[object], ReaderOrWriter] = field(default_factory=dict)
     _current_writer: Optional[asyncio.Task[object]] = None
     _savepoint_name: int = 0
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
-        assert c != self._write_connection
+        assert c != self._write_connection._connection
         await c.execute("pragma query_only")
-        self._read_connections.put_nowait(c)
+        self._read_connections.put_nowait(Reader(_connection=c))
         self._num_read_connections += 1
 
     @classmethod
@@ -186,7 +256,9 @@ class DBWrapper2:
 
             write_connection.row_factory = row_factory
 
-            self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
+            self = cls(
+                _write_connection=Writer(_connection=write_connection), db_version=db_version, _log_file=log_file
+            )
 
             for index in range(reader_count):
                 read_connection = await async_exit_stack.enter_async_context(
@@ -237,7 +309,7 @@ class DBWrapper2:
 
         write_connection.row_factory = row_factory
 
-        self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
+        self = cls(_write_connection=Writer(_connection=write_connection), db_version=db_version, _log_file=log_file)
 
         for index in range(reader_count):
             read_connection = await _create_connection(
@@ -285,7 +357,7 @@ class DBWrapper2:
     async def writer(
         self,
         foreign_key_enforcement_enabled: Optional[bool] = None,
-    ) -> AsyncIterator[aiosqlite.Connection]:
+    ) -> AsyncIterator[Writer]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -359,7 +431,7 @@ class DBWrapper2:
             raise ForeignKeyError(violations=violations)
 
     @contextlib.asynccontextmanager
-    async def writer_maybe_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer_maybe_transaction(self) -> AsyncIterator[Writer]:
         """
         Initiates a write to the database. If this task is already in a write
         transaction with the DB, this is a no-op. Any changes made to the
@@ -383,9 +455,9 @@ class DBWrapper2:
                     self._current_writer = None
 
     @contextlib.asynccontextmanager
-    async def reader(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def reader(self) -> AsyncIterator[Reader]:
         async with self.reader_no_transaction() as connection:
-            if connection.in_transaction:
+            if connection._connection.in_transaction:
                 yield connection
             else:
                 await connection.execute("BEGIN DEFERRED;")
@@ -394,10 +466,10 @@ class DBWrapper2:
                 finally:
                     # close the transaction with a rollback instead of commit just in
                     # case any modifications were submitted through this reader
-                    await connection.rollback()
+                    await connection._connection.rollback()
 
     @contextlib.asynccontextmanager
-    async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def reader_no_transaction(self) -> AsyncIterator[Reader]:
         # there should have been read connections added
         assert self._num_read_connections > 0
 
@@ -413,11 +485,15 @@ class DBWrapper2:
         if self._current_writer == task:
             # we allow nesting reading while also having a writer connection
             # open, within the same task
-            yield self._write_connection
+            yield Reader(_connection=self._write_connection._connection)
             return
 
         if task in self._in_use:
-            yield self._in_use[task]
+            reader_or_writer = self._in_use[task]
+            if isinstance(reader_or_writer, Reader):
+                yield reader_or_writer
+            else:
+                yield Reader(_connection=reader_or_writer._connection)
         else:
             c = await self._read_connections.get()
             try:
