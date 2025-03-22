@@ -14,6 +14,7 @@ from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 import chia_rs.datalayer
+import zstd
 from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, MerkleBlob, ProofOfInclusion, TreeIndex, ValueId
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int64
@@ -453,7 +454,7 @@ class DataStore:
             if row is None:
                 raise MerkleBlobNotFoundError(root_hash=root_hash)
 
-            merkle_blob = MerkleBlob(blob=bytearray(row["blob"]))
+            merkle_blob = MerkleBlob(blob=bytearray(zstd.decompress(row["blob"])))
 
             if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
@@ -482,7 +483,7 @@ class DataStore:
                     INSERT OR REPLACE INTO merkleblob (hash, blob, store_id)
                     VALUES (?, ?, ?)
                     """,
-                    (root_hash, merkle_blob.blob, store_id),
+                    (root_hash, zstd.compress(merkle_blob.blob), store_id),
                 )
             if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
