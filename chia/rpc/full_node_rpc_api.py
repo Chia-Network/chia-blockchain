@@ -863,7 +863,7 @@ class FullNodeRpcApi:
             start_time = time.monotonic()
 
             try:
-                maybe_gen = await self.service.mempool_manager.create_block_generator(curr_l_tb.header_hash)
+                maybe_gen = await self.service.mempool_manager.create_block_generator2(curr_l_tb.header_hash)
                 if maybe_gen is None:
                     self.service.log.error(f"failed to create block generator, peak: {peak}")
                 else:
