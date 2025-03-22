@@ -435,7 +435,7 @@ class DataStore:
         update_cache: bool = True,
     ) -> MerkleBlob:
         if root_hash is None:
-            return MerkleBlob(blob=bytearray())
+            return MerkleBlob(blob=b"")
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
@@ -454,7 +454,7 @@ class DataStore:
             if row is None:
                 raise MerkleBlobNotFoundError(root_hash=root_hash)
 
-            merkle_blob = MerkleBlob(blob=bytearray(zstd.decompress(row["blob"])))
+            merkle_blob = MerkleBlob(blob=zstd.decompress(row["blob"]))
 
             if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
