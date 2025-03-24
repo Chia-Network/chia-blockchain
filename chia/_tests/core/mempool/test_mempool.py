@@ -2933,10 +2933,11 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 
 
 # make sure that after failing to pick 3 fast-forward spends, we skip
-# FF spends
+# FF spends. create_block_generator2() does not stop trying FF spends after 3
+# failures, it keeps going.
 @pytest.mark.anyio
-@pytest.mark.parametrize("old", [True, False])
-async def test_skip_error_items(old: bool) -> None:
+@pytest.mark.parametrize("old, expected", [(True, 3), (False, 5)])
+async def test_skip_error_items(old: bool, expected: int) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
@@ -2962,7 +2963,7 @@ async def test_skip_error_items(old: bool) -> None:
     generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 10.0)
     assert generator is not None
 
-    assert called == 3
+    assert called == expected
     assert generator.program == SerializedProgram.from_bytes(bytes.fromhex("ff01ff8080"))
 
 

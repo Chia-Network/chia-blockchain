@@ -35,9 +35,9 @@ log = logging.getLogger(__name__)
 # block we're trying to create.
 MAX_SKIPPED_ITEMS = 10
 
-# Threshold after which we stop including mempool items with eligible spends
-# during the creation of a block bundle. We do that to avoid spending too much
-# time on potentially expensive items.
+# Threshold after which we stop including mempool items with fast-forward or
+# dedup spends during the creation of a block generator. We do that to avoid
+# spending too much time on potentially expensive items.
 PRIORITY_TX_THRESHOLD = 3
 
 # Typical cost of a standard XCH spend. It's used as a heuristic to help
@@ -699,30 +699,15 @@ class Mempool:
             try:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
-                if skipped_items >= PRIORITY_TX_THRESHOLD:
-                    # If we've encountered `PRIORITY_TX_THRESHOLD` number of
-                    # transactions that don't fit in the remaining block size,
-                    # we want to keep looking for smaller transactions that
-                    # might fit, but we also want to avoid spending too much
-                    # time on potentially expensive ones, hence this shortcut.
-                    unique_coin_spends = []
-                    unique_additions = []
-                    for spend_data in item.bundle_coin_spends.values():
-                        if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
-                            raise Exception(f"Skipping transaction with fast-forward or dedup coin(s): {name.hex()}")
-                        unique_coin_spends.append(spend_data.coin_spend)
-                        unique_additions.extend(spend_data.additions)
-                    cost_saving = 0
-                else:
-                    await eligible_coin_spends.process_fast_forward_spends(
-                        mempool_item=item,
-                        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
-                        height=height,
-                        constants=constants,
-                    )
-                    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                        bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
-                    )
+                await eligible_coin_spends.process_fast_forward_spends(
+                    mempool_item=item,
+                    get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+                    height=height,
+                    constants=constants,
+                )
+                unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+                    bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                )
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
                     # Such a fee is very unlikely to happen but we're defensively
