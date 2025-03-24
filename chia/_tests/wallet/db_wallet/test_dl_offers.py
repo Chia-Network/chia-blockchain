@@ -352,38 +352,91 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [3]}], indirect=True)
 @pytest.mark.anyio
-async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> None:
-    [wallet_node, _], [_, _], full_node_api = wallets_prefarm
-    assert wallet_node.wallet_state_manager is not None
-    wsm = wallet_node.wallet_state_manager
+async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "dl": 2,
+    }
 
-    async with wsm.lock:
-        dl_wallet = await DataLayerWallet.create_new_dl_wallet(wsm)
+    dl_wallet = await DataLayerWallet.create_new_dl_wallet(env_maker.wallet_state_manager)
+    await env_maker.change_balances({"dl": {"init": True}})
 
     ROWS = [bytes32([i] * 32) for i in range(0, 10)]
     root, _ = build_merkle_tree(ROWS)
 
-    async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with dl_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         launcher_id = await dl_wallet.generate_new_reporter(root, action_scope)
     assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
-    async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        launcher_id_2 = await dl_wallet.generate_new_reporter(root, action_scope)
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
-    trade_manager = wsm.trade_manager
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "dl": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "dl": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
+
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
+    async with dl_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
+        launcher_id_2 = await dl_wallet.generate_new_reporter(root, action_scope)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "dl": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "dl": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
+
+    trade_manager = env_maker.wallet_state_manager.trade_manager
 
     addition = bytes32([101] * 32)
     ROWS.append(addition)
     root, _proofs = build_merkle_tree(ROWS)
 
-    async with trade_manager.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    FEE = uint64(2_000_000_000_000)
+
+    async with trade_manager.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, offer, error = await trade_manager.create_offer_for_ids(
             {launcher_id: -1, launcher_id_2: 1},
             action_scope,
@@ -400,20 +453,63 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
                     }
                 }
             ),
-            fee=uint64(2_000_000_000_000),
+            fee=FEE,
         )
     assert error is None
     assert success is True
     assert offer is not None
 
-    async with trade_manager.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await trade_manager.cancel_pending_offers(
-            [offer.trade_id], action_scope, fee=uint64(2_000_000_000_000), secure=True
-        )
+    await env_maker.change_balances(
+        {
+            "xch": {
+                "spendable_balance": -FEE,
+                "max_send_amount": -FEE,
+                "pending_coin_removal_count": 2,
+            },
+            "dl": {
+                "pending_coin_removal_count": 1,
+            },
+        }
+    )
+    await env_maker.check_balances()
+
+    async with trade_manager.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
+        await trade_manager.cancel_pending_offers([offer.trade_id], action_scope, fee=FEE, secure=True)
+
     # One outgoing for cancel, one outgoing for fee, one incoming from cancel
     assert len(action_scope.side_effects.transactions) == 3
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -FEE,
+                        "spendable_balance": -FEE,
+                        "max_send_amount": -FEE,
+                        "pending_coin_removal_count": 2,
+                    },
+                    "dl": {},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -FEE,
+                        "spendable_balance": FEE,
+                        "max_send_amount": FEE,
+                        "pending_coin_removal_count": -4,
+                        "unspent_coin_count": -2,
+                    },
+                    "dl": {
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            )
+        ]
+    )
+
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
 
 
