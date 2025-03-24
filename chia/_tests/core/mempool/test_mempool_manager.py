@@ -2509,12 +2509,12 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert spend.latest_singleton_coin == spend_c.coin.name()
 
 
-@pytest.fixture(name="test_wallet", autouse=True)
+@pytest.fixture(name="test_wallet")
 def test_wallet_fixture() -> WalletTool:
     return WalletTool(DEFAULT_CONSTANTS)
 
 
-@pytest.fixture(name="transactions_1000", autouse=True)
+@pytest.fixture(name="transactions_1000")
 def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Random) -> list[SpendBundle]:
     op = ConditionOpcode
     bundles: list[SpendBundle] = []
