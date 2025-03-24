@@ -56,7 +56,7 @@ for setuptools_scm/PEP 440 reasons.
 - Removed n-weso algorithm. Timelords use either 2-weso or H/W
 - Removed unused proof-of-concept DAO wallet
 
-## 2.5.2 Chia blockchain 2024-02-19
+## 2.5.2 Chia blockchain 2025-02-19
 
 ## What's Changed
 
