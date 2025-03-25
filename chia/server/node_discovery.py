@@ -68,7 +68,7 @@ class FullNodeDiscovery:
     pending_tasks: set[asyncio.Task[None]] = field(default_factory=set, init=False)
     introducer_info_obj: Optional[UnresolvedPeerInfo] = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         random.shuffle(self.dns_servers)  # Don't always start with the same DNS server
 
         if self.introducer_info is not None:
@@ -168,7 +168,7 @@ class FullNodeDiscovery:
         )
 
     async def _introducer_client(self) -> None:
-        if self.introducer_info is None:
+        if self.introducer_info_obj is None:
             return None
 
         async def on_connect(peer: WSChiaConnection) -> None:
@@ -176,7 +176,7 @@ class FullNodeDiscovery:
             await peer.send_message(msg)
 
         await self.server.start_client(
-            PeerInfo(await resolve(self.introducer_info.host, prefer_ipv6=False), self.introducer_info.port), on_connect
+            PeerInfo(await resolve(self.introducer_info_obj.host, prefer_ipv6=False), self.introducer_info_obj.port), on_connect
         )
 
     async def _query_dns(self, dns_address: str) -> None:
@@ -491,7 +491,7 @@ class FullNodePeers(FullNodeDiscovery):
     neighbour_known_peers: dict[PeerInfo, set[str]] = field(default_factory=dict, init=False)
     key: int = field(default_factory=lambda: random.getrandbits(256), init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__post_init__()
 
     async def start(self) -> None:
@@ -646,30 +646,11 @@ class FullNodePeers(FullNodeDiscovery):
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
 
+@dataclass
 class WalletPeers(FullNodeDiscovery):
-    def __init__(
-        self,
-        server: ChiaServer,
-        target_outbound_count: int,
-        peers_file_path: Path,
-        introducer_info: dict[str, Any],
-        dns_servers: list[str],
-        peer_connect_interval: int,
-        selected_network: str,
-        default_port: Optional[int],
-        log: Logger,
-    ) -> None:
-        super().__init__(
-            server,
-            target_outbound_count,
-            peers_file_path,
-            introducer_info,
-            dns_servers,
-            peer_connect_interval,
-            selected_network,
-            default_port,
-            log,
-        )
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
     async def start(self) -> None:
         self.initial_wait = 1
