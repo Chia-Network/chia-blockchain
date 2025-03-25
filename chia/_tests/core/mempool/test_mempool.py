@@ -2984,9 +2984,8 @@ async def test_timeout(old: bool) -> None:
         add_info = mempool.add_to_pool(item)
         assert add_info.error is None
 
-    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:  # pragma: no cover
-        assert False
-        return None
+    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False  # pragma: no cover
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
 
