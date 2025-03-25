@@ -2961,10 +2961,35 @@ async def test_skip_error_items(old: bool, expected: int) -> None:
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
     generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 10.0)
-    assert generator is not None
+    assert generator is None
 
     assert called == expected
-    assert generator.program == SerializedProgram.from_bytes(bytes.fromhex("ff01ff8080"))
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("old", [True, False])
+async def test_timeout(old: bool) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    for i in range(50):
+        item = mk_item(coins[i : i + 1], flags=[0], fee=0, cost=50)
+        add_info = mempool.add_to_pool(item)
+        assert add_info.error is None
+
+    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:
+        return None
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+
+    # the timeout is set to 0, we should *always* fail with a timeout
+    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 0.0)
+    assert generator is None
 
 
 def rand_hash() -> bytes32:

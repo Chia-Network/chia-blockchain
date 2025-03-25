@@ -566,7 +566,7 @@ class Mempool:
             item = self._items[name]
 
             current_time = monotonic()
-            if current_time - bundle_creation_start > timeout:
+            if current_time - bundle_creation_start >= timeout:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
                 break
             try:
@@ -644,7 +644,7 @@ class Mempool:
                 log.info(f"Exception while checking a mempool item for deduplication: {e}")
                 skipped_items += 1
                 continue
-        if processed_spend_bundles == 0:
+        if coin_spends == []:
             return None
         log.info(
             f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
@@ -689,7 +689,7 @@ class Mempool:
 
         for row in cursor:
             current_time = monotonic()
-            if current_time - generator_creation_start > timeout:  # pragma: no cover
+            if current_time - generator_creation_start >= timeout:
                 log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
                 break
 
@@ -765,6 +765,9 @@ class Mempool:
                     f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
                     f"cost: {batch_cost} total cost: {block_cost}"
                 )
+
+        if removals == []:
+            return None
 
         generator_creation_end = monotonic()
         duration = generator_creation_end - generator_creation_start
