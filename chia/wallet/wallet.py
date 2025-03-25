@@ -240,6 +240,7 @@ class Wallet:
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
+        reserve_fee: Optional[uint64] = None,
     ) -> list[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -322,7 +323,7 @@ class Wallet:
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 solution: Program = self.make_solution(
                     primaries=primaries,
-                    fee=fee,
+                    fee=fee if reserve_fee is None else reserve_fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
                 )
                 solution = decorator_manager.solve(inner_puzzle, target_primaries, solution)
@@ -383,6 +384,7 @@ class Wallet:
         origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
         negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
         puzzle_decorator_override: Optional[list[dict[str, Any]]] = kwargs.get("puzzle_decorator_override", None)
+        reserve_fee: Optional[uint64] = kwargs.get("reserve_fee", None)
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
@@ -402,6 +404,7 @@ class Wallet:
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,
             extra_conditions=extra_conditions,
+            reserve_fee=reserve_fee,
         )
         assert len(transaction) > 0
         spend_bundle = WalletSpendBundle(transaction, G2Element())
@@ -444,16 +447,20 @@ class Wallet:
         self,
         fee: uint64,
         action_scope: WalletActionScope,
+        coins: Optional[set[Coin]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
+        reserve_fee: Optional[uint64] = None,
     ) -> None:
-        chia_coins = await self.select_coins(fee, action_scope)
+        if coins is None:
+            coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(
             [],
             [],
             action_scope,
             fee=fee,
-            coins=chia_coins,
+            coins=coins,
             extra_conditions=extra_conditions,
+            reserve_fee=reserve_fee,
         )
 
     async def get_coins_to_offer(
