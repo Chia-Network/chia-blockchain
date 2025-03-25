@@ -2509,6 +2509,24 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert spend.latest_singleton_coin == spend_c.coin.name()
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("old", [True, False])
+async def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
+    bundles = transactions_1000[:10]
+    all_coins = [s.coin for b in bundles for s in b.coin_spends]
+    coins = TestCoins(all_coins, {})
+
+    mempool_manager = MempoolManager(
+        coins.get_coin_records,
+        coins.get_unspent_lineage_info,
+        DEFAULT_CONSTANTS,
+    )
+
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+
+    assert await create_block(bytes32([1] * 32), 10.0) is None
+
+
 @pytest.fixture(name="test_wallet")
 def test_wallet_fixture() -> WalletTool:
     return WalletTool(DEFAULT_CONSTANTS)

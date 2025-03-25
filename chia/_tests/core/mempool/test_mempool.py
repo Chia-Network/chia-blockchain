@@ -2934,7 +2934,9 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 
 # make sure that after failing to pick 3 fast-forward spends, we skip
 # FF spends. create_block_generator2() does not stop trying FF spends after 3
-# failures, it keeps going.
+# failures, it keeps going. The new function (create_block_generator2()) does
+# not have a limit on FF and dedup spends so it tries all 5. make_test_coins()
+# only returns 5 coins
 @pytest.mark.anyio
 @pytest.mark.parametrize("old, expected", [(True, 3), (False, 5)])
 async def test_skip_error_items(old: bool, expected: int) -> None:
@@ -2946,8 +2948,8 @@ async def test_skip_error_items(old: bool, expected: int) -> None:
     )
     mempool = Mempool(mempool_info, fee_estimator)
 
-    # all 50 items support fast forward
-    for i in range(50):
+    # all 5 items support fast forward
+    for i in range(5):
         item = mk_item(coins[i : i + 1], flags=[ELIGIBLE_FOR_FF], fee=0, cost=50)
         add_info = mempool.add_to_pool(item)
         assert add_info.error is None
@@ -2982,7 +2984,8 @@ async def test_timeout(old: bool) -> None:
         add_info = mempool.add_to_pool(item)
         assert add_info.error is None
 
-    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:
+    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:  # pragma: no cover
+        assert False
         return None
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
