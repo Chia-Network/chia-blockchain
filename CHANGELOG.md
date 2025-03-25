@@ -39,7 +39,7 @@ for setuptools_scm/PEP 440 reasons.
 - bump `anyio` to `4.8.0`
 - bump `boto3` to `1.37.1`
 - bump `filelock` to `3.9`
-- bumpe `keyring` to `25.6.0`
+- bump `keyring` to `25.6.0`
 
 ### Fixed
 
