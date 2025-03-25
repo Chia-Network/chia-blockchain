@@ -546,15 +546,15 @@ class FullNode:
             dns_servers.append("dns-introducer.chia.net")
         try:
             self.full_node_peers = FullNodePeers(
-                self.server,
-                self.config["target_outbound_peer_count"],
-                self.root_path / Path(self.config.get("peers_file_path", "db/peers.dat")),
-                self.config["introducer_peer"],
-                dns_servers,
-                self.config["peer_connect_interval"],
-                self.config["selected_network"],
-                default_port,
-                self.log,
+                server=self.server,
+                target_outbound_count=self.config["target_outbound_peer_count"],
+                peers_file_path=self.root_path / Path(self.config.get("peers_file_path", "db/peers.dat")),
+                introducer_info=self.config["introducer_peer"],
+                dns_servers=dns_servers,
+                peer_connect_interval=self.config["peer_connect_interval"],
+                selected_network=self.config["selected_network"],
+                default_port=default_port,
+                log=self.log,
             )
         except Exception as e:
             error_stack = traceback.format_exc()

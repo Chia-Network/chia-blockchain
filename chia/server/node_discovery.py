@@ -176,7 +176,8 @@ class FullNodeDiscovery:
             await peer.send_message(msg)
 
         await self.server.start_client(
-            PeerInfo(await resolve(self.introducer_info_obj.host, prefer_ipv6=False), self.introducer_info_obj.port), on_connect
+            PeerInfo(await resolve(self.introducer_info_obj.host, prefer_ipv6=False), self.introducer_info_obj.port),
+            on_connect,
         )
 
     async def _query_dns(self, dns_address: str) -> None:
@@ -648,7 +649,6 @@ class FullNodePeers(FullNodeDiscovery):
 
 @dataclass
 class WalletPeers(FullNodeDiscovery):
-
     def __post_init__(self) -> None:
         super().__post_init__()
 
