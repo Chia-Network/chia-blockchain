@@ -488,7 +488,7 @@ class FullNodeDiscovery:
 class FullNodePeers(FullNodeDiscovery):
     self_advertise_task: Optional[asyncio.Task[None]] = field(default=None, init=False)
     address_relay_task: Optional[asyncio.Task[None]] = field(default=None, init=False)
-    relay_queue: asyncio.Queue = field(default_factory=asyncio.Queue, init=False)
+    relay_queue: asyncio.Queue[tuple[TimestampedPeerInfo, int]] = field(default_factory=asyncio.Queue, init=False)
     neighbour_known_peers: dict[PeerInfo, set[str]] = field(default_factory=dict, init=False)
     key: int = field(default_factory=lambda: random.getrandbits(256), init=False)
 
