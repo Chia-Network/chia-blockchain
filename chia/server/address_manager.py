@@ -160,11 +160,11 @@ class ExtendedPeerInfo:
         return chance
 
 
-def create_tried_matrix():
+def create_tried_matrix() -> list[list[int]]:
     return [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
 
 
-def create_new_matrix():
+def create_new_matrix() -> list[list[int]]:
     return [[-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)]
 
 
