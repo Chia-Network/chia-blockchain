@@ -6,7 +6,7 @@ from typing import Optional
 import click
 
 from chia.cmds.cmd_classes import ChiaCliContext
-from chia.cmds.mempool_funcs import create_block_async, export_mempool_async, import_mempool_async
+from chia.cmds.dev.mempool_funcs import create_block_async, export_mempool_async, import_mempool_async
 
 
 @click.group("mempool", help="Debug the mempool")
