@@ -869,7 +869,7 @@ class WalletRpcApi:
                     await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                         request.fee,
                         inner_action_scope,
-                        (
+                        extra_conditions=(
                             *extra_conditions,
                             CreateCoinAnnouncement(
                                 create_coin_announcement.msg, announcement_origin
