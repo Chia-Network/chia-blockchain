@@ -345,8 +345,6 @@ class FullNode:
                 self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
 
             self.initialized = True
-
-            # TODO: this is the place the code needs juicing up
             if self.full_node_peers is not None:
                 async with self.full_node_peers.manage():
                     try:
