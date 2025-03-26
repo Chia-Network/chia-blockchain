@@ -1360,7 +1360,6 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
 )
 @pytest.mark.anyio
 async def test_did_auto_transfer_limit(
-    self,
     self_hostname: str,
     two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
@@ -2120,7 +2119,6 @@ async def test_create_did_with_recovery_list(
 )
 @pytest.mark.anyio
 async def test_did_resync(
-    self,
     self_hostname: str,
     two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
