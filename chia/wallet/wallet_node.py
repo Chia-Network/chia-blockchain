@@ -470,7 +470,8 @@ class WalletNode:
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
             if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
-                await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                result = await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                await result.commit(self.wallet_state_manager)
 
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
@@ -828,7 +829,8 @@ class WalletNode:
         min_height_for_subscriptions = fork_height if use_delta_sync else 0
         already_checked_ph: set[bytes32] = set()
         while not self._shut_down:
-            await self.wallet_state_manager.create_more_puzzle_hashes()
+            result = await self.wallet_state_manager.create_more_puzzle_hashes()
+            await result.commit(self.wallet_state_manager)
             all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
             not_checked_puzzle_hashes = set(all_puzzle_hashes) - already_checked_ph
             if not_checked_puzzle_hashes == set():
