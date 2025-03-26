@@ -3111,21 +3111,18 @@ async def add_tx_to_mempool(
 
 
 def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) -> bool:
-    assert block1.finished_sub_slots == block2.finished_sub_slots, "Mismatch in finished_sub_slots"
-    assert block1.reward_chain_block == block2.reward_chain_block, "Mismatch in reward_chain_block"
-    assert block1.challenge_chain_sp_proof == block2.challenge_chain_sp_proof, "Mismatch in challenge_chain_sp_proof"
-    assert block1.reward_chain_sp_proof == block2.reward_chain_sp_proof, "Mismatch in reward_chain_sp_proof"
-    assert block1.total_iters == block2.total_iters, "Mismatch in total_iters"
-    assert block1.prev_header_hash == block2.prev_header_hash, "Mismatch in prev_header_hash"
-    assert block1.is_transaction_block() == block2.is_transaction_block(), "Mismatch in is_transaction_block"
-    assert block1.foliage == block2.foliage, "Mismatch in foliage"
-    assert block1.foliage_transaction_block == block2.foliage_transaction_block, "Mismatch in foliage_transaction_block"
-    assert block1.transactions_info == block2.transactions_info, "Mismatch in transactions_info"
-    assert block1.transactions_generator == block2.transactions_generator, "Mismatch in transactions_generator"
-    assert (
-        block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
-    ), "Mismatch in transactions_generator_ref_list"
-
+    assert block1.finished_sub_slots == block2.finished_sub_slots
+    assert block1.reward_chain_block == block2.reward_chain_block
+    assert block1.challenge_chain_sp_proof == block2.challenge_chain_sp_proof
+    assert block1.reward_chain_sp_proof == block2.reward_chain_sp_proof
+    assert block1.total_iters == block2.total_iters
+    assert block1.prev_header_hash == block2.prev_header_hash
+    assert block1.is_transaction_block() == block2.is_transaction_block()
+    assert block1.foliage == block2.foliage
+    assert block1.foliage_transaction_block == block2.foliage_transaction_block
+    assert block1.transactions_info == block2.transactions_info
+    assert block1.transactions_generator == block2.transactions_generator
+    assert block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
     # Final assertion to check the entire block
-    assert block1 == block2, "The entire block objects are not identical"
+    assert block1 == block2
     return True
