@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import math
 import random
 import time
 import traceback
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
@@ -495,16 +497,18 @@ class FullNodePeers(FullNodeDiscovery):
     def __post_init__(self) -> None:
         super().__post_init__()
 
-    async def start(self) -> None:
-        await self.initialize_address_manager()
-        self.self_advertise_task = create_referenced_task(self._periodically_self_advertise_and_clean_data())
-        self.address_relay_task = create_referenced_task(self._address_relay())
-        await self.start_tasks()
-
-    async def close(self) -> None:
-        await self._close_common()
-        cancel_task_safe(self.self_advertise_task, self.log)
-        cancel_task_safe(self.address_relay_task, self.log)
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        try:
+            await self.initialize_address_manager()
+            self.self_advertise_task = create_referenced_task(self._periodically_self_advertise_and_clean_data())
+            self.address_relay_task = create_referenced_task(self._address_relay())
+            await self.start_tasks()
+            yield
+        finally:
+            await self._close_common()
+            cancel_task_safe(self.self_advertise_task, self.log)
+            cancel_task_safe(self.address_relay_task, self.log)
 
     async def _periodically_self_advertise_and_clean_data(self) -> None:
         while not self.is_closed:
