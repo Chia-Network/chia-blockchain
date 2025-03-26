@@ -20,7 +20,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.eligible_coin_spends import EligibleCoinSpends, SkipDedup, UnspentLineageInfo
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -492,15 +492,14 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
+    ) -> Optional[NewBlockGenerator]:
         """
         height is needed in case we fast-forward a transaction and we need to
         re-run its puzzle.
         """
 
         mempool_bundle = await self.create_bundle_from_mempool_items(
-            get_unspent_lineage_info_for_puzzle_hash, constants, height, item_inclusion_filter
+            get_unspent_lineage_info_for_puzzle_hash, constants, height
         )
         if mempool_bundle is None:
             return None
@@ -521,10 +520,13 @@ class Mempool:
             logging.INFO if duration < 1 else logging.WARNING,
             f"serializing block generator took {duration:0.2f} seconds",
         )
-        return (
-            BlockGenerator(SerializedProgram.from_bytes(block_program), []),
+        return NewBlockGenerator(
+            SerializedProgram.from_bytes(block_program),
+            [],
+            [],
             spend_bundle.aggregated_signature,
             additions,
+            removals,
         )
 
     async def create_bundle_from_mempool_items(
@@ -532,7 +534,6 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -562,8 +563,6 @@ class Mempool:
             if current_time - bundle_creation_start > 1:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
                 break
-            if item_inclusion_filter is not None and not item_inclusion_filter(name):
-                continue
             try:
                 assert item.conds is not None
                 cost = item.conds.cost

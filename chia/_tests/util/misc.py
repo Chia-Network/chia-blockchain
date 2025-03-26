@@ -494,7 +494,7 @@ def invariant_check_mempool(mempool: Mempool) -> None:
                 assert item.bundle_coin_spends[coin_id].coin_spend.coin.name() == coin_id
                 continue
 
-            assert any(map(lambda i: i.latest_singleton_coin == coin_id, item.bundle_coin_spends.values()))
+            assert any(i.latest_singleton_coin == coin_id for i in item.bundle_coin_spends.values())
 
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
