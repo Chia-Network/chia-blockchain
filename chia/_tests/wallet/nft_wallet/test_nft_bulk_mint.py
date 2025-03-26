@@ -223,8 +223,6 @@ async def test_nft_mint_from_did_rpc(wallet_environments: WalletTestFramework, z
         "nft": 2,
     }
 
-    async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        await action_scope.get_puzzle_hash(env_0.wallet_state_manager)
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_1 = await action_scope.get_puzzle_hash(env_1.wallet_state_manager)
 
