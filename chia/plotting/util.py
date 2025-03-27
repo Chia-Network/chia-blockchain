@@ -308,7 +308,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
         
         log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
     except Exception as e:
-        log.warning(f"Error reading directory {directory}: {e}")
+        log.exception(f"Error reading directory {directory}")
         # We still return whatever files we found before the error
     
     return all_files
