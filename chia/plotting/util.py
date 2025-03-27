@@ -265,7 +265,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
                 # Fall back to manual recursive scanning if glob fails
                 try:
                     # Manually walk the directory tree to handle errors more gracefully
-                    for root, _, files in os.walk(directory, followlinks=follow_links, onerror=lambda err: log.warning(f"Error walking directory: {err}")):
+                    for root, _, files in os.walk(directory, followlinks=follow_links, onerror=lambda err: log.warning(f"Error walking directory \"{directory}\": {err}")):
                         for file in files:
                             if file.endswith(".plot") and not file.startswith("._"):
                                 try:
