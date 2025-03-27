@@ -572,8 +572,7 @@ async def test_nft_mint_from_xch(wallet_environments: WalletTestFramework) -> No
     wallet_1 = env_1.xch_wallet
     env_0.wallet_aliases = {
         "xch": 1,
-        "did": 2,
-        "nft": 3,
+        "nft": 2,
     }
     env_1.wallet_aliases = {
         "xch": 1,
@@ -582,41 +581,8 @@ async def test_nft_mint_from_xch(wallet_environments: WalletTestFramework) -> No
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_0 = await action_scope.get_puzzle_hash(env_0.wallet_state_manager)
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
-        )
 
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(),
-        ]
-    )
-
-    hex_did_id = did_wallet.get_my_DID()
-    did_id = bytes32.fromhex(hex_did_id)
-
-    nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
-    )
+    nft_wallet_maker = await NFTWallet.create_new_nft_wallet(env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1")
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(env_1.wallet_state_manager, wallet_1, name="NFT WALLET 2")
 
@@ -719,8 +685,7 @@ async def test_nft_mint_from_xch_rpc(wallet_environments: WalletTestFramework) -
     wallet_0 = env_0.xch_wallet
     env_0.wallet_aliases = {
         "xch": 1,
-        "did": 2,
-        "nft": 3,
+        "nft": 2,
     }
     env_1.wallet_aliases = {
         "xch": 1,
@@ -730,40 +695,7 @@ async def test_nft_mint_from_xch_rpc(wallet_environments: WalletTestFramework) -
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_1 = await action_scope.get_puzzle_hash(env_1.wallet_state_manager)
 
-    async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
-        )
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(),
-        ]
-    )
-
-    hex_did_id = did_wallet_maker.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(env_0.node.config))
-
-    nft_wallet_maker = await env_0.rpc_client.create_new_nft_wallet(name="NFT WALLET 1", did_id=hmr_did_id)
+    nft_wallet_maker = await env_0.rpc_client.create_new_nft_wallet(name="NFT WALLET 1", did_id=None)
 
     await env_1.rpc_client.create_new_nft_wallet(name="NFT WALLET 2", did_id=None)
 
@@ -897,8 +829,7 @@ async def test_nft_mint_from_xch_multiple_xch(wallet_environments: WalletTestFra
     wallet_1 = env_1.xch_wallet
     env_0.wallet_aliases = {
         "xch": 1,
-        "did": 2,
-        "nft": 3,
+        "nft": 2,
     }
     env_1.wallet_aliases = {
         "xch": 1,
@@ -909,42 +840,7 @@ async def test_nft_mint_from_xch_multiple_xch(wallet_environments: WalletTestFra
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_1 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
-    async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
-        )
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(),
-        ]
-    )
-
-    hex_did_id = did_wallet.get_my_DID()
-    did_id = bytes32.fromhex(hex_did_id)
-
-    nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
-        env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
-    )
+    nft_wallet_0 = await NFTWallet.create_new_nft_wallet(env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1")
 
     await NFTWallet.create_new_nft_wallet(env_1.wallet_state_manager, wallet_1, name="NFT WALLET 2")
 
