@@ -1353,6 +1353,7 @@ class NFTWallet:
             coins=xch_coins,
             extra_conditions=xch_extra_conditions,
             reserve_fee=fee,
+            preferred_change_puzzle_hash=xch_change_ph,
         )
 
         # Create the DID spend using the announcements collected when making the intermediate launcher coins
@@ -1600,6 +1601,7 @@ class NFTWallet:
             # We should have a better API to generate_signed_transaction that takes the whole CreateCoin in the API.
             memos=[p.memos if p.memos is not None else [] for p in primaries],
             extra_conditions=extra_conditions,
+            preferred_change_puzzle_hash=xch_change_ph,
         )
 
         async with action_scope.use() as interface:

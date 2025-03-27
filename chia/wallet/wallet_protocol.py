@@ -103,3 +103,4 @@ class GSTOptionalArgs(TypedDict):
     negative_change_allowed: NotRequired[bool]
     puzzle_decorator_override: NotRequired[Optional[list[dict[str, Any]]]]
     reserve_fee: NotRequired[Optional[uint64]]
+    preferred_change_puzzle_hash: NotRequired[Optional[bytes32]]
