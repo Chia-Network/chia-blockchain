@@ -435,8 +435,9 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
 
 @pytest.mark.limit_consensus_modes
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize("with_did", [True, False])
 @pytest.mark.anyio
-async def test_nft_mint_from_did_multiple_xch(wallet_environments: WalletTestFramework) -> None:
+async def test_nft_mint_multiple_xch(wallet_environments: WalletTestFramework, with_did: bool) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_0 = env_0.xch_wallet
@@ -526,15 +527,26 @@ async def test_nft_mint_from_did_multiple_xch(wallet_environments: WalletTestFra
     target_list = [ph_1 for x in range(mint_total)]
 
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        await nft_wallet_0.mint_from_did(
-            metadata_list,
-            action_scope,
-            target_list=target_list,
-            mint_number_start=1,
-            mint_total=mint_total,
-            xch_coins=xch_coins,
-            fee=fee,
-        )
+        if with_did:
+            await nft_wallet_0.mint_from_did(
+                metadata_list,
+                action_scope,
+                target_list=target_list,
+                mint_number_start=1,
+                mint_total=mint_total,
+                xch_coins=xch_coins,
+                fee=fee,
+            )
+        else:
+            await nft_wallet_0.mint_from_xch(
+                metadata_list,
+                action_scope,
+                target_list=target_list,
+                mint_number_start=1,
+                mint_total=mint_total,
+                xch_coins=xch_coins,
+                fee=fee,
+            )
 
     await wallet_environments.process_pending_states(
         [
@@ -552,7 +564,9 @@ async def test_nft_mint_from_did_multiple_xch(wallet_environments: WalletTestFra
                         "max_send_amount": -1,
                         "pending_change": 1,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
+                    if with_did
+                    else {},
                     "nft": {
                         "pending_coin_removal_count": mint_total,
                     },
@@ -571,118 +585,9 @@ async def test_nft_mint_from_did_multiple_xch(wallet_environments: WalletTestFra
                         "max_send_amount": 1,
                         "pending_change": -1,
                         "pending_coin_removal_count": -1,
-                    },
-                    "nft": {
-                        "pending_coin_removal_count": -mint_total,
-                    },
-                },
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={
-                    "nft": {
-                        "unspent_coin_count": mint_total,
                     }
-                },
-            ),
-        ]
-    )
-
-
-@pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
-@pytest.mark.anyio
-async def test_nft_mint_from_xch_multiple_xch(wallet_environments: WalletTestFramework) -> None:
-    env_0 = wallet_environments.environments[0]
-    env_1 = wallet_environments.environments[1]
-    wallet_0 = env_0.xch_wallet
-    wallet_1 = env_1.xch_wallet
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
-    async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        ph_0 = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
-    async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        ph_1 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
-
-    nft_wallet_0 = await NFTWallet.create_new_nft_wallet(env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1")
-
-    await NFTWallet.create_new_nft_wallet(env_1.wallet_state_manager, wallet_1, name="NFT WALLET 2")
-
-    await env_0.change_balances({"nft": {"init": True}})
-    await env_1.change_balances({"nft": {"init": True}})
-
-    # construct sample metadata
-    metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
-    )
-    royalty_pc = uint16(300)
-    royalty_addr = ph_0
-
-    mint_total = 1
-    fee = uint64(100)
-    metadata_list = [
-        {"program": metadata, "royalty_pc": royalty_pc, "royalty_ph": royalty_addr} for x in range(mint_total)
-    ]
-
-    # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    async with wallet_0.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
-    ) as action_scope:
-        xch_coins_1 = await wallet_0.select_coins(amount=uint64(10000), action_scope=action_scope)
-        xch_coins_2 = await wallet_0.select_coins(
-            amount=uint64(10000),
-            action_scope=action_scope,
-        )
-    xch_coins = xch_coins_1.union(xch_coins_2)
-
-    target_list = [ph_1 for x in range(mint_total)]
-
-    async with nft_wallet_0.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        await nft_wallet_0.mint_from_xch(
-            metadata_list,
-            action_scope,
-            target_list=target_list,
-            mint_number_start=1,
-            mint_total=mint_total,
-            xch_coins=xch_coins,
-            fee=fee,
-        )
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": -fee - mint_total,
-                        "<=#spendable_balance": -fee - mint_total,
-                        "<=#max_send_amount": -fee - mint_total,
-                        ">=#pending_change": 1,
-                        "pending_coin_removal_count": 2,
-                    },
-                    "nft": {
-                        "pending_coin_removal_count": mint_total,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -fee - mint_total,
-                        ">=#spendable_balance": 1,
-                        ">=#max_send_amount": 1,
-                        "<=#pending_change": -1,
-                        "pending_coin_removal_count": -2,
-                        "unspent_coin_count": -1,  # The two coins get combined for change
-                    },
+                    if with_did
+                    else {},
                     "nft": {
                         "pending_coin_removal_count": -mint_total,
                     },
