@@ -71,7 +71,7 @@ Write-Output "   ---"
 Write-Output "electron-builder create package directory"
 & "$NPM_PATH/electron-builder.ps1" --version
 & "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
-Get-ChildItem "..\..\..\build_scripts\dist\win-unpacked\resources"
+Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {
