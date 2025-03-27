@@ -303,7 +303,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
                             log.exception(f"Error processing file {child}")
                             continue
             except Exception as e:
-                log.warning(f"Error during directory scanning in {directory}: {e}")
+                log.exception(f"Error during directory scanning in {directory}")
                 # Continue rather than returning empty
         
         log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
