@@ -300,7 +300,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
                                 all_files.append(child)
                         except Exception as e:
                             # If we can't process a specific file, log and continue
-                            log.warning(f"Error processing file {child}: {e}")
+                            log.exception(f"Error processing file {child}")
                             continue
             except Exception as e:
                 log.warning(f"Error during directory scanning in {directory}: {e}")
