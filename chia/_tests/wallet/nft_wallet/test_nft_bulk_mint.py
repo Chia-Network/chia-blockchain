@@ -573,76 +573,76 @@ async def test_nft_mint_from_did_multiple_xch(wallet_environments: WalletTestFra
     )
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.anyio
-async def test_nft_mint_from_xch(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_0, server_0 = wallets[0]
-    wallet_node_1, server_1 = wallets[1]
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        ph_maker = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
+async def test_nft_mint_from_xch(wallet_environments: WalletTestFramework) -> None:
+    env_0 = wallet_environments.environments[0]
+    env_1 = wallet_environments.environments[1]
+    wallet_0 = env_0.xch_wallet
+    wallet_1 = env_1.xch_wallet
+    env_0.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+    }
+    env_1.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
 
-    if trusted:
-        wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_0.config["trusted_peers"] = {}
-        wallet_node_1.config["trusted_peers"] = {}
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    # for _ in range(1, num_blocks):
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
-
-    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
-    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-
-    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        ph_0 = await action_scope.get_puzzle_hash(env_0.wallet_state_manager)
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
+            env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
-    await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     hex_did_id = did_wallet.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
 
-    await time_out_assert(5, did_wallet.get_confirmed_balance, 1)
-
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
+        env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
     )
 
-    nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
-    )
+    nft_wallet_taker = await NFTWallet.create_new_nft_wallet(env_1.wallet_state_manager, wallet_1, name="NFT WALLET 2")
+
+    await env_0.change_balances({"nft": {"init": True}})
+    await env_1.change_balances({"nft": {"init": True}})
 
     royalty_pc = uint16(300)
-    royalty_addr = ph_maker
+    royalty_addr = ph_0
 
     mint_total = 1
     fee = uint64(100)
     metadata_list = [
         {
             "program": Program.to(
-                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes32.random(seeded_random).hex())]
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes([x] * 32).hex())]
             ),
             "royalty_pc": royalty_pc,
             "royalty_ph": royalty_addr,
@@ -650,10 +650,12 @@ async def test_nft_mint_from_xch(
         for x in range(mint_total)
     ]
 
-    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         target_list = [await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager) for x in range(mint_total)]
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_maker.mint_from_xch(
             metadata_list,
             action_scope,
@@ -663,13 +665,44 @@ async def test_nft_mint_from_xch(
             fee=fee,
         )
 
-    await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
-
-    await time_out_assert(30, nft_count, mint_total, nft_wallet_taker)
-    await time_out_assert(30, nft_count, 0, nft_wallet_maker)
-
-    expected_xch_bal = funds - fee - mint_total - 1
-    await time_out_assert(30, wallet_0.get_confirmed_balance, expected_xch_bal)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee - mint_total,
+                        "<=#spendable_balance": -fee - mint_total,
+                        "<=#max_send_amount": -fee - mint_total,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft": {
+                        "pending_coin_removal_count": mint_total,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee - mint_total,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft": {
+                        "pending_coin_removal_count": -mint_total,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "nft": {
+                        "unspent_coin_count": mint_total,
+                    }
+                },
+            ),
+        ]
+    )
 
     nfts = await nft_wallet_taker.get_current_nfts()
     matched_data = dict(zip(target_list, metadata_list))
@@ -683,7 +716,8 @@ async def test_nft_mint_from_xch(
         inner_ph = inner_args.at("rrrf").get_tree_hash()
         meta = unft.metadata.at("rfr").as_atom()
         # check that the target puzzle hashes of transferred nfts matches the metadata entry
-        assert matched_data[inner_ph]["program"].at("rfr").as_atom() == meta
+        prog: Program = cast(Program, matched_data[inner_ph]["program"])
+        assert prog.at("rfr").as_atom() == meta
         assert not nft.minter_did
 
 
