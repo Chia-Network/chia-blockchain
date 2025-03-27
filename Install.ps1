@@ -108,7 +108,7 @@ if (-not (Get-Item -ErrorAction SilentlyContinue ".penv/Scripts/poetry.exe").Exi
 }
 
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
-.penv/Scripts/poetry install @extras_cli
+.penv/Scripts/poetry install --verbose @extras_cli
 
 if ($i)
 {
