@@ -71,7 +71,7 @@ Write-Output "   ---"
 Write-Output "electron-builder create package directory"
 $OLD_ENV_PATH = $Env:Path
 $Env:Path = $NPM_PATH + ";" + $Env:Path
-electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
+"$NPM_PATH/electron-builder" build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
 $Env:Path = $OLD_ENV_PATH
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
@@ -92,7 +92,7 @@ If ($env:HAS_SIGNING_SECRET) {
 
 Write-Output "   ---"
 Write-Output "electron-builder create installer"
-npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
+"$NPM_PATH/electron-builder" build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {
