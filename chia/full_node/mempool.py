@@ -9,7 +9,7 @@ from enum import Enum
 from time import monotonic
 from typing import Callable, Optional
 
-from chia_rs import AugSchemeMPL, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
+from chia_rs import AugSchemeMPL, BlockBuilder, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -35,9 +35,9 @@ log = logging.getLogger(__name__)
 # block we're trying to create.
 MAX_SKIPPED_ITEMS = 10
 
-# Threshold after which we stop including mempool items with eligible spends
-# during the creation of a block bundle. We do that to avoid spending too much
-# time on potentially expensive items.
+# Threshold after which we stop including mempool items with fast-forward or
+# dedup spends during the creation of a block generator. We do that to avoid
+# spending too much time on potentially expensive items.
 PRIORITY_TX_THRESHOLD = 3
 
 # Typical cost of a standard XCH spend. It's used as a heuristic to help
@@ -492,6 +492,7 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
+        timeout: float,
     ) -> Optional[NewBlockGenerator]:
         """
         height is needed in case we fast-forward a transaction and we need to
@@ -499,7 +500,10 @@ class Mempool:
         """
 
         mempool_bundle = await self.create_bundle_from_mempool_items(
-            get_unspent_lineage_info_for_puzzle_hash, constants, height
+            get_unspent_lineage_info_for_puzzle_hash,
+            constants,
+            height,
+            timeout,
         )
         if mempool_bundle is None:
             return None
@@ -518,7 +522,8 @@ class Mempool:
         duration = monotonic() - start_time
         log.log(
             logging.INFO if duration < 1 else logging.WARNING,
-            f"serializing block generator took {duration:0.2f} seconds",
+            f"serializing block generator took {duration:0.2f} seconds "
+            f"spends: {len(removals)} additions: {len(additions)}",
         )
         return NewBlockGenerator(
             SerializedProgram.from_bytes(block_program),
@@ -534,6 +539,7 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
+        timeout: float = 1.0,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -560,7 +566,7 @@ class Mempool:
             item = self._items[name]
 
             current_time = monotonic()
-            if current_time - bundle_creation_start > 1:
+            if current_time - bundle_creation_start >= timeout:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
                 break
             try:
@@ -638,7 +644,7 @@ class Mempool:
                 log.info(f"Exception while checking a mempool item for deduplication: {e}")
                 skipped_items += 1
                 continue
-        if processed_spend_bundles == 0:
+        if coin_spends == []:
             return None
         log.info(
             f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
@@ -653,3 +659,130 @@ class Mempool:
             f"create_bundle_from_mempool_items took {duration:0.4f} seconds",
         )
         return agg, additions
+
+    async def create_block_generator2(
+        self,
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
+        constants: ConsensusConstants,
+        height: uint32,
+        timeout: float,
+    ) -> Optional[NewBlockGenerator]:
+        fee_sum = 0  # Checks that total fees don't exceed 64 bits
+        additions: list[Coin] = []
+        removals: list[Coin] = []
+
+        eligible_coin_spends = EligibleCoinSpends()
+        log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
+        generator_creation_start = monotonic()
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        builder = BlockBuilder()
+        skipped_items = 0
+        # the total (estimated) cost of the transactions added so far
+        block_cost = 0
+        added_spends = 0
+
+        batch_transactions: list[SpendBundle] = []
+        batch_additions: list[Coin] = []
+        batch_spends = 0
+        # this cost only includes conditions and execution cost, not byte-cost
+        batch_cost = 0
+
+        for row in cursor:
+            current_time = monotonic()
+            if current_time - generator_creation_start >= timeout:
+                log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
+                break
+
+            name = bytes32(row[0])
+            fee = int(row[1])
+            item = self._items[name]
+            try:
+                assert item.conds is not None
+                cost = item.conds.condition_cost + item.conds.execution_cost
+                await eligible_coin_spends.process_fast_forward_spends(
+                    mempool_item=item,
+                    get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
+                    height=height,
+                    constants=constants,
+                )
+                unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+                    bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                )
+                new_fee_sum = fee_sum + fee
+                if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
+                    # Such a fee is very unlikely to happen but we're defensively
+                    # accounting for it
+                    break  # pragma: no cover
+
+                # if adding item would make us exceed the block cost, commit the
+                # batch we've built up first, to see if more space may be freed
+                # up by the compression
+                if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
+                    added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+
+                    block_cost = builder.cost()
+                    if added:
+                        added_spends += batch_spends
+                        additions.extend(batch_additions)
+                        removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
+                        log.info(
+                            f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
+                            f"cost: {batch_cost} total cost: {block_cost}"
+                        )
+                    else:
+                        skipped_items += 1
+
+                    batch_cost = 0
+                    batch_transactions = []
+                    batch_additions = []
+                    batch_spends = 0
+                    if done:
+                        break
+
+                batch_cost += cost - cost_saving
+                batch_transactions.append(SpendBundle(unique_coin_spends, item.spend_bundle.aggregated_signature))
+                batch_spends += len(unique_coin_spends)
+                batch_additions.extend(unique_additions)
+                fee_sum = new_fee_sum
+                block_cost += item.conds.cost - cost_saving
+            except SkipDedup as e:
+                log.info(f"{e}")
+                continue
+            except Exception as e:
+                log.info(f"Exception while checking a mempool item for deduplication: {e}")
+                skipped_items += 1
+                continue
+
+        if len(batch_transactions) > 0:
+            added, _ = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+
+            if added:
+                added_spends += batch_spends
+                additions.extend(batch_additions)
+                removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
+                block_cost = builder.cost()
+                log.info(
+                    f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
+                    f"cost: {batch_cost} total cost: {block_cost}"
+                )
+
+        if removals == []:
+            return None
+
+        generator_creation_end = monotonic()
+        duration = generator_creation_end - generator_creation_start
+        block_program, signature, cost = builder.finalize(constants)
+        log.log(
+            logging.INFO if duration < 2 else logging.WARNING,
+            f"create_block_generator2() took {duration:0.4f} seconds. "
+            f"block cost: {cost} spends: {added_spends} additions: {len(additions)}",
+        )
+
+        return NewBlockGenerator(
+            SerializedProgram.from_bytes(block_program),
+            [],
+            [],
+            signature,
+            additions,
+            removals,
+        )
