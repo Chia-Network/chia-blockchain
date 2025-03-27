@@ -289,7 +289,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
                                     if filepath.is_file():
                                         all_files.append(filepath)
                                 except Exception as e:
-                                    log.warning(f"Error processing file {os.path.join(root, file)}: {e}")
+                                    log.exception(f"Error processing file {os.path.join(root, file)}")
                                     continue
                 else:
                     # Non-recursive case - just use glob
