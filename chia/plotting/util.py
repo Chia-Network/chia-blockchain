@@ -133,7 +133,6 @@ def get_plot_filenames(root_path: Path) -> dict[Path, list[Path]]:
             log.error(f"Error processing directory {directory}: {e}")
             all_files[directory] = []
             continue
-            
     return all_files
 
 
