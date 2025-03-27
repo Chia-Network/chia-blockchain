@@ -25,8 +25,9 @@ async def nft_count(wallet: NFTWallet) -> int:
 
 @pytest.mark.limit_consensus_modes
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize("with_did", [True, False])
 @pytest.mark.anyio
-async def test_nft_mint_from_did(wallet_environments: WalletTestFramework) -> None:
+async def test_nft_mint(wallet_environments: WalletTestFramework, with_did: bool) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_0 = env_0.xch_wallet
@@ -113,14 +114,24 @@ async def test_nft_mint_from_did(wallet_environments: WalletTestFramework) -> No
     async with nft_wallet_0.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
-        await nft_wallet_0.mint_from_did(
-            metadata_list,
-            action_scope,
-            target_list=target_list,
-            mint_number_start=1,
-            mint_total=mint_total,
-            fee=fee,
-        )
+        if with_did:
+            await nft_wallet_0.mint_from_did(
+                metadata_list,
+                action_scope,
+                target_list=target_list,
+                mint_number_start=1,
+                mint_total=mint_total,
+                fee=fee,
+            )
+        else:
+            await nft_wallet_0.mint_from_xch(
+                metadata_list,
+                action_scope,
+                target_list=target_list,
+                mint_number_start=1,
+                mint_total=mint_total,
+                fee=fee,
+            )
 
     await wallet_environments.process_pending_states(
         [
@@ -138,7 +149,9 @@ async def test_nft_mint_from_did(wallet_environments: WalletTestFramework) -> No
                         "max_send_amount": -1,
                         "pending_change": 1,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
+                    if with_did
+                    else {},
                     "nft": {
                         "pending_coin_removal_count": mint_total,
                     },
@@ -156,7 +169,9 @@ async def test_nft_mint_from_did(wallet_environments: WalletTestFramework) -> No
                         "max_send_amount": 1,
                         "pending_change": -1,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
+                    if with_did
+                    else {},
                     "nft": {
                         "pending_coin_removal_count": -mint_total,
                     },
@@ -173,9 +188,6 @@ async def test_nft_mint_from_did(wallet_environments: WalletTestFramework) -> No
         ]
     )
 
-    await time_out_assert(30, nft_count, mint_total, nft_wallet_1)
-    await time_out_assert(30, nft_count, 0, nft_wallet_0)
-
     nfts = await nft_wallet_1.get_current_nfts()
     matched_data = dict(zip(target_list, metadata_list))
 
@@ -190,8 +202,11 @@ async def test_nft_mint_from_did(wallet_environments: WalletTestFramework) -> No
         # check that the target puzzle hashes of transferred nfts matches the metadata entry
         prog: Program = cast(Program, matched_data[inner_ph]["program"])
         assert prog.at("rfr").as_atom() == meta
-        # Check the did is set for each nft
-        assert nft.minter_did == did_id
+        if with_did:
+            # Check the did is set for each nft
+            assert nft.minter_did == did_id
+        else:
+            assert nft.minter_did is None
 
 
 @pytest.mark.limit_consensus_modes
@@ -560,120 +575,6 @@ async def test_nft_mint_from_did_multiple_xch(wallet_environments: WalletTestFra
             ),
         ]
     )
-
-
-@pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
-@pytest.mark.anyio
-async def test_nft_mint_from_xch(wallet_environments: WalletTestFramework) -> None:
-    env_0 = wallet_environments.environments[0]
-    env_1 = wallet_environments.environments[1]
-    wallet_0 = env_0.xch_wallet
-    wallet_1 = env_1.xch_wallet
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
-
-    async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        ph_0 = await action_scope.get_puzzle_hash(env_0.wallet_state_manager)
-
-    nft_wallet_maker = await NFTWallet.create_new_nft_wallet(env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1")
-
-    nft_wallet_taker = await NFTWallet.create_new_nft_wallet(env_1.wallet_state_manager, wallet_1, name="NFT WALLET 2")
-
-    await env_0.change_balances({"nft": {"init": True}})
-    await env_1.change_balances({"nft": {"init": True}})
-
-    royalty_pc = uint16(300)
-    royalty_addr = ph_0
-
-    mint_total = 1
-    fee = uint64(100)
-    metadata_list = [
-        {
-            "program": Program.to(
-                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes([x] * 32).hex())]
-            ),
-            "royalty_pc": royalty_pc,
-            "royalty_ph": royalty_addr,
-        }
-        for x in range(mint_total)
-    ]
-
-    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        target_list = [await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager) for x in range(mint_total)]
-
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        await nft_wallet_maker.mint_from_xch(
-            metadata_list,
-            action_scope,
-            target_list=target_list,
-            mint_number_start=1,
-            mint_total=mint_total,
-            fee=fee,
-        )
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": -fee - mint_total,
-                        "<=#spendable_balance": -fee - mint_total,
-                        "<=#max_send_amount": -fee - mint_total,
-                        ">=#pending_change": 1,
-                        "pending_coin_removal_count": 1,
-                    },
-                    "nft": {
-                        "pending_coin_removal_count": mint_total,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -fee - mint_total,
-                        ">=#spendable_balance": 1,
-                        ">=#max_send_amount": 1,
-                        "<=#pending_change": -1,
-                        "pending_coin_removal_count": -1,
-                    },
-                    "nft": {
-                        "pending_coin_removal_count": -mint_total,
-                    },
-                },
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={
-                    "nft": {
-                        "unspent_coin_count": mint_total,
-                    }
-                },
-            ),
-        ]
-    )
-
-    nfts = await nft_wallet_taker.get_current_nfts()
-    matched_data = dict(zip(target_list, metadata_list))
-
-    # Check targets and metadata entries match in the final nfts
-    for nft in nfts:
-        mod, args = nft.full_puzzle.uncurry()
-        unft = UncurriedNFT.uncurry(mod, args)
-        assert isinstance(unft, UncurriedNFT)
-        inner_args = unft.inner_puzzle.uncurry()[1]
-        inner_ph = inner_args.at("rrrf").get_tree_hash()
-        meta = unft.metadata.at("rfr").as_atom()
-        # check that the target puzzle hashes of transferred nfts matches the metadata entry
-        prog: Program = cast(Program, matched_data[inner_ph]["program"])
-        assert prog.at("rfr").as_atom() == meta
-        assert not nft.minter_did
 
 
 @pytest.mark.limit_consensus_modes
