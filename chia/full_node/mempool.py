@@ -19,8 +19,8 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
-from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo
-from chia.types.generator_types import BlockGenerator
+from chia.types.eligible_coin_spends import EligibleCoinSpends, SkipDedup, UnspentLineageInfo
+from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -452,10 +452,20 @@ class Mempool:
                     item.fee / item.cost,
                 ),
             )
-            all_coin_spends = [(s.coin_id, item.name) for s in item.conds.spends]
-            conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
+            all_coin_spends = []
+            # item.name is a property
+            # only compute its name once (the spend bundle name)
+            item_name = item.name
+            for coin_id, bcs in item.bundle_coin_spends.items():
+                # any FF spend should be indexed by its latest singleton coin
+                # ID, this way we'll find it when the singleton is spent
+                if bcs.latest_singleton_coin is not None:
+                    all_coin_spends.append((bcs.latest_singleton_coin, item_name))
+                else:
+                    all_coin_spends.append((coin_id, item_name))
+            conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
 
-        self._items[item.name] = InternalMempoolItem(
+        self._items[item_name] = InternalMempoolItem(
             item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
         )
         self._total_cost += item.cost
@@ -464,6 +474,11 @@ class Mempool:
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
         self.fee_estimator.add_mempool_item(info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
         return MempoolAddInfo(removals, None)
+
+    # each tuple holds new_coin_id, current_coin_id, mempool item name
+    def update_spend_index(self, spends_to_update: list[tuple[bytes32, bytes32, bytes32]]) -> None:
+        with self._db_conn as conn:
+            conn.executemany("UPDATE OR REPLACE spends SET coin_id=? WHERE coin_id=? AND tx=?", spends_to_update)
 
     def at_full_capacity(self, cost: int) -> bool:
         """
@@ -477,15 +492,14 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> Optional[tuple[BlockGenerator, G2Element, list[Coin]]]:
+    ) -> Optional[NewBlockGenerator]:
         """
         height is needed in case we fast-forward a transaction and we need to
         re-run its puzzle.
         """
 
         mempool_bundle = await self.create_bundle_from_mempool_items(
-            get_unspent_lineage_info_for_puzzle_hash, constants, height, item_inclusion_filter
+            get_unspent_lineage_info_for_puzzle_hash, constants, height
         )
         if mempool_bundle is None:
             return None
@@ -506,10 +520,13 @@ class Mempool:
             logging.INFO if duration < 1 else logging.WARNING,
             f"serializing block generator took {duration:0.2f} seconds",
         )
-        return (
-            BlockGenerator(SerializedProgram.from_bytes(block_program), []),
+        return NewBlockGenerator(
+            SerializedProgram.from_bytes(block_program),
+            [],
+            [],
             spend_bundle.aggregated_signature,
             additions,
+            removals,
         )
 
     async def create_bundle_from_mempool_items(
@@ -517,7 +534,6 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -547,8 +563,6 @@ class Mempool:
             if current_time - bundle_creation_start > 1:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
                 break
-            if item_inclusion_filter is not None and not item_inclusion_filter(name):
-                continue
             try:
                 assert item.conds is not None
                 cost = item.conds.cost
@@ -558,11 +572,18 @@ class Mempool:
                     # we want to keep looking for smaller transactions that
                     # might fit, but we also want to avoid spending too much
                     # time on potentially expensive ones, hence this shortcut.
+                    if any(
+                        map(
+                            lambda spend_data: (spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward),
+                            item.bundle_coin_spends.values(),
+                        )
+                    ):
+                        log.info("Skipping transaction with dedup or FF spends {item.name}")
+                        continue
+
                     unique_coin_spends = []
                     unique_additions = []
                     for spend_data in item.bundle_coin_spends.values():
-                        if spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward:
-                            raise Exception(f"Skipping transaction with eligible coin(s): {name.hex()}")
                         unique_coin_spends.append(spend_data.coin_spend)
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
@@ -610,8 +631,12 @@ class Mempool:
                 # find transactions small enough to fit at this point
                 if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
                     break
+            except SkipDedup as e:
+                log.info(f"{e}")
+                continue
             except Exception as e:
                 log.info(f"Exception while checking a mempool item for deduplication: {e}")
+                skipped_items += 1
                 continue
         if processed_spend_bundles == 0:
             return None

@@ -355,7 +355,7 @@ class WalletTestFramework:
             for env in self.environments:
                 ph_indexes: dict[uint32, int] = {}
                 for wallet_id in env.wallet_state_manager.wallets:
-                    ph_indexes[wallet_id] = await env.wallet_state_manager.puzzle_store.get_unused_count(wallet_id)
+                    ph_indexes[wallet_id] = await env.wallet_state_manager.puzzle_store.get_used_count(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
         pending_txs: list[list[LightTransactionRecord]] = []
@@ -426,5 +426,5 @@ class WalletTestFramework:
             for env, ph_indexes_before in zip(self.environments, puzzle_hash_indexes):
                 for wallet_id, ph_index in zip(env.wallet_state_manager.wallets, ph_indexes_before):
                     assert ph_indexes_before[wallet_id] == (
-                        await env.wallet_state_manager.puzzle_store.get_unused_count(wallet_id)
+                        await env.wallet_state_manager.puzzle_store.get_used_count(wallet_id)
                     )

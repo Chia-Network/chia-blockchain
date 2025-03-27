@@ -478,6 +478,7 @@ introducer:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
+  dns_servers: *dns_servers
 
   ssl:
     public_crt: "config/ssl/full_node/public_full_node.crt"

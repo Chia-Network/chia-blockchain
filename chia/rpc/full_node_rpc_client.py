@@ -261,6 +261,10 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_mempool_items_by_coin_name", {"coin_name": coin_name.hex()})
         return response
 
+    async def create_block_generator(self) -> Optional[dict[str, Any]]:
+        response = await self.fetch("create_block_generator", {})
+        return response
+
     async def get_recent_signage_point_or_eos(
         self, sp_hash: Optional[bytes32], challenge_hash: Optional[bytes32]
     ) -> Optional[Any]:

@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 import anyio
 from chia_rs import (
@@ -238,11 +238,7 @@ class SpendSim:
             return None
         return simple_solution_generator(bundle)
 
-    async def farm_block(
-        self,
-        puzzle_hash: bytes32 = bytes32(b"0" * 32),
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> tuple[list[Coin], list[Coin]]:
+    async def farm_block(self, puzzle_hash: bytes32 = bytes32(b"0" * 32)) -> tuple[list[Coin], list[Coin]]:
         # Fees get calculated
         fees = uint64(0)
         for item in self.mempool_manager.mempool.all_items():
@@ -274,11 +270,7 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = await self.mempool_manager.create_bundle_from_mempool(
-                    last_tb_header_hash=peak.header_hash,
-                    item_inclusion_filter=item_inclusion_filter,
-                )
-
+                result = await self.mempool_manager.create_bundle_from_mempool(last_tb_header_hash=peak.header_hash)
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle

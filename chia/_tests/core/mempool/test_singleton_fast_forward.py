@@ -110,11 +110,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     test_amount = uint64(3)
     test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, test_amount)
     test_unspent_lineage_info = UnspentLineageInfo(
-        coin_id=test_coin.name(),
-        coin_amount=test_coin.amount,
-        parent_id=test_coin.parent_coin_info,
-        parent_amount=test_coin.amount,
-        parent_parent_id=TEST_COIN_ID,
+        coin_id=test_coin.name(), parent_id=test_coin.parent_coin_info, parent_parent_id=TEST_COIN_ID
     )
 
     async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
@@ -141,11 +137,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     child_coin = item.bundle_coin_spends[test_coin.name()].additions[0]
     expected_fast_forward_spends = {
         IDENTITY_PUZZLE_HASH: UnspentLineageInfo(
-            coin_id=child_coin.name(),
-            coin_amount=child_coin.amount,
-            parent_id=test_coin.name(),
-            parent_amount=test_coin.amount,
-            parent_parent_id=test_coin.parent_coin_info,
+            coin_id=child_coin.name(), parent_id=test_coin.name(), parent_parent_id=test_coin.parent_coin_info
         )
     }
     # We have set the next version from our additions to chain ff spends
@@ -202,9 +194,7 @@ def test_perform_the_fast_forward() -> None:
     test_spend_data = BundleCoinSpend(test_coin_spend, False, True, [test_child_coin])
     test_unspent_lineage_info = UnspentLineageInfo(
         coin_id=latest_unspent_coin.name(),
-        coin_amount=latest_unspent_coin.amount,
         parent_id=latest_unspent_coin.parent_coin_info,
-        parent_amount=test_child_coin.amount,
         parent_parent_id=test_child_coin.parent_coin_info,
     )
     # Start from a fresh state of fast forward spends
@@ -227,9 +217,7 @@ def test_perform_the_fast_forward() -> None:
     # (previously latest unspent)
     expected_unspent_lineage_info = UnspentLineageInfo(
         coin_id=expected_child_coin.name(),
-        coin_amount=expected_child_coin.amount,
         parent_id=latest_unspent_coin.name(),
-        parent_amount=latest_unspent_coin.amount,
         parent_parent_id=latest_unspent_coin.parent_coin_info,
     )
     assert fast_forward_spends == {test_ph: expected_unspent_lineage_info}
@@ -301,7 +289,7 @@ def make_singleton_coin_spend(
 
 
 async def prepare_singleton_eve(
-    sim: SpendSim, sim_client: SimClient, is_eligible_for_ff: bool, start_amount: uint64, singleton_amount: uint64
+    sim: SpendSim, sim_client: SimClient, is_eligible_for_ff: bool, singleton_amount: uint64
 ) -> tuple[Program, CoinSpend, Program]:
     # Generate starting info
     key_lookup = KeyTool()
@@ -319,11 +307,11 @@ async def prepare_singleton_eve(
     starting_coin = records[0].coin
     # Launching
     conditions, launcher_coin_spend = singleton_top_layer.launch_conditions_and_coinsol(
-        coin=starting_coin, inner_puzzle=inner_puzzle, comment=[], amount=start_amount
+        coin=starting_coin, inner_puzzle=inner_puzzle, comment=[], amount=singleton_amount
     )
     # Keep a remaining coin with an even amount
     conditions.append(
-        Program.to([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, starting_coin.amount - start_amount - 1])
+        Program.to([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, starting_coin.amount - singleton_amount - 1])
     )
     # Create a solution for standard transaction
     delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
@@ -351,10 +339,10 @@ async def prepare_singleton_eve(
 
 
 async def prepare_and_test_singleton(
-    sim: SpendSim, sim_client: SimClient, is_eligible_for_ff: bool, start_amount: uint64, singleton_amount: uint64
+    sim: SpendSim, sim_client: SimClient, is_eligible_for_ff: bool, singleton_amount: uint64
 ) -> tuple[Coin, CoinSpend, Program, Coin]:
     inner_puzzle, eve_coin_spend, eve_signing_puzzle = await prepare_singleton_eve(
-        sim, sim_client, is_eligible_for_ff, start_amount, singleton_amount
+        sim, sim_client, is_eligible_for_ff, singleton_amount
     )
     # At this point we don't have any unspent singleton
     singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
@@ -374,11 +362,7 @@ async def prepare_and_test_singleton(
         singleton_puzzle_hash
     )
     assert unspent_lineage_info == UnspentLineageInfo(
-        coin_id=singleton.name(),
-        coin_amount=singleton.amount,
-        parent_id=eve_coin.name(),
-        parent_amount=eve_coin.amount,
-        parent_parent_id=eve_coin.parent_coin_info,
+        coin_id=singleton.name(), parent_id=eve_coin.name(), parent_parent_id=eve_coin.parent_coin_info
     )
     return singleton, eve_coin_spend, inner_puzzle, remaining_coin
 
@@ -393,7 +377,7 @@ async def test_singleton_fast_forward_solo() -> None:
     SINGLETON_AMOUNT = uint64(1337)
     async with sim_and_client() as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
-            sim, sim_client, True, SINGLETON_AMOUNT, SINGLETON_AMOUNT
+            sim, sim_client, True, SINGLETON_AMOUNT
         )
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
         inner_puzzle_hash = inner_puzzle.get_tree_hash()
@@ -410,9 +394,7 @@ async def test_singleton_fast_forward_solo() -> None:
         assert singleton_child.amount == SINGLETON_AMOUNT
         assert unspent_lineage_info == UnspentLineageInfo(
             coin_id=singleton_child.name(),
-            coin_amount=singleton_child.amount,
             parent_id=eve_coin_spend.coin.name(),
-            parent_amount=singleton.amount,
             parent_parent_id=eve_coin_spend.coin.parent_coin_info,
         )
 
@@ -434,12 +416,10 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
     get properly fast forwarded to the latest unspent (when it's eligible) or
     get correctly rejected as a double spend (when it's not eligible)
     """
-    START_AMOUNT = uint64(1337)
-    # We're decrementing the next iteration's amount for testing purposes
-    SINGLETON_AMOUNT = uint64(1335)
+    SINGLETON_AMOUNT = uint64(1337)
     async with sim_and_client() as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
-            sim, sim_client, is_eligible_for_ff, START_AMOUNT, SINGLETON_AMOUNT
+            sim, sim_client, is_eligible_for_ff, SINGLETON_AMOUNT
         )
         # Let's spend this first version, to create a bigger singleton child
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
@@ -475,11 +455,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
         singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
         assert singleton_child.amount == SINGLETON_AMOUNT
         assert unspent_lineage_info == UnspentLineageInfo(
-            coin_id=singleton_child.name(),
-            coin_amount=singleton_child.amount,
-            parent_id=singleton.name(),
-            parent_amount=singleton.amount,
-            parent_parent_id=eve_coin_spend.coin.name(),
+            coin_id=singleton_child.name(), parent_id=singleton.name(), parent_parent_id=eve_coin_spend.coin.name()
         )
         # Now let's spend the first version again (despite being already spent by now)
         remaining_spend_solution = SerializedProgram.from_program(
@@ -506,11 +482,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             )
             singleton_grandchild, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
             assert unspent_lineage_info == UnspentLineageInfo(
-                coin_id=singleton_grandchild.name(),
-                coin_amount=singleton_grandchild.amount,
-                parent_id=singleton_child.name(),
-                parent_amount=singleton_child.amount,
-                parent_parent_id=singleton.name(),
+                coin_id=singleton_grandchild.name(), parent_id=singleton_child.name(), parent_parent_id=singleton.name()
             )
         else:
             # As this singleton is not eligible for fast forward, attempting to
@@ -526,12 +498,10 @@ async def test_singleton_fast_forward_same_block() -> None:
     singleton version, all in the same block, to make sure they get properly
     fast forwarded and chained down to a latest unspent version
     """
-    START_AMOUNT = uint64(1337)
-    # We're decrementing the next iteration's amount for testing purposes
-    SINGLETON_AMOUNT = uint64(1335)
+    SINGLETON_AMOUNT = uint64(1337)
     async with sim_and_client() as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
-            sim, sim_client, True, START_AMOUNT, SINGLETON_AMOUNT
+            sim, sim_client, True, SINGLETON_AMOUNT
         )
         # Let's spend this first version, to create a bigger singleton child
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
@@ -558,11 +528,7 @@ async def test_singleton_fast_forward_same_block() -> None:
         singleton_child, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
         assert singleton_child.amount == SINGLETON_AMOUNT
         assert unspent_lineage_info == UnspentLineageInfo(
-            coin_id=singleton_child.name(),
-            coin_amount=singleton_child.amount,
-            parent_id=singleton.name(),
-            parent_amount=singleton.amount,
-            parent_parent_id=eve_coin_spend.coin.name(),
+            coin_id=singleton_child.name(), parent_id=singleton.name(), parent_parent_id=eve_coin_spend.coin.name()
         )
         # Now let's send 3 arbitrary spends of the already spent singleton in
         # one block. They should all properly fast forward
@@ -596,14 +562,8 @@ async def test_singleton_fast_forward_same_block() -> None:
         assert unspent_lineage_info is not None
         # The unspent coin ID should reflect the latest version
         assert unspent_lineage_info.coin_id == latest_singleton.name()
-        # The latest version should have the last random amount
-        assert latest_singleton.amount == SINGLETON_AMOUNT
-        # The unspent coin amount should reflect the latest version
-        assert unspent_lineage_info.coin_amount == latest_singleton.amount
         # The unspent parent ID should reflect the latest version's parent
         assert unspent_lineage_info.parent_id == latest_singleton.parent_coin_info
-        # The one before it should have the second last random amount
-        assert unspent_lineage_info.parent_amount == SINGLETON_AMOUNT
 
 
 @pytest.mark.anyio
@@ -615,7 +575,7 @@ async def test_mempool_items_immutability_on_ff() -> None:
     SINGLETON_AMOUNT = uint64(1337)
     async with sim_and_client() as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
-            sim, sim_client, True, SINGLETON_AMOUNT, SINGLETON_AMOUNT
+            sim, sim_client, True, SINGLETON_AMOUNT
         )
         singleton_name = singleton.name()
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
@@ -649,11 +609,7 @@ async def test_mempool_items_immutability_on_ff() -> None:
         singleton_child_name = singleton_child.name()
         assert singleton_child.amount == SINGLETON_AMOUNT
         assert unspent_lineage_info == UnspentLineageInfo(
-            coin_id=singleton_child_name,
-            coin_amount=singleton_child.amount,
-            parent_id=singleton_name,
-            parent_amount=singleton.amount,
-            parent_parent_id=eve_coin_spend.coin.name(),
+            coin_id=singleton_child_name, parent_id=singleton_name, parent_parent_id=eve_coin_spend.coin.name()
         )
         # Now let's spend the first version again (despite being already spent
         # by now) to exercise its fast forward.
@@ -694,11 +650,11 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
     This test covers the scenario where we receive a spend bundle with a
     singleton fast forward spend that has currently no unspent coin.
     """
-    test_amount = uint64(1337)
+    singleton_amount = uint64(1337)
     async with sim_and_client() as (sim, sim_client):
         # Prepare a singleton spend
         singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
-            sim, sim_client, True, start_amount=test_amount, singleton_amount=test_amount
+            sim, sim_client, True, singleton_amount=singleton_amount
         )
         singleton_name = singleton.name()
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
@@ -708,7 +664,7 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         sig = AugSchemeMPL.sign(sk, b"foobar", g1)
         inner_conditions: list[list[Any]] = [
             [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
-            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, test_amount],
+            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, singleton_amount],
         ]
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
         # Get its current latest unspent info
@@ -717,9 +673,7 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         )
         assert unspent_lineage_info == UnspentLineageInfo(
             coin_id=singleton_name,
-            coin_amount=test_amount,
             parent_id=eve_coin_spend.coin.name(),
-            parent_amount=eve_coin_spend.coin.amount,
             parent_parent_id=eve_coin_spend.coin.parent_coin_info,
         )
         # Let's remove this latest unspent coin from the coin store
