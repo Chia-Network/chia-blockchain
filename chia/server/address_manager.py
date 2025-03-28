@@ -172,7 +172,7 @@ def create_new_matrix() -> list[list[int]]:
 @dataclass
 class AddressManager:
     id_count: int = 0
-    key: int = randbits(256)
+    key: int = field(default_factory=functools.partial(randbits, 256))
     random_pos: list[int] = field(default_factory=list)
     tried_matrix: list[list[int]] = field(default_factory=create_tried_matrix)
     new_matrix: list[list[int]] = field(default_factory=create_new_matrix)
