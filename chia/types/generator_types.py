@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from chia_rs import Coin, G2Element
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.streamable import Streamable, streamable
@@ -37,3 +37,5 @@ class NewBlockGenerator(BlockGenerator):
     additions: list[Coin] = field(default_factory=list)
     # all coins being spent by the block generator
     removals: list[Coin] = field(default_factory=list)
+    # the total cost of the block generator, CLVM + bytes + conditions
+    cost: uint64 = field(default=uint64(0))

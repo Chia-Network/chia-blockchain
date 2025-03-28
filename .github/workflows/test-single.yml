@@ -181,6 +181,7 @@ jobs:
           path: |
             ${{ github.workspace }}/.chia/blocks
             ${{ github.workspace }}/.chia/test-plots
+            ${{ github.workspace }}/.chia/test-bundles
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
       - name: Checkout test blocks and plots
