@@ -891,32 +891,35 @@ class WalletStateManager:
 
         return None, None
 
-    async def auto_claim_coins(self) -> None:
-        # Get unspent clawback coin
-        current_timestamp = self.blockchain.get_latest_timestamp()
-        clawback_coins: dict[Coin, ClawbackMetadata] = {}
-        tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
-        assert self.wallet_node.logged_in_fingerprint is not None
+    @property
+    def tx_config(self) -> TXConfig:
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(self.config.get("auto_claim", {}))
         if tx_config_loader.min_coin_amount is None:
             tx_config_loader = tx_config_loader.override(
                 min_coin_amount=self.config.get("auto_claim", {}).get("min_amount"),
             )
-        tx_config: TXConfig = tx_config_loader.autofill(
+        assert self.wallet_node.logged_in_fingerprint is not None
+        return tx_config_loader.autofill(
             constants=self.constants,
             config=self.config,
             logged_in_fingerprint=self.wallet_node.logged_in_fingerprint,
         )
+
+    async def auto_claim_coins(self) -> None:
+        # Get unspent clawback coin
+        current_timestamp = self.blockchain.get_latest_timestamp()
+        clawback_coins: dict[Coin, ClawbackMetadata] = {}
+        tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
         unspent_coins = await self.coin_store.get_coin_records(
             coin_type=CoinType.CLAWBACK,
             wallet_type=WalletType.STANDARD_WALLET,
             spent_range=UInt32Range(stop=uint32(0)),
             amount_range=UInt64Range(
-                start=tx_config.coin_selection_config.min_coin_amount,
-                stop=tx_config.coin_selection_config.max_coin_amount,
+                start=self.tx_config.coin_selection_config.min_coin_amount,
+                stop=self.tx_config.coin_selection_config.max_coin_amount,
             ),
         )
-        async with self.new_action_scope(tx_config, push=True) as action_scope:
+        async with self.new_action_scope(self.tx_config, push=True) as action_scope:
             for coin in unspent_coins.records:
                 try:
                     metadata: MetadataTypes = coin.parsed_metadata()
@@ -1867,9 +1870,10 @@ class WalletStateManager:
 
                                 while curr_coin_state.spent_height is not None:
                                     cs: CoinSpend = await fetch_coin_spend_for_coin_state(curr_coin_state, peer)
-                                    success = await singleton_wallet.apply_state_transition(
-                                        cs, uint32(curr_coin_state.spent_height)
-                                    )
+                                    async with self.new_action_scope(self.tx_config, push=True) as action_scope:
+                                        success = await singleton_wallet.apply_state_transition(
+                                            cs, uint32(curr_coin_state.spent_height), action_scope
+                                        )
                                     if not success:
                                         break
                                     new_singleton_coin = get_most_recent_singleton_coin_from_coin_spend(cs)
@@ -1958,14 +1962,16 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            pool_wallet = await PoolWallet.create(
-                                self,
-                                self.main_wallet,
-                                child.coin.name(),
-                                [launcher_spend],
-                                uint32(child.spent_height),
-                                name="pool_wallet",
-                            )
+                            async with self.new_action_scope(self.tx_config, push=True) as action_scope:
+                                pool_wallet = await PoolWallet.create(
+                                    self,
+                                    action_scope,
+                                    self.main_wallet,
+                                    child.coin.name(),
+                                    [launcher_spend],
+                                    uint32(child.spent_height),
+                                    name="pool_wallet",
+                                )
                             launcher_spend_additions = compute_additions(launcher_spend)
                             assert len(launcher_spend_additions) == 1
                             coin_added = launcher_spend_additions[0]
@@ -2358,7 +2364,8 @@ class WalletStateManager:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == WalletType.POOLING_WALLET.value:
                 assert isinstance(wallet, PoolWallet)
-                remove: bool = await wallet.rewind(height)
+                async with self.new_action_scope(self.tx_config, push=True) as action_scope:
+                    remove: bool = await wallet.rewind(height, action_scope)
                 if remove:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
@@ -2684,6 +2691,7 @@ class WalletStateManager:
         sign: Optional[bool] = None,
         additional_signing_responses: list[SigningResponse] = [],
         extra_spends: list[WalletSpendBundle] = [],
+        puzzle_for_pk: Optional[Callable[[G1Element], Program]] = None,
     ) -> AsyncIterator[WalletActionScope]:
         async with new_wallet_action_scope(
             self,
@@ -2693,6 +2701,7 @@ class WalletStateManager:
             sign=sign,
             additional_signing_responses=additional_signing_responses,
             extra_spends=extra_spends,
+            puzzle_for_pk=puzzle_for_pk,
         ) as action_scope:
             yield action_scope
 

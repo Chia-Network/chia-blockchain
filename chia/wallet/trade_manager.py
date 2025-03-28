@@ -301,9 +301,7 @@ class TradeManager:
                     self.log.error(f"Cannot find wallet for offer {trade.trade_id}, skip cancellation.")
                     continue
 
-                new_ph = await wallet.wallet_state_manager.main_wallet.get_puzzle_hash(
-                    new=(not action_scope.config.tx_config.reuse_puzhash)
-                )
+                new_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
 
                 if len(trade_records) > 1 or len(cancellation_coins) > 1:
                     announcement_conditions: tuple[Condition, ...] = (
@@ -498,18 +496,11 @@ class TradeManager:
                 if amount > 0:
                     # this is what we are receiving in the trade
                     memos: list[bytes] = []
+                    p2_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets.get(wallet_id)
-                        assert isinstance(wallet, (CATWallet, Wallet))
-                        if isinstance(wallet, Wallet):
-                            p2_ph: bytes32 = await wallet.get_puzzle_hash(
-                                new=not action_scope.config.tx_config.reuse_puzhash
-                            )
-                        else:
-                            p2_ph = await wallet.standard_wallet.get_puzzle_hash(
-                                new=not action_scope.config.tx_config.reuse_puzhash
-                            )
+                        assert isinstance(wallet, (Wallet, CATWallet))
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 assert isinstance(wallet, CATWallet)
@@ -520,9 +511,6 @@ class TradeManager:
                                     f"Cannot request assets from wallet id {wallet.id()} without more information"
                                 )
                     else:
-                        p2_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(
-                            new=not action_scope.config.tx_config.reuse_puzhash
-                        )
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
