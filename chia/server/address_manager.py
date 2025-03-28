@@ -191,8 +191,8 @@ class AddressManager:
         self.id_count = 0
         self.key = randbits(256)
         self.random_pos = []
-        self.tried_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
-        self.new_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)]
+        self.tried_matrix = create_tried_matrix()
+        self.new_matrix = create_new_matrix()
         self.tried_count = 0
         self.new_count = 0
         self.map_addr = {}
