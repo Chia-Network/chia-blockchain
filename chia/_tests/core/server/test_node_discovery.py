@@ -30,7 +30,6 @@ async def test_enable_private_networks(
         default_port=None,
         log=Logger("node_discovery_tests"),
     )
-
     assert discovery0 is not None
     assert discovery0.enable_private_networks is False
     await discovery0.initialize_address_manager()
