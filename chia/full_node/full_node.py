@@ -345,53 +345,55 @@ class FullNode:
                 self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
 
             self.initialized = True
-            if self.full_node_peers is not None:
-                async with self.full_node_peers.manage():
-                    try:
-                        yield
-                    finally:
-                        self._shut_down = True
-                        if self._init_weight_proof is not None:
-                            self._init_weight_proof.cancel()
 
-                        # blockchain is created in _start and in certain cases it may not exist here during _close
-                        if self._blockchain is not None:
-                            self.blockchain.shut_down()
-                        # same for mempool_manager
-                        if self._mempool_manager is not None:
-                            self.mempool_manager.shut_down()
-                        if self.uncompact_task is not None:
-                            self.uncompact_task.cancel()
-                        if self._transaction_queue_task is not None:
-                            self._transaction_queue_task.cancel()
-                        cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-                        for one_tx_task in self._tx_task_list:
-                            if not one_tx_task.done():
-                                cancel_task_safe(task=one_tx_task, log=self.log)
-                        for one_sync_task in self._sync_task_list:
-                            if not one_sync_task.done():
-                                cancel_task_safe(task=one_sync_task, log=self.log)
-                        for segment_task in self._segment_task_list:
-                            cancel_task_safe(segment_task, self.log)
-                        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-                            cancel_task_safe(task, self.log)
-                        if self._init_weight_proof is not None:
-                            await asyncio.wait([self._init_weight_proof])
-                        for one_tx_task in self._tx_task_list:
-                            if one_tx_task.done():
-                                self.log.info(f"TX task {one_tx_task.get_name()} done")
-                            else:
-                                with contextlib.suppress(asyncio.CancelledError):
-                                    self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
-                                    await one_tx_task
-                        for one_sync_task in self._sync_task_list:
-                            if one_sync_task.done():
-                                self.log.info(f"Long sync task {one_sync_task.get_name()} done")
-                            else:
-                                with contextlib.suppress(asyncio.CancelledError):
-                                    self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
-                                    await one_sync_task
-                        await asyncio.gather(*self._segment_task_list, return_exceptions=True)
+            try:
+                async with contextlib.AsyncExitStack() as exit_stack:
+                    if self.full_node_peers is not None:
+                        await exit_stack.enter_async_context(self.full_node_peers.manage())
+                    yield
+            finally:
+                self._shut_down = True
+                if self._init_weight_proof is not None:
+                    self._init_weight_proof.cancel()
+
+                # blockchain is created in _start and in certain cases it may not exist here during _close
+                if self._blockchain is not None:
+                    self.blockchain.shut_down()
+                # same for mempool_manager
+                if self._mempool_manager is not None:
+                    self.mempool_manager.shut_down()
+                if self.uncompact_task is not None:
+                    self.uncompact_task.cancel()
+                if self._transaction_queue_task is not None:
+                    self._transaction_queue_task.cancel()
+                cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+                for one_tx_task in self._tx_task_list:
+                    if not one_tx_task.done():
+                        cancel_task_safe(task=one_tx_task, log=self.log)
+                for one_sync_task in self._sync_task_list:
+                    if not one_sync_task.done():
+                        cancel_task_safe(task=one_sync_task, log=self.log)
+                for segment_task in self._segment_task_list:
+                    cancel_task_safe(segment_task, self.log)
+                for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+                    cancel_task_safe(task, self.log)
+                if self._init_weight_proof is not None:
+                    await asyncio.wait([self._init_weight_proof])
+                for one_tx_task in self._tx_task_list:
+                    if one_tx_task.done():
+                        self.log.info(f"TX task {one_tx_task.get_name()} done")
+                    else:
+                        with contextlib.suppress(asyncio.CancelledError):
+                            self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
+                            await one_tx_task
+                for one_sync_task in self._sync_task_list:
+                    if one_sync_task.done():
+                        self.log.info(f"Long sync task {one_sync_task.get_name()} done")
+                    else:
+                        with contextlib.suppress(asyncio.CancelledError):
+                            self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
+                            await one_sync_task
+                await asyncio.gather(*self._segment_task_list, return_exceptions=True)
 
     @property
     def block_store(self) -> BlockStore:
