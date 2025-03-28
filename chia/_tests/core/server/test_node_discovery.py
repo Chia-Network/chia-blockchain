@@ -30,12 +30,25 @@ async def test_enable_private_networks(
         default_port=None,
         log=Logger("node_discovery_tests"),
     )
-
     assert discovery0 is not None
     assert discovery0.enable_private_networks is False
     await discovery0.initialize_address_manager()
     assert discovery0.address_manager is not None
     assert discovery0.address_manager.allow_private_subnets is False
+
+    # Missing `default_port` but known selected_network should automatically pick a port
+    discovery0 = FullNodeDiscovery(
+        server=chia_server,
+        target_outbound_count=0,
+        peers_file_path=SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        introducer_info={"host": "introducer.chia.net", "port": 8444},
+        dns_servers=[],
+        peer_connect_interval=0,
+        selected_network="testnet7",
+        default_port=None,
+        log=Logger("node_discovery_tests"),
+    )
+    assert discovery0.default_port == 58444
 
     # Test with enable_private_networks set to False in Config
     discovery1 = FullNodeDiscovery(
