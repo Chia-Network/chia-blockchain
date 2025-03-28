@@ -104,9 +104,11 @@ def test_bundles_fixture() -> list[SpendBundle]:
 
     bundle_path_dir = DEFAULT_ROOT_PATH.parent.joinpath("test-bundles")
     for p in bundle_path_dir.iterdir():
-        if not p.is_file():
+        if not p.is_file():  # pragma: no cover
             continue
-        if len(p.name) != 64 + 7:
+        if p.suffix != ".bundle":  # pragma: no cover
+            continue
+        if len(p.name) != 64 + 7:  # pragma: no cover
             continue
 
         sb = SpendBundle.from_bytes(p.read_bytes())
