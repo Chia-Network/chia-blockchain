@@ -709,15 +709,16 @@ class WalletNode:
         testing = self.config.get("testing", False)
         if self.wallet_peers is None and connect_to_unknown_peers and not testing:
             self.wallet_peers = WalletPeers(
-                self.server,
-                self.config["target_peer_count"],
-                self.root_path / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
-                self.config["introducer_peer"],
-                self.config.get("dns_servers", ["dns-introducer.chia.net"]),
-                self.config["peer_connect_interval"],
-                network_name,
-                default_port,
-                self.log,
+                server=self.server,
+                target_outbound_count=self.config["target_peer_count"],
+                peers_file_path=self.root_path
+                / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
+                introducer_info=self.config["introducer_peer"],
+                dns_servers=self.config.get("dns_servers", ["dns-introducer.chia.net"]),
+                peer_connect_interval=self.config["peer_connect_interval"],
+                selected_network=network_name,
+                default_port=default_port,
+                log=self.log,
             )
             create_referenced_task(self.wallet_peers.start())
 
