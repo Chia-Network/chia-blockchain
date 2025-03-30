@@ -2944,7 +2944,20 @@ def get_blocks_for_test(
     force_overflow: bool = False,
     spend_bundle: Optional[SpendBundle] = None,
 ) -> list[FullBlock]:
+    collisions = 0
+    cc_sub_slot_sps: dict[bytes32, None] = {}
+    rc_sub_slot_sps: dict[bytes32, None] = {}
     transaction_block = False if coinbase is None else True
+    slots = 0
+    for i in range(len(blocks) - 1, -1, -1):
+        curr = blocks[i]
+        if curr.reward_chain_block.challenge_chain_sp_vdf is not None:
+            cc_sub_slot_sps[curr.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()] = None
+            assert curr.reward_chain_block.reward_chain_sp_vdf is not None
+            rc_sub_slot_sps[curr.reward_chain_block.reward_chain_sp_vdf.output.get_hash()] = None
+        if curr.finished_sub_slots and (slots := slots + 1) == 2:
+            break
+
     for i in range(0, num_of_blocks):
         new_block = bt.get_consecutive_blocks(
             block_list_input=blocks,
@@ -2955,7 +2968,51 @@ def get_blocks_for_test(
             guarantee_transaction_block=transaction_block,
             transaction_data=spend_bundle,
         )[-1]
+        if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
+            cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+            assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
+            rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
+            min_signage_point = -1
+            number_of_slots = len(new_block.finished_sub_slots)
+            while cc_sp_hash in cc_sub_slot_sps or rc_sp_hash in rc_sub_slot_sps:
+                collisions += 1
+                skip_slots = False
+                if (
+                    new_block.reward_chain_block.signage_point_index > bt.constants.NUM_SPS_SUB_SLOT - 2
+                    or len(new_block.finished_sub_slots) > number_of_slots
+                ):
+                    skip_slots = True
+                    min_signage_point = -1
+                else:
+                    min_signage_point = new_block.reward_chain_block.signage_point_index
+                number_of_slots = len(new_block.finished_sub_slots)
+                new_block = bt.get_consecutive_blocks(
+                    block_list_input=blocks,
+                    min_signage_point=min_signage_point,
+                    num_blocks=1,
+                    skip_slots=number_of_slots + 1 if skip_slots else 0,
+                    force_overflow=(i % 10 == 0) and force_overflow,
+                    skip_overflow=not force_overflow,
+                    farmer_reward_puzzle_hash=coinbase,
+                    guarantee_transaction_block=transaction_block,
+                    transaction_data=spend_bundle,
+                )[-1]
+
+                if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
+                    cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+                    flag_one, flag_two = False, False
+                    if cc_sp_hash not in cc_sub_slot_sps:
+                        cc_sub_slot_sps[cc_sp_hash] = None
+                        flag_one = True
+                    assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
+                    rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
+                    if rc_sp_hash not in rc_sub_slot_sps:
+                        rc_sub_slot_sps[rc_sp_hash] = None
+                        flag_two = True
+                    if flag_one and flag_two:
+                        break
         blocks.append(new_block)
+    logging.info(f"Collisions: {collisions} height {blocks[-1].height}")
     return blocks
 
 
@@ -3036,14 +3093,14 @@ async def declare_pos_unfinished_block(
             full_peak,
         )
 
-    sp = SignagePoint(
-        block.reward_chain_block.challenge_chain_sp_vdf,
-        block.challenge_chain_sp_proof,
-        block.reward_chain_block.reward_chain_sp_vdf,
-        block.reward_chain_sp_proof,
-    )
-
-    full_node_store.new_signage_point(block.reward_chain_block.signage_point_index, blockchain, prevb, ssi, sp)
+    if block.reward_chain_block.challenge_chain_sp_vdf is not None:
+        sp = SignagePoint(
+            block.reward_chain_block.challenge_chain_sp_vdf,
+            block.challenge_chain_sp_proof,
+            block.reward_chain_block.reward_chain_sp_vdf,
+            block.reward_chain_sp_proof,
+        )
+        full_node_store.new_signage_point(block.reward_chain_block.signage_point_index, blockchain, prevb, ssi, sp)
 
     pospace = DeclareProofOfSpace(
         challenge,
@@ -3111,18 +3168,21 @@ async def add_tx_to_mempool(
 
 
 def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) -> bool:
-    assert block1.finished_sub_slots == block2.finished_sub_slots
-    assert block1.reward_chain_block == block2.reward_chain_block
-    assert block1.challenge_chain_sp_proof == block2.challenge_chain_sp_proof
-    assert block1.reward_chain_sp_proof == block2.reward_chain_sp_proof
-    assert block1.total_iters == block2.total_iters
-    assert block1.prev_header_hash == block2.prev_header_hash
-    assert block1.is_transaction_block() == block2.is_transaction_block()
-    assert block1.foliage == block2.foliage
-    assert block1.foliage_transaction_block == block2.foliage_transaction_block
-    assert block1.transactions_info == block2.transactions_info
-    assert block1.transactions_generator == block2.transactions_generator
-    assert block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
+    assert block1.finished_sub_slots == block2.finished_sub_slots, "Mismatch in finished_sub_slots"
+    assert block1.reward_chain_block == block2.reward_chain_block, "Mismatch in reward_chain_block"
+    assert block1.challenge_chain_sp_proof == block2.challenge_chain_sp_proof, "Mismatch in challenge_chain_sp_proof"
+    assert block1.reward_chain_sp_proof == block2.reward_chain_sp_proof, "Mismatch in reward_chain_sp_proof"
+    assert block1.total_iters == block2.total_iters, "Mismatch in total_iters"
+    assert block1.prev_header_hash == block2.prev_header_hash, "Mismatch in prev_header_hash"
+    assert block1.is_transaction_block() == block2.is_transaction_block(), "Mismatch in is_transaction_block"
+    assert block1.foliage == block2.foliage, "Mismatch in foliage"
+    assert block1.foliage_transaction_block == block2.foliage_transaction_block, "Mismatch in foliage_transaction_block"
+    assert block1.transactions_info == block2.transactions_info, "Mismatch in transactions_info"
+    assert block1.transactions_generator == block2.transactions_generator, "Mismatch in transactions_generator"
+    assert (
+        block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
+    ), "Mismatch in transactions_generator_ref_list"
+
     # Final assertion to check the entire block
-    assert block1 == block2
+    assert block1 == block2, "The entire block objects are not identical"
     return True
