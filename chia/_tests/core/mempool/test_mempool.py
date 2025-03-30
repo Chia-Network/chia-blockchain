@@ -2933,9 +2933,13 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 
 
 # make sure that after failing to pick 3 fast-forward spends, we skip
-# FF spends
+# FF spends. create_block_generator2() does not stop trying FF spends after 3
+# failures, it keeps going. The new function (create_block_generator2()) does
+# not have a limit on FF and dedup spends so it tries all 5. make_test_coins()
+# only returns 5 coins
 @pytest.mark.anyio
-async def test_skip_error_items() -> None:
+@pytest.mark.parametrize("old, expected", [(True, 3), (False, 5)])
+async def test_skip_error_items(old: bool, expected: int) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
@@ -2944,8 +2948,8 @@ async def test_skip_error_items() -> None:
     )
     mempool = Mempool(mempool_info, fee_estimator)
 
-    # all 50 items support fast forward
-    for i in range(50):
+    # all 5 items support fast forward
+    for i in range(5):
         item = mk_item(coins[i : i + 1], flags=[ELIGIBLE_FOR_FF], fee=0, cost=50)
         add_info = mempool.add_to_pool(item)
         assert add_info.error is None
@@ -2957,12 +2961,37 @@ async def test_skip_error_items() -> None:
         called += 1
         raise RuntimeError("failed to find fast forward coin")
 
-    result = await mempool.create_block_generator(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10))
-    assert result is not None
-    generator, _, _ = result
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 10.0)
+    assert generator is None
 
-    assert called == 3
-    assert generator.program == SerializedProgram.from_bytes(bytes.fromhex("ff01ff8080"))
+    assert called == expected
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("old", [True, False])
+async def test_timeout(old: bool) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    for i in range(50):
+        item = mk_item(coins[i : i + 1], flags=[0], fee=0, cost=50)
+        add_info = mempool.add_to_pool(item)
+        assert add_info.error is None
+
+    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False  # pragma: no cover
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+
+    # the timeout is set to 0, we should *always* fail with a timeout
+    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 0.0)
+    assert generator is None
 
 
 def rand_hash() -> bytes32:
@@ -3222,7 +3251,8 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
 
 
 @pytest.mark.anyio
-async def test_create_block_generator() -> None:
+@pytest.mark.parametrize("old", [True, False])
+async def test_create_block_generator(old: bool) -> None:
     async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
         assert False  # pragma: no cover
 
@@ -3247,21 +3277,20 @@ async def test_create_block_generator() -> None:
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
 
-    block = await mempool.create_block_generator(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0))
-    assert block is not None
-    generator, signature, additions = block
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = await create_block(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0), 10.0)
+    assert generator is not None
 
-    assert set(additions) == expected_additions
-
-    assert len(additions) == len(expected_additions)
-    assert signature == expected_signature
+    assert set(generator.additions) == expected_additions
+    assert len(generator.additions) == len(expected_additions)
+    assert generator.signature == expected_signature
 
     err, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
         test_constants.MAX_BLOCK_COST_CLVM,
         0,
-        signature,
+        generator.signature,
         None,
         test_constants,
     )
@@ -3278,7 +3307,7 @@ async def test_create_block_generator() -> None:
             assert Coin(spend.coin_id, add2[0], uint64(add2[1])) in expected_additions
             num_additions += 1
 
-    assert num_additions == len(additions)
+    assert num_additions == len(generator.additions)
     invariant_check_mempool(mempool)
 
 
@@ -3356,11 +3385,7 @@ async def test_lineage_cache(seeded_random: random.Random) -> None:
     called = 0
 
     info1 = UnspentLineageInfo(
-        bytes32.random(seeded_random),
-        uint64.from_bytes(seeded_random.randbytes(8)),
-        bytes32.random(seeded_random),
-        uint64.from_bytes(seeded_random.randbytes(8)),
-        bytes32.random(seeded_random),
+        bytes32.random(seeded_random), bytes32.random(seeded_random), bytes32.random(seeded_random)
     )
 
     async def callback1(ph: bytes32) -> Optional[UnspentLineageInfo]:
