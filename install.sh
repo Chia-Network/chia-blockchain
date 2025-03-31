@@ -177,7 +177,7 @@ fi
 .penv/bin/poetry install -vvvvvvvvvvvvvvvv ${EXTRAS}
 
 echo '    ======== dumping clvm tools rs version'
-.venv/bin/python -c 'import clvm_tools_rs; print(clvm_tools_rs.get_version()'
+.venv/bin/python -c 'import clvm_tools_rs; print(clvm_tools_rs.get_version())'
 echo '    ======== ^^^^^'
 
 if [ -e venv ]; then
