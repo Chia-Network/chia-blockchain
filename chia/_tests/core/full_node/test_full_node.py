@@ -551,7 +551,6 @@ async def test_request_peers(
 
     await time_out_assert_custom_interval(10, 1, have_msgs, True, full_node_2.full_node.full_node_peers)
     assert full_node_1.full_node.full_node_peers is not None
-    full_node_1.full_node.full_node_peers.address_manager = AddressManager()
 
 
 @pytest.mark.anyio
