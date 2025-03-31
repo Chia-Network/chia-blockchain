@@ -110,6 +110,10 @@ if (-not (Get-Item -ErrorAction SilentlyContinue ".penv/Scripts/poetry.exe").Exi
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
 .penv/Scripts/poetry install -vvvvvvvvvvvvvvvv @extras_cli
 
+Write-Output "    ======== dumping clvm tools rs version"
+.venv/Scripts/python -c "import clvm_tools_rs; print(clvm_tools_rs.get_version()"
+Write-Output "    ======== ^^^^^"
+
 if ($i)
 {
     Write-Output "Running 'pip install --no-deps .' for non-editable"
