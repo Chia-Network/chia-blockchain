@@ -111,7 +111,7 @@ if (-not (Get-Item -ErrorAction SilentlyContinue ".penv/Scripts/poetry.exe").Exi
 .penv/Scripts/poetry install -vvvvvvvvvvvvvvvv @extras_cli
 
 Write-Output "    ======== dumping clvm tools rs version"
-.venv/Scripts/python -c "import clvm_tools_rs; print(clvm_tools_rs.get_version()"
+.venv/Scripts/python -c "import clvm_tools_rs; print(clvm_tools_rs.get_version())"
 Write-Output "    ======== ^^^^^"
 
 if ($i)
