@@ -3179,9 +3179,7 @@ def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) 
     assert block1.foliage_transaction_block == block2.foliage_transaction_block, "Mismatch in foliage_transaction_block"
     assert block1.transactions_info == block2.transactions_info, "Mismatch in transactions_info"
     assert block1.transactions_generator == block2.transactions_generator, "Mismatch in transactions_generator"
-    assert (
-        block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
-    ), "Mismatch in transactions_generator_ref_list"
+    assert block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
 
     # Final assertion to check the entire block
     assert block1 == block2, "The entire block objects are not identical"
