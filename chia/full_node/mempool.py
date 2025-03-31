@@ -805,6 +805,7 @@ class Mempool:
             f"create_block_generator2() took {duration:0.4f} seconds. "
             f"block cost: {cost} spends: {added_spends} additions: {len(additions)}",
         )
+        assert block_cost == cost
 
         return NewBlockGenerator(
             SerializedProgram.from_bytes(block_program),
