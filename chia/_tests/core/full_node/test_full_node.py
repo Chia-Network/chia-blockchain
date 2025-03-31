@@ -3156,15 +3156,16 @@ async def add_tx_to_mempool(
 
     assert spend_coin is not None
     spend_bundle = wallet.generate_signed_transaction(uint64(1000), receiver_puzzlehash, spend_coin)
-
     assert spend_bundle is not None
-    tx: wallet_protocol.SendTransaction = wallet_protocol.SendTransaction(spend_bundle)
+    await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
 
-    await full_node_api.send_transaction(tx)
-
-    sb = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
-    assert sb == spend_bundle
-    return sb
+    await time_out_assert(
+        10,
+        full_node_api.full_node.mempool_manager.get_spendbundle,
+        spend_bundle,
+        spend_bundle.name(),
+    )
+    return spend_bundle
 
 
 def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) -> bool:
