@@ -2509,6 +2509,24 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert spend.latest_singleton_coin == spend_c.coin.name()
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("old", [True, False])
+async def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
+    bundles = transactions_1000[:10]
+    all_coins = [s.coin for b in bundles for s in b.coin_spends]
+    coins = TestCoins(all_coins, {})
+
+    mempool_manager = MempoolManager(
+        coins.get_coin_records,
+        coins.get_unspent_lineage_info,
+        DEFAULT_CONSTANTS,
+    )
+
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+
+    assert await create_block(bytes32([1] * 32), 10.0) is None
+
+
 @pytest.fixture(name="test_wallet")
 def test_wallet_fixture() -> WalletTool:
     return WalletTool(DEFAULT_CONSTANTS)
@@ -2594,9 +2612,16 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 # if we try to fill the mempool with more than 550, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
-@pytest.mark.parametrize("mempool_size", [1, 2, 50, 100, 300, 400, 550])
-@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5, 6])
-async def test_create_block_generator(mempool_size: int, seed: int, transactions_1000: list[SpendBundle]) -> None:
+@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 730])
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("old", [True, False])
+async def test_create_block_generator(
+    mempool_size: int, seed: int, old: bool, transactions_1000: list[SpendBundle]
+) -> None:
+    # the old way of creating bloks doesn't fit this many transactions, so we
+    # expect it to fail
+    expect_failure = mempool_size == 730 and old
+
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
     coins = TestCoins(all_coins, {})
@@ -2628,16 +2653,24 @@ async def test_create_block_generator(mempool_size: int, seed: int, transactions
     invariant_check_mempool(mempool_manager.mempool)
 
     assert mempool_manager.peak is not None
-    new_block_gen = await mempool_manager.create_block_generator(mempool_manager.peak.header_hash)
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+    new_block_gen = await create_block(mempool_manager.peak.header_hash, 10.0)
     assert new_block_gen is not None
 
     # now, make sure the generator we got is valid
 
-    assert len(expected_additions) == len(new_block_gen.additions)
-    assert expected_additions == set(new_block_gen.additions)
-    assert len(expected_removals) == len(new_block_gen.removals)
-    assert expected_removals == set(new_block_gen.removals)
-    assert expected_signature == new_block_gen.signature
+    if expect_failure:
+        assert len(expected_additions) != len(new_block_gen.additions)
+        assert expected_additions != set(new_block_gen.additions)
+        assert len(expected_removals) != len(new_block_gen.removals)
+        assert expected_removals != set(new_block_gen.removals)
+        assert expected_signature != new_block_gen.signature
+    else:
+        assert len(expected_additions) == len(new_block_gen.additions)
+        assert expected_additions == set(new_block_gen.additions)
+        assert len(expected_removals) == len(new_block_gen.removals)
+        assert expected_removals == set(new_block_gen.removals)
+        assert expected_signature == new_block_gen.signature
 
     err, conds = run_block_generator2(
         bytes(new_block_gen.program),
@@ -2652,7 +2685,10 @@ async def test_create_block_generator(mempool_size: int, seed: int, transactions
     assert err is None
     assert conds is not None
 
-    assert len(conds.spends) == len(expected_removals)
+    if expect_failure:
+        assert len(conds.spends) != len(expected_removals)
+    else:
+        assert len(conds.spends) == len(expected_removals)
     assert conds.cost < DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
 
     num_additions = 0

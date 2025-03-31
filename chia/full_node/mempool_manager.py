@@ -243,6 +243,7 @@ class MempoolManager:
     async def create_block_generator(
         self,
         last_tb_header_hash: bytes32,
+        timeout: float = 2.0,
     ) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions and removals, for a new block
@@ -253,7 +254,30 @@ class MempoolManager:
         lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
 
         return await self.mempool.create_block_generator(
-            lineage_cache.get_unspent_lineage_info, self.constants, self.peak.height
+            lineage_cache.get_unspent_lineage_info,
+            self.constants,
+            self.peak.height,
+            timeout,
+        )
+
+    async def create_block_generator2(
+        self,
+        last_tb_header_hash: bytes32,
+        timeout: float = 2.0,
+    ) -> Optional[NewBlockGenerator]:
+        """
+        Returns a block generator program, the aggregate signature and all additions, for a new block
+        """
+        if self.peak is None or self.peak.header_hash != last_tb_header_hash:
+            return None
+
+        lineage_cache = LineageInfoCache(self.get_unspent_lineage_info_for_puzzle_hash)
+
+        return await self.mempool.create_block_generator2(
+            lineage_cache.get_unspent_lineage_info,
+            self.constants,
+            self.peak.height,
+            timeout,
         )
 
     def get_filter(self) -> bytes:
