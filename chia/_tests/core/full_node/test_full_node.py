@@ -51,7 +51,6 @@ from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
-from chia.server.address_manager import AddressManager
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
