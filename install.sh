@@ -176,6 +176,10 @@ fi
 # shellcheck disable=SC2086
 .penv/bin/poetry install -vvvvvvvvvvvvvvvv ${EXTRAS}
 
+echo '    ======== dumping clvm tools rs version'
+.venv/bin/python -c 'import clvm_tools_rs; print(clvm_tools_rs.get_version()'
+echo '    ======== ^^^^^'
+
 if [ -e venv ]; then
   if [ -d venv ] && [ ! -L venv ]; then
     echo "The 'venv' directory already exists. Please delete it before installing."
