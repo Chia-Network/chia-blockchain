@@ -17,7 +17,7 @@ from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 
 class AddressManagerTest(AddressManager):
     def __init__(self, connection: aiosqlite.Connection, make_deterministic=True):
-        super().__init__()
+        super().__init__(connection)
         self.db_connection = connection
         if make_deterministic:
             self.make_deterministic()
