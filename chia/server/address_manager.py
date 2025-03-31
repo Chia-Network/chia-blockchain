@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import functools
-import asyncio
 import logging
 import math
 import time
 from asyncio import Lock
-from enum import Enum
 from dataclasses import dataclass, field
+from enum import Enum
 from random import choice, randrange
 from secrets import randbits
 from typing import Optional
@@ -177,6 +176,7 @@ class Job:
         self.job_type = job_type
         self.info = info
 
+
 def create_tried_matrix() -> list[list[int]]:
     return [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
 
@@ -188,6 +188,7 @@ def create_new_matrix() -> list[list[int]]:
 # This is a Python port from 'CAddrMan' class from Bitcoin core code.
 @dataclass
 class AddressManager:
+    db_connection: aiosqlite.Connection
     id_count: int = 0
     key: int = field(default_factory=functools.partial(randbits, 256))
     random_pos: list[int] = field(default_factory=list)
@@ -204,7 +205,6 @@ class AddressManager:
     allow_private_subnets: bool = False
     lock: Lock = field(default_factory=Lock)
     jobs: list[Job] = field(default_factory=list)
-    db_connection: aiosqlite.Connection = field(default_factory=aiosqlite.Connection)
 
     def clear(self) -> None:
         self.id_count = 0

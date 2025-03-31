@@ -91,7 +91,7 @@ class AddressManagerStore:
     @classmethod
     async def deserialize(cls, connection: aiosqlite.Connection) -> AddressManager:
         log.info("Deserializing peer data from database")
-        address_manager = AddressManager()
+        address_manager = AddressManager(db_connection=connection)
         nodes = await get_all_peers(connection)
 
         # for node_id, info_str in peers:
