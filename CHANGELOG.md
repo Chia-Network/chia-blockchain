@@ -6,7 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 2.5.2 Chia blockchain 2024-02-19
+## 2.5.3 Chia blockchain 2025-03-25
+
+## What's Changed
+
+### Added
+
+- Add config constant support to `chia db validate`
+- Add names to threads in ThreadPoolExecutor
+- Add cache for `get_unspent_lineage_info()`
+
+### Changed
+
+- Mempool: Create a mempool item out of a copy of the input one when processing fast forward spends
+- Mempool: Validate fast forward spends before adding their spend bundle to the mempool
+- Mempool: make the super set rule stricter
+- Mempool: Add increment to skipped_items if we hit an Exception in mempool
+- Mempool: harden mempool fast-forward feature
+- Mempool: improve fast forward mempool eviction
+- Migrate puzzles away from `load_clvm` to import from chia_puzzles_py
+- Add singleton records to action scopes
+- Swap out `Payment` for `CreateCoin`
+- Remove old offer guards
+- Delete unused `chia/simulator/simulator_constants.py`
+- Port `test_dl_wallet.py` to `WalletTestFramework`
+- chia.types no longer depends upon chia.protocols
+- Standardize the `Wallet` API for `generate_signed_transaction`
+- Bring `VCWallet.generate_signed_transaction` into conformity
+- Add `generate_signed_transaction` to `WalletProtocol`
+- Refactor `create_block_generator`
+- bump `chia_rs` to `0.21.1`
+- bump `anyio` to `4.8.0`
+- bump `boto3` to `1.37.1`
+- bump `filelock` to `3.9`
+- bump `keyring` to `25.6.0`
+
+### Fixed
+
+- Allow coin selection of 0 value coins
+- Add some extra safety into `create_message_spend`
+- check on import that assertions are working
+- chore: fix some typos (thanks @lencap)
+- chore: fix 404 status URL (thanks @peicuiping)
+- Assert height to hash in contains block
+- Add DNS-based fallback for original introducer
+
+### Removed
+
+- Removed n-weso algorithm. Timelords use either 2-weso or H/W
+- Removed unused proof-of-concept DAO wallet
+
+## 2.5.2 Chia blockchain 2025-02-19
 
 ## What's Changed
 

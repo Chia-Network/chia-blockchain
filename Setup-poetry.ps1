@@ -6,7 +6,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-py -$pythonVersion -m venv .penv
-.penv/Scripts/python -m pip install --upgrade pip setuptools wheel
+if (-not (Get-Item -ErrorAction SilentlyContinue ".penv/Scripts/").Exists)
+{
+    py -$pythonVersion -m venv .penv
+    .penv/Scripts/python -m pip install --upgrade pip
+}
 # TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
-.penv/Scripts/python -m pip install --requirement requirements-poetry.txt
+.penv/Scripts/python -m pip install --upgrade --requirement requirements-poetry.txt

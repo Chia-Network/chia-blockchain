@@ -1818,8 +1818,6 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework) -> No
         await env.wallet_state_manager.puzzle_store.add_derivation_paths([dr])
 
     # Then we make sure that even though we asked for a used puzzle hash, it still gives us an unused one
-    unused_count = await env.wallet_state_manager.puzzle_store.get_unused_count(uint32(env.wallet_aliases["cat"]))
+    unused_count = await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
     await cat_wallet.get_cat_puzzle_hash(new=False)
-    assert unused_count < await env.wallet_state_manager.puzzle_store.get_unused_count(
-        uint32(env.wallet_aliases["cat"])
-    )
+    assert unused_count < await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))

@@ -11,7 +11,6 @@ import typing_extensions
 from aiosqlite import Cursor
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_from_bytes
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -613,27 +612,22 @@ class CoinStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT unspent.coin_name, "
-                "unspent.amount, "
                 "unspent.coin_parent, "
-                "parent.amount, "
                 "parent.coin_parent "
                 "FROM coin_record AS unspent INDEXED BY coin_puzzle_hash "
                 "LEFT JOIN coin_record AS parent ON unspent.coin_parent = parent.coin_name "
                 "WHERE unspent.spent_index = 0 "
                 "AND parent.spent_index > 0 "
                 "AND unspent.puzzle_hash = ? "
-                "AND parent.puzzle_hash = unspent.puzzle_hash",
+                "AND parent.puzzle_hash = unspent.puzzle_hash "
+                "AND parent.amount = unspent.amount",
                 (puzzle_hash,),
             ) as cursor:
                 rows = list(await cursor.fetchall())
                 if len(rows) != 1:
                     log.debug("Expected 1 unspent with puzzle hash %s, but found %s", puzzle_hash.hex(), len(rows))
                     return None
-                coin_id, coin_amount, parent_id, parent_amount, parent_parent_id = rows[0]
+                coin_id, parent_id, parent_parent_id = rows[0]
                 return UnspentLineageInfo(
-                    coin_id=bytes32(coin_id),
-                    coin_amount=uint64(int_from_bytes(coin_amount)),
-                    parent_id=bytes32(parent_id),
-                    parent_amount=uint64(int_from_bytes(parent_amount)),
-                    parent_parent_id=bytes32(parent_parent_id),
+                    coin_id=bytes32(coin_id), parent_id=bytes32(parent_id), parent_parent_id=bytes32(parent_parent_id)
                 )
