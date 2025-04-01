@@ -13,7 +13,7 @@ import traceback
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
 
 from chia_rs import ConsensusConstants, RewardChainBlock
 from chia_rs.sized_bytes import bytes32
@@ -148,7 +148,7 @@ class Timelord:
         self.bluebox_pool: Optional[ThreadPoolExecutor] = None
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,

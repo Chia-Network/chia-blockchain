@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from math import floor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
 
 import aiohttp
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
@@ -181,7 +181,7 @@ class Farmer:
         self.prev_signage_point: Optional[tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
         async def start_task() -> None:
             # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
             # succeeds or until we need to shut down.

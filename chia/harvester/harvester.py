@@ -8,7 +8,7 @@ import logging
 from collections.abc import AsyncIterator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
 
 from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint32
@@ -134,7 +134,7 @@ class Harvester:
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
         self._refresh_lock = asyncio.Lock()
         self.event_loop = asyncio.get_running_loop()
         try:

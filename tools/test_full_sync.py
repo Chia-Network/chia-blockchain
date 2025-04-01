@@ -137,7 +137,7 @@ async def run_sync_checkpoint(
     )
 
     full_node.set_server(FakeServer())  # type: ignore[arg-type]
-    async with full_node.manage():
+    async with full_node.manage(stop_callback=lambda: ...):
         peer: WSChiaConnection = FakePeer()  # type: ignore[assignment]
 
         print()

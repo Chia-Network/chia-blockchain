@@ -199,7 +199,7 @@ class FullNode:
         )
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 

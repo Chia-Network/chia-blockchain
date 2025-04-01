@@ -39,7 +39,7 @@ async def test_sql_logs(enable: bool, config: dict[str, Any], tmp_chia_root: Pat
         uploaders=[],
     )
     assert not log_path.exists()
-    async with data_layer.manage():
+    async with data_layer.manage(stop_callback=lambda: ...):
         pass
 
     if enable:
@@ -74,7 +74,7 @@ async def test_plugin_requests_use_custom_headers(
         uploaders=[plugin_remote],
     )
 
-    async with data_layer.manage():
+    async with data_layer.manage(stop_callback=lambda: ...):
         await data_layer.get_downloader(store_id=bytes32.zeros, url="")
         await data_layer.get_uploaders(store_id=bytes32.zeros)
         await data_layer.check_plugins()

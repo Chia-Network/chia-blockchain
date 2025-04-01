@@ -92,7 +92,7 @@ class RpcServiceProtocol(Protocol):
         ...
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
         yield  # pragma: no cover
 
 

@@ -11,7 +11,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, Union, cast, overload
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
@@ -148,7 +148,7 @@ class WalletNode:
     _tx_messages_in_progress: dict[bytes32, list[bytes32]] = dataclasses.field(default_factory=dict)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
         await self._start()
         try:
             yield

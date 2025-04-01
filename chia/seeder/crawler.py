@@ -73,7 +73,7 @@ class Crawler:
         return self._server
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
         # We override the default peer_connect_timeout when running from the crawler
         crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
         self.server.config["peer_connect_timeout"] = crawler_peer_timeout

@@ -12,7 +12,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator, Awaitable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast, final
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast, final
 
 import aiohttp
 from chia_rs.sized_bytes import bytes32
@@ -119,6 +119,7 @@ class DataLayer:
         default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5)
     )
     group_files_by_store: bool = False
+    stop_callback: Optional[Callable[[], object]] = None
 
     @property
     def server(self) -> ChiaServer:
@@ -192,7 +193,8 @@ class DataLayer:
         return self
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self, stop_callback: Callable[[], object]) -> AsyncIterator[None]:
+        self.stop_callback = stop_callback
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
@@ -598,6 +600,7 @@ class DataLayer:
                     downloader=await self.get_downloader(store_id, url),
                     group_files_by_store=self.group_files_by_store,
                     maximum_full_file_count=self.maximum_full_file_count,
+                    stop_callback=self.stop_callback,
                 )
                 if success:
                     self.log.info(

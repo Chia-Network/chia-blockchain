@@ -157,7 +157,7 @@ async def run_sync_test(
         )
 
         full_node.set_server(cast(ChiaServer, FakeServer()))
-        async with full_node.manage():
+        async with full_node.manage(stop_callback=lambda: ...):
             peak = full_node.blockchain.get_peak()
             if peak is not None:
                 height = int(peak.height)

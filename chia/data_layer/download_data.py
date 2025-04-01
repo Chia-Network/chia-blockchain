@@ -4,11 +4,10 @@ import asyncio
 import logging
 import math
 import os
-import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import aiohttp
 from chia_rs.sized_bytes import bytes32
@@ -249,6 +248,7 @@ async def insert_from_delta_file(
     downloader: Optional[PluginRemote],
     group_files_by_store: bool = False,
     maximum_full_file_count: int = 1,
+    stop_callback: Optional[Callable[[], object]] = None,
 ) -> bool:
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
@@ -270,7 +270,8 @@ async def insert_from_delta_file(
                 f"terminating for timing test, reached {timing_stop_after_generation}."
                 + f"  duration: {hours}h {minutes}m {seconds}s"
             )
-            sys.exit()
+            if stop_callback is not None:
+                stop_callback()
 
         target_filename_path = get_delta_filename_path(
             client_foldername, store_id, root_hash, existing_generation, group_files_by_store
