@@ -1044,19 +1044,19 @@ dev = ["pytest"]
 
 [[package]]
 name = "clvm-tools-rs"
-version = "0.1.45"
+version = "0.1.48"
 description = "tools for working with chialisp language; compiler, repl, python and wasm bindings"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "clvm_tools_rs-0.1.45-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:fc5a60fa6bbbfb8875258266b82251c4cc9279e3d6435eaaada0b2c033816b1a"},
-    {file = "clvm_tools_rs-0.1.45-cp38-abi3-macosx_13_0_x86_64.whl", hash = "sha256:d1cd3240fdb9560c5cc860ac15196a00b70935827018deacf01651fcd9bfa6e5"},
-    {file = "clvm_tools_rs-0.1.45-cp38-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:fe0dcb7cad0edd1c9b1f7b0e3e6864cea1e13c3f8a6667de83c4721ff5626b4f"},
-    {file = "clvm_tools_rs-0.1.45-cp38-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:792fb5be40d317e32b86e44f9a3bbbf4d96827b304877e678eaff0abca212b3e"},
-    {file = "clvm_tools_rs-0.1.45-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:079b849e0c289b6c8e7e93c027d9ee8083714ad07c5d19a1c0f7bd88efa9615f"},
-    {file = "clvm_tools_rs-0.1.45-cp38-abi3-win_amd64.whl", hash = "sha256:3153335cafd180a6a308fef0d3808777fb5f7e13edd43e9ee344afd212e05516"},
-    {file = "clvm_tools_rs-0.1.45.tar.gz", hash = "sha256:73848e0504e42bbd9627497c7307147cce9a04678936b5aec5c5a6be4b372c84"},
+    {file = "clvm_tools_rs-0.1.48-cp38-abi3-macosx_13_0_arm64.whl", hash = "sha256:8360760d67857a7864c20ce0b9d33f38e2df9f177d62a5603c44361daeb534d2"},
+    {file = "clvm_tools_rs-0.1.48-cp38-abi3-macosx_13_0_x86_64.whl", hash = "sha256:7fb1538c3427c12f2bc636114a8776399e0a525dce47544181d3b979735db32c"},
+    {file = "clvm_tools_rs-0.1.48-cp38-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:2dd11e50d3073d45f6ed5ec1900907773d512b4a406f24bd05169ee49fe7eda5"},
+    {file = "clvm_tools_rs-0.1.48-cp38-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:55b4902636b9ea8f284ad00d80aa912910383e83c499c0f88588ff9f3e76bf8d"},
+    {file = "clvm_tools_rs-0.1.48-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:23e858080db6bd3e3cda65b212bef00d072e181247970940fe77d1e9ec528e69"},
+    {file = "clvm_tools_rs-0.1.48-cp38-abi3-win_amd64.whl", hash = "sha256:5e7dd96b08ffa8a768fd4f78dc0d8fe2b6e4f2958604cc5955ee9813592e6385"},
+    {file = "clvm_tools_rs-0.1.48.tar.gz", hash = "sha256:03f60301c22d0cb190cdb29b540d72ef1c73f1d4a0c9bd93505b8d74c93fc026"},
 ]
 
 [[package]]
