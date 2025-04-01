@@ -129,6 +129,8 @@ class SyncTimeCommand:
                     print_date(line)
                     break
 
+        await self.run_chia("stop", "-d", "all", check=False)
+
     async def wait_for_wallet_synced(self) -> None:
         print_date("waiting for wallet to sync")
         while True:
