@@ -1266,14 +1266,14 @@ files = [
 
 [[package]]
 name = "dnslib"
-version = "0.9.25"
+version = "0.9.26"
 description = "Simple library to encode/decode DNS wire-format packets"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "dnslib-0.9.25-py3-none-any.whl", hash = "sha256:013699e4740ebfb6908060b6216c6b932ba3a2747bc10526796887c0ffb4922d"},
-    {file = "dnslib-0.9.25.tar.gz", hash = "sha256:687df2086e28086cb32b947dafa4c0a4e613f1429baa3be61d8b94e69418b4ef"},
+    {file = "dnslib-0.9.26-py3-none-any.whl", hash = "sha256:e68719e633d761747c7e91bd241019ef5a2b61a63f56025939e144c841a70e0d"},
+    {file = "dnslib-0.9.26.tar.gz", hash = "sha256:be56857534390b2fbd02935270019bacc5e6b411d156cb3921ac55a7fb51f1a8"},
 ]
 
 [[package]]
