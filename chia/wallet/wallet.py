@@ -522,6 +522,9 @@ class Wallet:
                 return True
         return False
 
+    def hardened_pubkey_for_path(self, path: list[int]) -> G1Element:
+        return _derive_path(self.wallet_state_manager.get_master_private_key(), path).get_g1()
+
     async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
         pk_parsed: G1Element = G1Element.from_bytes(pk)
         dr: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_puzzle_hash(
