@@ -6,7 +6,6 @@ import math
 import time
 from asyncio import Lock
 from dataclasses import dataclass, field
-from enum import Enum
 from random import choice, randrange
 from secrets import randbits
 from typing import Optional
