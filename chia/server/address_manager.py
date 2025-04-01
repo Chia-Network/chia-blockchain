@@ -164,19 +164,6 @@ class ExtendedPeerInfo:
         return chance
 
 
-class JobType(Enum):
-    CREATE = 0
-    UPDATE = 1
-    DELETE = 2
-
-
-class Job:
-    def __init__(self, node_id: int, job_type: JobType, info: Optional[str] = None):
-        self.node_id = node_id
-        self.job_type = job_type
-        self.info = info
-
-
 def create_tried_matrix() -> list[list[int]]:
     return [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
 
@@ -204,7 +191,6 @@ class AddressManager:
     used_tried_matrix_positions: set[tuple[int, int]] = field(default_factory=set)
     allow_private_subnets: bool = False
     lock: Lock = field(default_factory=Lock)
-    jobs: list[Job] = field(default_factory=list)
 
     def clear(self) -> None:
         self.id_count = 0
@@ -265,7 +251,6 @@ class AddressManager:
         self.map_addr[addr.host] = node_id
         self.map_info[node_id].random_pos = len(self.random_pos)
         self.random_pos.append(node_id)
-        # self.jobs.append(Job(node_id, JobType.CREATE, epi.to_string()))
         await add_peer(node_id, epi.to_string(), self.db_connection)
         return (self.map_info[node_id], node_id)
 
@@ -316,7 +301,6 @@ class AddressManager:
         self._set_tried_matrix(cur_bucket, cur_bucket_pos, node_id)
         self.tried_count += 1
         info.is_tried = True
-        # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
         await update_peer_info(node_id, info.to_string(), self.db_connection)
 
     async def clear_new_(self, bucket: int, pos: int) -> None:
@@ -351,7 +335,6 @@ class AddressManager:
 
         # if it is already in the tried set, don't do anything else
         if info.is_tried:
-            # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
             await update_peer_info(node_id, info.to_string(), self.db_connection)
             return None
 
@@ -391,7 +374,6 @@ class AddressManager:
         self.random_pos = self.random_pos[:-1]
         del self.map_addr[info.peer_info.host]
         del self.map_info[node_id]
-        # self.jobs.append(Job(node_id, JobType.DELETE))
         await remove_peer(node_id, self.db_connection)
         self.new_count -= 1
 
@@ -471,7 +453,6 @@ class AddressManager:
             info.last_count_attempt = timestamp
             info.num_attempts += 1
         assert node_id is not None
-        # self.jobs.append(Job(node_id, JobType.UPDATE, info.to_string()))
         await update_peer_info(node_id, info.to_string(), self.db_connection)
 
     def select_peer_(self, new_only: bool) -> Optional[ExtendedPeerInfo]:

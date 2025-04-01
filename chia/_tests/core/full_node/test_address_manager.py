@@ -598,6 +598,8 @@ class TestPeerManager:
         await AddressManagerStore.serialize(addrman, connection)
         addrman2 = await AddressManagerStore.create_address_manager(connection)
 
+        assert addrman2.new_count == addrman.new_count
+
         retrieved_peers = []
         for _ in range(50):
             peer = await addrman2.select_peer()
