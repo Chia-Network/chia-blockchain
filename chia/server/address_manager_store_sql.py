@@ -38,7 +38,7 @@ class AddressManagerStore:
         await connection.commit()
 
     @classmethod
-    async def update_metadata(cls, connection: aiosqlite.Connection, metadata: int) -> None:
+    async def update_metadata(cls, connection: aiosqlite.Connection, metadata: list[tuple[str, str]]) -> None:
         # Insert or update metadata
         for key, value in metadata:
             await connection.execute(
