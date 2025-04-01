@@ -301,7 +301,7 @@ class TestPoolWalletRpc:
         assert status.target is None
         assert status.current.owner_pubkey == G1Element.from_bytes(
             bytes.fromhex(
-                "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
             )
         )
         assert status.current.pool_url == ""
@@ -314,7 +314,7 @@ class TestPoolWalletRpc:
         pool_config = pool_list[0]
         assert (
             pool_config["owner_public_key"]
-            == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+            == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
         launcher_id = None
@@ -354,7 +354,7 @@ class TestPoolWalletRpc:
         assert status.target is None
         assert status.current.owner_pubkey == G1Element.from_bytes(
             bytes.fromhex(
-                "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
             )
         )
         assert status.current.pool_url == "http://pool.example.com"
@@ -367,7 +367,7 @@ class TestPoolWalletRpc:
         pool_config = pool_list[0]
         assert (
             pool_config["owner_public_key"]
-            == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+            == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
         launcher_id = None
@@ -477,10 +477,11 @@ class TestPoolWalletRpc:
                 assert len(pool_list) == i + 3
                 if i == 0:
                     # Ensures that the CAT creation does not cause pool wallet IDs to increment
+                    max_id = 0
                     for some_wallet in wallet_node.wallet_state_manager.wallets.values():
                         if some_wallet.type() == WalletType.POOLING_WALLET:
+                            max_id = max(max_id, some_wallet.id())
                             status: PoolWalletInfo = (await client.pw_status(some_wallet.id()))[0]
-                            assert (await some_wallet.get_pool_wallet_index()) < 5
                             auth_sk = find_authentication_sk(
                                 [some_wallet.wallet_state_manager.get_master_private_key()], status.current.owner_pubkey
                             )
@@ -490,6 +491,7 @@ class TestPoolWalletRpc:
                             )
                             assert owner_sk is not None
                             assert owner_sk[0] != auth_sk
+                    assert max_id < 5
 
     @pytest.mark.anyio
     async def test_absorb_self(
