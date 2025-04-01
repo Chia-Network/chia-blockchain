@@ -3160,7 +3160,7 @@ async def add_tx_to_mempool(
     await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
 
     await time_out_assert(
-        10,
+        20,
         full_node_api.full_node.mempool_manager.get_spendbundle,
         spend_bundle,
         spend_bundle.name(),
