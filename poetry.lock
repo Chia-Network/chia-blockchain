@@ -982,23 +982,23 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "clvm"
-version = "0.9.11"
+version = "0.9.12"
 description = "[Contract Language | Chialisp] Virtual Machine"
 optional = false
 python-versions = "<4,>=3.8.1"
 groups = ["main"]
 files = [
-    {file = "clvm-0.9.11-py3-none-any.whl", hash = "sha256:d39df22eb32b2e9b7d39545787a8a68e18e944d551790d5da05211c8812c7111"},
-    {file = "clvm-0.9.11.tar.gz", hash = "sha256:60a644eea1c8d52a61654d4b063337b46983477d4243265e10287639e4625206"},
+    {file = "clvm-0.9.12-py3-none-any.whl", hash = "sha256:fb7aec7349ca902eee52651a31a31e8f3806ff2b10ad13d5b6e39c8ae348fee4"},
+    {file = "clvm-0.9.12.tar.gz", hash = "sha256:c14c8c63ee70be05df1df5b211ff5f170033e9de9eaaffa7edc3a4fa8c03a4be"},
 ]
 
 [package.dependencies]
-chia-rs = ">=0.2.13"
-importlib-metadata = ">=7.1,<8.0"
+chia_rs = ">=0.2.13"
+importlib_metadata = ">=7.1,<8.0"
 typing-extensions = ">=4.0,<5.0"
 
 [package.extras]
-dev = ["clvm-tools (>=0.4.4)", "mypy", "pytest", "setuptools", "types-setuptools"]
+dev = ["clvm_tools (>=0.4.4)", "mypy", "pytest", "setuptools", "types-setuptools"]
 
 [[package]]
 name = "clvm-rs"
