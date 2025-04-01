@@ -30,6 +30,16 @@ async def set_new_table(entries: list[tuple[int, int]], connection: aiosqlite.Co
     await connection.commit()
 
 
+async def update_metadata(connection: aiosqlite.Connection, metadata: list[tuple[str, str]]) -> None:
+    # Insert or update metadata
+    for key, value in metadata:
+        await connection.execute(
+            "INSERT INTO metadata_table (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?",
+            (key, value, value),
+        )
+    await connection.commit()
+
+
 async def get_new_table(connection: aiosqlite.Connection) -> list[tuple[int, int]]:
     cursor = await connection.execute("SELECT node_id, bucket from peer_new_table")
     entries = await cursor.fetchall()

@@ -11,7 +11,14 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
-from chia.server.address_manager_sql_shared import add_peer, clear_peers, get_all_peers, get_new_table, set_new_table
+from chia.server.address_manager_sql_shared import (
+    add_peer,
+    clear_peers,
+    get_all_peers,
+    get_new_table,
+    set_new_table,
+    update_metadata,
+)
 
 Node = tuple[int, ExtendedPeerInfo]
 Table = tuple[int, int]
@@ -38,17 +45,6 @@ class AddressManagerStore:
         await connection.commit()
 
     @classmethod
-    async def update_metadata(cls, connection: aiosqlite.Connection, metadata: list[tuple[str, str]]) -> None:
-        # Insert or update metadata
-        for key, value in metadata:
-            await connection.execute(
-                "INSERT INTO metadata_table (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?",
-                (key, value, value),
-            )
-        await connection.commit()
-        log.debug("Metadata updated successfully")
-
-    @classmethod
     async def create_address_manager(cls, connection: aiosqlite.Connection) -> AddressManager:
         """
         Creates an AddressManager using data from the SQLite peer db
@@ -62,30 +58,31 @@ class AddressManagerStore:
         unique_ids: dict[int, int] = {}
         count_ids = 0
         metadata: list[tuple[str, str]] = []
+        trieds: list[tuple[int, str]] = []
         await clear_peers(connection)
         await connection.commit()
 
+        tried_ids = 0
         for node_id, info in address_manager.map_info.items():
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
                 await add_peer(count_ids, info.to_string(), connection)
                 count_ids += 1
+            if info.is_tried:
+                tried_ids += 1
+                trieds.append((tried_ids, info.to_string()))
         metadata.append(("new_count", str(count_ids)))
 
-        tried_ids = 0
-        for node_id, info in address_manager.map_info.items():
-            if info.is_tried:
-                assert info is not None
-                assert tried_ids != address_manager.tried_count
-                await add_peer(count_ids, info.to_string(), connection)
-                count_ids += 1
-                tried_ids += 1
+        for node_id, info in trieds:
+            assert tried_ids + count_ids != address_manager.tried_count
+            await add_peer(count_ids + node_id, info, connection)
 
-        metadata.append(("tried_count", str(tried_ids)))
+        # we don't even use this?
+        # metadata.append(("tried_count", str(tried_ids)))
         metadata.append(("key", str(address_manager.key)))
 
-        await cls.update_metadata(connection, metadata)
+        await update_metadata(connection, metadata)
 
         # store new_table_entries
         for bucket in range(NEW_BUCKET_COUNT):
