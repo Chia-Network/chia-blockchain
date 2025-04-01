@@ -1,19 +1,33 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import datetime
+import logging
 import os
 import sysconfig
+import tempfile
+import time
 from dataclasses import field
 from pathlib import Path
 from typing import Any, Optional
 
+import aiohttp
+import anyio
 import click
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
+from chia.cmds.cmd_helpers import NeedsWalletRPC
+from chia.data_layer.data_layer import server_files_path_from_config
+from chia.data_layer.data_layer_util import ServerInfo, Subscription
+from chia.data_layer.data_store import DataStore
+from chia.data_layer.download_data import insert_from_delta_file
+from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
+from chia.util.task_referencer import create_referenced_task
 
 
 class NonZeroReturnCodeError(Exception):
@@ -48,88 +62,114 @@ def print_date(*args: Any, **kwargs: Any) -> None:
     help="",
 )
 class SyncTimeCommand:
-    # TODO: NeedsWalletRPC-alike
+    wallet_rpc_info: NeedsWalletRPC
     context: ChiaCliContext = field(default_factory=ChiaCliContext)
     generation_limit: int = option("--generation-limit", required=True)
     store_id: bytes32 = option("--store-id", required=True)
     profile_tasks: bool = option("--profile-tasks/--no-profile-tasks")
     restart_all: bool = option("--restart-all/--no-restart-all")
-    delete_db: bool = option("--delete-db/--no-delete-db")
 
     async def run(self) -> None:
-        if self.restart_all or self.delete_db:
-            await self.run_chia("stop", "-d", "all", check=False)
+        config = load_config(self.context.root_path, "config.yaml", "data_layer", fill_missing_services=True)
+        initialize_logging(
+            service_name="data_layer_testing",
+            logging_config=config["logging"],
+            root_path=self.context.root_path,
+        )
 
-        if self.delete_db:
-            config = load_config(
-                root_path=self.context.root_path,
-                filename="config.yaml",
-                sub_config="data_layer",
-                fill_missing_services=True,
-            )
-            db_path = self.context.root_path.joinpath(
-                config["database_path"].replace("CHALLENGE", config["selected_network"])
-            )
-            print_date(f"deleting db: {db_path}")
-            db_path.unlink(missing_ok=True)
+        if self.restart_all:
+            await self.run_chia("stop", "-d", "all", check=False)
 
         await self.run_chia("start", "wallet")
         await self.run_chia("keys", "generate", "--label", "for_testing")
         await self.wait_for_wallet_synced()
         await self.run_chia("wallet", "show")
 
-        await self.run_chia("start", "data")
+        try:
+            async with contextlib.AsyncExitStack() as exit_stack:
+                temp_dir = exit_stack.enter_context(tempfile.TemporaryDirectory())
+                database_path = Path(temp_dir).joinpath("datalayer.sqlite")
 
-        with self.context.root_path.joinpath("log", "debug.log").open("r", encoding="utf-8") as log_file:
-            log_file.seek(0, os.SEEK_END)
-
-            while True:
-                try:
-                    await self.run_chia(
-                        "data",
-                        "subscribe",
-                        "--id",
-                        self.store_id.hex(),
-                    )
-                except NonZeroReturnCodeError:
-                    print("datalayer not running yet")
-                    await asyncio.sleep(1)
-                    continue
-
-                break
-
-            await self.wait_for_wallet_synced()
-            await self.run_chia("wallet", "show")
-
-            print_date("subscribed")
-
-            while True:
-                run_result = await self.run_chia(
-                    "data", "get_sync_status", "--id", self.store_id.hex(), stdout=asyncio.subprocess.PIPE
+                log_file = exit_stack.enter_context(
+                    self.context.root_path.joinpath("log", "debug.log").open("r", encoding="utf-8")
                 )
-                assert run_result.stdout is not None, "must not be none due to piping it in the exec call"
-                if "Traceback" in run_result.stdout:
-                    print_date("not syncing yet")
-                    await asyncio.sleep(1)
-                    continue
+                log_file.seek(0, os.SEEK_END)
 
-                break
+                data_store = await exit_stack.enter_async_context(DataStore.managed(database=database_path))
 
-            while True:
-                print_date("checking data sync status")
+                await data_store.subscribe(subscription=Subscription(store_id=self.store_id, servers_info=[]))
+
+                await self.wait_for_wallet_synced()
+                await self.run_chia("wallet", "show")
+
+                print_date("subscribed")
+
+                wallet_client_info = await exit_stack.enter_async_context(self.wallet_rpc_info.wallet_rpc())
+                wallet_rpc = wallet_client_info.client
+
+                to_download = await wallet_rpc.dl_history(
+                    launcher_id=self.store_id,
+                    min_generation=uint32(1),
+                    max_generation=uint32(self.generation_limit + 1),
+                )
+
+                root_hashes = [record.root for record in reversed(to_download)]
+
+                files_path = server_files_path_from_config(config=config, root_path=self.context.root_path)
+
+                clock = time.monotonic
+                start = clock()
+
+                task = create_referenced_task(
+                    insert_from_delta_file(
+                        data_store=data_store,
+                        store_id=self.store_id,
+                        existing_generation=0,
+                        target_generation=self.generation_limit,
+                        root_hashes=root_hashes,
+                        server_info=ServerInfo(url="", num_consecutive_failures=0, ignore_till=0),
+                        client_foldername=files_path,
+                        timeout=aiohttp.ClientTimeout(),
+                        log=logging.getLogger(__name__),
+                        proxy_url=None,
+                        downloader=None,
+                    )
+                )
+                last_generation = -1
                 try:
-                    await self.run_chia("data", "get_sync_status", "--id", self.store_id.hex())
-                except NonZeroReturnCodeError:
-                    break
+                    while not task.done():
+                        try:
+                            generation = await data_store.get_tree_generation(store_id=self.store_id)
+                        except Exception as e:
+                            if "No generations found" not in str(e):
+                                raise
+                        else:
+                            if generation != last_generation:
+                                last_generation = generation
+                                print_date(f"synced to: {generation}")
+                        await asyncio.sleep(1)
+                except asyncio.CancelledError:
+                    with anyio.CancelScope(shield=True):
+                        task.cancel()
+                        with contextlib.suppress(asyncio.CancelledError):
+                            await task
 
-                await asyncio.sleep(1)
+                end = clock()
+                remainder = round(end - start)
+                remainder, seconds = divmod(remainder, 60)
+                hours, minutes = divmod(remainder, 60)
+                print(
+                    f"terminating for timing test, reached {self.generation_limit}."
+                    + f"  duration: {hours}h {minutes}m {seconds}s"
+                )
 
-            for line in log_file:
-                if "terminating for timing test" in line:
-                    print_date(line)
-                    break
-
-        await self.run_chia("stop", "-d", "all", check=False)
+                for line in log_file:
+                    if "terminating for timing test" in line:
+                        print_date(line)
+                        break
+        finally:
+            with anyio.CancelScope(shield=True):
+                await self.run_chia("stop", "-d", "all", check=False)
 
     async def wait_for_wallet_synced(self) -> None:
         print_date("waiting for wallet to sync")
