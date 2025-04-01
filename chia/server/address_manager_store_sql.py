@@ -38,18 +38,7 @@ class AddressManagerStore:
         await connection.commit()
 
     @classmethod
-    async def update_metadata(cls, address_manager: AddressManager, connection: aiosqlite.Connection) -> None:
-        metadata: list[tuple[str, str]] = []
-        count_ids = 0
-
-        for _, info in address_manager.map_info.items():
-            if info.ref_count > 0:
-                count_ids += 1
-        metadata.append(("new_count", str(count_ids)))
-        metadata.append(("key", str(address_manager.key)))
-        tried_ids = sum(1 for info in address_manager.map_info.values() if info.is_tried)
-        metadata.append(("tried_count", str(tried_ids)))
-
+    async def update_metadata(cls, connection: aiosqlite.Connection, metadata: int) -> None:
         # Insert or update metadata
         for key, value in metadata:
             await connection.execute(
@@ -72,14 +61,33 @@ class AddressManagerStore:
         new_table_entries: list[tuple[int, int]] = []
         unique_ids: dict[int, int] = {}
         count_ids = 0
+        metadata: list[tuple[str, str]] = []
         await clear_peers(connection)
         await connection.commit()
+
         for node_id, info in address_manager.map_info.items():
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
-                await add_peer(node_id, info.to_string(), connection)
+                assert count_ids != address_manager.new_count
+                await add_peer(count_ids, info.to_string(), connection)
                 count_ids += 1
-        await cls.update_metadata(address_manager, connection)
+        metadata.append(("new_count", str(count_ids)))
+
+        tried_ids = 0
+        for node_id, info in address_manager.map_info.items():
+            if info.is_tried:
+                assert info is not None
+                assert tried_ids != address_manager.tried_count
+                await add_peer(count_ids, info.to_string(), connection)
+                count_ids += 1
+                tried_ids += 1
+
+        metadata.append(("tried_count", str(tried_ids)))
+        metadata.append(("key", str(address_manager.key)))
+
+        await cls.update_metadata(connection, metadata)
+
+        # store new_table_entries
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
                 if address_manager.new_matrix[bucket][i] != -1:
@@ -103,10 +111,12 @@ class AddressManagerStore:
 
             address_manager.key = int(metadata.get("key", 0))
             address_manager.new_count = int(metadata.get("new_count", 0))
-            address_manager.tried_count = int(metadata.get("tried_count", 0))
+            # address_manager.tried_count = int(metadata.get("tried_count", 0))
+            address_manager.tried_count = 0
 
         new_table_entries = await get_new_table(connection)
         new_table_nodes = [(node_id, info) for node_id, info in nodes if node_id < address_manager.new_count]
+
         for n, info in new_table_nodes:
             info = ExtendedPeerInfo.from_string(info)
             address_manager.map_addr[info.peer_info.host] = n
