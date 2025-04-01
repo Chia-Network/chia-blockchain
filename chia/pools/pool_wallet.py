@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs import G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack, final
@@ -80,7 +80,6 @@ class PoolWallet:
     next_transaction_fee: uint64 = uint64(0)
     next_tx_config: TXConfig = DEFAULT_TX_CONFIG
     target_state: Optional[PoolState] = None
-    _owner_sk_and_index: Optional[tuple[PrivateKey, uint32]] = None
 
     """
     From the user's perspective, this is not a wallet at all, but a way to control
