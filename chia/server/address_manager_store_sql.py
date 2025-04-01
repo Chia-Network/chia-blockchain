@@ -74,9 +74,9 @@ class AddressManagerStore:
                 trieds.append((tried_ids, info.to_string()))
         metadata.append(("new_count", str(count_ids)))
 
-        for node_id, info in trieds:
+        for node_id, info_str in trieds:
             assert tried_ids + count_ids != address_manager.tried_count
-            await add_peer(count_ids + node_id, info, connection)
+            await add_peer(count_ids + node_id, info_str, connection)
 
         # we don't even use this?
         # metadata.append(("tried_count", str(tried_ids)))
