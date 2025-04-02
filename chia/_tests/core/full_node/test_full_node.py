@@ -2504,9 +2504,9 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
             assert records == {}
             continue
 
-        if len(block.transactions_generator_ref_list) > 0:  # pragma: no cover
-            # TODO: Support block references
-            assert False
+        # TODO: Support block references
+        # if len(block.transactions_generator_ref_list) > 0:
+        #    assert False
 
         flags = get_flags_for_height_and_constants(block.height, test_constants)
         additions, removals = additions_and_removals(bytes(block.transactions_generator), [], flags, test_constants)
