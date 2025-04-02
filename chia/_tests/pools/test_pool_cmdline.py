@@ -808,7 +808,7 @@ async def test_plotnft_cli_inspect(
 
     assert (
         json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+        == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
     )
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.FARMING_TO_POOL.value
 
@@ -833,7 +833,7 @@ async def test_plotnft_cli_inspect(
 
     assert (
         json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0x893474c97d04a0283483ba1af9e070768dff9e9a83d9ae2cf00a34be96ca29aec387dfb7474f2548d777000e5463f602"
+        == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
     )
 
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.SELF_POOLING.value

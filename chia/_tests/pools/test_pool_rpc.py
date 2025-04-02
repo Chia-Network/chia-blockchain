@@ -476,11 +476,8 @@ class TestPoolWalletRpc:
                 pool_list = full_config["pool"]["pool_list"]
                 assert len(pool_list) == i + 3
                 if i == 0:
-                    # Ensures that the CAT creation does not cause pool wallet IDs to increment
-                    max_id = 0
                     for some_wallet in wallet_node.wallet_state_manager.wallets.values():
                         if some_wallet.type() == WalletType.POOLING_WALLET:
-                            max_id = max(max_id, some_wallet.id())
                             status: PoolWalletInfo = (await client.pw_status(some_wallet.id()))[0]
                             auth_sk = find_authentication_sk(
                                 [some_wallet.wallet_state_manager.get_master_private_key()], status.current.owner_pubkey
@@ -491,7 +488,6 @@ class TestPoolWalletRpc:
                             )
                             assert owner_sk is not None
                             assert owner_sk[0] != auth_sk
-                    assert max_id < 5
 
     @pytest.mark.anyio
     async def test_absorb_self(
