@@ -93,8 +93,6 @@ def create_data_layer_service(
 
 
 async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
-    service_config: dict[str, Any] = config[SERVICE_NAME]
-
     create_all_ssl(
         root_path=root_path,
         private_node_names=["data_layer"],
@@ -102,10 +100,10 @@ async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
         overwrite=False,
     )
 
-    plugins_config = service_config.get("plugins", {})
+    plugins_config = config["data_layer"].get("plugins", {})
     service_dir = root_path / SERVICE_NAME
 
-    old_uploaders = service_config.get("uploaders", [])
+    old_uploaders = config["data_layer"].get("uploaders", [])
     new_uploaders = plugins_config.get("uploaders", [])
     conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
     uploaders: list[PluginRemote] = [
@@ -114,7 +112,7 @@ async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
         *conf_file_uploaders,
     ]
 
-    old_downloaders = service_config.get("downloaders", [])
+    old_downloaders = config["data_layer"].get("downloaders", [])
     new_downloaders = plugins_config.get("downloaders", [])
     conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
     downloaders: list[PluginRemote] = [
