@@ -112,8 +112,10 @@ class AddressManagerStore:
             address_manager.tried_count = 0
 
         new_table_entries = await get_new_table(connection)
+        # we serialize all the new_table peers first, and then mark the end with new_count
         new_table_nodes = [(node_id, info) for node_id, info in nodes if node_id < address_manager.new_count]
 
+        # load info for new_table peers
         for n, info in new_table_nodes:
             info = ExtendedPeerInfo.from_string(info)
             address_manager.map_addr[info.peer_info.host] = n
@@ -121,10 +123,11 @@ class AddressManagerStore:
             info.random_pos = len(address_manager.random_pos)
             address_manager.random_pos.append(n)
         address_manager.id_count = len(new_table_nodes)
+
+        # load all peers after new_count as tried_table peers
         tried_table_nodes = [
             (node_id, ExtendedPeerInfo.from_string(info))
-            for node_id, info in nodes
-            if node_id >= address_manager.new_count
+            for node_id, info in nodes[address_manager.new_count:]
         ]
         # lost_count = 0
         for node_id, info in tried_table_nodes:
