@@ -5,13 +5,17 @@ import logging
 import time
 
 import pytest
-from chia_rs.sized_ints import uint16
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint16, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_between, node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.shared_protocol import Capability
+from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
@@ -21,7 +25,9 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.anyio
-async def test_long_sync_from_zero(five_nodes, default_400_blocks, bt, self_hostname):
+async def test_long_sync_from_zero(
+    five_nodes: list[FullNodeAPI], default_400_blocks: list[FullBlock], bt: BlockTools, self_hostname: str
+) -> None:
     # Must be larger than "sync_block_behind_threshold" in the config
     num_blocks = len(default_400_blocks)
     blocks: list[FullBlock] = default_400_blocks
@@ -109,8 +115,11 @@ async def test_long_sync_from_zero(five_nodes, default_400_blocks, bt, self_host
 
 @pytest.mark.anyio
 async def test_sync_from_fork_point_and_weight_proof(
-    three_nodes, default_1000_blocks, default_400_blocks, self_hostname
-):
+    three_nodes: list[FullNodeAPI],
+    default_1000_blocks: list[FullBlock],
+    default_400_blocks: list[FullBlock],
+    self_hostname: str,
+) -> None:
     # Must be larger than "sync_block_behind_threshold" in the config
     num_blocks_initial = len(default_1000_blocks) - 50
     blocks_950 = default_1000_blocks[:num_blocks_initial]
@@ -138,9 +147,10 @@ async def test_sync_from_fork_point_and_weight_proof(
     # Also test request proof of weight
     # Have the request header hash
     res = await full_node_1.request_proof_of_weight(
-        full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, blocks_950[-1].header_hash)
+        full_node_protocol.RequestProofOfWeight(uint32(blocks_950[-1].height + 1), blocks_950[-1].header_hash)
     )
     assert res is not None
+    assert full_node_1.full_node.weight_proof_handler is not None
     validated, _, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(
         full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
     )
@@ -148,7 +158,7 @@ async def test_sync_from_fork_point_and_weight_proof(
 
     # Don't have the request header hash
     res = await full_node_1.request_proof_of_weight(
-        full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, std_hash(b"12"))
+        full_node_protocol.RequestProofOfWeight(uint32(blocks_950[-1].height + 1), std_hash(b"12"))
     )
     assert res is None
 
@@ -157,7 +167,7 @@ async def test_sync_from_fork_point_and_weight_proof(
     await time_out_assert(300, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
     await time_out_assert(180, node_height_exactly, True, full_node_3, num_blocks_initial - 1)
 
-    def fn3_is_not_syncing():
+    def fn3_is_not_syncing() -> bool:
         return not full_node_3.full_node.sync_store.get_sync_mode()
 
     await time_out_assert(180, fn3_is_not_syncing)
@@ -166,9 +176,13 @@ async def test_sync_from_fork_point_and_weight_proof(
         await con.close()
     for block in blocks_rest:
         await full_node_3.full_node.add_block(block)
-        assert full_node_3.full_node.blockchain.get_peak().height >= block.height
+        peak = full_node_3.full_node.blockchain.get_peak()
+        assert peak is not None
+        assert peak.height >= block.height
 
-    log.warning(f"FN3 height {full_node_3.full_node.blockchain.get_peak().height}")
+    peak = full_node_3.full_node.blockchain.get_peak()
+    assert peak is not None
+    log.warning(f"FN3 height {peak.height}")
 
     # TODO: fix this flaky test
     await time_out_assert(180, node_height_exactly, True, full_node_3, 999)
@@ -181,7 +195,9 @@ async def test_sync_from_fork_point_and_weight_proof(
 
 
 @pytest.mark.anyio
-async def test_batch_sync(two_nodes, self_hostname):
+async def test_batch_sync(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+) -> None:
     # Must be below "sync_block_behind_threshold" in the config
     num_blocks = 20
     num_blocks_2 = 9
@@ -205,7 +221,9 @@ async def test_batch_sync(two_nodes, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_backtrack_sync_1(two_nodes, self_hostname):
+async def test_backtrack_sync_1(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+) -> None:
     full_node_1, full_node_2, server_1, server_2, bt = two_nodes
     blocks = bt.get_consecutive_blocks(1, skip_slots=1)
     blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
@@ -223,7 +241,9 @@ async def test_backtrack_sync_1(two_nodes, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_backtrack_sync_2(two_nodes, self_hostname):
+async def test_backtrack_sync_2(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+) -> None:
     full_node_1, full_node_2, server_1, server_2, bt = two_nodes
     blocks = bt.get_consecutive_blocks(1, skip_slots=3)
     blocks = bt.get_consecutive_blocks(8, blocks, skip_slots=0)
@@ -240,7 +260,7 @@ async def test_backtrack_sync_2(two_nodes, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_close_height_but_big_reorg(three_nodes, bt, self_hostname):
+async def test_close_height_but_big_reorg(three_nodes: list[FullNodeAPI], bt: BlockTools, self_hostname: str) -> None:
     blocks_a = bt.get_consecutive_blocks(50)
     blocks_b = bt.get_consecutive_blocks(51, seed=b"B")
     blocks_c = bt.get_consecutive_blocks(90, seed=b"C")
@@ -279,7 +299,12 @@ async def test_close_height_but_big_reorg(three_nodes, bt, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_sync_bad_peak_while_synced(three_nodes, default_1000_blocks, default_1500_blocks, self_hostname):
+async def test_sync_bad_peak_while_synced(
+    three_nodes: list[FullNodeAPI],
+    default_1000_blocks: list[FullBlock],
+    default_1500_blocks: list[FullBlock],
+    self_hostname: str,
+) -> None:
     # Must be larger than "sync_block_behind_threshold" in the config
     num_blocks_initial = len(default_1000_blocks) - 250
     blocks_750 = default_1000_blocks[:num_blocks_initial]
@@ -320,16 +345,21 @@ async def test_sync_bad_peak_while_synced(three_nodes, default_1000_blocks, defa
     for block in default_1000_blocks[1000 - num_blocks_initial :]:
         await full_node_2.full_node.add_block(block)
 
-    assert node_height_exactly(full_node_2, 999)
+    assert node_height_exactly(full_node_2, uint32(999))
 
 
 @pytest.mark.anyio
-async def test_block_ses_mismatch(two_nodes, default_1000_blocks, self_hostname, monkeypatch):
+async def test_block_ses_mismatch(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    default_1000_blocks: list[FullBlock],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     full_node_1, full_node_2, server_1, server_2, _ = two_nodes
     blocks = default_1000_blocks
 
     # mock for full node _sync
-    async def async_mock():
+    async def async_mock() -> None:
         log.info("do nothing")
 
     with monkeypatch.context() as monkeypatch_context:
@@ -354,8 +384,8 @@ async def test_block_ses_mismatch(two_nodes, default_1000_blocks, self_hostname,
             s.prev_subepoch_summary_hash,
             s.reward_chain_hash,
             s.num_blocks_overflow,
-            s.new_difficulty * 2,
-            s.new_sub_slot_iters * 2,
+            uint64(s.new_difficulty * 2) if s.new_difficulty is not None else None,
+            uint64(s.new_sub_slot_iters * 2) if s.new_sub_slot_iters is not None else None,
         )
         # manually try sync with wrong sub epoch summary list
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
@@ -365,14 +395,16 @@ async def test_block_ses_mismatch(two_nodes, default_1000_blocks, self_hostname,
             peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True
         )
         # sync using bad ses list
-        await full_node_2.full_node.sync_from_fork_point(0, peak1.height, peak1.header_hash, summaries)
+        await full_node_2.full_node.sync_from_fork_point(uint32(0), peak1.height, peak1.header_hash, summaries)
         # assert we failed somewhere between sub epoch 0 to sub epoch 1
         assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
 
 
 @pytest.mark.anyio
 @pytest.mark.skip("skipping until we re-enable the capability in chia.protocols.shared_protocol")
-async def test_sync_none_wp_response_backward_comp(three_nodes, default_1000_blocks, self_hostname):
+async def test_sync_none_wp_response_backward_comp(
+    three_nodes: list[FullNodeAPI], default_1000_blocks: list[FullBlock], self_hostname: str
+) -> None:
     num_blocks_initial = len(default_1000_blocks) - 50
     blocks_950 = default_1000_blocks[:num_blocks_initial]
     full_node_1, full_node_2, full_node_3 = three_nodes
@@ -393,8 +425,10 @@ async def test_sync_none_wp_response_backward_comp(three_nodes, default_1000_blo
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
     await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
 
-    peers: list = [c for c in full_node_2.full_node.server.all_connections.values()]
-    request = full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash)
+    peers = [c for c in full_node_2.full_node.server.all_connections.values()]
+    request = full_node_protocol.RequestProofOfWeight(
+        uint32(blocks_950[-1].height + 1), default_1000_blocks[-1].header_hash
+    )
     start = time.time()
     res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=5)
     assert res is None
@@ -402,8 +436,10 @@ async def test_sync_none_wp_response_backward_comp(three_nodes, default_1000_blo
     log.info(f"result was {res}")
     assert duration < 1
 
-    peers: list = [c for c in full_node_3.full_node.server.all_connections.values()]
-    request = full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash)
+    peers = [c for c in full_node_3.full_node.server.all_connections.values()]
+    request = full_node_protocol.RequestProofOfWeight(
+        uint32(blocks_950[-1].height + 1), default_1000_blocks[-1].header_hash
+    )
     start = time.time()
     res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=6)
     assert res is None
@@ -412,13 +448,19 @@ async def test_sync_none_wp_response_backward_comp(three_nodes, default_1000_blo
 
 
 @pytest.mark.anyio
-async def test_bad_peak_cache_invalidation(two_nodes, default_1000_blocks, blockchain_constants, consensus_mode):
+async def test_bad_peak_cache_invalidation(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    default_1000_blocks: list[FullBlock],
+    blockchain_constants: ConsensusConstants,
+    consensus_mode: ConsensusMode,
+) -> None:
     full_node_1, _full_node_2, _server_1, _server_2, bt = two_nodes
 
     for block in default_1000_blocks[:-500]:
         await full_node_1.full_node.add_block(block)
 
     cache_size = full_node_1.full_node.config.get("bad_peak_cache_size")
+    assert cache_size is not None
     for x in range(cache_size + 10):
         blocks = bt.get_consecutive_blocks(
             num_blocks=1, block_list_input=default_1000_blocks[:-500], seed=x.to_bytes(2, "big")
