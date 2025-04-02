@@ -23,6 +23,7 @@ from chia.types.aliases import DataLayerService, WalletService
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
+from chia.util.resource_monitor import ResourceMonitor, ResourceMonitorConfiguration
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
@@ -103,40 +104,45 @@ async def async_main(root_path: pathlib.Path) -> int:
         root_path=root_path,
     )
 
-    create_all_ssl(
-        root_path=root_path,
-        private_node_names=["data_layer"],
-        public_node_names=["data_layer"],
-        overwrite=False,
-    )
+    # TODO: just hacking for now, pr not ready until this is removed
+    service_config["resource_monitor"] = {"process_memory": True}
 
-    plugins_config = config["data_layer"].get("plugins", {})
-    service_dir = root_path / SERVICE_NAME
+    resource_monitor_configuration = ResourceMonitorConfiguration.create(service_config=service_config)
+    async with ResourceMonitor.managed(log=log, monitors=resource_monitor_configuration.create_enabled_monitors()):
+        create_all_ssl(
+            root_path=root_path,
+            private_node_names=["data_layer"],
+            public_node_names=["data_layer"],
+            overwrite=False,
+        )
 
-    old_uploaders = config["data_layer"].get("uploaders", [])
-    new_uploaders = plugins_config.get("uploaders", [])
-    conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
-    uploaders: list[PluginRemote] = [
-        *(PluginRemote(url=url) for url in old_uploaders),
-        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
-        *conf_file_uploaders,
-    ]
+        plugins_config = config["data_layer"].get("plugins", {})
+        service_dir = root_path / SERVICE_NAME
 
-    old_downloaders = config["data_layer"].get("downloaders", [])
-    new_downloaders = plugins_config.get("downloaders", [])
-    conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
-    downloaders: list[PluginRemote] = [
-        *(PluginRemote(url=url) for url in old_downloaders),
-        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
-        *conf_file_uploaders,
-    ]
+        old_uploaders = config["data_layer"].get("uploaders", [])
+        new_uploaders = plugins_config.get("uploaders", [])
+        conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
+        uploaders: list[PluginRemote] = [
+            *(PluginRemote(url=url) for url in old_uploaders),
+            *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
+            *conf_file_uploaders,
+        ]
 
-    service = create_data_layer_service(root_path, config, downloaders, uploaders)
-    async with SignalHandlers.manage() as signal_handlers:
-        await service.setup_process_global_state(signal_handlers=signal_handlers)
-        await service.run()
+        old_downloaders = config["data_layer"].get("downloaders", [])
+        new_downloaders = plugins_config.get("downloaders", [])
+        conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
+        downloaders: list[PluginRemote] = [
+            *(PluginRemote(url=url) for url in old_downloaders),
+            *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
+            *conf_file_uploaders,
+        ]
 
-    return 0
+        service = create_data_layer_service(root_path, config, downloaders, uploaders)
+        async with SignalHandlers.manage() as signal_handlers:
+            await service.setup_process_global_state(signal_handlers=signal_handlers)
+            await service.run()
+
+        return 0
 
 
 def main() -> int:
