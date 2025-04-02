@@ -92,16 +92,8 @@ def create_data_layer_service(
     )
 
 
-async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml", fill_missing_services=True)
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
-    config[SERVICE_NAME] = service_config
-    initialize_logging(
-        service_name=SERVICE_NAME,
-        logging_config=service_config["logging"],
-        root_path=root_path,
-    )
+async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
+    service_config: dict[str, Any] = config[SERVICE_NAME]
 
     create_all_ssl(
         root_path=root_path,
@@ -110,10 +102,10 @@ async def async_main(root_path: pathlib.Path) -> int:
         overwrite=False,
     )
 
-    plugins_config = config["data_layer"].get("plugins", {})
+    plugins_config = service_config.get("plugins", {})
     service_dir = root_path / SERVICE_NAME
 
-    old_uploaders = config["data_layer"].get("uploaders", [])
+    old_uploaders = service_config.get("uploaders", [])
     new_uploaders = plugins_config.get("uploaders", [])
     conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
     uploaders: list[PluginRemote] = [
@@ -122,7 +114,7 @@ async def async_main(root_path: pathlib.Path) -> int:
         *conf_file_uploaders,
     ]
 
-    old_downloaders = config["data_layer"].get("downloaders", [])
+    old_downloaders = service_config.get("downloaders", [])
     new_downloaders = plugins_config.get("downloaders", [])
     conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
     downloaders: list[PluginRemote] = [
@@ -142,10 +134,20 @@ async def async_main(root_path: pathlib.Path) -> int:
 def main() -> int:
     root_path = resolve_root_path(override=None)
 
+    # TODO: refactor to avoid the double load
+    config = load_config(root_path, "config.yaml", fill_missing_services=True)
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
+    config[SERVICE_NAME] = service_config
+    initialize_logging(
+        service_name=SERVICE_NAME,
+        logging_config=service_config["logging"],
+        root_path=root_path,
+    )
+
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        return async_run(coro=async_main(root_path=root_path))
+        return async_run(coro=async_main(root_path=root_path, config=config))
 
 
 if __name__ == "__main__":
