@@ -155,10 +155,11 @@ class SyncTimeCommand:
                 end = clock()
                 remainder = round(end - start)
                 remainder, seconds = divmod(remainder, 60)
-                hours, minutes = divmod(remainder, 60)
+                remainder, minutes = divmod(remainder, 60)
+                days, hours = divmod(remainder, 24)
                 print(
                     f"terminating for timing test, reached {self.generation_limit}."
-                    + f"  duration: {hours}h {minutes}m {seconds}s"
+                    + f"  duration: {days}d {hours}h {minutes}m {seconds}s"
                 )
         finally:
             with anyio.CancelScope(shield=True):
