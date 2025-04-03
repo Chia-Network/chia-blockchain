@@ -69,7 +69,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_intermediate,
     master_sk_to_wallet_sk_unhardened,
 )
-from chia.wallet.did_wallet.did_info import DIDCoinData
+from chia.wallet.did_wallet.did_info import DIDCoinData, did_recovery_as_bytes
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
@@ -867,7 +867,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.as_atom()),
+                did_recovery_as_bytes(recovery_list_hash),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
