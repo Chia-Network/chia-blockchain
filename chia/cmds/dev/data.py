@@ -56,10 +56,13 @@ def print_date(*args: Any, **kwargs: Any) -> None:
 @chia_command(
     group=data_group,
     name="sync-time",
-    # TODO: fill this out
-    short_help="",
-    # TODO: fill this out
-    help="",
+    short_help="test time to sync a provided store id",
+    help="""
+        An empty temporary database is created and then the specified store is synced to it.
+        If local delta files are available in the specified directory then they will be used.
+        This allows both testing of total time including downloading as well as just the insert time.
+        The DataLayer work is done within the test process.
+        Separate daemon and wallet service processes are started and stopped.""",
 )
 class SyncTimeCommand:
     wallet_rpc_info: NeedsWalletRPC
