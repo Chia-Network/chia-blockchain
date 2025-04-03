@@ -157,10 +157,10 @@ class SyncTimeCommand:
                 remainder, seconds = divmod(remainder, 60)
                 remainder, minutes = divmod(remainder, 60)
                 days, hours = divmod(remainder, 24)
-                print(
-                    f"terminating for timing test, reached {self.generation_limit}."
-                    + f"  duration: {days}d {hours}h {minutes}m {seconds}s"
-                )
+                print("DataLayer sync timing test complete:")
+                print(f"    store id: {self.store_id}")
+                print(f"     reached: {self.generation_limit}")
+                print(f"    duration: {days}d {hours}h {minutes}m {seconds}s")
         finally:
             with anyio.CancelScope(shield=True):
                 await self.run_chia("stop", "-d", "all", check=False)
