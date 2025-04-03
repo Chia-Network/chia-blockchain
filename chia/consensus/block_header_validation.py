@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Optional
 
-from chia_rs import AugSchemeMPL, ConsensusConstants
+from chia_rs import AugSchemeMPL, ChallengeChainSubSlot, ConsensusConstants, RewardChainSubSlot, SubSlotProofs
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -24,7 +24,6 @@ from chia.consensus.pot_iterations import (
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
