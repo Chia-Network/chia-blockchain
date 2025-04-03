@@ -6,26 +6,30 @@ import dataclasses
 import functools
 import logging
 import sys
-from collections.abc import AsyncIterator, Collection
-from typing import TYPE_CHECKING, ClassVar, Optional, cast, final
+from collections.abc import AsyncIterator, Iterator
+from typing import TYPE_CHECKING, ClassVar, Optional, Self, cast, final
 
 import anyio
 import psutil
 from typing_extensions import Protocol
 
-from chia.util.log_exceptions import log_exceptions
 from chia.util.task_referencer import create_referenced_task
 
 
 class LogCallable(Protocol):
-    def __call__(self, log_level: int, format: str, *args: object) -> None: ...
+    def __call__(self, monitor: ResourceMonitorProtocol, log_level: int, format: str, *args: object) -> None: ...
 
 
 class ResourceMonitorProtocol(Protocol):
     label: str
 
-    async def task(self, log: LogCallable) -> None: ...
-    async def final_report(self, log: LogCallable) -> None: ...
+    @classmethod
+    @contextlib.contextmanager
+    def manage_sync(cls, log: LogCallable) -> Iterator[Self]: ...
+    @contextlib.asynccontextmanager
+    async def manage_async(self) -> AsyncIterator[None]:
+        # yield included to make this a generator as expected by @contextlib.asynccontextmanager
+        yield
 
 
 @dataclasses.dataclass
@@ -33,23 +37,37 @@ class MonitorProcessMemory:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ResourceMonitorProtocol] = cast("MonitorProcessMemory", None)
 
+    log: LogCallable
     period: float = 10.0
     label: str = "process memory usage"
     process: psutil.Process = dataclasses.field(default_factory=psutil.Process)
     log_level: int = logging.DEBUG
 
-    async def task(self, log: LogCallable) -> None:
+    @classmethod
+    @contextlib.contextmanager
+    def manage_sync(cls, log: LogCallable) -> Iterator[Self]:
+        yield cls(log=log)
+
+    @contextlib.asynccontextmanager
+    async def manage_async(self) -> AsyncIterator[None]:
+        task = create_referenced_task(self.task())
+        try:
+            yield
+        finally:
+            with anyio.CancelScope(shield=True):
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+    async def task(self) -> None:
         while True:
-            self.report(log=log)
+            self.report()
             await anyio.sleep(self.period)
 
-    async def final_report(self, log: LogCallable) -> None:
-        self.report(log=log)
-
-    def report(self, log: LogCallable) -> None:
+    def report(self) -> None:
         memory_info = self.process.memory_info()
         human_readable = psutil._common.bytes2human(memory_info.rss)
-        log(self.log_level, "%s (%s)", memory_info.rss, human_readable)
+        self.log(self, self.log_level, "%s (%s)", memory_info.rss, human_readable)
 
 
 @final
@@ -59,7 +77,7 @@ class ResourceMonitorConfiguration:
     process_memory: bool = False
 
     @classmethod
-    def create(cls, service_config: dict[str, object]) -> ResourceMonitorConfiguration:
+    def create(cls, service_config: dict[str, object]) -> Self:
         # TODO: support env vars and, as needed, existing configuration entries outside
         #       of the resource monitor configuration
         resource_monitor_config = service_config.get("resource_monitor", {})
@@ -68,7 +86,7 @@ class ResourceMonitorConfiguration:
         return self
 
     @classmethod
-    def unmarshal(cls, resource_monitor_config: dict[str, object]) -> ResourceMonitorConfiguration:
+    def unmarshal(cls, resource_monitor_config: dict[str, object]) -> Self:
         # TODO: make configuration per monitor possible
 
         if sys.version_info >= (3, 11):
@@ -97,11 +115,11 @@ class ResourceMonitorConfiguration:
         self = cls(**data)  # type: ignore[arg-type]
         return self
 
-    def create_enabled_monitors(self) -> list[ResourceMonitorProtocol]:
-        monitors: list[ResourceMonitorProtocol] = []
+    def enabled_monitor_types(self) -> list[type[ResourceMonitorProtocol]]:
+        monitors: list[type[ResourceMonitorProtocol]] = []
 
         if self.process_memory:
-            monitors.append(MonitorProcessMemory())
+            monitors.append(MonitorProcessMemory)
 
         return monitors
 
@@ -112,67 +130,74 @@ class ResourceMonitor:
     """Coordinate setup and teardown of resource monitor logging"""
 
     log: logging.Logger
-    config = ResourceMonitorConfiguration
+    config: ResourceMonitorConfiguration
+    monitors: list[ResourceMonitorProtocol]
 
     @classmethod
-    @contextlib.asynccontextmanager
-    async def managed(
+    @contextlib.contextmanager
+    def managed(
         cls,
         log: logging.Logger,
-        monitors: Collection[ResourceMonitorProtocol],
-    ) -> AsyncIterator[None]:
-        if len(monitors) != len(set(monitor.label for monitor in monitors)):
-            raise ValueError("Duplicate monitor labels found")
+        config: ResourceMonitorConfiguration,
+    ) -> Iterator[Self]:
+        monitor_types = config.enabled_monitor_types()
+        # if len(monitors) != len(set(monitor.label for monitor in monitors)):
+        #     raise ValueError("Duplicate monitor labels found")
 
-        self = cls(log=log)
-
-        tasks: list[asyncio.Task[None]] = []
         try:
-            async with contextlib.AsyncExitStack() as exit_stack:
-                try:
-                    for monitor in monitors:
-                        task = await exit_stack.enter_async_context(self._manage_monitor(monitor=monitor))
-                        tasks.append(task)
-                    yield
-                finally:
-                    with anyio.CancelScope(shield=True):
-                        # cancelling all here for concurrent teardown
-                        for task in tasks:
-                            task.cancel()
-                        # the exit stack will handle waiting for completion
-        finally:
-            self._write(
-                log_level=logging.INFO,
-                monitor=None,
-                message_format="starting final reports",
-                final_report=True,
+            self = cls(
+                log=log,
+                config=config,
+                monitors=[],
             )
-            for monitor in monitors:
-                await monitor.final_report(log=self._create_log_callable(monitor, final_report=True))
+            with contextlib.ExitStack() as exit_stack:
+                for monitor_type in monitor_types:
+                    monitor = exit_stack.enter_context(
+                        monitor_type.manage_sync(log=self._create_log_callable(final_report=False))
+                    )
+                    self.monitors.append(monitor)
+            yield self
+        finally:
+            pass
 
     @contextlib.asynccontextmanager
-    async def _manage_monitor(self, monitor: ResourceMonitorProtocol) -> AsyncIterator[asyncio.Task[None]]:
-        log = self._create_log_callable(monitor, final_report=False)
+    async def manage(self) -> AsyncIterator[None]:
+        async with contextlib.AsyncExitStack() as exit_stack:
+            try:
+                for monitor in self.monitors:
+                    await exit_stack.enter_async_context(monitor.manage_async())
+                yield
+            finally:
+                self._write(
+                    log_level=logging.INFO,
+                    monitor=None,
+                    message_format="shutting down resource monitors",
+                    final_report=True,
+                )
 
-        task = create_referenced_task(
-            monitor.task(log=log),
-            name=f"resource monitor - {monitor.label}",
-        )
+    # @contextlib.asynccontextmanager
+    # async def _manage_monitor(self, monitor: ResourceMonitorProtocol) -> AsyncIterator[asyncio.Task[None]]:
+    #     log = self._create_log_callable(monitor, final_report=False)
+    #
+    #     task = create_referenced_task(
+    #         monitor.task(log=log),
+    #         name=f"resource monitor - {monitor.label}",
+    #     )
+    #
+    #     try:
+    #         yield task
+    #     finally:
+    #         with anyio.CancelScope(shield=True):
+    #             task.cancel()
+    #             with log_exceptions(
+    #                 log=self.log, consume=True, message=f"Error in resource monitor task: {monitor.label}"
+    #             ):
+    #                 with contextlib.suppress(asyncio.CancelledError):
+    #                     await task
+    #             await monitor.final_report(log=log)
 
-        try:
-            yield task
-        finally:
-            with anyio.CancelScope(shield=True):
-                task.cancel()
-                with log_exceptions(
-                    log=self.log, consume=True, message=f"Error in resource monitor task: {monitor.label}"
-                ):
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await task
-                await monitor.final_report(log=log)
-
-    def _create_log_callable(self, monitor: ResourceMonitorProtocol, final_report: bool) -> LogCallable:
-        return functools.partial(self._write, monitor=monitor, final_report=final_report)
+    def _create_log_callable(self, final_report: bool) -> LogCallable:
+        return functools.partial(self._write, final_report=final_report)
 
     def _write(
         self,

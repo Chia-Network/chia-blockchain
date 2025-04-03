@@ -93,7 +93,7 @@ def create_data_layer_service(
     )
 
 
-async def async_main(root_path: pathlib.Path) -> int:
+async def async_main(root_path: pathlib.Path, resource_monitor: ResourceMonitor) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml", fill_missing_services=True)
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
@@ -104,11 +104,7 @@ async def async_main(root_path: pathlib.Path) -> int:
         root_path=root_path,
     )
 
-    # TODO: just hacking for now, pr not ready until this is removed
-    service_config["resource_monitor"] = {"process_memory": True}
-
-    resource_monitor_configuration = ResourceMonitorConfiguration.create(service_config=service_config)
-    async with ResourceMonitor.managed(log=log, monitors=resource_monitor_configuration.create_enabled_monitors()):
+    async with resource_monitor.manage():
         create_all_ssl(
             root_path=root_path,
             private_node_names=["data_layer"],
@@ -148,10 +144,17 @@ async def async_main(root_path: pathlib.Path) -> int:
 def main() -> int:
     root_path = resolve_root_path(override=None)
 
-    with maybe_manage_task_instrumentation(
-        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
-    ):
-        return async_run(coro=async_main(root_path=root_path))
+    # TODO: just hacking for now, pr not ready until this is removed
+    service_config: dict[str, Any] = {}
+    service_config["resource_monitor"] = {"process_memory": True}
+
+    with ResourceMonitor.managed(
+        log=log, config=ResourceMonitorConfiguration.create(service_config=service_config)
+    ) as resource_monitor:
+        with maybe_manage_task_instrumentation(
+            enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+        ):
+            return async_run(coro=async_main(root_path=root_path, resource_monitor=resource_monitor))
 
 
 if __name__ == "__main__":
