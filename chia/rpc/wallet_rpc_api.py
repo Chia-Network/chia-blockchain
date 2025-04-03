@@ -1126,6 +1126,7 @@ class WalletRpcApi:
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
                     owner_pk: G1Element = self.service.wallet_state_manager.main_wallet.hardened_pubkey_for_path(
+                        # copied from chia.wallet.derive_keys. Could maybe be an exported constant in the future.
                         [12381, 8444, 5, max_pwi]
                     )
 
