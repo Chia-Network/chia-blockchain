@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from ipaddress import ip_address
 from pathlib import Path
 from timeit import default_timer as timer
 from typing import Any, Optional
 
 import aiofiles
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint16, uint64
 
 from chia.server.address_manager import (
     BUCKET_SIZE,
@@ -17,7 +18,9 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
+from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.files import write_file_async
+from chia.util.ip_address import IPAddress
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -31,8 +34,38 @@ class PeerDataSerialization(Streamable):
     """
 
     metadata: list[tuple[str, str]]
-    nodes: list[tuple[uint64, str]]
+    nodes: list[tuple[uint64, bytes]]
     new_table: list[tuple[uint64, uint64]]
+
+
+@streamable
+@dataclass(frozen=True)
+class ExtendedPeerInfoSerialization(Streamable):
+    peer_info_host: bytes
+    peer_info_port: uint16
+    timestamp: uint64
+    src_host: bytes
+    src_port: uint16
+
+    @classmethod
+    def from_extended_peer_info(cls, epi: ExtendedPeerInfo) -> ExtendedPeerInfoSerialization:
+        assert epi.src is not None
+        peer_ip_bytes = IPAddress.create(epi.peer_info.host)._inner.packed
+        src_ip_bytes = IPAddress.create(epi.src.host)._inner.packed
+        return ExtendedPeerInfoSerialization(
+            peer_ip_bytes, epi.peer_info.port, uint64(epi.timestamp), src_ip_bytes, epi.src.port
+        )
+
+    @classmethod
+    def to_extended_peer_info(cls, bytes: bytes) -> ExtendedPeerInfo:
+        epi = ExtendedPeerInfoSerialization.from_bytes(bytes)
+
+        peer_ip = IPAddress(ip_address(epi.peer_info_host))
+        src_ip = IPAddress(ip_address(epi.src_host))
+
+        peer_info = PeerInfo(peer_ip, epi.peer_info_port)
+        src_peer_info = PeerInfo(src_ip, epi.src_port)
+        return ExtendedPeerInfo(TimestampedPeerInfo(str(peer_info.host), peer_info.port, epi.timestamp), src_peer_info)
 
 
 async def makePeerDataSerialization(
@@ -41,11 +74,13 @@ async def makePeerDataSerialization(
     """
     Create a PeerDataSerialization, adapting the provided collections
     """
-    transformed_nodes: list[tuple[uint64, str]] = []
+    transformed_nodes: list[tuple[uint64, bytes]] = []
     transformed_new_table: list[tuple[uint64, uint64]] = []
 
     for index, [node_id, peer_info] in enumerate(nodes):
-        transformed_nodes.append((uint64(node_id), peer_info.to_string()))
+        transformed_nodes.append(
+            (uint64(node_id), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(peer_info)))
+        )
         # Come up to breathe for a moment
         if index % 1000 == 0:
             await asyncio.sleep(0)
@@ -106,27 +141,26 @@ class AddressManagerStore:
         new_table_entries: list[tuple[int, int]] = []
         unique_ids: dict[int, int] = {}
         count_ids: int = 0
-
+        trieds: list[tuple[int, ExtendedPeerInfo]] = []
         log.info("Serializing peer data")
         metadata.append(("key", str(address_manager.key)))
 
+        tried_ids = 0
         for node_id, info in address_manager.map_info.items():
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
                 nodes.append((count_ids, info))
                 count_ids += 1
+            if info.is_tried:
+                assert tried_ids != address_manager.tried_count
+                trieds.append((count_ids, info))
+                tried_ids += 1
         metadata.append(("new_count", str(count_ids)))
 
-        tried_ids = 0
-        for node_id, info in address_manager.map_info.items():
-            if info.is_tried:
-                assert info is not None
-                assert tried_ids != address_manager.tried_count
-                nodes.append((count_ids, info))
-                count_ids += 1
-                tried_ids += 1
-        metadata.append(("tried_count", str(tried_ids)))
+        for node_id, info in trieds:
+            assert tried_ids + count_ids != address_manager.tried_count
+            nodes.append((count_ids + node_id, info))
 
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
@@ -159,7 +193,8 @@ class AddressManagerStore:
         if peer_data is not None:
             metadata: dict[str, str] = {key: value for key, value in peer_data.metadata}
             nodes: list[tuple[int, ExtendedPeerInfo]] = [
-                (node_id, ExtendedPeerInfo.from_string(info_str)) for node_id, info_str in peer_data.nodes
+                (node_id, ExtendedPeerInfoSerialization.to_extended_peer_info(info_bytes))
+                for node_id, info_bytes in peer_data.nodes
             ]
             new_table_entries: list[tuple[int, int]] = [(node_id, bucket) for node_id, bucket in peer_data.new_table]
             log.debug(f"Deserializing peer data took {timer() - start_time} seconds")
@@ -169,16 +204,14 @@ class AddressManagerStore:
             # address_manager.tried_count = int(metadata["tried_count"])
             address_manager.tried_count = 0
 
-            new_table_nodes = [(node_id, info) for node_id, info in nodes if node_id < address_manager.new_count]
-            for n, info in new_table_nodes:
+            for n, info in nodes[: address_manager.new_count]:
                 address_manager.map_addr[info.peer_info.host] = n
                 address_manager.map_info[n] = info
                 info.random_pos = len(address_manager.random_pos)
                 address_manager.random_pos.append(n)
-            address_manager.id_count = len(new_table_nodes)
-            tried_table_nodes = [(node_id, info) for node_id, info in nodes if node_id >= address_manager.new_count]
+            address_manager.id_count = address_manager.new_count
             # lost_count = 0
-            for node_id, info in tried_table_nodes:
+            for node_id, info in nodes[address_manager.new_count :]:
                 tried_bucket = info.get_tried_bucket(address_manager.key)
                 tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
                 if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
