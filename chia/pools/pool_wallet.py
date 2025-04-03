@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs import G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack, final
@@ -43,7 +43,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
-from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -81,7 +80,6 @@ class PoolWallet:
     next_transaction_fee: uint64 = uint64(0)
     next_tx_config: TXConfig = DEFAULT_TX_CONFIG
     target_state: Optional[PoolState] = None
-    _owner_sk_and_index: Optional[tuple[PrivateKey, uint32]] = None
 
     """
     From the user's perspective, this is not a wallet at all, but a way to control
@@ -437,18 +435,6 @@ class PoolWallet:
         )
 
         return p2_singleton_puzzle_hash, launcher_coin_id
-
-    async def _get_owner_key_cache(self) -> tuple[PrivateKey, uint32]:
-        if self._owner_sk_and_index is None:
-            self._owner_sk_and_index = find_owner_sk(
-                [self.wallet_state_manager.get_master_private_key()],
-                (await self.get_current_state()).current.owner_pubkey,
-            )
-        assert self._owner_sk_and_index is not None
-        return self._owner_sk_and_index
-
-    async def get_pool_wallet_index(self) -> uint32:
-        return (await self._get_owner_key_cache())[1]
 
     async def generate_fee_transaction(
         self,

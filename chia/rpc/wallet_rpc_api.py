@@ -109,7 +109,6 @@ from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
-    master_sk_to_singleton_owner_sk,
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
@@ -1119,17 +1118,15 @@ class WalletRpcApi:
                     max_pwi = 1
                     for _, wallet in self.service.wallet_state_manager.wallets.items():
                         if wallet.type() == WalletType.POOLING_WALLET:
-                            assert isinstance(wallet, PoolWallet)
-                            pool_wallet_index = await wallet.get_pool_wallet_index()
-                            max_pwi = max(max_pwi, pool_wallet_index)
+                            max_pwi += 1
 
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
-                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
+                    owner_pk: G1Element = self.service.wallet_state_manager.main_wallet.hardened_pubkey_for_path(
+                        # copied from chia.wallet.derive_keys. Could maybe be an exported constant in the future.
+                        [12381, 8444, 5, max_pwi]
                     )
-                    owner_pk: G1Element = owner_sk.get_g1()
 
                     initial_target_state = initial_pool_state_from_dict(
                         request["initial_target_state"], owner_pk, owner_puzzle_hash
