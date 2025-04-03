@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import dataclasses
 import functools
@@ -13,7 +12,7 @@ import anyio
 import psutil
 from typing_extensions import Protocol
 
-from chia.util.task_referencer import create_referenced_task
+from chia.util.task_referencer import manage_referenced_task_cancel_on_exit
 
 
 class LogCallable(Protocol):
@@ -50,14 +49,8 @@ class MonitorProcessMemory:
 
     @contextlib.asynccontextmanager
     async def manage_async(self) -> AsyncIterator[None]:
-        task = create_referenced_task(self.task())
-        try:
+        async with manage_referenced_task_cancel_on_exit(self.task()):
             yield
-        finally:
-            with anyio.CancelScope(shield=True):
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
 
     async def task(self) -> None:
         while True:

@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import typing
+
+import anyio
 
 T = typing.TypeVar("T")
 
@@ -31,6 +34,24 @@ class _TaskReferencer:
     """
 
     tasks: dict[asyncio.Task[object], _TaskInfo] = dataclasses.field(default_factory=dict)
+
+    @contextlib.asynccontextmanager
+    async def manage_task_cancel_on_exit(
+        self,
+        coroutine: typing.Coroutine[object, object, T],
+        *,
+        name: typing.Optional[str] = None,
+    ) -> typing.AsyncIterator[asyncio.Task[T]]:
+        task = create_referenced_task(coroutine, name=name, known_unreferenced=False)
+        done = asyncio.Event()
+        task.add_done_callback(lambda _: done.set())
+        try:
+            yield task
+        finally:
+            with anyio.CancelScope(shield=True):
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
     def create_task(
         self,
@@ -57,3 +78,4 @@ class _TaskReferencer:
 _global_task_referencer = _TaskReferencer()
 
 create_referenced_task = _global_task_referencer.create_task
+manage_referenced_task_cancel_on_exit = _global_task_referencer.manage_task_cancel_on_exit
