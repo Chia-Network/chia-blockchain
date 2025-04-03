@@ -45,7 +45,8 @@ async def test_nft_mint_from_did(
     wallet_node_1, server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-    ph_maker = await wallet_0.get_new_puzzlehash()
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -106,7 +107,8 @@ async def test_nft_mint_from_did(
         for x in range(mint_total)
     ]
 
-    target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        target_list = [await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager) for x in range(mint_total)]
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await nft_wallet_maker.mint_from_did(
@@ -168,8 +170,10 @@ async def test_nft_mint_from_did_rpc(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -360,8 +364,10 @@ async def test_nft_mint_from_did_rpc_no_royalties(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -526,8 +532,10 @@ async def test_nft_mint_from_did_multiple_xch(
     wallet_node_1, server_1 = wallets[1]
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
-    ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -638,7 +646,8 @@ async def test_nft_mint_from_xch(
     wallet_node_1, server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-    ph_maker = await wallet_0.get_new_puzzlehash()
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -699,7 +708,8 @@ async def test_nft_mint_from_xch(
         for x in range(mint_total)
     ]
 
-    target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        target_list = [await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager) for x in range(mint_total)]
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await nft_wallet_maker.mint_from_xch(
@@ -756,8 +766,10 @@ async def test_nft_mint_from_xch_rpc(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -930,8 +942,10 @@ async def test_nft_mint_from_xch_multiple_xch(
     wallet_node_1, server_1 = wallets[1]
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
-    ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:

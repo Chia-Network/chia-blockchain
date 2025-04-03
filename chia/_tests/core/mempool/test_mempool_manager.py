@@ -1742,8 +1742,9 @@ async def test_identical_spend_aggregation_e2e(
         full_node_api: FullNodeSimulator, wallet_node: WalletNode
     ) -> tuple[Wallet, list[WalletCoinRecord], bytes32]:
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
-        phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+            phs = [await action_scope.get_puzzle_hash(wallet.wallet_state_manager) for _ in range(3)]
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
         async with wallet.wallet_state_manager.new_action_scope(

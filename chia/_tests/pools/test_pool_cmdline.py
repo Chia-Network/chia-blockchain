@@ -44,6 +44,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -678,7 +679,8 @@ async def test_plotnft_cli_claim(
     wallet_id = await create_new_plotnft(wallet_environments, self_pool=True)
 
     status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
-    our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
     bt = wallet_environments.full_node.bt
 
     async with manage_temporary_pool_plot(bt, status.p2_singleton_puzzle_hash) as pool_plot:
