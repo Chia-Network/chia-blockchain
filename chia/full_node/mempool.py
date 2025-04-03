@@ -9,7 +9,18 @@ from enum import Enum
 from time import monotonic
 from typing import Callable, Optional
 
-from chia_rs import AugSchemeMPL, BlockBuilder, Coin, ConsensusConstants, G2Element, solution_generator_backrefs
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    MEMPOOL_MODE,
+    AugSchemeMPL,
+    BlockBuilder,
+    Coin,
+    ConsensusConstants,
+    G2Element,
+    get_flags_for_height_and_constants,
+    run_block_generator2,
+    solution_generator_backrefs,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -525,6 +536,22 @@ class Mempool:
             f"serializing block generator took {duration:0.2f} seconds "
             f"spends: {len(removals)} additions: {len(additions)}",
         )
+
+        flags = get_flags_for_height_and_constants(height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
+
+        _, conds = run_block_generator2(
+            block_program,
+            [],
+            constants.MAX_BLOCK_COST_CLVM,
+            flags,
+            spend_bundle.aggregated_signature,
+            None,
+            constants,
+        )
+
+        assert conds is not None
+        assert conds.cost > 0
+
         return NewBlockGenerator(
             SerializedProgram.from_bytes(block_program),
             [],
@@ -532,6 +559,7 @@ class Mempool:
             spend_bundle.aggregated_signature,
             additions,
             removals,
+            uint64(conds.cost),
         )
 
     async def create_bundle_from_mempool_items(
@@ -777,6 +805,7 @@ class Mempool:
             f"create_block_generator2() took {duration:0.4f} seconds. "
             f"block cost: {cost} spends: {added_spends} additions: {len(additions)}",
         )
+        assert block_cost == cost
 
         return NewBlockGenerator(
             SerializedProgram.from_bytes(block_program),
@@ -785,4 +814,5 @@ class Mempool:
             signature,
             additions,
             removals,
+            uint64(block_cost),
         )

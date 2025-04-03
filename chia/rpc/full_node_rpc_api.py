@@ -852,6 +852,7 @@ class FullNodeRpcApi:
                     "additions": gen.additions,
                     "removals": gen.removals,
                     "sig": gen.signature,
+                    "cost": gen.cost,
                 }
 
             # Finds the last transaction block before this one
@@ -878,6 +879,7 @@ class FullNodeRpcApi:
             "additions": gen.additions,
             "removals": gen.removals,
             "sig": gen.signature,
+            "cost": gen.cost,
         }
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
