@@ -90,11 +90,6 @@ class SyncTimeCommand:
                 temp_dir = exit_stack.enter_context(tempfile.TemporaryDirectory())
                 database_path = Path(temp_dir).joinpath("datalayer.sqlite")
 
-                log_file = exit_stack.enter_context(
-                    self.context.root_path.joinpath("log", "debug.log").open("r", encoding="utf-8")
-                )
-                log_file.seek(0, os.SEEK_END)
-
                 data_store = await exit_stack.enter_async_context(DataStore.managed(database=database_path))
 
                 await data_store.subscribe(subscription=Subscription(store_id=self.store_id, servers_info=[]))
@@ -162,11 +157,6 @@ class SyncTimeCommand:
                     f"terminating for timing test, reached {self.generation_limit}."
                     + f"  duration: {hours}h {minutes}m {seconds}s"
                 )
-
-                for line in log_file:
-                    if "terminating for timing test" in line:
-                        print_date(line)
-                        break
         finally:
             with anyio.CancelScope(shield=True):
                 await self.run_chia("stop", "-d", "all", check=False)
