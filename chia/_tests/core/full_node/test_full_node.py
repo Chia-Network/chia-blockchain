@@ -1527,7 +1527,9 @@ async def test_unfinished_block_with_replaced_generator(
     blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
     block: FullBlock = blocks[0]
     overflow = is_overflow_block(
-        bt.constants.NUM_SPS_SUB_SLOT, bt.constants.NUM_SP_INTERVALS_EXTRA, block.reward_chain_block.signage_point_index
+        bt.constants.NUM_SPS_SUB_SLOT,
+        bt.constants.NUM_SP_INTERVALS_EXTRA,
+        uint32(block.reward_chain_block.signage_point_index),
     )
 
     replaced_generator = SerializedProgram.from_bytes(b"\x80")

@@ -46,12 +46,12 @@ def iters_from_block(
         cc_sp,
     )
     return (
-        calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, reward_chain_block.signage_point_index),
+        calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(reward_chain_block.signage_point_index)),
         calculate_ip_iters(
             constants.NUM_SPS_SUB_SLOT,
             constants.NUM_SP_INTERVALS_EXTRA,
             sub_slot_iters,
-            reward_chain_block.signage_point_index,
+            uint32(reward_chain_block.signage_point_index),
             required_iters,
         ),
     )

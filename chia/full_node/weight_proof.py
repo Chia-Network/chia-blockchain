@@ -1007,7 +1007,7 @@ def _validate_segment(
                 constants.NUM_SPS_SUB_SLOT,
                 constants.NUM_SP_INTERVALS_EXTRA,
                 curr_ssi,
-                sub_slot_data.signage_point_index,
+                uint32(sub_slot_data.signage_point_index),
                 required_iters,
             )
             vdf_list = _get_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi)
@@ -1036,7 +1036,7 @@ def _get_challenge_block_vdfs(
         sp_input = ClassgroupElement.get_default_element()
         if not sub_slot_data.cc_signage_point.normalized_to_identity and sub_slot_idx >= 1:
             is_overflow = is_overflow_block(
-                constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, sub_slot_data.signage_point_index
+                constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(sub_slot_data.signage_point_index)
             )
             prev_ssd = sub_slots[sub_slot_idx - 1]
             sp_input = sub_slot_data_vdf_input(
@@ -1116,7 +1116,9 @@ def _validate_sub_slot_data(
             input = ClassgroupElement.get_default_element()
             if not sub_slot_data.cc_signage_point.normalized_to_identity:
                 is_overflow = is_overflow_block(
-                    constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, sub_slot_data.signage_point_index
+                    constants.NUM_SPS_SUB_SLOT,
+                    constants.NUM_SP_INTERVALS_EXTRA,
+                    uint32(sub_slot_data.signage_point_index),
                 )
                 input = sub_slot_data_vdf_input(
                     constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, prev_ssd.is_end_of_slot(), ssi
@@ -1257,7 +1259,7 @@ def validate_recent_blocks(
             overflow = is_overflow_block(
                 constants.NUM_SPS_SUB_SLOT,
                 constants.NUM_SP_INTERVALS_EXTRA,
-                block.reward_chain_block.signage_point_index,
+                uint32(block.reward_chain_block.signage_point_index),
             )
             if not adjusted:
                 assert prev_block_record is not None
@@ -1365,7 +1367,7 @@ def __validate_pospace(
     sub_slot_data: SubSlotData = segment.sub_slots[idx]
 
     if sub_slot_data.signage_point_index and is_overflow_block(
-        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, sub_slot_data.signage_point_index
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(sub_slot_data.signage_point_index)
     ):
         curr_slot = segment.sub_slots[idx - 1]
         assert curr_slot.cc_slot_end_info
@@ -1423,7 +1425,9 @@ def __get_rc_sub_slot(
     slots_n = 1
     assert first
     assert first.signage_point_index is not None
-    if is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, first.signage_point_index):
+    if is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(first.signage_point_index)
+    ):
         if idx >= 2 and slots[idx - 2].cc_slot_end is None:
             slots_n = 2
 
@@ -1431,7 +1435,7 @@ def __get_rc_sub_slot(
     new_ssi = None if ses is None else ses.new_sub_slot_iters
     ses_hash: Optional[bytes32] = None if ses is None else ses.get_hash()
     overflow = is_overflow_block(
-        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, first.signage_point_index
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(first.signage_point_index)
     )
     if overflow:
         if idx >= 2 and slots[idx - 2].cc_slot_end is not None and slots[idx - 1].cc_slot_end is not None:
@@ -1592,7 +1596,7 @@ def get_sp_total_iters(
     assert sub_slot_data.cc_ip_vdf_info is not None
     assert sub_slot_data.total_iters is not None
     assert sub_slot_data.signage_point_index is not None
-    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, ssi, sub_slot_data.signage_point_index)
+    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, ssi, uint32(sub_slot_data.signage_point_index))
     ip_iters = sub_slot_data.cc_ip_vdf_info.number_of_iterations
     sp_sub_slot_total_iters = uint128(sub_slot_data.total_iters - ip_iters)
     if is_overflow:

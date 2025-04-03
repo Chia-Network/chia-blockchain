@@ -754,7 +754,7 @@ class BlockTools:
                 for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
                     curr = latest_block
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
-                        constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint8(signage_point_index)
+                        constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index)
                     ):
                         if curr.height == 0:
                             break
@@ -1356,17 +1356,17 @@ class BlockTools:
                     sp_iters: uint64 = calculate_sp_iters(
                         constants.NUM_SPS_SUB_SLOT,
                         uint64(constants.SUB_SLOT_ITERS_STARTING),
-                        uint8(signage_point_index),
+                        uint32(signage_point_index),
                     )
                     ip_iters = calculate_ip_iters(
                         constants.NUM_SPS_SUB_SLOT,
                         constants.NUM_SP_INTERVALS_EXTRA,
                         uint64(constants.SUB_SLOT_ITERS_STARTING),
-                        uint8(signage_point_index),
+                        uint32(signage_point_index),
                         required_iters,
                     )
                     is_overflow = is_overflow_block(
-                        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint8(signage_point_index)
+                        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(signage_point_index)
                     )
                     if force_overflow and not is_overflow:
                         continue
@@ -1472,7 +1472,7 @@ class BlockTools:
                         + calculate_sp_iters(
                             self.constants.NUM_SPS_SUB_SLOT,
                             self.constants.SUB_SLOT_ITERS_STARTING,
-                            unfinished_block.reward_chain_block.signage_point_index,
+                            uint32(unfinished_block.reward_chain_block.signage_point_index),
                         )
                     )
                     return unfinished_block_to_full_block(
@@ -1568,10 +1568,13 @@ def get_signage_point(
 ) -> SignagePoint:
     if signage_point_index == 0:
         return SignagePoint(None, None, None, None)
-    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, signage_point_index)
-    overflow = is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, signage_point_index)
+    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
+    overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(signage_point_index)
+    )
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters
+        + calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
     )
 
     (
@@ -1632,7 +1635,9 @@ def finish_block(
     difficulty: uint64,
     normalized_to_identity_cc_ip: bool = False,
 ) -> tuple[FullBlock, BlockRecord]:
-    is_overflow = is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, signage_point_index)
+    is_overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(signage_point_index)
+    )
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
         new_ip_iters = uint64(unfinished_block.total_iters - latest_block.total_iters)
@@ -1683,7 +1688,8 @@ def finish_block(
     )
     assert unfinished_block is not None
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters
+        + calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
     )
     full_block: FullBlock = unfinished_block_to_full_block(
         unfinished_block,
@@ -1890,12 +1896,12 @@ def get_full_block_and_block_record(
         timestamp = max(int(time.time()), last_timestamp + time_per_block)
     else:
         timestamp = last_timestamp + time_per_block
-    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, signage_point_index)
+    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
     ip_iters = calculate_ip_iters(
         constants.NUM_SPS_SUB_SLOT,
         constants.NUM_SP_INTERVALS_EXTRA,
         sub_slot_iters,
-        signage_point_index,
+        uint32(signage_point_index),
         required_iters,
     )
 
@@ -2077,7 +2083,9 @@ def make_unfinished_block(
     block: FullBlock, constants: ConsensusConstants, *, force_overflow: bool = False
 ) -> UnfinishedBlock:
     if force_overflow or is_overflow_block(
-        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, block.reward_chain_block.signage_point_index
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
+        uint32(block.reward_chain_block.signage_point_index),
     ):
         finished_ss = block.finished_sub_slots[:-1]
     else:

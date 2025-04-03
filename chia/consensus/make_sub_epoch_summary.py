@@ -119,7 +119,9 @@ def next_sub_epoch_summary(
     sub_slot_iters = get_next_sub_slot_iters_and_difficulty(
         constants, len(block.finished_sub_slots) > 0, prev_b, blocks
     )[0]
-    overflow = is_overflow_block(constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, signage_point_index)
+    overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(signage_point_index)
+    )
 
     if (
         len(block.finished_sub_slots) > 0
@@ -177,12 +179,12 @@ def next_sub_epoch_summary(
 
     # if can finish epoch, new difficulty and ssi
     if can_finish_epoch:
-        sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, signage_point_index)
+        sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
         ip_iters = calculate_ip_iters(
             constants.NUM_SPS_SUB_SLOT,
             constants.NUM_SP_INTERVALS_EXTRA,
             sub_slot_iters,
-            signage_point_index,
+            uint32(signage_point_index),
             required_iters,
         )
 

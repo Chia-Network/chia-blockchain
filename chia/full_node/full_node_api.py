@@ -978,13 +978,13 @@ class FullNodeAPI:
                 request.challenge_chain_sp,
             )
             sp_iters: uint64 = calculate_sp_iters(
-                self.full_node.constants.NUM_SPS_SUB_SLOT, sub_slot_iters, request.signage_point_index
+                self.full_node.constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(request.signage_point_index)
             )
             ip_iters: uint64 = calculate_ip_iters(
                 self.full_node.constants.NUM_SPS_SUB_SLOT,
                 self.full_node.constants.NUM_SP_INTERVALS_EXTRA,
                 sub_slot_iters,
-                request.signage_point_index,
+                uint32(request.signage_point_index),
                 required_iters,
             )
 

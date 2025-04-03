@@ -69,7 +69,7 @@ def validate_unfinished_header_block(
     overflow = is_overflow_block(
         constants.NUM_SPS_SUB_SLOT,
         constants.NUM_SP_INTERVALS_EXTRA,
-        header_block.reward_chain_block.signage_point_index,
+        uint32(header_block.reward_chain_block.signage_point_index),
     )
     if skip_overflow_last_ss_validation and overflow:
         if final_eos_is_already_included(header_block, blocks, expected_vs.ssi):
@@ -530,14 +530,14 @@ def validate_unfinished_header_block(
     sp_iters: uint64 = calculate_sp_iters(
         constants.NUM_SPS_SUB_SLOT,
         expected_vs.ssi,
-        header_block.reward_chain_block.signage_point_index,
+        uint32(header_block.reward_chain_block.signage_point_index),
     )
 
     ip_iters: uint64 = calculate_ip_iters(
         constants.NUM_SPS_SUB_SLOT,
         constants.NUM_SP_INTERVALS_EXTRA,
         expected_vs.ssi,
-        header_block.reward_chain_block.signage_point_index,
+        uint32(header_block.reward_chain_block.signage_point_index),
         required_iters,
     )
     if header_block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -882,7 +882,7 @@ def validate_finished_header_block(
         constants.NUM_SPS_SUB_SLOT,
         constants.NUM_SP_INTERVALS_EXTRA,
         expected_vs.ssi,
-        header_block.reward_chain_block.signage_point_index,
+        uint32(header_block.reward_chain_block.signage_point_index),
         required_iters,
     )
     if not genesis_block:
@@ -992,7 +992,7 @@ def validate_finished_header_block(
         overflow = is_overflow_block(
             constants.NUM_SPS_SUB_SLOT,
             constants.NUM_SP_INTERVALS_EXTRA,
-            header_block.reward_chain_block.signage_point_index,
+            uint32(header_block.reward_chain_block.signage_point_index),
         )
         deficit = calculate_deficit(
             constants,

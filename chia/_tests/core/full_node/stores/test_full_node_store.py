@@ -817,7 +817,9 @@ async def test_basic_store(
         custom_block_tools.constants.NUM_SPS_SUB_SLOT,
     ):
         if is_overflow_block(
-            custom_block_tools.constants.NUM_SPS_SUB_SLOT, custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA, uint8(i)
+            custom_block_tools.constants.NUM_SPS_SUB_SLOT,
+            custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
+            uint32(i),
         ):
             finished_sub_slots = blocks_5[-1].finished_sub_slots
         else:
@@ -1017,12 +1019,12 @@ async def test_basic_store(
             and not is_overflow_block(
                 custom_block_tools.constants.NUM_SPS_SUB_SLOT,
                 custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
-                signage_point_index=i2,
+                signage_point_index=uint32(i2),
             )
             and not is_overflow_block(
                 custom_block_tools.constants.NUM_SPS_SUB_SLOT,
                 custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
-                signage_point_index=i1,
+                signage_point_index=uint32(i1),
             )
             and i2 > i3 + 3
             and i1 > (i2 + 3)
@@ -1080,7 +1082,7 @@ async def test_basic_store(
                 if is_overflow_block(
                     custom_block_tools.constants.NUM_SPS_SUB_SLOT,
                     custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
-                    uint8(i),
+                    uint32(i),
                 ):
                     blocks_alt = custom_block_tools.get_consecutive_blocks(
                         1, block_list_input=blocks[:-1], skip_slots=1

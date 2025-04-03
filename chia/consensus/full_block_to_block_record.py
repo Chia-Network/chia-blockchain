@@ -35,7 +35,9 @@ def block_to_block_record(
             constants, len(block.finished_sub_slots) > 0, prev_b, blocks
         )
     overflow = is_overflow_block(
-        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, block.reward_chain_block.signage_point_index
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
+        uint32(block.reward_chain_block.signage_point_index),
     )
     deficit = calculate_deficit(
         constants,

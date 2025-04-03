@@ -207,7 +207,9 @@ async def pre_validate_block(
         if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
             vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
     overflow = is_overflow_block(
-        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, block.reward_chain_block.signage_point_index
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
+        uint32(block.reward_chain_block.signage_point_index),
     )
     challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
     if block.reward_chain_block.challenge_chain_sp_vdf is None:

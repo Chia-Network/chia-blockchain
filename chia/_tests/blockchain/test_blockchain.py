@@ -853,7 +853,7 @@ class TestBlockHeaderValidation:
                 and is_overflow_block(
                     bt.constants.NUM_SPS_SUB_SLOT,
                     bt.constants.NUM_SP_INTERVALS_EXTRA,
-                    block.reward_chain_block.signage_point_index,
+                    uint32(block.reward_chain_block.signage_point_index),
                 )
                 and block.finished_sub_slots[-1].challenge_chain.challenge_chain_end_of_slot_vdf.output
                 != ClassgroupElement.get_default_element()
@@ -1103,7 +1103,7 @@ class TestBlockHeaderValidation:
             if len(blocks[-1].finished_sub_slots) > 0 and is_overflow_block(
                 bt.constants.NUM_SPS_SUB_SLOT,
                 bt.constants.NUM_SP_INTERVALS_EXTRA,
-                blocks[-1].reward_chain_block.signage_point_index,
+                uint32(blocks[-1].reward_chain_block.signage_point_index),
             ):
                 new_finished_ss: EndOfSubSlotBundle = recursive_replace(
                     blocks[-1].finished_sub_slots[0],
@@ -1211,7 +1211,7 @@ class TestBlockHeaderValidation:
             elif not is_overflow_block(
                 bt.constants.NUM_SPS_SUB_SLOT,
                 bt.constants.NUM_SP_INTERVALS_EXTRA,
-                blocks[-1].reward_chain_block.signage_point_index,
+                uint32(blocks[-1].reward_chain_block.signage_point_index),
             ):
                 case_2 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(0))
