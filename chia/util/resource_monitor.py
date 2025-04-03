@@ -16,7 +16,9 @@ from chia.util.task_referencer import manage_referenced_task_cancel_on_exit
 
 
 class LogCallable(Protocol):
-    def __call__(self, monitor: ResourceMonitorProtocol, log_level: int, format: str, *args: object) -> None: ...
+    def __call__(
+        self, monitor: ResourceMonitorProtocol, log_level: int, format: str, *args: object, final_report: bool = ...
+    ) -> None: ...
 
 
 class ResourceMonitorProtocol(Protocol):
@@ -50,17 +52,21 @@ class MonitorProcessMemory:
     @contextlib.asynccontextmanager
     async def manage_async(self) -> AsyncIterator[None]:
         async with manage_referenced_task_cancel_on_exit(self.task()):
-            yield
+            try:
+                yield
+            finally:
+                with anyio.CancelScope(shield=True):
+                    self.report(final_report=True)
 
     async def task(self) -> None:
         while True:
             self.report()
             await anyio.sleep(self.period)
 
-    def report(self) -> None:
+    def report(self, final_report: bool = False) -> None:
         memory_info = self.process.memory_info()
         human_readable = psutil._common.bytes2human(memory_info.rss)
-        self.log(self, self.log_level, "%s (%s)", memory_info.rss, human_readable)
+        self.log(self, self.log_level, "%s (%s)", memory_info.rss, human_readable, final_report=final_report)
 
 
 @final
@@ -145,9 +151,7 @@ class ResourceMonitor:
             )
             with contextlib.ExitStack() as exit_stack:
                 for monitor_type in monitor_types:
-                    monitor = exit_stack.enter_context(
-                        monitor_type.manage_sync(log=self._create_log_callable(final_report=False))
-                    )
+                    monitor = exit_stack.enter_context(monitor_type.manage_sync(log=self._create_log_callable()))
                     self.monitors.append(monitor)
             yield self
         finally:
@@ -189,8 +193,9 @@ class ResourceMonitor:
     #                     await task
     #             await monitor.final_report(log=log)
 
-    def _create_log_callable(self, final_report: bool) -> LogCallable:
-        return functools.partial(self._write, final_report=final_report)
+    def _create_log_callable(self) -> LogCallable:
+        # TODO: review the lack of any actual benefit to this layer anymore
+        return functools.partial(self._write)
 
     def _write(
         self,
@@ -198,7 +203,7 @@ class ResourceMonitor:
         message_format: str,
         *args: object,
         monitor: Optional[ResourceMonitorProtocol],
-        final_report: bool,
+        final_report: bool = False,
     ) -> None:
         level = self.config.override_log_level
         if level is None:
