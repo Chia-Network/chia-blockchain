@@ -77,6 +77,9 @@ def persistent_blocks(
 
                 # make sure that the blocks we found on-disk are consistent with
                 # the ones we would have generated
+                # 40 blocks is a balance between capturing all features of the
+                # chains (such as block references) versus the cost of
+                # generating and comparing blocks.
                 expected_blocks: list[FullBlock] = bt.get_consecutive_blocks(
                     40,
                     block_list_input=block_list_input,
@@ -94,7 +97,7 @@ def persistent_blocks(
                 # if this assert fails, and changing the test chains was
                 # intentional, please also update the test chain cache.
                 # run: pytest -m build_test_chains
-                for i in range(40):
+                for i in range(len(expected_blocks)):
                     if blocks[i] != expected_blocks[i]:  # pragma: no cover
                         print(
                             f"Block {i} in the block cache on disk differs "
