@@ -16,6 +16,8 @@ from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 # hardcode values to use for supporting DIDs from third party wallet
 # that use an actually empty recovery list instead of the hash of an empty list
 # For DB reasons, the reference wallet needs somethign to store in the DB
+# This was randomly generated and doesn't correspond to any real recovery list
+# and cannot be used to recover anything
 alternate_wallet_nil_recovery_list_bytes = bytes32.fromhex(
     "1e56bb33a795ec7d8039708d2783491c22e55b94c9cec43911807064353ddbb8"
 )
@@ -29,7 +31,8 @@ def did_recovery_as_bytes(recovery_program: Program) -> bytes32:
 
 
 def did_recovery_is_nil(recovery_program: Program) -> bool:
-    if recovery_program in {NIL_TREEHASH, alternate_wallet_nil_recovery_list_bytes}:
+    # cannot use set as not hashable
+    if recovery_program in (NIL_TREEHASH, alternate_wallet_nil_recovery_list_bytes):  # noqa: PLR6201
         return True
     else:
         return False
