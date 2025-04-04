@@ -112,7 +112,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_as_bytes, did_recovery_is_nil
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -2600,7 +2600,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            did_recovery_as_bytes(recovery_list_hash),
+            recovery_list_hash.as_atom(),
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,

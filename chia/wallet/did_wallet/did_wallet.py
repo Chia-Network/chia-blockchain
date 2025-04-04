@@ -28,7 +28,7 @@ from chia.wallet.conditions import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_as_bytes, did_recovery_is_nil
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -387,7 +387,7 @@ class DIDWallet:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle=p2_puzzle,
-                recovery_list_hash=did_recovery_as_bytes(recovery_list_hash),
+                recovery_list_hash=recovery_list_hash.as_atom(),
                 num_verification=uint16(num_verification.as_int()),
                 singleton_struct=singleton_struct,
                 metadata=metadata,

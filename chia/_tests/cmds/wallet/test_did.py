@@ -17,8 +17,6 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.did_wallet.did_info import (
-    alternate_wallet_nil_recovery_list_bytes,
-    did_recovery_as_bytes,
     did_recovery_is_nil,
 )
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
@@ -28,17 +26,17 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 
-@pytest.mark.parametrize(
-    argnames=["program", "result"],
-    argvalues=[
-        (Program.to(NIL_TREEHASH), NIL_TREEHASH),
-        (NIL, alternate_wallet_nil_recovery_list_bytes),
-        (Program.to(bytes32([1] * 32)), bytes32([1] * 32)),
-    ],
-)
-def test_did_recovery_as_bytes(program: Program, result: bytes32) -> None:
-    # test that the alternate wallet nil recovery list bytes are used
-    assert did_recovery_as_bytes(program) == result
+# @pytest.mark.parametrize(
+#     argnames=["program", "result"],
+#     argvalues=[
+#         (Program.to(NIL_TREEHASH), NIL_TREEHASH),
+#         (NIL, alternate_wallet_nil_recovery_list_bytes),
+#         (Program.to(bytes32([1] * 32)), bytes32([1] * 32)),
+#     ],
+# )
+# def test_did_recovery_as_bytes(program: Program, result: bytes32) -> None:
+#     # test that the alternate wallet nil recovery list bytes are used
+#     assert did_recovery_as_bytes(program) == result
 
 
 @pytest.mark.parametrize(
@@ -46,7 +44,6 @@ def test_did_recovery_as_bytes(program: Program, result: bytes32) -> None:
     argvalues=[
         (Program.to(NIL_TREEHASH), True),
         (NIL, True),
-        (Program.to(alternate_wallet_nil_recovery_list_bytes), True),
         (Program.to(bytes32([1] * 32)), False),
     ],
 )

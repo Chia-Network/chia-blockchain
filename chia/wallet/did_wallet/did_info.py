@@ -18,21 +18,21 @@ from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 # For DB reasons, the reference wallet needs somethign to store in the DB
 # This was randomly generated and doesn't correspond to any real recovery list
 # and cannot be used to recover anything
-alternate_wallet_nil_recovery_list_bytes = bytes32.fromhex(
-    "1e56bb33a795ec7d8039708d2783491c22e55b94c9cec43911807064353ddbb8"
-)
+# alternate_wallet_nil_recovery_list_bytes = bytes32.fromhex(
+#    "1e56bb33a795ec7d8039708d2783491c22e55b94c9cec43911807064353ddbb8"
+# )
 
 
-def did_recovery_as_bytes(recovery_program: Program) -> bytes32:
-    try:
-        return bytes32(recovery_program.as_atom())
-    except ValueError:
-        return alternate_wallet_nil_recovery_list_bytes
+# def did_recovery_as_bytes(recovery_program: Program) -> bytes:
+#    try:
+#        return recovery_program.as_atom()
+#    except ValueError:
+#        return bytes(Program.to(None))
 
 
 def did_recovery_is_nil(recovery_program: Program) -> bool:
     # cannot use set as not hashable
-    if recovery_program in (NIL, NIL_TREEHASH, alternate_wallet_nil_recovery_list_bytes):  # noqa: PLR6201
+    if recovery_program in (NIL, NIL_TREEHASH):  # noqa: PLR6201
         return True
     else:
         return False
@@ -57,7 +57,7 @@ class DIDInfo(Streamable):
 @dataclass(frozen=True)
 class DIDCoinData(Streamable):
     p2_puzzle: Program
-    recovery_list_hash: bytes32
+    recovery_list_hash: bytes
     num_verification: uint16
     singleton_struct: Program
     metadata: Program
