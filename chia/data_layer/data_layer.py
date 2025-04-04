@@ -71,6 +71,16 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
+def server_files_path_from_config(config: dict[str, Any], root_path: Path) -> Path:
+    server_files_replaced: Path = path_from_root(
+        root_path,
+        config.get("server_files_location", "data_layer/db/server_files_location_CHALLENGE").replace(
+            "CHALLENGE", config["selected_network"]
+        ),
+    )
+    return server_files_replaced
+
+
 async def get_plugin_info(plugin_remote: PluginRemote) -> tuple[PluginRemote, dict[str, Any]]:
     try:
         async with aiohttp.ClientSession() as session:
@@ -162,9 +172,7 @@ class DataLayer:
             #       need this.
             name = None
 
-        server_files_replaced: str = config.get(
-            "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
-        ).replace("CHALLENGE", config["selected_network"])
+        server_files_replaced = server_files_path_from_config(config, root_path)
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
 
@@ -174,7 +182,7 @@ class DataLayer:
             wallet_rpc_init=wallet_rpc_init,
             log=logging.getLogger(name if name is None else __name__),
             db_path=path_from_root(root_path, db_path_replaced),
-            server_files_location=path_from_root(root_path, server_files_replaced),
+            server_files_location=server_files_replaced,
             downloaders=downloaders,
             uploaders=uploaders,
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
