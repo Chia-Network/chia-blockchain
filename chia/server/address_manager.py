@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import functools
 import logging
 import math
 import time
 from asyncio import Lock
+from dataclasses import dataclass, field
 from random import choice, randrange
 from secrets import randbits
 from typing import Optional
@@ -159,33 +161,39 @@ class ExtendedPeerInfo:
         return chance
 
 
-# This is a Python port from 'CAddrMan' class from Bitcoin core code.
-class AddressManager:
-    id_count: int
-    key: int
-    random_pos: list[int]
-    tried_matrix: list[list[int]]
-    new_matrix: list[list[int]]
-    tried_count: int
-    new_count: int
-    map_addr: dict[str, int]
-    map_info: dict[int, ExtendedPeerInfo]
-    last_good: int
-    tried_collisions: list[int]
-    used_new_matrix_positions: set[tuple[int, int]]
-    used_tried_matrix_positions: set[tuple[int, int]]
-    allow_private_subnets: bool
+def create_tried_matrix() -> list[list[int]]:
+    return [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
 
-    def __init__(self) -> None:
-        self.clear()
-        self.lock: Lock = Lock()
+
+def create_new_matrix() -> list[list[int]]:
+    return [[-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)]
+
+
+# This is a Python port from 'CAddrMan' class from Bitcoin core code.
+@dataclass
+class AddressManager:
+    id_count: int = 0
+    key: int = field(default_factory=functools.partial(randbits, 256))
+    random_pos: list[int] = field(default_factory=list)
+    tried_matrix: list[list[int]] = field(default_factory=create_tried_matrix)
+    new_matrix: list[list[int]] = field(default_factory=create_new_matrix)
+    tried_count: int = 0
+    new_count: int = 0
+    map_addr: dict[str, int] = field(default_factory=dict)
+    map_info: dict[int, ExtendedPeerInfo] = field(default_factory=dict)
+    last_good: int = 1
+    tried_collisions: list[int] = field(default_factory=list)
+    used_new_matrix_positions: set[tuple[int, int]] = field(default_factory=set)
+    used_tried_matrix_positions: set[tuple[int, int]] = field(default_factory=set)
+    allow_private_subnets: bool = False
+    lock: Lock = field(default_factory=Lock)
 
     def clear(self) -> None:
         self.id_count = 0
         self.key = randbits(256)
         self.random_pos = []
-        self.tried_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
-        self.new_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)]
+        self.tried_matrix = create_tried_matrix()
+        self.new_matrix = create_new_matrix()
         self.tried_count = 0
         self.new_count = 0
         self.map_addr = {}
