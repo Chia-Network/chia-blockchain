@@ -151,7 +151,9 @@ class AddressManagerStore:
 
         for node_id, info in trieds:
             assert tried_ids + count_ids != address_manager.tried_count
-            nodes.append((uint64(count_ids + node_id), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info))))
+            nodes.append(
+                (uint64(count_ids + node_id), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info)))
+            )
 
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
@@ -251,7 +253,7 @@ class AddressManagerStore:
         cls,
         peers_file_path: Path,
         metadata: list[tuple[str, Any]],
-        nodes: list[tuple[int, ExtendedPeerInfo]],
+        nodes: list[tuple[uint64, bytes]],
         new_table: list[tuple[int, int]],
     ) -> None:
         """
