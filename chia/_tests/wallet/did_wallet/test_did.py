@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from typing import Optional, Union
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -25,7 +26,14 @@ from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.singleton import create_singleton_puzzle
+from chia.wallet.did_wallet.did_wallet_puzzles import (
+    DID_INNERPUZ_MOD,
+)
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_TOP_LAYER_MOD_HASH,
+    create_singleton_puzzle,
+)
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
@@ -2266,3 +2274,81 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, monkey
         )
 
     assert len(await wallet.wallet_state_manager.get_spendable_coins_for_wallet(did_wallet.id())) == 1
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.anyio
+async def test_alternate_did_recovery(
+    self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
+):
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    api = WalletRpcApi(wallet_node)
+
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    wallet_node.config["trusted_peers"] = {
+        full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+    }
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    await full_node_api.farm_blocks_to_wallet(1, wallet)
+
+    def alt_create_innerpuz(
+        p2_puzzle_or_hash: Union[Program, bytes32],
+        recovery_list: list[bytes32],
+        num_of_backup_ids_needed: uint64,
+        launcher_id: bytes32,
+        metadata: Program = Program.to([]),
+        recovery_list_hash: Optional[Program] = None,
+    ) -> Program:
+        # override the default of NIL_TREEHASH with NIL to match other wallet implementations
+        nil_recovery = Program.to(None)
+        singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
+        return DID_INNERPUZ_MOD.curry(p2_puzzle_or_hash, nil_recovery, 0, singleton_struct, metadata)
+
+    with monkeypatch.context() as m:
+        m.setattr("chia.wallet.did_wallet.did_wallet_puzzles.create_innerpuz", alt_create_innerpuz)
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            did_wallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager, wallet, uint64(101), action_scope
+            )
+
+    with pytest.raises(RuntimeError, match="DID is not currently spendable"):
+        assert await did_wallet.get_coin() == set()
+    assert await did_wallet.get_info_for_recovery() is None
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node])
+
+    await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
+    await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
+    await time_out_assert(15, did_wallet.get_pending_change_balance, 0)
+
+    response = await api.did_get_info({"coin_id": did_wallet.did_info.origin_coin.name().hex()})
+    # make sure the recovery list hash is empty as expected for this alternate implementation
+    assert response["recovery_list_hash"] == ""
+
+    # response = await api.did_get_information_needed_for_recovery()
+    # Delete the coin and wallet
+    coin = await did_wallet.get_coin()
+    await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
+    await wallet_node.wallet_state_manager.delete_wallet(did_wallet.wallet_info.id)
+    wallet_node.wallet_state_manager.wallets.pop(did_wallet.wallet_info.id)
+    assert len(wallet_node.wallet_state_manager.wallets) == 1
+
+    # Find lost DID
+    assert did_wallet.did_info.origin_coin is not None  # mypy
+    resp = await api.did_find_lost_did({"coin_id": did_wallet.did_info.origin_coin.name().hex()})
+    assert resp["success"]
+    did_wallets = list(
+        filter(
+            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            await wallet_node.wallet_state_manager.get_all_wallet_info_entries(),
+        )
+    )
+    assert len(wallet_node.wallet_state_manager.wallets) == 2
+    found_did_wallet = wallet_node.wallet_state_manager.wallets[did_wallets[0].id]
+    # assert did_wallet.did_info.origin_coin == found_did_wallet.did_info.origin_coin
+
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node])
+    await time_out_assert(15, found_did_wallet.get_confirmed_balance, 101)
+    await time_out_assert(15, found_did_wallet.get_unconfirmed_balance, 101)
+    await time_out_assert(15, found_did_wallet.get_pending_change_balance, 0)
