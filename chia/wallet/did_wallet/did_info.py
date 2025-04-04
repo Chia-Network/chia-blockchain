@@ -8,7 +8,7 @@ from chia_rs.sized_ints import uint16, uint64
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import NIL, Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
@@ -32,7 +32,7 @@ def did_recovery_as_bytes(recovery_program: Program) -> bytes32:
 
 def did_recovery_is_nil(recovery_program: Program) -> bool:
     # cannot use set as not hashable
-    if recovery_program in (NIL_TREEHASH, alternate_wallet_nil_recovery_list_bytes):  # noqa: PLR6201
+    if recovery_program in (NIL, NIL_TREEHASH, alternate_wallet_nil_recovery_list_bytes):  # noqa: PLR6201
         return True
     else:
         return False
