@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
@@ -122,7 +123,9 @@ class HarvesterAPI:
                         )
                     return []
                 except Exception as e:
-                    self.harvester.log.error(f"Error using prover object {e}")
+                    self.harvester.log.error(
+                        f"Error using prover object: {type(e).__name__}: {e}\n TB={traceback.format_exc()}"
+                    )
                     self.harvester.log.error(
                         f"File: {filename} Plot ID: {plot_id.hex()}, "
                         f"challenge: {sp_challenge_hash}, plot_info: {plot_info}"
