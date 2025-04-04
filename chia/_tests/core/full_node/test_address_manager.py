@@ -3,18 +3,22 @@ from __future__ import annotations
 import math
 import time
 from pathlib import Path
+from typing import Optional
 
+import aiosqlite
 import pytest
 from chia_rs.sized_ints import uint16, uint64
 
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
-from chia.server.address_manager_store import AddressManagerStore
+from chia.server.address_manager_sql_shared import clear_peers
+from chia.server.address_manager_store_sql import AddressManagerStore
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 
 
 class AddressManagerTest(AddressManager):
-    def __init__(self, make_deterministic=True):
-        super().__init__()
+    def __init__(self, connection: aiosqlite.Connection, make_deterministic=True):
+        super().__init__(connection)
+        self.db_connection = connection
         if make_deterministic:
             self.make_deterministic()
         self.make_private_subnets_valid()
@@ -42,8 +46,10 @@ class AddressManagerTest(AddressManager):
 
 class TestPeerManager:
     @pytest.mark.anyio
-    async def test_addr_manager(self):
-        addrman = AddressManagerTest()
+    async def test_addr_manager(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         # Test: Does Addrman respond correctly when empty.
         none_peer = await addrman.select_peer()
         assert none_peer is None
@@ -53,6 +59,7 @@ class TestPeerManager:
         assert await addrman.add_peer_info([peer1])
         assert await addrman.size() == 1
         peer1_ret = await addrman.select_peer()
+        assert peer1_ret is not None
         assert peer1_ret.peer_info == peer1
 
         # Test: Does IP address deduplication work correctly.
@@ -71,14 +78,18 @@ class TestPeerManager:
         assert await addrman.size() >= 1
 
         # Test: AddrMan::Add multiple addresses works as expected
-        addrman2 = AddressManagerTest()
+        await clear_peers(connection)
+        addrman2 = AddressManagerTest(connection)
         peers = [peer1, peer2]
         assert await addrman2.add_peer_info(peers)
         assert await addrman2.size() >= 1
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addr_manager_ports(self):
-        addrman = AddressManagerTest()
+    async def test_addr_manager_ports(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
         source = PeerInfo("252.2.2.2", 8444)
 
@@ -91,6 +102,7 @@ class TestPeerManager:
         assert not await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 1
         peer3 = await addrman.select_peer()
+        assert peer3 is not None
         assert peer3.peer_info == peer1
 
         # Test: Add same IP but diff port to tried table, it doesn't get added.
@@ -98,13 +110,17 @@ class TestPeerManager:
         await addrman.mark_good(peer2)
         assert await addrman.size() == 1
         peer3_ret = await addrman.select_peer(True)
+        assert peer3_ret is not None
         assert peer3_ret.peer_info == peer1
+        await connection.close()
 
     # This is a fleaky test, since it uses randomness.
     # TODO: Make sure it always succeeds.
     @pytest.mark.anyio
-    async def test_addrman_select(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_select(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         source = PeerInfo("252.2.2.2", 8444)
 
         # Test: Select from new with 1 addr in new.
@@ -113,6 +129,7 @@ class TestPeerManager:
         assert await addrman.size() == 1
 
         peer1_ret = await addrman.select_peer(True)
+        assert peer1_ret is not None
         assert peer1_ret.peer_info == peer1
 
         # Test: move addr to tried, select from new expected nothing returned.
@@ -122,6 +139,7 @@ class TestPeerManager:
         peer2_ret = await addrman.select_peer(True)
         assert peer2_ret is None
         peer3_ret = await addrman.select_peer()
+        assert peer3_ret is not None
         assert peer3_ret.peer_info == peer1
 
         # Add three addresses to new table.
@@ -152,15 +170,19 @@ class TestPeerManager:
         ports = []
         for _ in range(200):
             peer = await addrman.select_peer()
+            assert peer is not None
             if peer.peer_info.port not in ports:
                 ports.append(peer.peer_info.port)
             if len(ports) == 3:
                 break
         assert len(ports) == 3
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_collisions_new(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_collisions_new(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
         source = PeerInfo("252.2.2.2", 8444)
 
@@ -177,10 +199,13 @@ class TestPeerManager:
         peer2 = PeerInfo("250.1.1.9", 8444)
         assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 8
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_collisions_tried(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_collisions_tried(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
         source = PeerInfo("252.2.2.2", 8444)
 
@@ -199,10 +224,13 @@ class TestPeerManager:
         peer2 = PeerInfo("250.1.1.78", 8444)
         assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 77
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_find(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_find(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
 
         peer1 = PeerInfo("250.1.2.1", 8333)
@@ -230,47 +258,58 @@ class TestPeerManager:
         info3 = addrman.find_(peer3)
         assert info3[0] is not None and info3[1] is not None
         assert info3[0].peer_info == peer3
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_create(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_create(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
-
+        info: Optional[ExtendedPeerInfo]
         peer1 = PeerInfo("250.1.2.1", 8444)
-        t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
-        info, _node_id = addrman.create_(t_peer, peer1)
+        t_peer = TimestampedPeerInfo("250.1.2.1", uint16(8444), uint64(0))
+        info, _node_id = await addrman.create_(t_peer, peer1)
         assert info.peer_info == peer1
+        assert peer1 is not None
         info, _ = addrman.find_(peer1)
+        assert info is not None
         assert info.peer_info == peer1
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_delete(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_delete(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
 
         peer1 = PeerInfo("250.1.2.1", 8444)
-        t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
-        _info, node_id = addrman.create_(t_peer, peer1)
+        t_peer = TimestampedPeerInfo("250.1.2.1", uint16(8444), uint64(0))
+        _info, node_id = await addrman.create_(t_peer, peer1)
 
         # Test: Delete should actually delete the addr.
         assert await addrman.size() == 1
-        addrman.delete_new_entry_(node_id)
+        await addrman.delete_new_entry_(node_id)
         assert await addrman.size() == 0
         info2, _ = addrman.find_(peer1)
         assert info2 is None
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_get_peers(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_get_peers(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
         peers1 = await addrman.get_peers()
         assert len(peers1) == 0
 
-        peer1 = TimestampedPeerInfo("250.250.2.1", 8444, time.time())
-        peer2 = TimestampedPeerInfo("250.250.2.2", 9999, time.time())
-        peer3 = TimestampedPeerInfo("251.252.2.3", 8444, time.time())
-        peer4 = TimestampedPeerInfo("251.252.2.4", 8444, time.time())
-        peer5 = TimestampedPeerInfo("251.252.2.5", 8444, time.time())
+        peer1 = TimestampedPeerInfo("250.250.2.1", uint16(8444), uint64(time.time()))
+        peer2 = TimestampedPeerInfo("250.250.2.2", uint16(9999), uint64(time.time()))
+        peer3 = TimestampedPeerInfo("251.252.2.3", uint16(8444), uint64(time.time()))
+        peer4 = TimestampedPeerInfo("251.252.2.4", uint16(8444), uint64(time.time()))
+        peer5 = TimestampedPeerInfo("251.252.2.5", uint16(8444), uint64(time.time()))
         source1 = PeerInfo("250.1.2.1", 8444)
         source2 = PeerInfo("250.2.3.3", 8444)
 
@@ -295,7 +334,7 @@ class TestPeerManager:
         for i in range(1, 8 * 256):
             octet1 = i % 256
             octet2 = i >> 8 % 256
-            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time())
+            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", uint16(8444), uint64(time.time()))
             await addrman.add_to_new_table([peer])
             if i % 8 == 0:
                 await addrman.mark_good(PeerInfo(peer.host, peer.port))
@@ -304,6 +343,7 @@ class TestPeerManager:
         percent = await addrman.size()
         percent = math.ceil(percent * 23 / 100)
         assert len(peers4) == percent
+        await connection.close()
 
     @pytest.mark.anyio
     async def test_addrman_tried_bucket(self):
@@ -408,8 +448,10 @@ class TestPeerManager:
         assert len(buckets) > 64
 
     @pytest.mark.anyio
-    async def test_addrman_select_collision_no_collision(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_select_collision_no_collision(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         collision = await addrman.select_tried_collision()
         assert collision is None
 
@@ -432,11 +474,13 @@ class TestPeerManager:
             assert await addrman.size() == 17
             collision = await addrman.select_tried_collision()
             assert collision is None
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_no_evict(self):
-        addrman = AddressManagerTest()
-
+    async def test_addrman_no_evict(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         # Add 17 addresses.
         source = PeerInfo("252.2.2.2", 8444)
         for i in range(1, 18):
@@ -453,6 +497,7 @@ class TestPeerManager:
         await addrman.mark_good(peer18)
         assert await addrman.size() == 18
         collision = await addrman.select_tried_collision()
+        assert collision is not None
         assert collision.peer_info == PeerInfo("250.1.1.16", 8444)
         await addrman.resolve_tried_collisions()
         collision = await addrman.select_tried_collision()
@@ -482,10 +527,13 @@ class TestPeerManager:
         await addrman.resolve_tried_collisions()
         collision = await addrman.select_tried_collision()
         assert collision is None
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_addrman_eviction_works(self):
-        addrman = AddressManagerTest()
+    async def test_addrman_eviction_works(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         assert await addrman.size() == 0
         # Empty addrman should return blank addrman info.
         assert await addrman.select_tried_collision() is None
@@ -502,10 +550,12 @@ class TestPeerManager:
 
         # Collision between 18 and 16.
         peer18 = PeerInfo("250.1.1.18", 8444)
+        assert peer18 is not None
         assert await addrman.add_peer_info([peer18], source)
         await addrman.mark_good(peer18)
         assert await addrman.size() == 18
         collision = await addrman.select_tried_collision()
+        assert collision is not None
         assert collision.peer_info == PeerInfo("250.1.1.16", 8444)
         await addrman.simulate_connection_fail(collision)
         # Should swap 18 for 16.
@@ -522,29 +572,33 @@ class TestPeerManager:
         assert not await addrman.add_peer_info([addr16], source)
         await addrman.mark_good(addr16)
         collision = await addrman.select_tried_collision()
+        assert collision is not None
         assert collision.peer_info == PeerInfo("250.1.1.18", 8444)
         await addrman.resolve_tried_collisions()
         assert await addrman.select_tried_collision() is None
+        await connection.close()
 
     @pytest.mark.anyio
     # use tmp_path pytest fixture to create a temporary directory
     async def test_serialization(self, tmp_path: Path):
-        addrman = AddressManagerTest()
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
         now = int(math.floor(time.time()))
         t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
         t_peer2 = TimestampedPeerInfo("250.7.2.2", uint16(9999), uint64(now - 20000))
         t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))
         source = PeerInfo("252.5.1.1", uint16(8333))
-        await addrman.add_to_new_table([t_peer1, t_peer2, t_peer3], source)
+        assert await addrman.add_to_new_table([t_peer1], source)
+        assert await addrman.add_to_new_table([t_peer2], source)
+        assert await addrman.add_to_new_table([t_peer3], source)
         await addrman.mark_good(PeerInfo("250.7.1.1", uint16(8333)))
 
-        peers_dat_filename = tmp_path / "peers.dat"
-        if peers_dat_filename.exists():
-            peers_dat_filename.unlink()
-        # Write out the serialized peer data
-        await AddressManagerStore.serialize(addrman, peers_dat_filename)
-        # Read in the serialized peer data
-        addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        # TODO: These should be automatically serialized as they're added
+        await AddressManagerStore.serialize(addrman, connection)
+        addrman2 = await AddressManagerStore.create_address_manager(connection)
+
+        assert addrman2.new_count == addrman.new_count
 
         retrieved_peers = []
         for _ in range(50):
@@ -570,19 +624,22 @@ class TestPeerManager:
                 ):
                     recovered += 1
         assert recovered == 3
-        peers_dat_filename.unlink()
+        await connection.close()
 
     @pytest.mark.anyio
-    async def test_cleanup(self):
-        addrman = AddressManagerTest()
-        peer1 = TimestampedPeerInfo("250.250.2.1", 8444, 100000)
-        peer2 = TimestampedPeerInfo("250.250.2.2", 9999, time.time())
+    async def test_cleanup(self, tmp_path: Path):
+        connection = await aiosqlite.connect(tmp_path / "test.db")
+        addrman = AddressManagerTest(connection)
+        await AddressManagerStore.initialise(addrman.db_connection)
+        peer1 = TimestampedPeerInfo("250.250.2.1", uint16(8444), uint64(100000))
+        peer2 = TimestampedPeerInfo("250.250.2.2", uint16(9999), uint64(time.time()))
         source = PeerInfo("252.5.1.1", 8333)
         assert await addrman.add_to_new_table([peer1], source)
         assert await addrman.add_to_new_table([peer2], source)
         await addrman.mark_good(PeerInfo("250.250.2.2", 9999))
         assert await addrman.size() == 2
         for _ in range(5):
-            await addrman.attempt(PeerInfo(peer1.host, peer1.port), True, time.time() - 61)
-        addrman.cleanup(7 * 3600 * 24, 5)
+            await addrman.attempt(PeerInfo(peer1.host, peer1.port), True, int(time.time()) - 61)
+        await addrman.cleanup(7 * 3600 * 24, 5)
         assert await addrman.size() == 1
+        await connection.close()
