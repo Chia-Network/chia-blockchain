@@ -69,21 +69,12 @@ class ExtendedPeerInfoSerialization(Streamable):
 
 
 async def makePeerDataSerialization(
-    metadata: list[tuple[str, Any]], nodes: list[tuple[int, ExtendedPeerInfo]], new_table: list[tuple[int, int]]
+    metadata: list[tuple[str, Any]], nodes: list[tuple[uint64, bytes]], new_table: list[tuple[int, int]]
 ) -> bytes:
     """
     Create a PeerDataSerialization, adapting the provided collections
     """
-    transformed_nodes: list[tuple[uint64, bytes]] = []
     transformed_new_table: list[tuple[uint64, uint64]] = []
-
-    for index, [node_id, peer_info] in enumerate(nodes):
-        transformed_nodes.append(
-            (uint64(node_id), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(peer_info)))
-        )
-        # Come up to breathe for a moment
-        if index % 1000 == 0:
-            await asyncio.sleep(0)
 
     for index, [node_id, bucket_id] in enumerate(new_table):
         transformed_new_table.append((uint64(node_id), uint64(bucket_id)))
@@ -91,7 +82,7 @@ async def makePeerDataSerialization(
         if index % 1000 == 0:
             await asyncio.sleep(0)
 
-    serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, transformed_nodes, transformed_new_table))
+    serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, nodes, transformed_new_table))
     return serialized_bytes
 
 
@@ -137,7 +128,7 @@ class AddressManagerStore:
         Serialize the address manager's peer data to a file.
         """
         metadata: list[tuple[str, str]] = []
-        nodes: list[tuple[int, ExtendedPeerInfo]] = []
+        nodes: list[tuple[uint64, bytes]] = []
         new_table_entries: list[tuple[int, int]] = []
         unique_ids: dict[int, int] = {}
         count_ids: int = 0
@@ -150,7 +141,7 @@ class AddressManagerStore:
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
-                nodes.append((count_ids, info))
+                nodes.append((uint64(count_ids), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info))))
                 count_ids += 1
             if info.is_tried:
                 assert tried_ids != address_manager.tried_count
@@ -160,7 +151,7 @@ class AddressManagerStore:
 
         for node_id, info in trieds:
             assert tried_ids + count_ids != address_manager.tried_count
-            nodes.append((count_ids + node_id, info))
+            nodes.append((uint64(count_ids + node_id), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info))))
 
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
