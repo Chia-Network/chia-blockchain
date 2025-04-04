@@ -13,6 +13,7 @@ from chia_rs import (
     AugSchemeMPL,
     G1Element,
     G2Element,
+    SpendBundleConditions,
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
@@ -73,7 +74,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle, estimate_fees
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
