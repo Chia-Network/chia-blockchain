@@ -4,7 +4,14 @@ import logging
 import time
 from typing import Optional
 
-from chia_rs import AugSchemeMPL, ConsensusConstants
+from chia_rs import (
+    AugSchemeMPL,
+    ConsensusConstants,
+    calculate_ip_iters,
+    calculate_sp_interval_iters,
+    calculate_sp_iters,
+    is_overflow_block,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -14,13 +21,7 @@ from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
-from chia.consensus.pot_iterations import (
-    calculate_ip_iters,
-    calculate_iterations_quality,
-    calculate_sp_interval_iters,
-    calculate_sp_iters,
-    is_overflow_block,
-)
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
@@ -65,7 +66,11 @@ def validate_unfinished_header_block(
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
-    overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
+        uint32(header_block.reward_chain_block.signage_point_index),
+    )
     if skip_overflow_last_ss_validation and overflow:
         if final_eos_is_already_included(header_block, blocks, expected_vs.ssi):
             skip_overflow_last_ss_validation = False
@@ -507,7 +512,7 @@ def validate_unfinished_header_block(
     )
 
     # 7. check required iters
-    if required_iters >= calculate_sp_interval_iters(constants, expected_vs.ssi):
+    if required_iters >= calculate_sp_interval_iters(constants.NUM_SPS_SUB_SLOT, expected_vs.ssi):
         return None, ValidationError(Err.INVALID_REQUIRED_ITERS)
 
     # 8a. check signage point index 0 has no cc sp
@@ -523,15 +528,16 @@ def validate_unfinished_header_block(
         return None, ValidationError(Err.INVALID_SP_INDEX)
 
     sp_iters: uint64 = calculate_sp_iters(
-        constants,
+        constants.NUM_SPS_SUB_SLOT,
         expected_vs.ssi,
-        header_block.reward_chain_block.signage_point_index,
+        uint32(header_block.reward_chain_block.signage_point_index),
     )
 
     ip_iters: uint64 = calculate_ip_iters(
-        constants,
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
         expected_vs.ssi,
-        header_block.reward_chain_block.signage_point_index,
+        uint32(header_block.reward_chain_block.signage_point_index),
         required_iters,
     )
     if header_block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -873,9 +879,10 @@ def validate_finished_header_block(
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
 
     ip_iters: uint64 = calculate_ip_iters(
-        constants,
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
         expected_vs.ssi,
-        header_block.reward_chain_block.signage_point_index,
+        uint32(header_block.reward_chain_block.signage_point_index),
         required_iters,
     )
     if not genesis_block:
@@ -982,7 +989,11 @@ def validate_finished_header_block(
 
     # 31. Check infused challenge chain infusion point VDF
     if not genesis_block:
-        overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(
+            constants.NUM_SPS_SUB_SLOT,
+            constants.NUM_SP_INTERVALS_EXTRA,
+            uint32(header_block.reward_chain_block.signage_point_index),
+        )
         deficit = calculate_deficit(
             constants,
             header_block.height,

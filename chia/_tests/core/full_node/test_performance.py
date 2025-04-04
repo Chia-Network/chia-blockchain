@@ -4,6 +4,7 @@ import logging
 import random
 
 import pytest
+from chia_rs import is_overflow_block
 from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
@@ -13,7 +14,6 @@ from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.misc import BenchmarkRunner
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -137,7 +137,11 @@ class TestPerformance:
             guarantee_transaction_block=True,
         )
         block = blocks[-1]
-        if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+        if is_overflow_block(
+            bt.constants.NUM_SPS_SUB_SLOT,
+            bt.constants.NUM_SP_INTERVALS_EXTRA,
+            block.reward_chain_block.signage_point_index,
+        ):
             sub_slots = block.finished_sub_slots[:-1]
         else:
             sub_slots = block.finished_sub_slots

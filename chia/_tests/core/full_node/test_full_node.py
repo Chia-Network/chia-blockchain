@@ -21,6 +21,7 @@ from chia_rs import (
     TransactionsInfo,
     additions_and_removals,
     get_flags_for_height_and_constants,
+    is_overflow_block,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -39,7 +40,6 @@ from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_cu
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
@@ -1527,7 +1527,11 @@ async def test_unfinished_block_with_replaced_generator(
 
     blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
     block: FullBlock = blocks[0]
-    overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(
+        bt.constants.NUM_SPS_SUB_SLOT,
+        bt.constants.NUM_SP_INTERVALS_EXTRA,
+        uint32(block.reward_chain_block.signage_point_index),
+    )
 
     replaced_generator = SerializedProgram.from_bytes(b"\x80")
 

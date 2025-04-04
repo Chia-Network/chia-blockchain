@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator
 from typing import Optional
 
 import pytest
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -19,7 +19,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_store import FullNodeStore, UnfinishedBlockEntry, find_best_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
@@ -817,7 +816,11 @@ async def test_basic_store(
         sb.signage_point_index + custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
         custom_block_tools.constants.NUM_SPS_SUB_SLOT,
     ):
-        if is_overflow_block(custom_block_tools.constants, uint8(i)):
+        if is_overflow_block(
+            custom_block_tools.constants.NUM_SPS_SUB_SLOT,
+            custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
+            uint32(i),
+        ):
             finished_sub_slots = blocks_5[-1].finished_sub_slots
         else:
             finished_sub_slots = []
@@ -1013,8 +1016,16 @@ async def test_basic_store(
         i1 = blocks[-1].reward_chain_block.signage_point_index
         if (
             len(blocks[-2].finished_sub_slots) == len(blocks[-1].finished_sub_slots) == 0
-            and not is_overflow_block(custom_block_tools.constants, signage_point_index=i2)
-            and not is_overflow_block(custom_block_tools.constants, signage_point_index=i1)
+            and not is_overflow_block(
+                custom_block_tools.constants.NUM_SPS_SUB_SLOT,
+                custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
+                signage_point_index=uint32(i2),
+            )
+            and not is_overflow_block(
+                custom_block_tools.constants.NUM_SPS_SUB_SLOT,
+                custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
+                signage_point_index=uint32(i1),
+            )
             and i2 > i3 + 3
             and i1 > (i2 + 3)
         ):
@@ -1068,7 +1079,11 @@ async def test_basic_store(
                 assert_sp_none(i1 + 4, True)
 
             for i in range(i2, custom_block_tools.constants.NUM_SPS_SUB_SLOT):
-                if is_overflow_block(custom_block_tools.constants, uint8(i)):
+                if is_overflow_block(
+                    custom_block_tools.constants.NUM_SPS_SUB_SLOT,
+                    custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
+                    uint32(i),
+                ):
                     blocks_alt = custom_block_tools.get_consecutive_blocks(
                         1, block_list_input=blocks[:-1], skip_slots=1
                     )

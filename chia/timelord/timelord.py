@@ -15,12 +15,11 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import ConsensusConstants, RewardChainBlock
+from chia_rs import ConsensusConstants, RewardChainBlock, calculate_sp_iters, is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiavdf import create_discriminant, prove
 
-from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
@@ -258,7 +257,11 @@ class Timelord:
             log.warning(f"Received invalid unfinished block: {e}.")
             return None
         block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
-        if is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
+        if is_overflow_block(
+            self.constants.NUM_SPS_SUB_SLOT,
+            self.constants.NUM_SP_INTERVALS_EXTRA,
+            uint32(block.reward_chain_block.signage_point_index),
+        ):
             block_sp_total_iters -= self.last_state.get_sub_slot_iters()
         found_index = -1
         for index, (rc, total_iters) in enumerate(self.last_state.reward_challenge_cache):
@@ -281,7 +284,11 @@ class Timelord:
                 )
                 return None
             if self.last_state.reward_challenge_cache[found_index][1] > block_sp_total_iters:
-                if not is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
+                if not is_overflow_block(
+                    self.constants.NUM_SPS_SUB_SLOT,
+                    self.constants.NUM_SP_INTERVALS_EXTRA,
+                    uint32(block.reward_chain_block.signage_point_index),
+                ):
                     log.error(
                         f"Will not infuse unfinished block {block.rc_prev}, sp total iters: {block_sp_total_iters}, "
                         f"because its iters are too low"
@@ -600,7 +607,11 @@ class Timelord:
                     self.last_active_time = time.time()
                     log.debug(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
 
-                    overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
+                    overflow = is_overflow_block(
+                        self.constants.NUM_SPS_SUB_SLOT,
+                        self.constants.NUM_SP_INTERVALS_EXTRA,
+                        uint32(block.reward_chain_block.signage_point_index),
+                    )
 
                     if not self.last_state.can_infuse_block(overflow):
                         log.warning("Too many blocks, or overflow in new epoch, cannot infuse, discarding")
@@ -633,9 +644,9 @@ class Timelord:
                         ip_total_iters
                         - ip_iters
                         + calculate_sp_iters(
-                            self.constants,
+                            self.constants.NUM_SPS_SUB_SLOT,
                             block.sub_slot_iters,
-                            block.reward_chain_block.signage_point_index,
+                            uint32(block.reward_chain_block.signage_point_index),
                         )
                         - (block.sub_slot_iters if overflow else 0)
                     )

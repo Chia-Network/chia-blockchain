@@ -20,6 +20,8 @@ from chia_rs import (
     PoolTarget,
     RewardChainBlockUnfinished,
     additions_and_removals,
+    calculate_ip_iters,
+    calculate_sp_iters,
     get_flags_for_height_and_constants,
 )
 from chia_rs.sized_bytes import bytes32
@@ -30,7 +32,7 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -975,11 +977,14 @@ class FullNodeAPI:
                 difficulty,
                 request.challenge_chain_sp,
             )
-            sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
+            sp_iters: uint64 = calculate_sp_iters(
+                self.full_node.constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(request.signage_point_index)
+            )
             ip_iters: uint64 = calculate_ip_iters(
-                self.full_node.constants,
+                self.full_node.constants.NUM_SPS_SUB_SLOT,
+                self.full_node.constants.NUM_SP_INTERVALS_EXTRA,
                 sub_slot_iters,
-                request.signage_point_index,
+                uint32(request.signage_point_index),
                 required_iters,
             )
 

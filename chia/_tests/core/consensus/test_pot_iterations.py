@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+from chia_rs import (
+    calculate_ip_iters,
+    calculate_sp_iters,
+    is_overflow_block,
+)
+from chia_rs import expected_plot_size as _expected_plot_size
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
-    calculate_ip_iters,
     calculate_iterations_quality,
-    calculate_sp_iters,
-    is_overflow_block,
 )
 from chia.util.hash import std_hash
 
@@ -18,19 +20,19 @@ test_constants = DEFAULT_CONSTANTS.replace(NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT
 
 class TestPotIterations:
     def test_is_overflow_block(self):
-        assert not is_overflow_block(test_constants, uint8(27))
-        assert not is_overflow_block(test_constants, uint8(28))
-        assert is_overflow_block(test_constants, uint8(29))
-        assert is_overflow_block(test_constants, uint8(30))
-        assert is_overflow_block(test_constants, uint8(31))
+        assert not is_overflow_block(test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, uint8(27))
+        assert not is_overflow_block(test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, uint8(28))
+        assert is_overflow_block(test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, uint8(29))
+        assert is_overflow_block(test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, uint8(30))
+        assert is_overflow_block(test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, uint8(31))
         with raises(ValueError):
-            assert is_overflow_block(test_constants, uint8(32))
+            assert is_overflow_block(test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, uint8(32))
 
     def test_calculate_sp_iters(self):
         ssi: uint64 = uint64(100001 * 64 * 4)
         with raises(ValueError):
-            calculate_sp_iters(test_constants, ssi, uint8(32))
-        calculate_sp_iters(test_constants, ssi, uint8(31))
+            calculate_sp_iters(test_constants.NUM_SPS_SUB_SLOT, ssi, uint8(32))
+        calculate_sp_iters(test_constants.NUM_SPS_SUB_SLOT, ssi, uint8(31))
 
     def test_calculate_ip_iters(self):
         ssi: uint64 = uint64(100001 * 64 * 4)
@@ -38,45 +40,79 @@ class TestPotIterations:
 
         with raises(ValueError):
             # Invalid signage point index
-            calculate_ip_iters(test_constants, ssi, uint8(123), uint64(100000))
+            calculate_ip_iters(
+                test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, ssi, uint8(123), uint64(100000)
+            )
 
         sp_iters = sp_interval_iters * 13
 
         with raises(ValueError):
             # required_iters too high
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, sp_interval_iters)
+            calculate_ip_iters(
+                test_constants.NUM_SPS_SUB_SLOT,
+                test_constants.NUM_SP_INTERVALS_EXTRA,
+                ssi,
+                sp_interval_iters,
+                sp_interval_iters,
+            )
 
         with raises(ValueError):
             # required_iters too high
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, sp_interval_iters * 12)
+            calculate_ip_iters(
+                test_constants.NUM_SPS_SUB_SLOT,
+                test_constants.NUM_SP_INTERVALS_EXTRA,
+                ssi,
+                sp_interval_iters,
+                sp_interval_iters * 12,
+            )
 
         with raises(ValueError):
             # required_iters too low (0)
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, uint64(0))
+            calculate_ip_iters(
+                test_constants.NUM_SPS_SUB_SLOT,
+                test_constants.NUM_SP_INTERVALS_EXTRA,
+                ssi,
+                sp_interval_iters,
+                uint64(0),
+            )
 
         required_iters = sp_interval_iters - 1
-        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
+        ip_iters = calculate_ip_iters(
+            test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, ssi, uint8(13), required_iters
+        )
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
         required_iters = uint64(1)
-        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
+        ip_iters = calculate_ip_iters(
+            test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, ssi, uint8(13), required_iters
+        )
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
         required_iters = uint64(int(ssi * 4 / 300))
-        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
+        ip_iters = calculate_ip_iters(
+            test_constants.NUM_SPS_SUB_SLOT, test_constants.NUM_SP_INTERVALS_EXTRA, ssi, uint8(13), required_iters
+        )
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
         assert sp_iters < ip_iters
 
         # Overflow
         sp_iters = sp_interval_iters * (test_constants.NUM_SPS_SUB_SLOT - 1)
         ip_iters = calculate_ip_iters(
-            test_constants,
+            test_constants.NUM_SPS_SUB_SLOT,
+            test_constants.NUM_SP_INTERVALS_EXTRA,
             ssi,
             uint8(test_constants.NUM_SPS_SUB_SLOT - 1),
             required_iters,
         )
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
+
+    def test_expected_plot_size(self):
+        assert _expected_plot_size(32) == uint64(139586437120)
+        assert _expected_plot_size(33) == uint64(287762808832)
+        assert _expected_plot_size(34) == uint64(592705486848)
+        assert _expected_plot_size(35) == uint64(1219770712064)
+        assert _expected_plot_size(36) == uint64(2508260900864)
 
     def test_win_percentage(self):
         """

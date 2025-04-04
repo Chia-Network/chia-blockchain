@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from chia_rs import G1Element
+from chia_rs import expected_plot_size as _expected_plot_size
 from chiapos import DiskProver, decompressor_context_queue
 
-from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.plotting.cache import Cache, CacheEntry
 from chia.plotting.util import (
     HarvestingMode,

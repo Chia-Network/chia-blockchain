@@ -8,11 +8,12 @@ from typing import Any, Callable, Union
 
 import pytest
 from chia_rs import G1Element
+from chia_rs import expected_plot_size as _expected_plot_size
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.plot_sync.util import get_dummy_connection
-from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
 from chia.plot_sync.util import ErrorCodes, State

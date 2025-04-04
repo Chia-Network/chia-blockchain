@@ -26,6 +26,10 @@ from chia_rs import (
     G2Element,
     PoolTarget,
     PrivateKey,
+    calculate_ip_iters,
+    calculate_sp_interval_iters,
+    calculate_sp_iters,
+    is_overflow_block,
     solution_generator,
 )
 from chia_rs.sized_bytes import bytes32
@@ -41,13 +45,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.pot_iterations import (
-    calculate_ip_iters,
-    calculate_iterations_quality,
-    calculate_sp_interval_iters,
-    calculate_sp_iters,
-    is_overflow_block,
-)
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
@@ -756,7 +754,7 @@ class BlockTools:
                 for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
                     curr = latest_block
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
-                        constants, sub_slot_iters, uint8(signage_point_index)
+                        constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index)
                     ):
                         if curr.height == 0:
                             break
@@ -1356,17 +1354,20 @@ class BlockTools:
                 # Try each of the proofs of space
                 for required_iters, proof_of_space in qualified_proofs:
                     sp_iters: uint64 = calculate_sp_iters(
-                        constants,
+                        constants.NUM_SPS_SUB_SLOT,
                         uint64(constants.SUB_SLOT_ITERS_STARTING),
-                        uint8(signage_point_index),
+                        uint32(signage_point_index),
                     )
                     ip_iters = calculate_ip_iters(
-                        constants,
+                        constants.NUM_SPS_SUB_SLOT,
+                        constants.NUM_SP_INTERVALS_EXTRA,
                         uint64(constants.SUB_SLOT_ITERS_STARTING),
-                        uint8(signage_point_index),
+                        uint32(signage_point_index),
                         required_iters,
                     )
-                    is_overflow = is_overflow_block(constants, uint8(signage_point_index))
+                    is_overflow = is_overflow_block(
+                        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(signage_point_index)
+                    )
                     if force_overflow and not is_overflow:
                         continue
                     if len(finished_sub_slots) < skip_slots:
@@ -1469,9 +1470,9 @@ class BlockTools:
                     total_iters_sp = uint128(
                         sub_slot_total_iters
                         + calculate_sp_iters(
-                            self.constants,
+                            self.constants.NUM_SPS_SUB_SLOT,
                             self.constants.SUB_SLOT_ITERS_STARTING,
-                            unfinished_block.reward_chain_block.signage_point_index,
+                            uint32(unfinished_block.reward_chain_block.signage_point_index),
                         )
                     )
                     return unfinished_block_to_full_block(
@@ -1521,7 +1522,7 @@ class BlockTools:
                         difficulty,
                         signage_point,
                     )
-                    if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
+                    if required_iters < calculate_sp_interval_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
 
                         # Look up local_sk from plot to save locked memory
@@ -1567,10 +1568,13 @@ def get_signage_point(
 ) -> SignagePoint:
     if signage_point_index == 0:
         return SignagePoint(None, None, None, None)
-    sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
-    overflow = is_overflow_block(constants, signage_point_index)
+    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
+    overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(signage_point_index)
+    )
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters
+        + calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
     )
 
     (
@@ -1631,7 +1635,9 @@ def finish_block(
     difficulty: uint64,
     normalized_to_identity_cc_ip: bool = False,
 ) -> tuple[FullBlock, BlockRecord]:
-    is_overflow = is_overflow_block(constants, signage_point_index)
+    is_overflow = is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT, constants.NUM_SP_INTERVALS_EXTRA, uint32(signage_point_index)
+    )
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
         new_ip_iters = uint64(unfinished_block.total_iters - latest_block.total_iters)
@@ -1682,7 +1688,8 @@ def finish_block(
     )
     assert unfinished_block is not None
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters
+        + calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
     )
     full_block: FullBlock = unfinished_block_to_full_block(
         unfinished_block,
@@ -1889,8 +1896,14 @@ def get_full_block_and_block_record(
         timestamp = max(int(time.time()), last_timestamp + time_per_block)
     else:
         timestamp = last_timestamp + time_per_block
-    sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
-    ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
+    sp_iters = calculate_sp_iters(constants.NUM_SPS_SUB_SLOT, sub_slot_iters, uint32(signage_point_index))
+    ip_iters = calculate_ip_iters(
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
+        sub_slot_iters,
+        uint32(signage_point_index),
+        required_iters,
+    )
 
     unfinished_block = create_unfinished_block(
         constants,
@@ -2069,7 +2082,11 @@ def create_block_tools(
 def make_unfinished_block(
     block: FullBlock, constants: ConsensusConstants, *, force_overflow: bool = False
 ) -> UnfinishedBlock:
-    if force_overflow or is_overflow_block(constants, block.reward_chain_block.signage_point_index):
+    if force_overflow or is_overflow_block(
+        constants.NUM_SPS_SUB_SLOT,
+        constants.NUM_SP_INTERVALS_EXTRA,
+        uint32(block.reward_chain_block.signage_point_index),
+    ):
         finished_ss = block.finished_sub_slots[:-1]
     else:
         finished_ss = block.finished_sub_slots
