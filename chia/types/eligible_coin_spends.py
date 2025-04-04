@@ -144,9 +144,8 @@ class SkipDedup(BaseException):
 
 
 @dataclasses.dataclass(frozen=True)
-class EligibleCoinSpends:
+class IdenticalSpendDedup:
     deduplication_spends: dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
-    fast_forward_spends: dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
 
     def get_deduplication_info(
         self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend], max_cost: int
@@ -228,6 +227,11 @@ class EligibleCoinSpends:
         # Update the eligible coin spends data
         self.deduplication_spends.update(new_dedup_spends)
         return unique_coin_spends, uint64(cost_saving), unique_additions
+
+
+@dataclasses.dataclass(frozen=True)
+class SingletonFastForward:
+    fast_forward_spends: dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
 
     async def process_fast_forward_spends(
         self,
