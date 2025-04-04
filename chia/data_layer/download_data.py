@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import math
-import os
-import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -253,25 +250,9 @@ async def insert_from_delta_file(
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
-    clock = time.monotonic
-    start = clock()
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
-
-        timing_stop_after_generation = float(os.environ.get("CHIA_DATA_LAYER_STOP_AFTER_GENERATION", math.inf))
-        if existing_generation > timing_stop_after_generation:
-            timing_stop_after_generation = int(timing_stop_after_generation)
-            end = clock()
-            remainder = round(end - start)
-            remainder, seconds = divmod(remainder, 60)
-            hours, minutes = divmod(remainder, 60)
-            log.error(
-                f"terminating for timing test, reached {timing_stop_after_generation}."
-                + f"  duration: {hours}h {minutes}m {seconds}s"
-            )
-            sys.exit()
-
         target_filename_path = get_delta_filename_path(
             client_foldername, store_id, root_hash, existing_generation, group_files_by_store
         )
