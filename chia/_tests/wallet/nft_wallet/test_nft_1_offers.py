@@ -960,11 +960,14 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
 
     await env_taker.change_balances({"cat": {"init": True}})
 
-    async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-        ph_taker_cat_2 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+    with wallet_environments.new_puzzle_hashes_allowed():
+        async with wallet_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+            ph_taker_cat_2 = await action_scope.get_puzzle_hash(
+                wallet_taker.wallet_state_manager, override_reuse_puzhash_with=False
+            )
     async with cat_wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
@@ -1305,18 +1308,23 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
 
     await env_taker.change_balances({"cat": {"init": True}})
 
-    if test_change:
-        async with wallet_maker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
-        ) as action_scope:
-            cat_1 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-            cat_2 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    else:
-        async with wallet_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
-        ) as action_scope:
-            cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-            cat_2 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+    with wallet_environments.new_puzzle_hashes_allowed():
+        if test_change:
+            async with wallet_maker.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                cat_1 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+                cat_2 = await action_scope.get_puzzle_hash(
+                    wallet_maker.wallet_state_manager, override_reuse_puzhash_with=False
+                )
+        else:
+            async with wallet_taker.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+                cat_2 = await action_scope.get_puzzle_hash(
+                    wallet_taker.wallet_state_manager, override_reuse_puzhash_with=False
+                )
     puzzle_hashes = [cat_1, cat_2]
     amounts = [cats_to_trade, cats_to_trade]
     if test_change:
