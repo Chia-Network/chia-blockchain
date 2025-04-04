@@ -188,22 +188,6 @@ class AddressManager:
     allow_private_subnets: bool = False
     lock: Lock = field(default_factory=Lock)
 
-    def clear(self) -> None:
-        self.id_count = 0
-        self.key = randbits(256)
-        self.random_pos = []
-        self.tried_matrix = create_tried_matrix()
-        self.new_matrix = create_new_matrix()
-        self.tried_count = 0
-        self.new_count = 0
-        self.map_addr = {}
-        self.map_info = {}
-        self.last_good = 1
-        self.tried_collisions = []
-        self.used_new_matrix_positions = set()
-        self.used_tried_matrix_positions = set()
-        self.allow_private_subnets = False
-
     def make_private_subnets_valid(self) -> None:
         self.allow_private_subnets = True
 
