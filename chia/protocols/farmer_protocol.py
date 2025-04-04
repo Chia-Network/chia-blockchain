@@ -3,13 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from chia_rs import FoliageBlockData, FoliageTransactionBlock, G2Element, PoolTarget, RewardChainBlockUnfinished
+from chia_rs import (
+    ChallengeChainSubSlot,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    G2Element,
+    PoolTarget,
+    RewardChainBlockUnfinished,
+    RewardChainSubSlot,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from chia.util.streamable import Streamable, streamable
 
 """
