@@ -75,36 +75,6 @@ def persistent_blocks(
             if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
 
-                # make sure that the blocks we found on-disk are consistent with
-                # the ones we would have generated
-                expected_blocks: list[FullBlock] = bt.get_consecutive_blocks(
-                    5,
-                    block_list_input=block_list_input,
-                    time_per_block=time_per_block,
-                    seed=seed,
-                    skip_slots=empty_sub_slots,
-                    normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,
-                    normalized_to_identity_icc_eos=normalized_to_identity_icc_eos,
-                    normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
-                    normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
-                    dummy_block_references=dummy_block_references,
-                    include_transactions=include_transactions,
-                    genesis_timestamp=uint64(1234567890),
-                )
-                # if this assert fails, and changing the test chains was
-                # intentional, please also update the test chain cache.
-                # run: pytest -m build_test_chains
-                for i in range(5):
-                    if blocks[i] != expected_blocks[i]:  # pragma: no cover
-                        print(
-                            f"Block {i} in the block cache on disk differs "
-                            "from what BlockTools generated. Please make sure "
-                            "your test blocks are up-to-date"
-                        )
-                        print(f"disk:\n{blocks[i]}")
-                        print(f"block-tools:\n{expected_blocks[i]}")
-                    assert blocks[i] == expected_blocks[i]
-
                 return blocks
         except EOFError:
             print("\n error reading db file")

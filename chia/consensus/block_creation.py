@@ -132,6 +132,8 @@ def create_foliage(
         assert prev_block is not None
         prev_block_hash = prev_block.header_hash
 
+    generator_block_heights_list: list[uint32] = []
+
     foliage_transaction_block_hash: Optional[bytes32]
 
     if is_transaction_block:
@@ -192,6 +194,7 @@ def create_foliage(
             byte_array_tx.append(bytearray(coin.puzzle_hash))
 
         if new_block_gen is not None:
+            generator_block_heights_list = new_block_gen.block_refs
             for coin in new_block_gen.additions:
                 tx_additions.append(coin)
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
@@ -227,6 +230,10 @@ def create_foliage(
             generator_hash = std_hash(new_block_gen.program)
 
         generator_refs_hash = bytes32([1] * 32)
+        if generator_block_heights_list not in (None, []):
+            generator_ref_list_bytes = b"".join([i.stream_to_bytes() for i in generator_block_heights_list])
+            generator_refs_hash = std_hash(generator_ref_list_bytes)
+
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
