@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from chia_rs import Coin, ConsensusConstants, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_ints import uint64
 
 from chia.simulator.block_tools import BlockTools
@@ -63,6 +64,30 @@ def test_trigger_default_10000_compact(default_10000_blocks_compact: list[FullBl
     pass
 
 
+def validate_coins(constants: ConsensusConstants, blocks: list[FullBlock]) -> None:
+    unspent_coins: set[Coin] = set()
+    for block in blocks:
+        rewards = block.get_included_reward_coins()
+
+        if block.transactions_generator is not None:
+            flags = get_flags_for_height_and_constants(block.height, constants)
+            additions, removals = additions_and_removals(
+                bytes(block.transactions_generator),
+                [],
+                flags,
+                constants,
+            )
+
+            for rem in removals:
+                unspent_coins.remove(rem)
+
+            for add, _ in additions:
+                unspent_coins.add(add)
+
+        for add in rewards:
+            unspent_coins.add(add)
+
+
 def validate_chain(
     bt: BlockTools,
     blocks: list[FullBlock],
@@ -78,6 +103,8 @@ def validate_chain(
     dummy_block_references: bool = False,
     include_transactions: bool = False,
 ) -> None:
+    validate_coins(bt.constants, blocks)
+
     # make sure that the blocks we found on-disk are consistent with
     # the ones we would have generated
     input_length = len(block_list_input) if block_list_input else 0
