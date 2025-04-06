@@ -650,9 +650,6 @@ class BlockTools:
 
         constants = self.constants
 
-        # this indicates whether the passed in transaction_data has been
-        # included in a transaction block yet
-        transaction_data_included = False
         if time_per_block is None:
             time_per_block = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
 
@@ -808,9 +805,6 @@ class BlockTools:
                                     continue
 
                         assert latest_block.header_hash in blocks
-                        if transaction_data_included:
-                            transaction_data = None
-                            block_refs = []
 
                         assert last_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
@@ -861,20 +855,19 @@ class BlockTools:
                             # some transactions
                             assert wallet is not None
                             assert rng is not None
-                            transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
-                            removals = transaction_data.removals()
-                            program = simple_solution_generator(transaction_data).program
+                            bundle, additions = make_spend_bundle(available_coins, wallet, rng)
+                            removals = bundle.removals()
+                            program = simple_solution_generator(bundle).program
                             cost = compute_block_cost(program, constants, uint32(curr.height + 1))
                             new_gen = NewBlockGenerator(
                                 program,
                                 [],
                                 block_refs + dummy_refs,
-                                transaction_data.aggregated_signature,
+                                bundle.aggregated_signature,
                                 additions,
                                 removals,
                                 cost,
                             )
-                            transaction_data_included = False
                         elif dummy_block_references:
                             program = SerializedProgram.from_bytes(solution_generator([]))
                             cost = compute_block_cost(program, constants, uint32(curr.height + 1))
@@ -914,7 +907,7 @@ class BlockTools:
                             current_time=current_time,
                         )
                         if block_record.is_transaction_block:
-                            transaction_data_included = True
+                            transaction_data = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1090,8 +1083,6 @@ class BlockTools:
             latest_block_eos = latest_block
             overflow_cc_challenge = finished_sub_slots_at_ip[-1].challenge_chain.get_hash()
             overflow_rc_challenge = finished_sub_slots_at_ip[-1].reward_chain.get_hash()
-            if transaction_data_included:
-                transaction_data = None
             sub_slots_finished += 1
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
@@ -1195,20 +1186,19 @@ class BlockTools:
                             # some transactions
                             assert wallet is not None
                             assert rng is not None
-                            transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
-                            removals = transaction_data.removals()
-                            program = simple_solution_generator(transaction_data).program
+                            bundle, additions = make_spend_bundle(available_coins, wallet, rng)
+                            removals = bundle.removals()
+                            program = simple_solution_generator(bundle).program
                             cost = compute_block_cost(program, constants, uint32(curr.height + 1))
                             new_gen = NewBlockGenerator(
                                 program,
                                 [],
                                 block_refs + dummy_refs,
-                                transaction_data.aggregated_signature,
+                                bundle.aggregated_signature,
                                 additions,
                                 removals,
                                 cost,
                             )
-                            transaction_data_included = False
                         elif dummy_block_references:
                             program = SerializedProgram.from_bytes(solution_generator([]))
                             cost = compute_block_cost(program, constants, uint32(curr.height + 1))
@@ -1251,7 +1241,7 @@ class BlockTools:
                         )
 
                         if block_record.is_transaction_block:
-                            transaction_data_included = True
+                            transaction_data = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
