@@ -67,17 +67,6 @@ class ExtendedPeerInfoSerialization(Streamable):
         return ExtendedPeerInfo(TimestampedPeerInfo(str(peer_info.host), peer_info.port, epi.timestamp), src_peer_info)
 
 
-async def makePeerDataSerialization(
-    metadata: list[tuple[str, Any]], nodes: list[bytes], new_table: list[tuple[uint64, uint64]]
-) -> bytes:
-    """
-    Create a PeerDataSerialization, adapting the provided collections
-    """
-
-    serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, nodes, new_table))
-    return serialized_bytes
-
-
 class AddressManagerStore:
     """
     Metadata table:
@@ -246,5 +235,5 @@ class AddressManagerStore:
         """
         Serializes the given peer data and writes it to the peers file.
         """
-        serialized_bytes: bytes = await makePeerDataSerialization(metadata, nodes, new_table)
+        serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, nodes, new_table))
         await write_file_async(peers_file_path, serialized_bytes, file_mode=0o644)
