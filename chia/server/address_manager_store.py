@@ -69,7 +69,7 @@ class ExtendedPeerInfoSerialization(Streamable):
 
 
 async def makePeerDataSerialization(
-    metadata: list[tuple[str, Any]], nodes: list[tuple[uint64, bytes]], new_table: list[tuple[int, int]]
+    metadata: list[tuple[str, Any]], nodes: list[bytes], new_table: list[tuple[int, int]]
 ) -> bytes:
     """
     Create a PeerDataSerialization, adapting the provided collections
@@ -247,7 +247,7 @@ class AddressManagerStore:
         cls,
         peers_file_path: Path,
         metadata: list[tuple[str, Any]],
-        nodes: list[tuple[uint64, bytes]],
+        nodes: list[bytes],
         new_table: list[tuple[int, int]],
     ) -> None:
         """
