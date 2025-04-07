@@ -14,6 +14,8 @@ from chia_rs import (
     AugSchemeMPL,
     ConsensusConstants,
     G2Element,
+    SpendBundleConditions,
+    SpendConditions,
     get_conditions_from_spendbundle,
     run_block_generator2,
 )
@@ -66,7 +68,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
 from chia.wallet.conditions import AssertCoinAnnouncement
