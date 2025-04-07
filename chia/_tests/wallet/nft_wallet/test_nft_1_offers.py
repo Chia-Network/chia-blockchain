@@ -81,7 +81,8 @@ async def test_nft_offer_sell_nft(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
@@ -219,7 +220,8 @@ async def test_nft_offer_request_nft(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
@@ -356,7 +358,8 @@ async def test_nft_offer_sell_did_to_did(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
@@ -508,7 +511,8 @@ async def test_nft_offer_sell_nft_for_cat(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
@@ -607,8 +611,9 @@ async def test_nft_offer_sell_nft_for_cat(
         wallet_node_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
     )
 
-    ph_taker_cat_1 = await wallet_taker.get_new_puzzlehash()
-    ph_taker_cat_2 = await wallet_taker.get_new_puzzlehash()
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+        ph_taker_cat_2 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     async with cat_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await cat_wallet_maker.generate_signed_transaction(
             [cats_to_trade, cats_to_trade],
@@ -688,7 +693,8 @@ async def test_nft_offer_request_nft_for_cat(
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
@@ -786,15 +792,18 @@ async def test_nft_offer_request_nft_for_cat(
         wallet_node_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
     )
     if test_change:
-        cat_1 = await wallet_maker.get_new_puzzlehash()
-        cat_2 = await wallet_maker.get_new_puzzlehash()
+        async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            cat_1 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+            cat_2 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     else:
-        cat_1 = await wallet_taker.get_new_puzzlehash()
-        cat_2 = await wallet_taker.get_new_puzzlehash()
+        async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+            cat_2 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     puzzle_hashes = [cat_1, cat_2]
     amounts = [cats_to_trade, cats_to_trade]
     if test_change:
-        ph_taker_cat_1 = await wallet_taker.get_new_puzzlehash()
+        async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
         extra_change = cats_to_mint - (2 * cats_to_trade)
         amounts.append(uint64(extra_change))
         puzzle_hashes.append(ph_taker_cat_1)
@@ -878,7 +887,8 @@ async def test_nft_offer_sell_cancel(
     wallet_node_maker, server_0 = wallets[0]
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -989,7 +999,8 @@ async def test_nft_offer_sell_cancel_in_batch(
     wallet_node_maker, server_0 = wallets[0]
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -1121,8 +1132,10 @@ async def test_complex_nft_offer(
     wallet_maker = wsm_maker.main_wallet
     wallet_taker = wsm_taker.main_wallet
 
-    ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)

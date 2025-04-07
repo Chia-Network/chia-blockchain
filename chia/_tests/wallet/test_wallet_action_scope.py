@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import G2Element, Program
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
@@ -83,6 +83,7 @@ async def test_wallet_action_scope() -> None:
         sign=True,
         additional_signing_responses=[],
         extra_spends=[],
+        puzzle_for_pk=lambda _: Program.to(1),
     ) as action_scope:
         async with action_scope.use() as interface:
             interface.side_effects.transactions = [STD_TX]
@@ -94,7 +95,13 @@ async def test_wallet_action_scope() -> None:
     assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [])
 
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
-        DEFAULT_TX_CONFIG, push=False, merge_spends=True, sign=True, additional_signing_responses=[], extra_spends=[]
+        DEFAULT_TX_CONFIG,
+        push=False,
+        merge_spends=True,
+        sign=True,
+        additional_signing_responses=[],
+        extra_spends=[],
+        puzzle_for_pk=lambda _: Program.to(1),
     ) as action_scope:
         async with action_scope.use() as interface:
             interface.side_effects.transactions = []

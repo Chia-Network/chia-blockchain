@@ -470,7 +470,8 @@ class WalletNode:
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
             if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
-                await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                result = await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                await result.commit(self.wallet_state_manager)
 
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
@@ -708,15 +709,16 @@ class WalletNode:
         testing = self.config.get("testing", False)
         if self.wallet_peers is None and connect_to_unknown_peers and not testing:
             self.wallet_peers = WalletPeers(
-                self.server,
-                self.config["target_peer_count"],
-                self.root_path / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
-                self.config["introducer_peer"],
-                self.config.get("dns_servers", ["dns-introducer.chia.net"]),
-                self.config["peer_connect_interval"],
-                network_name,
-                default_port,
-                self.log,
+                server=self.server,
+                target_outbound_count=self.config["target_peer_count"],
+                peers_file_path=self.root_path
+                / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
+                introducer_info=self.config["introducer_peer"],
+                dns_servers=self.config.get("dns_servers", ["dns-introducer.chia.net"]),
+                peer_connect_interval=self.config["peer_connect_interval"],
+                selected_network=network_name,
+                default_port=default_port,
+                log=self.log,
             )
             create_referenced_task(self.wallet_peers.start())
 
@@ -828,7 +830,8 @@ class WalletNode:
         min_height_for_subscriptions = fork_height if use_delta_sync else 0
         already_checked_ph: set[bytes32] = set()
         while not self._shut_down:
-            await self.wallet_state_manager.create_more_puzzle_hashes()
+            result = await self.wallet_state_manager.create_more_puzzle_hashes()
+            await result.commit(self.wallet_state_manager)
             all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
             not_checked_puzzle_hashes = set(all_puzzle_hashes) - already_checked_ph
             if not_checked_puzzle_hashes == set():
