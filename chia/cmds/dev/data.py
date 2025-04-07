@@ -140,6 +140,7 @@ class SyncTimeCommand:
                         log=logging.getLogger(__name__),
                         proxy_url=None,
                         downloader=None,
+                        maximum_full_file_count=0,
                     )
                 )
                 try:
