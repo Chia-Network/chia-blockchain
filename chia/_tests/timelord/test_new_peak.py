@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from chia_rs import FullBlock, SubEpochSummary, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint128
 
@@ -19,9 +20,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.aliases import FullNodeService
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.unfinished_block import UnfinishedBlock
 
 
 class TestNewPeak:

@@ -12,6 +12,7 @@ from typing import Callable, Optional, cast
 
 import aiosqlite
 import zstd
+from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
@@ -26,7 +27,6 @@ from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.simulator.block_tools import make_unfinished_block
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain

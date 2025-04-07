@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import pytest
-
-from chia.types.full_block import FullBlock
+from chia_rs import FullBlock
 
 # These test targets are used to trigger a build of the test chains.
 # On CI we clone the test-cache repository to load the chains from, so they

@@ -3,14 +3,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import SubEpochChallengeSegment, SubEpochSegments
+from chia_rs import HeaderBlock, SubEpochChallengeSegment, SubEpochSegments, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
-from chia.types.header_block import HeaderBlock
 
 
 # implements BlockchainInterface

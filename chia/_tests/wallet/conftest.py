@@ -11,6 +11,7 @@ import pytest
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     ConsensusConstants,
+    FullBlock,
     SpendBundleConditions,
     get_flags_for_height_and_constants,
     run_block_generator,
@@ -25,7 +26,6 @@ from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
