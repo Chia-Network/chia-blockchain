@@ -53,6 +53,10 @@ def print_date(*args: Any, **kwargs: Any) -> None:
     print(f"{s}:", *args, **kwargs)
 
 
+def humanize_bytes(size: int) -> str:
+    return f"{size / 2**20:.1f} MB"
+
+
 @chia_command(
     group=data_group,
     name="sync-time",
@@ -158,7 +162,8 @@ class SyncTimeCommand:
                                 per_generation = delta_time / delta_generation
 
                                 print_date(
-                                    f"synced: {last_generation} -> {generation} at {per_generation:.1f}s / gen",
+                                    f"synced: {last_generation} -> {generation} at {per_generation:.1f}s / gen"
+                                    + f" ({humanize_bytes(database_path.stat().st_size)})",
                                     flush=True,
                                 )
 
@@ -168,26 +173,33 @@ class SyncTimeCommand:
                                 last_generation = generation
                                 last_time = now
                         await asyncio.sleep(1)
-                except asyncio.CancelledError:
+                finally:
                     with anyio.CancelScope(shield=True):
-                        task.cancel()
-                        with contextlib.suppress(asyncio.CancelledError):
+                        if task.done():
                             await task
+                        else:
+                            task.cancel()
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await task
 
-                end = clock()
-                remainder = round(end - start)
-                remainder, seconds = divmod(remainder, 60)
-                remainder, minutes = divmod(remainder, 60)
-                days, hours = divmod(remainder, 24)
-                print_date("DataLayer sync timing test complete:")
-                print(f"    store id: {self.store_id}")
-                print(f"     reached: {self.generation_limit}")
-                print(f"    duration: {days}d {hours}h {minutes}m {seconds}s")
-                if len(all_times) > 0:
-                    generation, duration = max(all_times.items(), key=lambda item: item[1])
-                    print(f"         max: {generation} -> {duration:.1f}s")
+                    end = clock()
+                    total = round(end - start)
+                    remainder, seconds = divmod(total, 60)
+                    remainder, minutes = divmod(remainder, 60)
+                    days, hours = divmod(remainder, 24)
+                    # TODO: report better on failure
+                    print_date("DataLayer sync timing test results:")
+                    print(f"    store id: {self.store_id}")
+                    print(f"     reached: {generation}")
+                    print(f"     db size: {humanize_bytes(database_path.stat().st_size)}")
+                    print(f"    duration: {days}d {hours}h {minutes}m {seconds}s")
+                    print(f"              {total}s")
+                    if len(all_times) > 0:
+                        generation, duration = max(all_times.items(), key=lambda item: item[1])
+                        print(f"         max: {generation} @ {duration:.1f}s")
         finally:
             with anyio.CancelScope(shield=True):
+                print_date("stopping services")
                 await self.run_chia("stop", "-d", "all", check=False)
 
     async def wait_for_wallet_synced(self) -> None:
