@@ -22,7 +22,7 @@ from chia_rs.sized_ints import uint32
 from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
 from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.data_layer.data_layer import server_files_path_from_config
-from chia.data_layer.data_layer_util import ServerInfo, Subscription
+from chia.data_layer.data_layer_util import ServerInfo, Status, Subscription
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file
 from chia.util.chia_logging import initialize_logging
@@ -123,6 +123,10 @@ class SyncTimeCommand:
                 last_time = clock()
                 all_times: dict[int, float] = {}
 
+                print_date(f"using local files at: {files_path}")
+
+                await data_store.create_tree(store_id=self.store_id, status=Status.COMMITTED)
+
                 task = create_referenced_task(
                     insert_from_delta_file(
                         data_store=data_store,
@@ -174,12 +178,13 @@ class SyncTimeCommand:
                 remainder, seconds = divmod(remainder, 60)
                 remainder, minutes = divmod(remainder, 60)
                 days, hours = divmod(remainder, 24)
-                print("DataLayer sync timing test complete:")
+                print_date("DataLayer sync timing test complete:")
                 print(f"    store id: {self.store_id}")
                 print(f"     reached: {self.generation_limit}")
                 print(f"    duration: {days}d {hours}h {minutes}m {seconds}s")
-                generation, duration = max(all_times.items(), key=lambda item: item[1])
-                print(f"         max: {generation} -> {duration:.1f}s")
+                if len(all_times) > 0:
+                    generation, duration = max(all_times.items(), key=lambda item: item[1])
+                    print(f"         max: {generation} -> {duration:.1f}s")
         finally:
             with anyio.CancelScope(shield=True):
                 await self.run_chia("stop", "-d", "all", check=False)
