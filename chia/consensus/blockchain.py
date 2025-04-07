@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import (
     ConsensusConstants,
+    EndOfSubSlotBundle,
+    FullBlock,
+    HeaderBlock,
     SubEpochChallengeSegment,
+    SubEpochSummary,
+    UnfinishedBlock,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
@@ -32,14 +37,9 @@ from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.cpu import available_logical_cores
