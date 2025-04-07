@@ -70,7 +70,11 @@ class DataStore:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
+        cls,
+        database: Union[str, Path],
+        uri: bool = False,
+        sql_log_path: Optional[Path] = None,
+        cache_capacity: int = 1,
     ) -> AsyncIterator[DataStore]:
         async with DBWrapper2.managed(
             database=database,
@@ -85,7 +89,7 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=128)
+            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
             self = cls(db_wrapper=db_wrapper, recent_merkle_blobs=recent_merkle_blobs)
 
             async with db_wrapper.writer() as writer:
