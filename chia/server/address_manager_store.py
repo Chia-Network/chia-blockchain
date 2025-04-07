@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass
 from ipaddress import ip_address
@@ -69,20 +68,14 @@ class ExtendedPeerInfoSerialization(Streamable):
 
 
 async def makePeerDataSerialization(
-    metadata: list[tuple[str, Any]], nodes: list[bytes], new_table: list[tuple[int, int]]
+    metadata: list[tuple[str, Any]], nodes: list[bytes], new_table: list[tuple[uint64, uint64]]
 ) -> bytes:
     """
     Create a PeerDataSerialization, adapting the provided collections
     """
     transformed_new_table: list[tuple[uint64, uint64]] = []
 
-    for index, [node_id, bucket_id] in enumerate(new_table):
-        transformed_new_table.append((uint64(node_id), uint64(bucket_id)))
-        # Come up to breathe for a moment
-        if index % 1000 == 0:
-            await asyncio.sleep(0)
-
-    serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, nodes, transformed_new_table))
+    serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, nodes, new_table))
     return serialized_bytes
 
 
@@ -129,7 +122,7 @@ class AddressManagerStore:
         """
         metadata: list[tuple[str, str]] = []
         nodes: list[bytes] = []
-        new_table_entries: list[tuple[int, int]] = []
+        new_table_entries: list[tuple[uint64, uint64]] = []
         unique_ids: dict[int, int] = {}
         count_ids: int = 0
         trieds: list[bytes] = []
@@ -151,8 +144,9 @@ class AddressManagerStore:
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
                 if address_manager.new_matrix[bucket][i] != -1:
-                    index = unique_ids[address_manager.new_matrix[bucket][i]]
-                    new_table_entries.append((index, bucket))
+                    new_table_entries.append(
+                        (uint64(unique_ids[address_manager.new_matrix[bucket][i]]), uint64(bucket))
+                    )
 
         try:
             # Ensure the parent directory exists
@@ -248,7 +242,7 @@ class AddressManagerStore:
         peers_file_path: Path,
         metadata: list[tuple[str, Any]],
         nodes: list[bytes],
-        new_table: list[tuple[int, int]],
+        new_table: list[tuple[uint64, uint64]],
     ) -> None:
         """
         Serializes the given peer data and writes it to the peers file.
