@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
 import pytest
 from chia_rs import G2Element
@@ -12,6 +13,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_request_types import PushTransactions
+from chia.rpc.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -221,7 +223,7 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         await env_1.xch_wallet.generate_signed_transaction(
             [uint64(1)],
-            [await env_1.xch_wallet.get_puzzle_hash(new=False)],
+            [await action_scope.get_puzzle_hash(env_1.wallet_state_manager)],
             action_scope,
         )
 
@@ -257,3 +259,188 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
             ),
         ]
     )
+
+
+@dataclass
+class PuzzleHashState:
+    highest_index: int
+    used_up_to_index: int
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) -> None:
+    wsm = wallet_environments.environments[0].wallet_state_manager
+
+    async def get_puzzle_hash_state() -> PuzzleHashState:
+        last_index = await wsm.puzzle_store.get_last_derivation_path_for_wallet(wsm.main_wallet.id())
+        assert last_index is not None
+        return PuzzleHashState(
+            last_index,
+            int((await wsm.puzzle_store.get_used_count(wsm.main_wallet.id())) / 2) - 1,  # hardened + unhardened
+        )
+
+    expected_state = await get_puzzle_hash_state()
+
+    # `create_more_puzzle_hashes`
+    # No-op
+    result = await wsm.create_more_puzzle_hashes()
+    await result.commit(wsm)
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Ensure the window continues to expand
+    await wsm.puzzle_store.set_used_up_to(uint32(expected_state.used_up_to_index + 1))
+    result = await wsm.create_more_puzzle_hashes()
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(expected_state.highest_index + 1, expected_state.used_up_to_index + 1)
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Explicitly make 1 extra
+    result = await wsm.create_more_puzzle_hashes(num_additional_phs=wsm.initial_num_public_keys + 1)
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(expected_state.highest_index + 1, expected_state.used_up_to_index)
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Make sure window doesn't expand on next use
+    await wsm.puzzle_store.set_used_up_to(uint32(expected_state.used_up_to_index + 1))
+    result = await wsm.create_more_puzzle_hashes()
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(expected_state.highest_index, expected_state.used_up_to_index + 1)
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Make sure `up_to_index` works
+    result = await wsm.create_more_puzzle_hashes(
+        up_to_index=uint32(expected_state.highest_index + 100), mark_existing_as_used=False
+    )
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(
+        expected_state.highest_index + 100 + wsm.initial_num_public_keys, expected_state.used_up_to_index
+    )
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Make sure `mark_existing_as_used` works
+    result = await wsm.create_more_puzzle_hashes(
+        up_to_index=uint32(expected_state.highest_index + 1), mark_existing_as_used=True
+    )
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(
+        expected_state.highest_index + 1 + wsm.initial_num_public_keys, expected_state.highest_index
+    )
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Test basic transactionality
+    result = await wsm.create_more_puzzle_hashes(
+        up_to_index=uint32(expected_state.highest_index + 1), mark_existing_as_used=False
+    )
+    result = await wsm.create_more_puzzle_hashes(
+        num_additional_phs=(expected_state.highest_index - expected_state.used_up_to_index)
+        + wsm.initial_num_public_keys
+        + 1,
+        mark_existing_as_used=False,
+        previous_result=result,
+    )
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(
+        expected_state.highest_index + 1 + wsm.initial_num_public_keys + 1, expected_state.used_up_to_index
+    )
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Test error using two different "config"s
+    result = await wsm.create_more_puzzle_hashes(mark_existing_as_used=False)
+    with pytest.raises(ValueError, match="different configuration"):
+        await wsm.create_more_puzzle_hashes(mark_existing_as_used=True, previous_result=result)
+
+    # Test generation with no local data
+    await wsm.puzzle_store.delete_wallet(wsm.main_wallet.id())
+    result = await wsm.create_more_puzzle_hashes()
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(
+        wsm.initial_num_public_keys, -1
+    )  # -1 being no puzzle hashes used, not even at index 0
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Test `from_zero` fills in gaps
+    async with wsm.puzzle_store.db_wrapper.writer() as conn:
+        await conn.execute(
+            "DELETE FROM derivation_paths WHERE derivation_index=?",
+            (0,),
+        )
+    assert await get_puzzle_hash_state() == expected_state
+    assert (
+        len(list(await wsm.puzzle_store.get_all_puzzle_hashes())) == (expected_state.highest_index) * 2
+    )  # 0 inclusive
+    result = await wsm.create_more_puzzle_hashes(
+        from_zero=True, mark_existing_as_used=False, up_to_index=uint32(expected_state.highest_index)
+    )
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(expected_state.highest_index + wsm.initial_num_public_keys, -1)
+    assert await get_puzzle_hash_state() == expected_state
+    assert len(list(await wsm.puzzle_store.get_all_puzzle_hashes())) == (expected_state.highest_index + 1) * 2
+
+    # `get_unused_derivation_record`
+    # Assert index increases
+    assert expected_state.highest_index > expected_state.used_up_to_index
+    await wsm.get_unused_derivation_record(wsm.main_wallet.id())
+    expected_state = PuzzleHashState(expected_state.highest_index, expected_state.used_up_to_index + 1)
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Assert more puzzle hashes get made
+    await wsm.puzzle_store.set_used_up_to(uint32(expected_state.highest_index))
+    await wsm.get_unused_derivation_record(wsm.main_wallet.id())
+    expected_state = PuzzleHashState(
+        expected_state.highest_index + wsm.initial_num_public_keys + 1, expected_state.highest_index + 1
+    )
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Test transactionality
+    previous_result = None
+    for _ in range(0, wsm.initial_num_public_keys):  # all currently unused
+        previous_result = await wsm._get_unused_derivation_record(wsm.main_wallet.id(), previous_result=previous_result)
+    assert previous_result is not None
+    await previous_result.commit(wsm)
+    expected_state = PuzzleHashState(
+        expected_state.highest_index + wsm.initial_num_public_keys, expected_state.highest_index
+    )
+    assert await get_puzzle_hash_state() == expected_state
+
+    # `extend_derivation_index`
+    # Check malformed request
+    rpc_client = wallet_environments.environments[0].rpc_client
+    with pytest.raises(ValueError):
+        await rpc_client.fetch("extend_derivation_index", {})
+
+    # Test no existing derivation paths
+    async with wsm.puzzle_store.db_wrapper.writer() as conn:
+        await conn.execute(
+            "DELETE FROM derivation_paths WHERE derivation_index=?",
+            (0,),
+        )
+    with pytest.raises(ValueError):
+        await rpc_client.extend_derivation_index(0)
+
+    # Reset to a normal state
+    await wsm.puzzle_store.delete_wallet(wsm.main_wallet.id())
+    result = await wsm.create_more_puzzle_hashes()
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(wsm.initial_num_public_keys, -1)
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Test an index already created
+    with pytest.raises(ValueError):
+        await rpc_client.extend_derivation_index(0)
+
+    # Test an index too far in the future
+    with pytest.raises(ValueError):
+        await rpc_client.extend_derivation_index(MAX_DERIVATION_INDEX_DELTA + expected_state.highest_index + 1)
+
+    # Test the actual functionality
+    assert await rpc_client.extend_derivation_index(expected_state.highest_index + 5) == str(
+        expected_state.highest_index + 5
+    )
+    expected_state = PuzzleHashState(expected_state.highest_index + 5, expected_state.used_up_to_index)
+    assert await get_puzzle_hash_state() == expected_state

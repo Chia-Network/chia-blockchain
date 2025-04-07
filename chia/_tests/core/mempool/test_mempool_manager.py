@@ -67,6 +67,7 @@ from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -95,6 +96,28 @@ TEST_COIN3 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)
 TEST_COIN_ID3 = TEST_COIN3.name()
 TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIMESTAMP)
 TEST_HEIGHT = uint32(5)
+
+
+@pytest.fixture(name="test_bundles")
+def test_bundles_fixture() -> list[SpendBundle]:
+    ret: list[SpendBundle] = []
+
+    bundle_path_dir = DEFAULT_ROOT_PATH.parent.joinpath("test-bundles")
+    for p in bundle_path_dir.iterdir():
+        if not p.is_file():  # pragma: no cover
+            continue
+        if p.suffix != ".bundle":  # pragma: no cover
+            continue
+        if len(p.name) != 64 + 7:  # pragma: no cover
+            continue
+
+        sb = SpendBundle.from_bytes(p.read_bytes())
+        ret.append(sb)
+
+    print(f"loaded {len(ret)} spend bundles from disk")
+
+    ret.sort(key=lambda x: x.name())
+    return ret
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1719,8 +1742,9 @@ async def test_identical_spend_aggregation_e2e(
         full_node_api: FullNodeSimulator, wallet_node: WalletNode
     ) -> tuple[Wallet, list[WalletCoinRecord], bytes32]:
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
-        phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+            phs = [await action_scope.get_puzzle_hash(wallet.wallet_state_manager) for _ in range(3)]
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
         async with wallet.wallet_state_manager.new_action_scope(
@@ -2274,7 +2298,7 @@ async def setup_mempool(coins: TestCoins) -> MempoolManager:
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
     )
-    test_block_record = create_test_block_record(height=uint32(10), timestamp=uint64(12345678))
+    test_block_record = create_test_block_record(height=uint32(5000000), timestamp=uint64(12345678))
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
 
@@ -2509,6 +2533,24 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert spend.latest_singleton_coin == spend_c.coin.name()
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("old", [True, False])
+async def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
+    bundles = transactions_1000[:10]
+    all_coins = [s.coin for b in bundles for s in b.coin_spends]
+    coins = TestCoins(all_coins, {})
+
+    mempool_manager = MempoolManager(
+        coins.get_coin_records,
+        coins.get_unspent_lineage_info,
+        DEFAULT_CONSTANTS,
+    )
+
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+
+    assert await create_block(bytes32([1] * 32), 10.0) is None
+
+
 @pytest.fixture(name="test_wallet")
 def test_wallet_fixture() -> WalletTool:
     return WalletTool(DEFAULT_CONSTANTS)
@@ -2594,9 +2636,16 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 # if we try to fill the mempool with more than 550, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
-@pytest.mark.parametrize("mempool_size", [1, 2, 50, 100, 300, 400, 550])
-@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5, 6])
-async def test_create_block_generator(mempool_size: int, seed: int, transactions_1000: list[SpendBundle]) -> None:
+@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 730])
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("old", [True, False])
+async def test_create_block_generator(
+    mempool_size: int, seed: int, old: bool, transactions_1000: list[SpendBundle]
+) -> None:
+    # the old way of creating bloks doesn't fit this many transactions, so we
+    # expect it to fail
+    expect_failure = mempool_size == 730 and old
+
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
     coins = TestCoins(all_coins, {})
@@ -2628,16 +2677,24 @@ async def test_create_block_generator(mempool_size: int, seed: int, transactions
     invariant_check_mempool(mempool_manager.mempool)
 
     assert mempool_manager.peak is not None
-    new_block_gen = await mempool_manager.create_block_generator(mempool_manager.peak.header_hash)
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+    new_block_gen = await create_block(mempool_manager.peak.header_hash, 10.0)
     assert new_block_gen is not None
 
     # now, make sure the generator we got is valid
 
-    assert len(expected_additions) == len(new_block_gen.additions)
-    assert expected_additions == set(new_block_gen.additions)
-    assert len(expected_removals) == len(new_block_gen.removals)
-    assert expected_removals == set(new_block_gen.removals)
-    assert expected_signature == new_block_gen.signature
+    if expect_failure:
+        assert len(expected_additions) != len(new_block_gen.additions)
+        assert expected_additions != set(new_block_gen.additions)
+        assert len(expected_removals) != len(new_block_gen.removals)
+        assert expected_removals != set(new_block_gen.removals)
+        assert expected_signature != new_block_gen.signature
+    else:
+        assert len(expected_additions) == len(new_block_gen.additions)
+        assert expected_additions == set(new_block_gen.additions)
+        assert len(expected_removals) == len(new_block_gen.removals)
+        assert expected_removals == set(new_block_gen.removals)
+        assert expected_signature == new_block_gen.signature
 
     err, conds = run_block_generator2(
         bytes(new_block_gen.program),
@@ -2652,8 +2709,12 @@ async def test_create_block_generator(mempool_size: int, seed: int, transactions
     assert err is None
     assert conds is not None
 
-    assert len(conds.spends) == len(expected_removals)
+    if expect_failure:
+        assert len(conds.spends) != len(expected_removals)
+    else:
+        assert len(conds.spends) == len(expected_removals)
     assert conds.cost < DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    assert new_block_gen.cost == conds.cost
 
     num_additions = 0
     for spend in conds.spends:
@@ -2663,3 +2724,68 @@ async def test_create_block_generator(mempool_size: int, seed: int, transactions
             num_additions += 1
 
     assert num_additions == len(new_block_gen.additions)
+
+
+# if we try to fill the mempool with more than 550, all spends won't
+# necessarily fit in the block, which the test assumes
+@pytest.mark.anyio
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])
+@pytest.mark.parametrize("old", [True, False])
+async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bundles: list[SpendBundle]) -> None:
+    all_coins = [s.coin for b in test_bundles for s in b.coin_spends]
+    coins = TestCoins(all_coins, {})
+
+    rng = random.Random(seed)
+
+    mempool_manager = await setup_mempool(coins)
+
+    included_bundles = rng.sample(test_bundles, len(test_bundles) // 5)
+    for sb in included_bundles:
+        pre_validation = await mempool_manager.pre_validate_spendbundle(sb)
+        bundle_add_info = await mempool_manager.add_spend_bundle(
+            sb, pre_validation, sb.name(), first_added_height=uint32(1)
+        )
+
+        # in the test bundles, we have some duplicate spends
+        # just ignore them for now
+        if bundle_add_info.status == MempoolInclusionStatus.FAILED:
+            assert bundle_add_info.error == Err.DOUBLE_SPEND
+            continue
+        assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
+        item = mempool_manager.get_mempool_item(sb.name())
+        assert item is not None
+
+    invariant_check_mempool(mempool_manager.mempool)
+
+    assert mempool_manager.peak is not None
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+    new_block_gen = await create_block(mempool_manager.peak.header_hash, 10.0)
+    assert new_block_gen is not None
+
+    # now, make sure the generator we got is valid
+
+    err, conds = run_block_generator2(
+        bytes(new_block_gen.program),
+        new_block_gen.generator_refs,
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        MEMPOOL_MODE,
+        new_block_gen.signature,
+        None,
+        DEFAULT_CONSTANTS,
+    )
+
+    assert err is None
+    assert conds is not None
+
+    assert conds.cost == new_block_gen.cost
+
+    removals: set[Coin] = set()
+    additions: set[Coin] = set()
+
+    for spend in conds.spends:
+        removals.add(Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount)))
+        for add in spend.create_coin:
+            additions.add(Coin(spend.coin_id, add[0], uint64(add[1])))
+
+    assert removals == set(new_block_gen.removals)
+    assert additions == set(new_block_gen.additions)

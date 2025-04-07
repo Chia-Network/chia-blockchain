@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs import G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack, final
@@ -43,7 +43,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
-from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -81,7 +80,6 @@ class PoolWallet:
     next_transaction_fee: uint64 = uint64(0)
     next_tx_config: TXConfig = DEFAULT_TX_CONFIG
     target_state: Optional[PoolState] = None
-    _owner_sk_and_index: Optional[tuple[PrivateKey, uint32]] = None
 
     """
     From the user's perspective, this is not a wallet at all, but a way to control
@@ -232,7 +230,7 @@ class PoolWallet:
     async def get_tip(self) -> tuple[uint32, CoinSpend]:
         return (await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id))[-1]
 
-    async def update_pool_config(self) -> None:
+    async def update_pool_config(self, action_scope: WalletActionScope) -> None:
         current_state: PoolWalletInfo = await self.get_current_state()
         pool_config_list: list[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
         pool_config_dict: dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
@@ -240,15 +238,7 @@ class PoolWallet:
         payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
 
         if len(payout_instructions) == 0:
-            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
-            if reuse_puzhash_config is None:
-                reuse_puzhash = False
-            else:
-                reuse_puzhash = reuse_puzhash_config.get(
-                    str(self.wallet_state_manager.root_pubkey.get_fingerprint()), False
-                )
-
-            payout_instructions = (await self.standard_wallet.get_puzzle_hash(new=not reuse_puzhash)).hex()
+            payout_instructions = (await action_scope.get_puzzle_hash(self.wallet_state_manager)).hex()
             self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
 
         new_config: PoolWalletConfig = PoolWalletConfig(
@@ -262,7 +252,9 @@ class PoolWallet:
         pool_config_dict[new_config.launcher_id] = new_config
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
-    async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
+    async def apply_state_transition(
+        self, new_state: CoinSpend, block_height: uint32, action_scope: WalletActionScope
+    ) -> bool:
         """
         Updates the Pool state (including DB) with new singleton spends.
         The DB must be committed after calling this method. All validation should be done here. Returns True iff
@@ -301,10 +293,10 @@ class PoolWallet:
                     self.next_tx_config = DEFAULT_TX_CONFIG
                 break
 
-        await self.update_pool_config()
+        await self.update_pool_config(action_scope)
         return True
 
-    async def rewind(self, block_height: int) -> bool:
+    async def rewind(self, block_height: int, action_scope: WalletActionScope) -> bool:
         """
         Rolls back all transactions after block_height, and if creation was after block_height, deletes the wallet.
         Returns True if the wallet should be removed.
@@ -320,7 +312,7 @@ class PoolWallet:
                 return True
             else:
                 if await self.get_current_state() != prev_state:
-                    await self.update_pool_config()
+                    await self.update_pool_config(action_scope)
                 return False
         except Exception as e:
             self.log.error(f"Exception rewinding: {e}")
@@ -330,6 +322,7 @@ class PoolWallet:
     async def create(
         cls,
         wallet_state_manager: Any,
+        action_scope: WalletActionScope,
         wallet: Wallet,
         launcher_coin_id: bytes32,
         block_spends: list[CoinSpend],
@@ -359,7 +352,7 @@ class PoolWallet:
                 launcher_spend = spend
         assert launcher_spend is not None
         await wallet_state_manager.pool_store.add_spend(pool_wallet.wallet_id, launcher_spend, block_height)
-        await pool_wallet.update_pool_config()
+        await pool_wallet.update_pool_config(action_scope)
 
         p2_puzzle_hash: bytes32 = (await pool_wallet.get_current_state()).p2_singleton_puzzle_hash
         await wallet_state_manager.add_new_wallet(pool_wallet)
@@ -411,9 +404,7 @@ class PoolWallet:
         standard_wallet = main_wallet
 
         if p2_singleton_delayed_ph is None:
-            p2_singleton_delayed_ph = await main_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
+            p2_singleton_delayed_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
         if p2_singleton_delay_time is None:
             p2_singleton_delay_time = uint64(604800)
 
@@ -444,18 +435,6 @@ class PoolWallet:
         )
 
         return p2_singleton_puzzle_hash, launcher_coin_id
-
-    async def _get_owner_key_cache(self) -> tuple[PrivateKey, uint32]:
-        if self._owner_sk_and_index is None:
-            self._owner_sk_and_index = find_owner_sk(
-                [self.wallet_state_manager.get_master_private_key()],
-                (await self.get_current_state()).current.owner_pubkey,
-            )
-        assert self._owner_sk_and_index is not None
-        return self._owner_sk_and_index
-
-    async def get_pool_wallet_index(self) -> uint32:
-        return (await self._get_owner_key_cache())[1]
 
     async def generate_fee_transaction(
         self,
@@ -711,7 +690,7 @@ class PoolWallet:
 
         # Note the implications of getting owner_puzzlehash from our local wallet right now
         # vs. having pre-arranged the target self-pooling address
-        owner_puzzlehash = await self.standard_wallet.get_new_puzzlehash()
+        owner_puzzlehash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         current_state: PoolWalletInfo = await self.get_current_state()
         total_fee = uint64(fee * 2)

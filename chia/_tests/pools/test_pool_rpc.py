@@ -253,7 +253,8 @@ async def create_new_plotnft(
     wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
-    our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_state_manager.new_action_scope(wallet_test_framework.tx_config, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
 
     await wallet_rpc.create_new_pool_wallet(
         target_puzzlehash=our_ph,
@@ -283,7 +284,8 @@ class TestPoolWalletRpc:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
@@ -301,7 +303,7 @@ class TestPoolWalletRpc:
         assert status.target is None
         assert status.current.owner_pubkey == G1Element.from_bytes(
             bytes.fromhex(
-                "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
             )
         )
         assert status.current.pool_url == ""
@@ -314,7 +316,7 @@ class TestPoolWalletRpc:
         pool_config = pool_list[0]
         assert (
             pool_config["owner_public_key"]
-            == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+            == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
         launcher_id = None
@@ -335,7 +337,8 @@ class TestPoolWalletRpc:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -354,7 +357,7 @@ class TestPoolWalletRpc:
         assert status.target is None
         assert status.current.owner_pubkey == G1Element.from_bytes(
             bytes.fromhex(
-                "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
             )
         )
         assert status.current.pool_url == "http://pool.example.com"
@@ -367,7 +370,7 @@ class TestPoolWalletRpc:
         pool_config = pool_list[0]
         assert (
             pool_config["owner_public_key"]
-            == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+            == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
         launcher_id = None
@@ -390,8 +393,9 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph_1 = await wallet.get_new_puzzlehash()
-        our_ph_2 = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph_1 = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+            our_ph_2 = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -476,11 +480,9 @@ class TestPoolWalletRpc:
                 pool_list = full_config["pool"]["pool_list"]
                 assert len(pool_list) == i + 3
                 if i == 0:
-                    # Ensures that the CAT creation does not cause pool wallet IDs to increment
                     for some_wallet in wallet_node.wallet_state_manager.wallets.values():
                         if some_wallet.type() == WalletType.POOLING_WALLET:
                             status: PoolWalletInfo = (await client.pw_status(some_wallet.id()))[0]
-                            assert (await some_wallet.get_pool_wallet_index()) < 5
                             auth_sk = find_authentication_sk(
                                 [some_wallet.wallet_state_manager.get_master_private_key()], status.current.owner_pubkey
                             )
@@ -500,7 +502,8 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -590,7 +593,8 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -660,7 +664,8 @@ class TestPoolWalletRpc:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        our_ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(

@@ -17,6 +17,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.aliases import WalletService
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 @pytest.fixture(scope="function")
@@ -37,7 +38,8 @@ async def setup_node_and_rpc(
     )
     full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
 
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     for i in range(4):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
