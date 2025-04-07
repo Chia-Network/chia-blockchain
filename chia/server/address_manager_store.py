@@ -34,7 +34,7 @@ class PeerDataSerialization(Streamable):
     """
 
     metadata: list[tuple[str, str]]
-    nodes: list[tuple[uint64, bytes]]
+    nodes: list[bytes]
     new_table: list[tuple[uint64, uint64]]
 
 
@@ -128,32 +128,25 @@ class AddressManagerStore:
         Serialize the address manager's peer data to a file.
         """
         metadata: list[tuple[str, str]] = []
-        nodes: list[tuple[uint64, bytes]] = []
+        nodes: list[bytes] = []
         new_table_entries: list[tuple[int, int]] = []
         unique_ids: dict[int, int] = {}
         count_ids: int = 0
-        trieds: list[tuple[int, ExtendedPeerInfo]] = []
+        trieds: list[bytes] = []
         log.info("Serializing peer data")
         metadata.append(("key", str(address_manager.key)))
 
-        tried_ids = 0
         for node_id, info in address_manager.map_info.items():
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
-                nodes.append((uint64(count_ids), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info))))
+                nodes.append(bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info)))
                 count_ids += 1
             if info.is_tried:
-                assert tried_ids != address_manager.tried_count
-                trieds.append((count_ids, info))
-                tried_ids += 1
+                trieds.append(bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info)))
         metadata.append(("new_count", str(count_ids)))
 
-        for node_id, info in trieds:
-            assert tried_ids + count_ids != address_manager.tried_count
-            nodes.append(
-                (uint64(count_ids + node_id), bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info)))
-            )
+        nodes.extend(trieds)
 
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
@@ -185,10 +178,11 @@ class AddressManagerStore:
 
         if peer_data is not None:
             metadata: dict[str, str] = {key: value for key, value in peer_data.metadata}
-            nodes: list[tuple[int, ExtendedPeerInfo]] = [
-                (node_id, ExtendedPeerInfoSerialization.to_extended_peer_info(info_bytes))
-                for node_id, info_bytes in peer_data.nodes
-            ]
+            nodes = []
+            i = 0
+            for node_bytes in peer_data.nodes:
+                nodes.append((i, ExtendedPeerInfoSerialization.to_extended_peer_info(node_bytes)))
+                i += 1
             new_table_entries: list[tuple[int, int]] = [(node_id, bucket) for node_id, bucket in peer_data.new_table]
             log.debug(f"Deserializing peer data took {timer() - start_time} seconds")
 
