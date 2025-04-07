@@ -118,6 +118,11 @@ class SyncTimeCommand:
                 clock = time.monotonic
                 start = clock()
 
+                last_generation = -1
+                clock = time.monotonic
+                last_time = clock()
+                all_times: dict[int, float] = {}
+
                 task = create_referenced_task(
                     insert_from_delta_file(
                         data_store=data_store,
@@ -133,7 +138,6 @@ class SyncTimeCommand:
                         downloader=None,
                     )
                 )
-                last_generation = -1
                 try:
                     while not task.done():
                         try:
@@ -143,8 +147,21 @@ class SyncTimeCommand:
                                 raise
                         else:
                             if generation != last_generation:
+                                delta_generation = generation - last_generation
+                                now = clock()
+                                delta_time = now - last_time
+                                per_generation = delta_time / delta_generation
+
+                                print_date(
+                                    f"synced: {last_generation} -> {generation} at {per_generation:.1f}s / gen",
+                                    flush=True,
+                                )
+
+                                for i in range(generation, last_generation, -1):
+                                    all_times[i] = per_generation
+
                                 last_generation = generation
-                                print_date(f"synced to: {generation}")
+                                last_time = now
                         await asyncio.sleep(1)
                 except asyncio.CancelledError:
                     with anyio.CancelScope(shield=True):
@@ -161,6 +178,8 @@ class SyncTimeCommand:
                 print(f"    store id: {self.store_id}")
                 print(f"     reached: {self.generation_limit}")
                 print(f"    duration: {days}d {hours}h {minutes}m {seconds}s")
+                generation, duration = max(all_times.items(), key=lambda item: item[1])
+                print(f"         max: {generation} -> {duration:.1f}s")
         finally:
             with anyio.CancelScope(shield=True):
                 await self.run_chia("stop", "-d", "all", check=False)
