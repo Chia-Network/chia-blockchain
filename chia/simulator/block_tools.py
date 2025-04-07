@@ -218,9 +218,6 @@ def make_spend_bundle(coins: list[Coin], wallet: WalletTool, rng: Random) -> tup
         bundle = wallet.generate_signed_transaction(uint64(c.amount // 2), receiver, c)
         new_coins.extend(bundle.additions())
         spend_bundles.append(bundle)
-        coins.remove(c)
-
-    coins.extend(new_coins)
 
     return SpendBundle.aggregate(spend_bundles), new_coins
 
@@ -654,6 +651,9 @@ class BlockTools:
             time_per_block = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
 
         available_coins: list[Coin] = []
+        # award coins aren't available to spend until the transaction block
+        # after the one they were created by, so we "stage" them here to move
+        # them into available_coins at the next transaction block
         pending_rewards: list[Coin] = []
         wallet: Optional[WalletTool] = None
         rng: Optional[Random] = None
@@ -819,6 +819,11 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
+                        # we don't know if the new block will be a transaction
+                        # block or not, so even though we prepare a block
+                        # generator, we can't update our state (like,
+                        # available_coins) until it's confirmed the block
+                        # generator made it into the block.
                         if dummy_block_references and len(tx_block_heights) > 4:
                             dummy_refs = [
                                 tx_block_heights[1],
@@ -929,6 +934,9 @@ class BlockTools:
                             if full_block.is_transaction_block():
                                 available_coins.extend(pending_rewards)
                                 pending_rewards = []
+                                for rem in removals:
+                                    available_coins.remove(rem)
+                                available_coins.extend(additions)
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
@@ -1151,6 +1159,11 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
+                        # we don't know if the new block will be a transaction
+                        # block or not, so even though we prepare a block
+                        # generator, we can't update our state (like,
+                        # available_coins) until it's confirmed the block
+                        # generator made it into the block.
                         if dummy_block_references and len(tx_block_heights) > 4:
                             dummy_refs = [
                                 tx_block_heights[1],
@@ -1264,6 +1277,9 @@ class BlockTools:
                             if full_block.is_transaction_block():
                                 available_coins.extend(pending_rewards)
                                 pending_rewards = []
+                                for rem in removals:
+                                    available_coins.remove(rem)
+                                available_coins.extend(additions)
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
