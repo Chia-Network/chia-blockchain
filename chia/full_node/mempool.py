@@ -607,10 +607,7 @@ class Mempool:
                     # might fit, but we also want to avoid spending too much
                     # time on potentially expensive ones, hence this shortcut.
                     if any(
-                        map(
-                            lambda spend_data: (spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward),
-                            item.bundle_coin_spends.values(),
-                        )
+                        sd.eligible_for_dedup or sd.eligible_for_fast_forward for sd in item.bundle_coin_spends.values()
                     ):
                         log.info("Skipping transaction with dedup or FF spends {item.name}")
                         continue
