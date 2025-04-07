@@ -73,7 +73,6 @@ async def makePeerDataSerialization(
     """
     Create a PeerDataSerialization, adapting the provided collections
     """
-    transformed_new_table: list[tuple[uint64, uint64]] = []
 
     serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, nodes, new_table))
     return serialized_bytes
