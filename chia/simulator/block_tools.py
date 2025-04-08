@@ -791,7 +791,6 @@ class BlockTools:
             curr = blocks[curr.prev_hash]
         assert curr.timestamp is not None
         last_timestamp = float(curr.timestamp)
-        start_height = curr.height
 
         curr = latest_block
         blocks_added_this_sub_slot = 1
@@ -922,7 +921,6 @@ class BlockTools:
                             farmer_reward_puzzle_hash,
                             pool_target,
                             last_timestamp,
-                            start_height,
                             time_per_block,
                             new_gen,
                             height_to_hash,
@@ -1215,7 +1213,6 @@ class BlockTools:
                             farmer_reward_puzzle_hash,
                             pool_target,
                             last_timestamp,
-                            start_height,
                             time_per_block,
                             new_gen,
                             height_to_hash,
@@ -1846,7 +1843,6 @@ def get_full_block_and_block_record(
     farmer_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
     last_timestamp: float,
-    start_height: uint32,
     time_per_block: float,
     new_gen: Optional[NewBlockGenerator],
     height_to_hash: dict[uint32, bytes32],
