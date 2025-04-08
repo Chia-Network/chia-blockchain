@@ -22,10 +22,14 @@ class LRUCache(Generic[K, V]):
             return self.cache[key]
 
     def put(self, key: K, value: V) -> None:
-        self.cache[key] = value
-        self.cache.move_to_end(key)
-        if len(self.cache) > self.capacity:
-            self.cache.popitem(last=False)
+        if self.capacity > 0:
+            self.cache[key] = value
+            self.cache.move_to_end(key)
+            if len(self.cache) > self.capacity:
+                self.cache.popitem(last=False)
 
     def remove(self, key: K) -> None:
         self.cache.pop(key)
+
+    def get_capacity(self) -> int:
+        return self.capacity

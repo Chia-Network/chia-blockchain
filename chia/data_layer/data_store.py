@@ -70,7 +70,11 @@ class DataStore:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
+        cls,
+        database: Union[str, Path],
+        uri: bool = False,
+        sql_log_path: Optional[Path] = None,
+        cache_capacity: int = 1,
     ) -> AsyncIterator[DataStore]:
         async with DBWrapper2.managed(
             database=database,
@@ -85,7 +89,7 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=128)
+            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
             self = cls(db_wrapper=db_wrapper, recent_merkle_blobs=recent_merkle_blobs)
 
             async with db_wrapper.writer() as writer:
@@ -436,6 +440,8 @@ class DataStore:
     ) -> MerkleBlob:
         if root_hash is None:
             return MerkleBlob(blob=b"")
+        if self.recent_merkle_blobs.get_capacity() == 0:
+            update_cache = False
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
@@ -485,7 +491,7 @@ class DataStore:
                     """,
                     (root_hash, zstd.compress(merkle_blob.blob), store_id),
                 )
-            if update_cache:
+            if update_cache and self.recent_merkle_blobs.get_capacity() > 0:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
