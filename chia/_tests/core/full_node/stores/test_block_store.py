@@ -91,7 +91,14 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert GeneratorBlockInfo(
                 block.foliage.prev_block_hash, block.transactions_generator, block.transactions_generator_ref_list
             ) == await store.get_block_info(block.header_hash)
-            assert maybe_serialize(block.transactions_generator) == await store.get_generator(block.header_hash)
+
+            if block.transactions_generator is not None:
+                assert await store.get_generators([block.header_hash]) == {
+                    block.height: bytes(block.transactions_generator)
+                }
+            else:
+                with pytest.raises(ValueError, match="GENERATOR_REF_HAS_NO_GENERATOR"):
+                    await store.get_generators([block.header_hash])
             assert block_record == (await store.get_block_record(block_record_hh))
             await store.set_in_chain([(block_record.header_hash,)])
             await store.set_peak(block_record.header_hash)
@@ -441,10 +448,18 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
 
         assert await store.get_generators_at(set()) == {}
 
-        assert await store.get_generator(blocks[2].header_hash) == maybe_serialize(new_blocks[2].transactions_generator)
-        assert await store.get_generator(blocks[4].header_hash) == maybe_serialize(new_blocks[4].transactions_generator)
-        assert await store.get_generator(blocks[6].header_hash) == maybe_serialize(new_blocks[6].transactions_generator)
-        assert await store.get_generator(blocks[7].header_hash) == maybe_serialize(new_blocks[7].transactions_generator)
+        assert (await store.get_generators([blocks[2].header_hash])).get(uint32(2)) == maybe_serialize(
+            new_blocks[2].transactions_generator
+        )
+        assert (await store.get_generators([blocks[4].header_hash])).get(uint32(4)) == maybe_serialize(
+            new_blocks[4].transactions_generator
+        )
+        assert (await store.get_generators([blocks[6].header_hash])).get(uint32(6)) == maybe_serialize(
+            new_blocks[6].transactions_generator
+        )
+        assert (await store.get_generators([blocks[7].header_hash])).get(uint32(7)) == maybe_serialize(
+            new_blocks[7].transactions_generator
+        )
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")

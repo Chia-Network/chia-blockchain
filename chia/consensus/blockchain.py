@@ -1071,21 +1071,22 @@ class Blockchain:
                 self.constants,
             )
 
-            remaining_refs = set()
+            lookup_by_height = set()
+            lookup_by_hash = set()
             for ref_height in generator_refs:
                 if ref_height in reorg_chain:
-                    gen = await self.block_store.get_generator(reorg_chain[ref_height])
-                    if gen is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    generators[ref_height] = gen
+                    lookup_by_hash.add(reorg_chain[ref_height])
                 else:
-                    remaining_refs.add(ref_height)
-        else:
-            remaining_refs = generator_refs
+                    lookup_by_height.add(ref_height)
 
-        if len(remaining_refs) > 0:
+            if len(lookup_by_hash) > 0:
+                generators.update(await self.block_store.get_generators(lookup_by_hash))
+        else:
+            lookup_by_height = generator_refs
+
+        if len(lookup_by_height) > 0:
             # any remaining references fall in the main chain, and can be looked up
             # in a single query
-            generators.update(await self.block_store.get_generators_at(remaining_refs))
+            generators.update(await self.block_store.get_generators_at(lookup_by_height))
 
         return generators
