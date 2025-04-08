@@ -23,6 +23,7 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from sortedcontainers import SortedDict
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
@@ -78,26 +79,30 @@ class MempoolRemoveReason(Enum):
 
 
 class MempoolMap:
-    _items: list[Optional[MempoolItem]]
+    _items: list[Optional[tuple[MempoolItem, int]]]
     _unused_items: list[int]
     _transaction_ids: dict[bytes32, int]
-    _fee_per_cost: dict[tuple[float, int], None]
-    _assert_before_seconds: dict[tuple[uint64, int], None]
-    _assert_before_height: dict[tuple[uint32, int], None]
+    _low_fee_per_cost: SortedDict[tuple[float, int], int]
+    _high_fee_per_cost: SortedDict[tuple[float, int], int]
+    _assert_before_seconds: SortedDict[tuple[uint64, int], int]
+    _assert_before_height: SortedDict[tuple[uint32, int], int]
     _spent_coin_ids: dict[bytes32, dict[int, None]]
     _total_fee: int
     _total_cost: int
+    _next_seq: int
 
     def __init__(self) -> None:
         self._items = []
         self._unused_items = []
         self._transaction_ids = {}
-        self._fee_per_cost = {}
-        self._assert_before_seconds = {}
-        self._assert_before_height = {}
+        self._low_fee_per_cost = SortedDict()
+        self._high_fee_per_cost = SortedDict()
+        self._assert_before_seconds = SortedDict()
+        self._assert_before_height = SortedDict()
         self._spent_coin_ids = {}
         self._total_fee = 0
         self._total_cost = 0
+        self._next_seq = 0
 
     def __len__(self) -> int:
         return len(self._items) - len(self._unused_items)
@@ -113,14 +118,17 @@ class MempoolMap:
             return False
 
         index = self._free_index()
+        seq = self._next_seq
+        self._next_seq += 1
 
-        self._items[index] = item
+        self._items[index] = (item, seq)
         self._transaction_ids[item.spend_bundle_name] = index
-        self._fee_per_cost[item.fee_per_cost, index] = None
+        self._low_fee_per_cost[item.fee_per_cost, seq] = index
+        self._high_fee_per_cost[-item.fee_per_cost, seq] = index
         if item.assert_before_seconds is not None:
-            self._assert_before_seconds[item.assert_before_seconds, index] = None
+            self._assert_before_seconds[item.assert_before_seconds, seq] = index
         if item.assert_before_height is not None:
-            self._assert_before_height[item.assert_before_height, index] = None
+            self._assert_before_height[item.assert_before_height, seq] = index
         self._total_fee += item.fee
         self._total_cost += item.cost
 
@@ -134,16 +142,19 @@ class MempoolMap:
 
     def remove(self, transaction_id: bytes32) -> MempoolItem:
         index = self._transaction_ids[transaction_id]
-        item = self._items[index]
-        assert item is not None
+        item_with_seq = self._items[index]
+        assert item_with_seq is not None
+
+        item, seq = item_with_seq
 
         self._items[index] = None
         self._transaction_ids.pop(transaction_id)
-        self._fee_per_cost.pop((item.fee_per_cost, index))
+        self._low_fee_per_cost.pop((item.fee_per_cost, seq))
+        self._high_fee_per_cost.pop((-item.fee_per_cost, seq))
         if item.assert_before_seconds is not None:
-            self._assert_before_seconds.pop((item.assert_before_seconds, index))
+            self._assert_before_seconds.pop((item.assert_before_seconds, seq))
         if item.assert_before_height is not None:
-            self._assert_before_height.pop((item.assert_before_height, index))
+            self._assert_before_height.pop((item.assert_before_height, seq))
         self._unused_items.append(index)
         self._total_fee -= item.fee
         self._total_cost -= item.cost
@@ -168,7 +179,12 @@ class MempoolMap:
         if index is None:
             return None
 
-        return self._items[index]
+        item = self._items[index]
+
+        if item is None:
+            return None
+
+        return item[0]
 
     def update_coin_index(self, transaction_id: bytes32, coin_id: bytes32, new_coin_id: bytes32) -> None:
         index = self._transaction_ids.get(transaction_id)
@@ -191,41 +207,41 @@ class MempoolMap:
     def items(self) -> Iterator[MempoolItem]:
         for item in self._items:
             if item is not None:
-                yield item
+                yield item[0]
 
     def low_fee_items(self) -> Iterator[MempoolItem]:
-        for _, index in self._fee_per_cost.keys():
+        for _, index in self._low_fee_per_cost.items():
             item = self._items[index]
 
             if item is not None:
-                yield item
+                yield item[0]
 
     def high_fee_items(self) -> Iterator[MempoolItem]:
-        for _, index in reversed(self._fee_per_cost.keys()):
+        for _, index in self._high_fee_per_cost.items():
             item = self._items[index]
 
             if item is not None:
-                yield item
+                yield item[0]
 
     def expiring_soon_seconds_items(self, max_seconds: uint64) -> Iterator[MempoolItem]:
-        for seconds, index in self._assert_before_seconds.keys():
+        for (seconds, _), index in self._assert_before_seconds.items():
             if seconds > max_seconds:
                 continue
 
             item = self._items[index]
 
             if item is not None:
-                yield item
+                yield item[0]
 
     def expiring_soon_height_items(self, max_height: uint32) -> Iterator[MempoolItem]:
-        for height, index in self._assert_before_height.keys():
+        for (height, _), index in self._assert_before_height.items():
             if height > max_height:
                 continue
 
             item = self._items[index]
 
             if item is not None:
-                yield item
+                yield item[0]
 
     def items_by_coin_ids(self, coin_ids: list[bytes32]) -> Iterator[MempoolItem]:
         all_indices: dict[int, None] = dict()
@@ -240,7 +256,7 @@ class MempoolMap:
             item = self._items[index]
 
             if item is not None:
-                yield item
+                yield item[0]
 
     def all_coin_ids(self) -> Iterator[bytes32]:
         yield from self._spent_coin_ids.keys()
@@ -452,14 +468,14 @@ class Mempool:
 
             to_remove: list[bytes32] = []
 
-            cumulative_cost = 0
+            cumulative_cost = int(sum(item.cost for item in expiring_soon))
 
             for expiring_item in expiring_soon:
-                cumulative_cost += expiring_item.cost
-
                 # there's space for us, stop pruning
                 if cumulative_cost + item.cost <= self.mempool_info.max_block_clvm_cost:
                     break
+
+                cumulative_cost -= expiring_item.cost
 
                 # we can't evict any more transactions, abort (and don't
                 # evict what we put aside in "to_remove" list)
@@ -476,13 +492,14 @@ class Mempool:
             # pick the items with the lowest fee per cost to remove
             to_remove = []
 
-            cumulative_cost = 0
+            cumulative_cost = self._map.total_cost()
 
             for low_fee in self._map.low_fee_items():
                 if cumulative_cost + item.cost <= self.mempool_info.max_size_in_cost:
                     break
 
-                cumulative_cost += low_fee.cost
+                cumulative_cost -= low_fee.cost
+
                 to_remove.append(low_fee.spend_bundle_name)
 
             removals.append(self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL))
