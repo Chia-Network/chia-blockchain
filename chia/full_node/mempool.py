@@ -464,7 +464,7 @@ class Mempool:
                     self._map.expiring_soon_seconds_items(uint64(time_cutoff - 1)),
                 )
             )
-            expiring_soon.sort(key=lambda tx: -tx.fee_per_cost)
+            expiring_soon.sort(key=lambda tx: tx.fee_per_cost)
 
             to_remove: list[bytes32] = []
 
