@@ -45,6 +45,7 @@ def populate_address_manager(num_new: int = 500, num_tried: int = 200) -> Addres
             src_peer=None,  # will default to itself inside constructor
         )
 
+        am.tried_count += 1  # why do we even have `assert tried_ids != tried_count`?
         node_id = am.id_count
         am.id_count += 1
         epi.random_pos = len(am.random_pos)
