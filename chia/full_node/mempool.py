@@ -132,16 +132,10 @@ class MempoolMap:
 
         return True
 
-    def remove(self, transaction_id: bytes32) -> Optional[MempoolItem]:
-        index = self._transaction_ids.get(transaction_id)
-
-        if index is None:
-            return None
-
+    def remove(self, transaction_id: bytes32) -> MempoolItem:
+        index = self._transaction_ids[transaction_id]
         item = self._items[index]
-
-        if item is None:
-            return None
+        assert item is not None
 
         self._items[index] = None
         self._transaction_ids.pop(transaction_id)
@@ -164,6 +158,9 @@ class MempoolMap:
                 transaction_ids.pop(index)
 
         return item
+
+    def has(self, transaction_id: bytes32) -> bool:
+        return transaction_id in self._transaction_ids
 
     def get(self, transaction_id: bytes32) -> Optional[MempoolItem]:
         index = self._transaction_ids.get(transaction_id)
