@@ -160,11 +160,7 @@ class AddressManagerStore:
 
         if peer_data is not None:
             metadata: dict[str, str] = {key: value for key, value in peer_data.metadata}
-            nodes = []
-            i = 0
-            for node_bytes in peer_data.nodes:
-                nodes.append((i, ExtendedPeerInfoSerialization.to_extended_peer_info(node_bytes)))
-                i += 1
+
             new_table_entries: list[tuple[int, int]] = [(node_id, bucket) for node_id, bucket in peer_data.new_table]
             log.debug(f"Deserializing peer data took {timer() - start_time} seconds")
 
@@ -173,14 +169,17 @@ class AddressManagerStore:
             # address_manager.tried_count = int(metadata["tried_count"])
             address_manager.tried_count = 0
 
-            for n, info in nodes[: address_manager.new_count]:
+            n = 0
+            for node_bytes in peer_data.nodes[: address_manager.new_count]:
+                info = ExtendedPeerInfoSerialization.to_extended_peer_info(node_bytes)
                 address_manager.map_addr[info.peer_info.host] = n
                 address_manager.map_info[n] = info
                 info.random_pos = len(address_manager.random_pos)
                 address_manager.random_pos.append(n)
+                n += 1
             address_manager.id_count = address_manager.new_count
-            # lost_count = 0
-            for node_id, info in nodes[address_manager.new_count :]:
+            for node_bytes in peer_data.nodes[address_manager.new_count :]:
+                info = ExtendedPeerInfoSerialization.to_extended_peer_info(node_bytes)
                 tried_bucket = info.get_tried_bucket(address_manager.key)
                 tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
                 if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
