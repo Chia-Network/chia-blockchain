@@ -11,10 +11,7 @@ from pathlib import Path
 from chia_rs.sized_ints import uint16, uint64
 
 from chia.server.address_manager import (
-    BUCKET_SIZE,
-    NEW_BUCKET_COUNT,
     NEW_BUCKETS_PER_ADDRESS,
-    TRIED_BUCKET_COUNT,
     AddressManager,
     ExtendedPeerInfo,
 )
