@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
-from chia_rs import MEMPOOL_MODE, run_chia_program, tree_hash
+from chia_rs import ENABLE_KECCAK, MEMPOOL_MODE, run_chia_program, tree_hash
 from chia_rs.sized_bytes import bytes32
 from clvm.casts import int_from_bytes
 from clvm.CLVMObject import CLVMStorage
@@ -17,7 +17,7 @@ from chia.util.hash import std_hash
 
 INFINITE_COST = 11000000000
 
-DEFAULT_FLAGS = MEMPOOL_MODE
+DEFAULT_FLAGS = MEMPOOL_MODE | ENABLE_KECCAK
 
 T_CLVMStorage = TypeVar("T_CLVMStorage", bound=CLVMStorage)
 T_Program = TypeVar("T_Program", bound="Program")
