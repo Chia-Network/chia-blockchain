@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
 from collections.abc import Awaitable, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from itertools import chain
 from time import monotonic
 from typing import Callable, Optional
 
@@ -32,11 +32,8 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.eligible_coin_spends import EligibleCoinSpends, SkipDedup, UnspentLineageInfo
 from chia.types.generator_types import NewBlockGenerator
-from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
-from chia.util.batches import to_batches
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err
 
 log = logging.getLogger(__name__)
@@ -63,7 +60,7 @@ MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
 @dataclass
 class MempoolRemoveInfo:
-    items: list[InternalMempoolItem]
+    items: list[MempoolItem]
     reason: MempoolRemoveReason
 
 
@@ -80,107 +77,213 @@ class MempoolRemoveReason(Enum):
     EXPIRED = 4
 
 
+class MempoolMap:
+    _items: list[Optional[MempoolItem]]
+    _unused_items: list[int]
+    _transaction_ids: dict[bytes32, int]
+    _fee_per_cost: dict[tuple[float, int], None]
+    _assert_before_seconds: dict[tuple[uint64, int], None]
+    _assert_before_height: dict[tuple[uint32, int], None]
+    _spent_coin_ids: dict[bytes32, dict[int, None]]
+    _total_fee: int
+    _total_cost: int
+
+    def __init__(self) -> None:
+        self._items = []
+        self._unused_items = []
+        self._transaction_ids = {}
+        self._fee_per_cost = {}
+        self._assert_before_seconds = {}
+        self._assert_before_height = {}
+        self._spent_coin_ids = {}
+        self._total_fee = 0
+        self._total_cost = 0
+
+    def __len__(self) -> int:
+        return len(self._items) - len(self._unused_items)
+
+    def total_fee(self) -> int:
+        return self._total_fee
+
+    def total_cost(self) -> int:
+        return self._total_cost
+
+    def add(self, item: MempoolItem) -> bool:
+        if item.spend_bundle_name in self._transaction_ids:
+            return False
+
+        index = self._free_index()
+
+        self._items[index] = item
+        self._transaction_ids[item.spend_bundle_name] = index
+        self._fee_per_cost[item.fee_per_cost, index] = None
+        if item.assert_before_seconds is not None:
+            self._assert_before_seconds[item.assert_before_seconds, index] = None
+        if item.assert_before_height is not None:
+            self._assert_before_height[item.assert_before_height, index] = None
+        self._total_fee += item.fee
+        self._total_cost += item.cost
+
+        for coin_id, bcs in item.bundle_coin_spends.items():
+            if bcs.latest_singleton_coin is not None:
+                coin_id = bcs.latest_singleton_coin
+
+            self._spent_coin_ids.setdefault(coin_id, dict())[index] = None
+
+        return True
+
+    def remove(self, transaction_id: bytes32) -> Optional[MempoolItem]:
+        index = self._transaction_ids.get(transaction_id)
+
+        if index is None:
+            return None
+
+        item = self._items[index]
+
+        if item is None:
+            return None
+
+        self._items[index] = None
+        self._transaction_ids.pop(transaction_id)
+        self._fee_per_cost.pop((item.fee_per_cost, index))
+        if item.assert_before_seconds is not None:
+            self._assert_before_seconds.pop((item.assert_before_seconds, index))
+        if item.assert_before_height is not None:
+            self._assert_before_height.pop((item.assert_before_height, index))
+        self._unused_items.append(index)
+        self._total_fee -= item.fee
+        self._total_cost -= item.cost
+
+        for coin_id, bcs in item.bundle_coin_spends.items():
+            if bcs.latest_singleton_coin is not None:
+                coin_id = bcs.latest_singleton_coin
+
+            transaction_ids = self._spent_coin_ids.get(coin_id)
+
+            if transaction_ids is not None:
+                transaction_ids.pop(index)
+
+        return item
+
+    def get(self, transaction_id: bytes32) -> Optional[MempoolItem]:
+        index = self._transaction_ids.get(transaction_id)
+
+        if index is None:
+            return None
+
+        return self._items[index]
+
+    def update_coin_index(self, transaction_id: bytes32, coin_id: bytes32, new_coin_id: bytes32) -> None:
+        index = self._transaction_ids.get(transaction_id)
+
+        if index is None:
+            return
+
+        indices = self._spent_coin_ids.get(coin_id)
+
+        if indices is None:
+            return
+
+        if index not in indices:
+            return
+
+        indices.pop(index)
+
+        self._spent_coin_ids.setdefault(new_coin_id, dict())[index] = None
+
+    def items(self) -> Iterator[MempoolItem]:
+        for item in self._items:
+            if item is not None:
+                yield item
+
+    def low_fee_items(self) -> Iterator[MempoolItem]:
+        for _, index in self._fee_per_cost.keys():
+            item = self._items[index]
+
+            if item is not None:
+                yield item
+
+    def high_fee_items(self) -> Iterator[MempoolItem]:
+        for _, index in reversed(self._fee_per_cost.keys()):
+            item = self._items[index]
+
+            if item is not None:
+                yield item
+
+    def expiring_soon_seconds_items(self, max_seconds: uint64) -> Iterator[MempoolItem]:
+        for seconds, index in self._assert_before_seconds.keys():
+            if seconds > max_seconds:
+                continue
+
+            item = self._items[index]
+
+            if item is not None:
+                yield item
+
+    def expiring_soon_height_items(self, max_height: uint32) -> Iterator[MempoolItem]:
+        for height, index in self._assert_before_height.keys():
+            if height > max_height:
+                continue
+
+            item = self._items[index]
+
+            if item is not None:
+                yield item
+
+    def items_by_coin_ids(self, coin_ids: list[bytes32]) -> Iterator[MempoolItem]:
+        all_indices: dict[int, None] = dict()
+
+        for coin_id in coin_ids:
+            indices = self._spent_coin_ids.get(coin_id)
+
+            if indices is not None:
+                all_indices.update(indices)
+
+        for index in all_indices:
+            item = self._items[index]
+
+            if item is not None:
+                yield item
+
+    def all_coin_ids(self) -> Iterator[bytes32]:
+        yield from self._spent_coin_ids.keys()
+
+    def _free_index(self) -> int:
+        if len(self._unused_items) > 0:
+            return self._unused_items.pop()
+
+        self._items.append(None)
+
+        return len(self._items) - 1
+
+
 class Mempool:
-    _db_conn: sqlite3.Connection
-    # it's expensive to serialize and deserialize G2Element, so we keep those in
-    # this separate dictionary
-    _items: dict[bytes32, InternalMempoolItem]
+    _map: MempoolMap
 
     # the most recent block height and timestamp that we know of
     _block_height: uint32
     _timestamp: uint64
 
-    _total_fee: int
-    _total_cost: int
-
     def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
-        self._db_conn = sqlite3.connect(":memory:")
-        self._items = {}
+        self._map = MempoolMap()
+
         self._block_height = uint32(0)
         self._timestamp = uint64(0)
-        self._total_fee = 0
-        self._total_cost = 0
-
-        with self._db_conn:
-            # name means SpendBundle hash
-            # assert_height may be NIL
-            # the seq field indicates the order of items being added to the
-            # mempool. It's used as a tie-breaker for items with the same fee
-            # rate
-            # TODO: In the future, for the "fee_per_cost" field, opt for
-            # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
-            self._db_conn.execute(
-                """CREATE TABLE tx(
-                name BLOB,
-                cost INT NOT NULL,
-                fee INT NOT NULL,
-                assert_height INT,
-                assert_before_height INT,
-                assert_before_seconds INT,
-                fee_per_cost REAL,
-                seq INTEGER PRIMARY KEY AUTOINCREMENT)
-                """
-            )
-            self._db_conn.execute("CREATE INDEX name_idx ON tx(name)")
-            self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
-            self._db_conn.execute(
-                "CREATE INDEX assert_before ON tx(assert_before_height, assert_before_seconds) "
-                "WHERE assert_before_height IS NOT NULL OR assert_before_seconds IS NOT NULL"
-            )
-
-            # This table maps coin IDs to spend bundles hashes
-            self._db_conn.execute(
-                """CREATE TABLE spends(
-                coin_id BLOB NOT NULL,
-                tx BLOB NOT NULL,
-                UNIQUE(coin_id, tx))
-                """
-            )
-            self._db_conn.execute("CREATE INDEX spend_by_coin ON spends(coin_id)")
-            self._db_conn.execute("CREATE INDEX spend_by_bundle ON spends(tx)")
 
         self.mempool_info: MempoolInfo = mempool_info
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
 
-    def __del__(self) -> None:
-        self._db_conn.close()
-
-    def _row_to_item(self, row: sqlite3.Row) -> MempoolItem:
-        name = bytes32(row[0])
-        fee = int(row[2])
-        assert_height = row[3]
-        assert_before_height = row[4]
-        assert_before_seconds = row[5]
-        item = self._items[name]
-
-        return MempoolItem(
-            item.spend_bundle,
-            uint64(fee),
-            item.conds,
-            name,
-            uint32(item.height_added_to_mempool),
-            assert_height,
-            assert_before_height,
-            assert_before_seconds,
-            bundle_coin_spends=item.bundle_coin_spends,
-        )
-
     def total_mempool_fees(self) -> int:
-        return self._total_fee
+        return self._map.total_fee()
 
     def total_mempool_cost(self) -> CLVMCost:
-        return CLVMCost(uint64(self._total_cost))
+        return CLVMCost(uint64(self._map.total_cost()))
 
     def all_items(self) -> Iterator[MempoolItem]:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT * FROM tx")
-            for row in cursor:
-                yield self._row_to_item(row)
+        return self._map.items()
 
     def all_item_ids(self) -> list[bytes32]:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT name FROM tx")
-            return [bytes32(row[0]) for row in cursor]
+        return [item.spend_bundle_name for item in self._map.items()]
 
     def items_with_coin_ids(self, coin_ids: set[bytes32]) -> list[bytes32]:
         """
@@ -190,18 +293,18 @@ class Mempool:
 
         transaction_ids: list[bytes32] = []
 
-        for transaction_id, item in self._items.items():
+        for item in self.all_items():
             conds = item.conds
             assert conds is not None
 
             for spend in conds.spends:
                 if spend.coin_id in coin_ids:
-                    transaction_ids.append(transaction_id)
+                    transaction_ids.append(item.spend_bundle_name)
                     break
 
                 for puzzle_hash, amount, _memo in spend.create_coin:
                     if Coin(spend.coin_id, puzzle_hash, uint64(amount)).name() in coin_ids:
-                        transaction_ids.append(transaction_id)
+                        transaction_ids.append(item.spend_bundle_name)
                         break
                 else:
                     continue
@@ -219,18 +322,18 @@ class Mempool:
 
         transaction_ids: list[bytes32] = []
 
-        for transaction_id, item in self._items.items():
+        for item in self.all_items():
             conds = item.conds
             assert conds is not None
 
             for spend in conds.spends:
                 if spend.puzzle_hash in puzzle_hashes:
-                    transaction_ids.append(transaction_id)
+                    transaction_ids.append(item.spend_bundle_name)
                     break
 
                 for puzzle_hash, _amount, memo in spend.create_coin:
                     if puzzle_hash in puzzle_hashes or (include_hints and memo is not None and memo in puzzle_hashes):
-                        transaction_ids.append(transaction_id)
+                        transaction_ids.append(item.spend_bundle_name)
                         break
                 else:
                     continue
@@ -242,48 +345,19 @@ class Mempool:
     # TODO: move "process_mempool_items()" into this class in order to do this a
     # bit more efficiently
     def items_by_feerate(self) -> Iterator[MempoolItem]:
-        cursor = self._db_conn.execute("SELECT * FROM tx ORDER BY fee_per_cost DESC, seq ASC")
-        for row in cursor:
-            yield self._row_to_item(row)
+        return self._map.high_fee_items()
 
     def size(self) -> int:
-        cursor = self._db_conn.execute("SELECT COUNT(name) FROM tx")
-        row = cursor.fetchone()
-        return int(row[0])
+        return len(self._map)
 
     def get_item_by_id(self, item_id: bytes32) -> Optional[MempoolItem]:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT * FROM tx WHERE name=?", (item_id,))
-            row = cursor.fetchone()
-            return None if row is None else self._row_to_item(row)
+        return self._map.get(item_id)
 
-    # TODO: we need a bulk lookup function like this too
     def get_items_by_coin_id(self, spent_coin_id: bytes32) -> Iterator[MempoolItem]:
-        cursor = self._db_conn.execute(
-            """
-            SELECT *
-            FROM tx
-            WHERE name IN (
-                SELECT tx
-                FROM spends
-                WHERE coin_id = ?
-            )
-            """,
-            (spent_coin_id,),
-        )
-        for row in cursor:
-            yield self._row_to_item(row)
+        return self._map.items_by_coin_ids([spent_coin_id])
 
     def get_items_by_coin_ids(self, spent_coin_ids: list[bytes32]) -> list[MempoolItem]:
-        items: list[MempoolItem] = []
-        for batch in to_batches(spent_coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
-            args = ",".join(["?"] * len(batch.entries))
-            cursor = self._db_conn.execute(
-                f"SELECT * FROM tx WHERE name IN (SELECT tx FROM spends WHERE coin_id IN ({args}))",
-                tuple(batch.entries),
-            )
-            items.extend(self._row_to_item(row) for row in cursor)
-        return items
+        return list(self._map.items_by_coin_ids(spent_coin_ids))
 
     def get_min_fee_rate(self, cost: int) -> Optional[float]:
         """
@@ -294,24 +368,19 @@ class Mempool:
             return 0
 
         # TODO: make MempoolItem.cost be CLVMCost
-        current_cost = self._total_cost
+        current_cost = self._map.total_cost()
 
         # Iterates through all spends in increasing fee per cost
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
+        for item in self._map.low_fee_items():
+            current_cost -= item.cost
+            # Removing one at a time, until our transaction of size cost fits
+            if current_cost + cost <= self.mempool_info.max_size_in_cost:
+                return item.fee_per_cost
 
-            item_cost: int
-            fee_per_cost: float
-            for item_cost, fee_per_cost in cursor:
-                current_cost -= item_cost
-                # Removing one at a time, until our transaction of size cost fits
-                if current_cost + cost <= self.mempool_info.max_size_in_cost:
-                    return fee_per_cost
-
-            log.info(
-                f"Transaction with cost {cost} does not fit in mempool of max cost {self.mempool_info.max_size_in_cost}"
-            )
-            return None
+        log.info(
+            f"Transaction with cost {cost} does not fit in mempool of max cost {self.mempool_info.max_size_in_cost}"
+        )
+        return None
 
     def new_tx_block(self, block_height: uint32, timestamp: uint64) -> MempoolRemoveInfo:
         """
@@ -319,17 +388,15 @@ class Mempool:
         timestamp. (we don't know about which coins were spent in this new block
         here, so those are handled separately)
         """
-        with self._db_conn:
-            cursor = self._db_conn.execute(
-                "SELECT name FROM tx WHERE assert_before_seconds <= ? OR assert_before_height <= ?",
-                (timestamp, block_height),
-            )
-            to_remove = [bytes32(row[0]) for row in cursor]
+        expired = chain(
+            self._map.expiring_soon_height_items(block_height),
+            self._map.expiring_soon_seconds_items(timestamp),
+        )
 
         self._block_height = block_height
         self._timestamp = timestamp
 
-        return self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+        return self.remove_from_pool([item.spend_bundle_name for item in expired], MempoolRemoveReason.EXPIRED)
 
     def remove_from_pool(self, items: list[bytes32], reason: MempoolRemoveReason) -> MempoolRemoveInfo:
         """
@@ -338,46 +405,24 @@ class Mempool:
         if items == []:
             return MempoolRemoveInfo([], reason)
 
-        removed_items: list[MempoolItemInfo] = []
-        if reason != MempoolRemoveReason.BLOCK_INCLUSION:
-            for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
-                args = ",".join(["?"] * len(batch.entries))
-                with self._db_conn:
-                    cursor = self._db_conn.execute(
-                        f"SELECT name, cost, fee FROM tx WHERE name in ({args})", batch.entries
-                    )
-                    for row in cursor:
-                        name = bytes32(row[0])
-                        internal_item = self._items[name]
-                        item = MempoolItemInfo(int(row[1]), int(row[2]), internal_item.height_added_to_mempool)
-                        removed_items.append(item)
+        removed_items: list[MempoolItem] = []
 
-        removed_internal_items = [self._items.pop(name) for name in items]
+        for transaction_id in items:
+            item = self._map.remove(transaction_id)
 
-        for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
-            args = ",".join(["?"] * len(batch.entries))
-            with self._db_conn:
-                cursor = self._db_conn.execute(
-                    f"SELECT SUM(cost), SUM(fee) FROM tx WHERE name in ({args})", batch.entries
-                )
-                cost_to_remove, fee_to_remove = cursor.fetchone()
-
-                self._db_conn.execute(f"DELETE FROM tx WHERE name in ({args})", batch.entries)
-                self._db_conn.execute(f"DELETE FROM spends WHERE tx in ({args})", batch.entries)
-
-            self._total_cost -= cost_to_remove
-            self._total_fee -= fee_to_remove
-            assert self._total_cost >= 0
-            assert self._total_fee >= 0
+            if item is not None:
+                removed_items.append(item)
 
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
             info = FeeMempoolInfo(
                 self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now()
             )
-            for iteminfo in removed_items:
-                self.fee_estimator.remove_mempool_item(info, iteminfo)
+            for item in removed_items:
+                self.fee_estimator.remove_mempool_item(
+                    info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool)
+                )
 
-        return MempoolRemoveInfo(removed_internal_items, reason)
+        return MempoolRemoveInfo(removed_items, reason)
 
     def add_to_pool(self, item: MempoolItem) -> MempoolAddInfo:
         """
@@ -400,21 +445,20 @@ class Mempool:
             # this lists only transactions that expire soon, in order of
             # lowest fee rate along with the cumulative cost of such
             # transactions counting from highest to lowest fee rate
-            cursor = self._db_conn.execute(
-                """
-                SELECT name,
-                    fee_per_cost,
-                    SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS cumulative_cost
-                FROM tx
-                WHERE assert_before_seconds IS NOT NULL AND assert_before_seconds < ?
-                    OR assert_before_height IS NOT NULL AND assert_before_height < ?
-                ORDER BY cumulative_cost DESC
-                """,
-                (time_cutoff, block_cutoff),
+            expiring_soon = list(
+                chain(
+                    self._map.expiring_soon_height_items(uint32(block_cutoff - 1)),
+                    self._map.expiring_soon_seconds_items(uint64(time_cutoff - 1)),
+                )
             )
+            expiring_soon.sort(key=lambda tx: -tx.fee_per_cost)
+
             to_remove: list[bytes32] = []
-            for row in cursor:
-                name, fee_per_cost, cumulative_cost = row
+
+            cumulative_cost = 0
+
+            for expiring_item in expiring_soon:
+                cumulative_cost += expiring_item.cost
 
                 # there's space for us, stop pruning
                 if cumulative_cost + item.cost <= self.mempool_info.max_block_clvm_cost:
@@ -422,65 +466,31 @@ class Mempool:
 
                 # we can't evict any more transactions, abort (and don't
                 # evict what we put aside in "to_remove" list)
-                if fee_per_cost > item.fee_per_cost:
+                if expiring_item.fee_per_cost > item.fee_per_cost:
                     return MempoolAddInfo([], Err.INVALID_FEE_LOW_FEE)
-                to_remove.append(name)
+
+                to_remove.append(expiring_item.spend_bundle_name)
 
             removals.append(self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED))
 
             # if we don't find any entries, it's OK to add this entry
 
-        if self._total_cost + item.cost > self.mempool_info.max_size_in_cost:
+        if self._map.total_cost() + item.cost > self.mempool_info.max_size_in_cost:
             # pick the items with the lowest fee per cost to remove
-            cursor = self._db_conn.execute(
-                """SELECT name FROM tx
-                WHERE name NOT IN (
-                    SELECT name FROM (
-                        SELECT name,
-                        SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS total_cost
-                        FROM tx) AS tx_with_cost
-                    WHERE total_cost <= ?)
-                """,
-                (self.mempool_info.max_size_in_cost - item.cost,),
-            )
-            to_remove = [bytes32(row[0]) for row in cursor]
+            to_remove = []
+
+            cumulative_cost = 0
+
+            for low_fee in self._map.low_fee_items():
+                if cumulative_cost + item.cost <= self.mempool_info.max_size_in_cost:
+                    break
+
+                cumulative_cost += low_fee.cost
+                to_remove.append(low_fee.spend_bundle_name)
+
             removals.append(self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL))
 
-        with self._db_conn as conn:
-            # TODO: In the future, for the "fee_per_cost" field, opt for
-            # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
-            conn.execute(
-                "INSERT INTO "
-                "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,fee_per_cost) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?)",
-                (
-                    item.name,
-                    item.cost,
-                    item.fee,
-                    item.assert_height,
-                    item.assert_before_height,
-                    item.assert_before_seconds,
-                    item.fee / item.cost,
-                ),
-            )
-            all_coin_spends = []
-            # item.name is a property
-            # only compute its name once (the spend bundle name)
-            item_name = item.name
-            for coin_id, bcs in item.bundle_coin_spends.items():
-                # any FF spend should be indexed by its latest singleton coin
-                # ID, this way we'll find it when the singleton is spent
-                if bcs.latest_singleton_coin is not None:
-                    all_coin_spends.append((bcs.latest_singleton_coin, item_name))
-                else:
-                    all_coin_spends.append((coin_id, item_name))
-            conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
-
-        self._items[item_name] = InternalMempoolItem(
-            item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
-        )
-        self._total_cost += item.cost
-        self._total_fee += item.fee
+        self._map.add(item)
 
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
         self.fee_estimator.add_mempool_item(info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
@@ -488,15 +498,15 @@ class Mempool:
 
     # each tuple holds new_coin_id, current_coin_id, mempool item name
     def update_spend_index(self, spends_to_update: list[tuple[bytes32, bytes32, bytes32]]) -> None:
-        with self._db_conn as conn:
-            conn.executemany("UPDATE OR REPLACE spends SET coin_id=? WHERE coin_id=? AND tx=?", spends_to_update)
+        for new_coin_id, coin_id, transaction_id in spends_to_update:
+            self._map.update_coin_index(transaction_id, coin_id, new_coin_id)
 
     def at_full_capacity(self, cost: int) -> bool:
         """
         Checks whether the mempool is at full capacity and cannot accept a transaction with size cost.
         """
 
-        return self._total_cost + cost > self.mempool_info.max_size_in_cost
+        return self._map.total_cost() + cost > self.mempool_info.max_size_in_cost
 
     async def create_block_generator(
         self,
@@ -586,13 +596,9 @@ class Mempool:
         sigs: list[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         bundle_creation_start = monotonic()
-        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
         skipped_items = 0
-        for row in cursor:
-            name = bytes32(row[0])
-            fee = int(row[1])
-            item = self._items[name]
 
+        for item in self._map.high_fee_items():
             current_time = monotonic()
             if current_time - bundle_creation_start >= timeout:
                 log.info(f"exiting early, already spent {current_time - bundle_creation_start:0.2f} s")
@@ -633,9 +639,9 @@ class Mempool:
                     )
                 item_cost = cost - cost_saving
                 log.info(
-                    "Cumulative cost: %d, fee per cost: %0.4f, item cost: %d", cost_sum, fee / item_cost, item_cost
+                    "Cumulative cost: %d, fee per cost: %0.4f, item cost: %d", cost_sum, item.fee / item_cost, item_cost
                 )
-                new_fee_sum = fee_sum + fee
+                new_fee_sum = fee_sum + item.fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
                     # Such a fee is very unlikely to happen but we're defensively
                     # accounting for it
@@ -702,7 +708,6 @@ class Mempool:
         eligible_coin_spends = EligibleCoinSpends()
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
-        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
         builder = BlockBuilder()
         skipped_items = 0
         # the total (estimated) cost of the transactions added so far
@@ -715,15 +720,12 @@ class Mempool:
         # this cost only includes conditions and execution cost, not byte-cost
         batch_cost = 0
 
-        for row in cursor:
+        for item in self._map.high_fee_items():
             current_time = monotonic()
             if current_time - generator_creation_start >= timeout:
                 log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
                 break
 
-            name = bytes32(row[0])
-            fee = int(row[1])
-            item = self._items[name]
             try:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
@@ -736,7 +738,7 @@ class Mempool:
                 unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
                     bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
                 )
-                new_fee_sum = fee_sum + fee
+                new_fee_sum = fee_sum + item.fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
                     # Such a fee is very unlikely to happen but we're defensively
                     # accounting for it

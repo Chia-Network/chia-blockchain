@@ -477,16 +477,19 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
 
 
 def invariant_check_mempool(mempool: Mempool) -> None:
-    with mempool._db_conn as conn:
-        cursor = conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
-        val = cursor.fetchone()
-        assert (mempool._total_cost, mempool._total_fee) == val
+    items = list(mempool.all_items())
+    computed_cost = 0
+    computed_fees = 0
 
-    with mempool._db_conn as conn:
-        cursor = conn.execute("SELECT coin_id, tx FROM spends")
-        for coin_id, item_id in cursor.fetchall():
-            item = mempool._items.get(item_id)
-            assert item is not None
+    for item in items:
+        computed_cost += item.cost
+        computed_fees += item.fee
+
+    assert mempool.total_mempool_cost() == computed_cost
+    assert mempool.total_mempool_fees() == computed_fees
+
+    for coin_id in mempool._map.all_coin_ids():
+        for item in mempool.get_items_by_coin_id(coin_id):
             # item is expected to contain a spend of coin_id, but it might be a
             # fast-forward spend, in which case the dictionary won't help us,
             # but we'll have to do a linear search

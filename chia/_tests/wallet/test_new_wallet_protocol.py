@@ -1168,7 +1168,7 @@ async def test_cost_info(one_node: OneNode, self_hostname: str) -> None:
         max_transaction_cost=mempool_manager.max_tx_clvm_cost,
         max_block_cost=mempool_manager.max_block_clvm_cost,
         max_mempool_cost=uint64(mempool_manager.mempool_max_total_cost),
-        mempool_cost=uint64(mempool_manager.mempool._total_cost),
-        mempool_fee=uint64(mempool_manager.mempool._total_fee),
+        mempool_cost=uint64(mempool_manager.mempool.total_mempool_cost()),
+        mempool_fee=uint64(mempool_manager.mempool.total_mempool_fees()),
         bump_fee_per_cost=uint8(mempool_manager.nonzero_fee_minimum_fpc),
     )

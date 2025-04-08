@@ -29,7 +29,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageInfo, perform_the_fast_forward
-from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -56,11 +55,10 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     item = mempool_item_from_spendbundle(sb)
     # This coin is not eligible for fast forward
     assert item.bundle_coin_spends[TEST_COIN_ID].eligible_for_fast_forward is False
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
-    original_version = dataclasses.replace(internal_mempool_item)
+    original_version = dataclasses.replace(item)
     eligible_coin_spends = EligibleCoinSpends()
     bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
-        mempool_item=internal_mempool_item,
+        mempool_item=item,
         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
         height=TEST_HEIGHT,
         constants=DEFAULT_CONSTANTS,
@@ -87,13 +85,12 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
     item = mempool_item_from_spendbundle(sb)
     # The coin is eligible for fast forward
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     eligible_coin_spends = EligibleCoinSpends()
     # We have no fast forward records yet, so we'll process this coin for the
     # first time here, but the DB lookup will return None
     with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward."):
         await eligible_coin_spends.process_fast_forward_spends(
-            mempool_item=internal_mempool_item,
+            mempool_item=item,
             get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
             height=TEST_HEIGHT,
             constants=DEFAULT_CONSTANTS,
@@ -125,11 +122,10 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
-    original_version = dataclasses.replace(internal_mempool_item)
+    original_version = dataclasses.replace(item)
     eligible_coin_spends = EligibleCoinSpends()
     bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
-        mempool_item=internal_mempool_item,
+        mempool_item=item,
         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
         height=TEST_HEIGHT,
         constants=DEFAULT_CONSTANTS,
