@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -15,7 +15,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
@@ -161,10 +161,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
     xch_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch: dict[Union[bytes32, int], int] = {
-        nft_to_offer_asset_id: -1,
-        wallet_maker.id(): xch_requested,
-    }
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -396,7 +393,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
     maker_fee = uint64(10)
     driver_dict = {nft_to_request_asset_id: nft_to_request_info}
 
-    offer_dict: dict[Union[bytes32, int], int] = {nft_to_request_asset_id: 1, wallet_maker.id(): -xch_offered}
+    offer_dict: OfferSummary = {nft_to_request_asset_id: 1, wallet_maker.id(): -xch_offered}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -686,10 +683,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
     xch_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch: dict[Union[bytes32, int], int] = {
-        nft_to_offer_asset_id: -1,
-        wallet_maker.id(): xch_requested,
-    }
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -1013,10 +1007,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
     cats_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch: dict[Union[bytes32, int], int] = {
-        nft_to_offer_asset_id: -1,
-        cat_wallet_maker.id(): cats_requested,
-    }
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, cat_wallet_maker.id(): cats_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -1392,7 +1383,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
     maker_fee = uint64(433)
     driver_dict = {nft_to_request_asset_id: nft_to_request_info}
 
-    offer_dict: dict[Union[bytes32, int], int] = {nft_to_request_asset_id: 1, cat_wallet_maker.id(): -cats_requested}
+    offer_dict: OfferSummary = {nft_to_request_asset_id: 1, cat_wallet_maker.id(): -cats_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -1628,10 +1619,7 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
     xch_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch: dict[Union[bytes32, int], int] = {
-        nft_to_offer_asset_id: -1,
-        wallet_maker.id(): xch_requested,
-    }
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -2017,7 +2005,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         CAT_REQUESTED = 100000
         FEE = uint64(2000000000000)
 
-    complex_nft_offer: dict[Union[bytes32, int], int] = {
+    complex_nft_offer: OfferSummary = {
         nft_to_offer_asset_id_maker: -1,
         cat_wallet_maker.id(): CAT_REQUESTED * -1,
         1: XCH_REQUESTED,
