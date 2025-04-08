@@ -31,5 +31,5 @@ class LRUCache(Generic[K, V]):
     def remove(self, key: K) -> None:
         self.cache.pop(key)
 
-    def capacity(self) -> int:
+    def get_capacity(self) -> int:
         return self.capacity
