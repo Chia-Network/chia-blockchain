@@ -26,7 +26,7 @@ def generate_random_ip() -> str:
     return str(IPv4Address(random.getrandbits(32)))
 
 
-def populate_address_manager(num_new: int = 500, num_tried: int = 200) -> AddressManager:
+def populate_address_manager(num_new: int = 50000, num_tried: int = 20000) -> AddressManager:
     am = AddressManager()
     current_time = int(datetime.now().timestamp())
     total = num_new + num_tried
@@ -58,8 +58,8 @@ def populate_address_manager(num_new: int = 500, num_tried: int = 200) -> Addres
             epi.is_tried = True
             epi.last_success = timestamp
             epi.last_try = timestamp - random.randint(0, 1000)
-            bucket = random.randint(0, TRIED_BUCKET_COUNT - 1)  # we have a real algorithm for this in pracitce
-            pos = random.randint(0, BUCKET_SIZE - 1)
+            bucket = epi.get_tried_bucket(am.key)
+            pos = epi.get_bucket_position(am.key, False, bucket)
             if am.tried_matrix[bucket][pos] == -1:
                 am.tried_matrix[bucket][pos] = node_id
                 am.tried_count += 1
@@ -69,8 +69,8 @@ def populate_address_manager(num_new: int = 500, num_tried: int = 200) -> Addres
             epi.ref_count = ref_count
             assigned = False
             for _ in range(ref_count):
-                bucket = random.randint(0, NEW_BUCKET_COUNT - 1)
-                pos = random.randint(0, BUCKET_SIZE - 1)
+                bucket = epi.get_new_bucket(am.key)
+                pos = epi.get_bucket_position(am.key, True, bucket)
                 if am.new_matrix[bucket][pos] == -1:
                     am.new_matrix[bucket][pos] = node_id
                     am.new_count += 1
