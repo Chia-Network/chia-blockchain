@@ -2308,6 +2308,7 @@ async def test_alternate_did_recovery(
     with monkeypatch.context() as m:
         m.setattr("chia.wallet.did_wallet.did_wallet_puzzles.create_innerpuz", alt_create_innerpuz)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
             did_wallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager, wallet, uint64(101), action_scope
             )
@@ -2325,10 +2326,44 @@ async def test_alternate_did_recovery(
     response = await api.did_get_info({"coin_id": did_wallet.did_info.origin_coin.name().hex()})
     # make sure the recovery list hash is empty as expected for this alternate implementation
     assert response["recovery_list_hash"] == ""
+    await did_wallet.get_coin()
 
-    # response = await api.did_get_information_needed_for_recovery()
-    # Delete the coin and wallet
+    #
+    # Check that we can make an metadata update spend for this DID
+    #
+    parent_num = get_parent_num(did_wallet)
+    metadata = {}
+    metadata["Twitter"] = "http://www.twitter.com"
+    await did_wallet.update_metadata(metadata)
+    async with did_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await did_wallet.create_update_spend(action_scope, uint64(1000))
+
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node])
+
+    assert get_parent_num(did_wallet) == parent_num + 2
+    assert did_wallet.did_info.metadata.find("Twitter") > 0
+    await did_wallet.get_coin()
+
+    #
+    # Check that we can make an recovery update spend for this DID
+    #
+    await did_wallet.update_recovery_list([ph], uint64(1))
+    async with did_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await did_wallet.create_update_spend(action_scope)
+
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node])
+
+    response = await api.did_get_info({"coin_id": did_wallet.did_info.origin_coin.name().hex()})
+    # make sure the recovery list hash is empty as expected for this alternate implementation
+    assert response["recovery_list_hash"] == Program.to([ph]).get_tree_hash().hex()
     coin = await did_wallet.get_coin()
+
+    #
+    # Test that we can delete and find the DID again
+    #
+    # Delete the coin and wallet
     await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
     await wallet_node.wallet_state_manager.delete_wallet(did_wallet.wallet_info.id)
     wallet_node.wallet_state_manager.wallets.pop(did_wallet.wallet_info.id)
