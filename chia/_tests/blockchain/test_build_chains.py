@@ -81,7 +81,7 @@ def validate_coins(constants: ConsensusConstants, blocks: list[FullBlock]) -> No
             for rem in removals:
                 try:
                     unspent_coins.remove(rem)
-                except KeyError as e:
+                except KeyError:
                     print(f"at height: {block.height} removal: {rem} does not exist")
                     print("coinset: ", unspent_coins)
                     raise
