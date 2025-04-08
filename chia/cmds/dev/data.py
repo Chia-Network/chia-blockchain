@@ -174,29 +174,30 @@ class SyncTimeCommand:
                                 last_time = now
                         await asyncio.sleep(1)
                 finally:
-                    with anyio.CancelScope(shield=True):
-                        if task.done():
-                            await task
-                        else:
-                            task.cancel()
-                            with contextlib.suppress(asyncio.CancelledError):
+                    try:
+                        with anyio.CancelScope(shield=True):
+                            if task.done():
                                 await task
-
-                    end = clock()
-                    total = round(end - start)
-                    remainder, seconds = divmod(total, 60)
-                    remainder, minutes = divmod(remainder, 60)
-                    days, hours = divmod(remainder, 24)
-                    # TODO: report better on failure
-                    print_date("DataLayer sync timing test results:")
-                    print(f"    store id: {self.store_id}")
-                    print(f"     reached: {generation}")
-                    print(f"     db size: {humanize_bytes(database_path.stat().st_size)}")
-                    print(f"    duration: {days}d {hours}h {minutes}m {seconds}s")
-                    print(f"              {total}s")
-                    if len(all_times) > 0:
-                        generation, duration = max(all_times.items(), key=lambda item: item[1])
-                        print(f"         max: {generation} @ {duration:.1f}s")
+                            else:
+                                task.cancel()
+                                with contextlib.suppress(asyncio.CancelledError):
+                                    await task
+                    finally:
+                        end = clock()
+                        total = round(end - start)
+                        remainder, seconds = divmod(total, 60)
+                        remainder, minutes = divmod(remainder, 60)
+                        days, hours = divmod(remainder, 24)
+                        # TODO: report better on failure
+                        print_date("DataLayer sync timing test results:")
+                        print(f"    store id: {self.store_id}")
+                        print(f"     reached: {generation}")
+                        print(f"     db size: {humanize_bytes(database_path.stat().st_size)}")
+                        print(f"    duration: {days}d {hours}h {minutes}m {seconds}s")
+                        print(f"              {total}s")
+                        if len(all_times) > 0:
+                            generation, duration = max(all_times.items(), key=lambda item: item[1])
+                            print(f"         max: {generation} @ {duration:.1f}s")
         finally:
             with anyio.CancelScope(shield=True):
                 print_date("stopping services")
