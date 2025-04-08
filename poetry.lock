@@ -486,18 +486,18 @@ files = [
 
 [[package]]
 name = "bitstring"
-version = "4.3.0"
+version = "4.3.1"
 description = "Simple construction, analysis and modification of binary data."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "bitstring-4.3.0-py3-none-any.whl", hash = "sha256:3282a896814813f8fe5fa09dbafac842c57aace1d3bfd94546c6f1ed9aafcbe1"},
-    {file = "bitstring-4.3.0.tar.gz", hash = "sha256:81800bc4e00b6508716adbae648e741256355c8dfd19541f76482fb89bee0313"},
+    {file = "bitstring-4.3.1-py3-none-any.whl", hash = "sha256:69d1587f0ac18dc7d93fc7e80d5f447161a33e57027e726dc18a0a8bacf1711a"},
+    {file = "bitstring-4.3.1.tar.gz", hash = "sha256:a08bc09d3857216d4c0f412a1611056f1cc2b64fd254fb1e8a0afba7cfa1a95a"},
 ]
 
 [package.dependencies]
-bitarray = ">=3.0.0,<3.1"
+bitarray = ">=3.0.0,<4.0"
 
 [[package]]
 name = "boto3"
