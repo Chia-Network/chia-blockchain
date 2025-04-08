@@ -23,7 +23,8 @@ def generate_random_ip() -> str:
     return str(IPv4Address(random.getrandbits(32)))
 
 
-def populate_address_manager(num_new: int = 50000, num_tried: int = 20000) -> AddressManager:
+def populate_address_manager(num_new: int = 500000, num_tried: int = 200000) -> AddressManager:
+    random.seed(1337)
     am = AddressManager()
     current_time = int(datetime.now().timestamp())
     total = num_new + num_tried
