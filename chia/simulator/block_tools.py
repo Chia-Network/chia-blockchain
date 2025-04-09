@@ -147,6 +147,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
+    SOFT_FORK6_HEIGHT=uint32(2),
 )
 
 
@@ -826,13 +827,13 @@ class BlockTools:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         if dummy_block_references and len(tx_block_heights) > 4:
-                            block_refs.extend(
-                                [
-                                    tx_block_heights[1],
-                                    tx_block_heights[len(tx_block_heights) // 2],
-                                    tx_block_heights[-2],
-                                ]
-                            )
+                            dummy_refs = [
+                                tx_block_heights[1],
+                                tx_block_heights[len(tx_block_heights) // 2],
+                                tx_block_heights[-2],
+                            ]
+                        else:
+                            dummy_refs = []
 
                         new_gen: Optional[NewBlockGenerator]
                         if transaction_data is not None:
@@ -868,7 +869,7 @@ class BlockTools:
                             new_gen = NewBlockGenerator(
                                 program,
                                 [],
-                                block_refs,
+                                block_refs + dummy_refs,
                                 transaction_data.aggregated_signature,
                                 additions,
                                 removals,
@@ -878,7 +879,7 @@ class BlockTools:
                         elif dummy_block_references:
                             program = SerializedProgram.from_bytes(solution_generator([]))
                             cost = compute_block_cost(program, constants, uint32(curr.height + 1))
-                            new_gen = NewBlockGenerator(program, [], block_refs, G2Element(), [], [], cost)
+                            new_gen = NewBlockGenerator(program, [], block_refs + dummy_refs, G2Element(), [], [], cost)
                         else:
                             new_gen = None
 
@@ -1161,13 +1162,13 @@ class BlockTools:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         if dummy_block_references and len(tx_block_heights) > 4:
-                            block_refs.extend(
-                                [
-                                    tx_block_heights[1],
-                                    tx_block_heights[len(tx_block_heights) // 2],
-                                    tx_block_heights[-2],
-                                ]
-                            )
+                            dummy_refs = [
+                                tx_block_heights[1],
+                                tx_block_heights[len(tx_block_heights) // 2],
+                                tx_block_heights[-2],
+                            ]
+                        else:
+                            dummy_refs = []
 
                         if transaction_data is not None:
                             # this means the caller passed in transaction_data
@@ -1202,7 +1203,7 @@ class BlockTools:
                             new_gen = NewBlockGenerator(
                                 program,
                                 [],
-                                block_refs,
+                                block_refs + dummy_refs,
                                 transaction_data.aggregated_signature,
                                 additions,
                                 removals,
@@ -1212,7 +1213,7 @@ class BlockTools:
                         elif dummy_block_references:
                             program = SerializedProgram.from_bytes(solution_generator([]))
                             cost = compute_block_cost(program, constants, uint32(curr.height + 1))
-                            new_gen = NewBlockGenerator(program, [], block_refs, G2Element(), [], [], cost)
+                            new_gen = NewBlockGenerator(program, [], block_refs + dummy_refs, G2Element(), [], [], cost)
                         else:
                             new_gen = None
 

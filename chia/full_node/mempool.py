@@ -607,10 +607,7 @@ class Mempool:
                     # might fit, but we also want to avoid spending too much
                     # time on potentially expensive ones, hence this shortcut.
                     if any(
-                        map(
-                            lambda spend_data: (spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward),
-                            item.bundle_coin_spends.values(),
-                        )
+                        sd.eligible_for_dedup or sd.eligible_for_fast_forward for sd in item.bundle_coin_spends.values()
                     ):
                         log.info("Skipping transaction with dedup or FF spends {item.name}")
                         continue
@@ -727,14 +724,14 @@ class Mempool:
             try:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
-                await eligible_coin_spends.process_fast_forward_spends(
+                bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
                     mempool_item=item,
                     get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                     height=height,
                     constants=constants,
                 )
                 unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                    bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                    bundle_coin_spends=bundle_coin_spends, max_cost=cost
                 )
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
