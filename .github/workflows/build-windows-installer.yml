@@ -142,6 +142,7 @@ jobs:
           msiexec /i smtools-windows-x64.msi /quiet /qn
           smksp_registrar.exe list
           smctl.exe keypair ls
+          smctl.exe healthcheck
           C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
           smksp_cert_sync.exe
 
