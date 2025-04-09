@@ -2600,7 +2600,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            recovery_list_hash.as_atom(),
+            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,

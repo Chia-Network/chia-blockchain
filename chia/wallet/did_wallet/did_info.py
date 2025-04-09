@@ -41,7 +41,7 @@ class DIDInfo(Streamable):
 @dataclass(frozen=True)
 class DIDCoinData(Streamable):
     p2_puzzle: Program
-    recovery_list_hash: bytes
+    recovery_list_hash: Optional[bytes32]
     num_verification: uint16
     singleton_struct: Program
     metadata: Program
