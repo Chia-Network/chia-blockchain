@@ -3170,7 +3170,10 @@ async def add_tx_to_mempool(
     spend_bundle = wallet.generate_signed_transaction(amount, receiver_puzzlehash, spend_coin)
     assert spend_bundle is not None
     response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
-    assert response_msg is not None and TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
+    assert (
+        response_msg is not None
+        and TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
+    )
 
     await time_out_assert(
         20,
