@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from ipaddress import ip_address
 from pathlib import Path
 from timeit import default_timer as timer
 from typing import Any, Optional
 
 import aiofiles
-from chia_rs.sized_ints import uint16, uint64
+from chia_rs.sized_ints import uint64
 
 from chia.server.address_manager import (
     BUCKET_SIZE,
@@ -17,9 +16,7 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
-from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.files import write_file_async
-from chia.util.ip_address import IPAddress
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -33,38 +30,8 @@ class PeerDataSerialization(Streamable):
     """
 
     metadata: list[tuple[str, str]]
-    nodes: list[bytes]
+    nodes: list[str]
     new_table: list[tuple[uint64, uint64]]
-
-
-@streamable
-@dataclass(frozen=True)
-class ExtendedPeerInfoSerialization(Streamable):
-    peer_info_host: bytes
-    peer_info_port: uint16
-    timestamp: uint64
-    src_host: bytes
-    src_port: uint16
-
-    @classmethod
-    def from_extended_peer_info(cls, epi: ExtendedPeerInfo) -> ExtendedPeerInfoSerialization:
-        assert epi.src is not None
-        peer_ip_bytes = IPAddress.create(epi.peer_info.host)._inner.packed
-        src_ip_bytes = IPAddress.create(epi.src.host)._inner.packed
-        return ExtendedPeerInfoSerialization(
-            peer_ip_bytes, epi.peer_info.port, uint64(epi.timestamp), src_ip_bytes, epi.src.port
-        )
-
-    @classmethod
-    def to_extended_peer_info(cls, bytes: bytes) -> ExtendedPeerInfo:
-        epi = ExtendedPeerInfoSerialization.from_bytes(bytes)
-
-        peer_ip = IPAddress(ip_address(epi.peer_info_host))
-        src_ip = IPAddress(ip_address(epi.src_host))
-
-        peer_info = PeerInfo(peer_ip, epi.peer_info_port)
-        src_peer_info = PeerInfo(src_ip, epi.src_port)
-        return ExtendedPeerInfo(TimestampedPeerInfo(str(peer_info.host), peer_info.port, epi.timestamp), src_peer_info)
 
 
 class AddressManagerStore:
@@ -109,11 +76,11 @@ class AddressManagerStore:
         Serialize the address manager's peer data to a file.
         """
         metadata: list[tuple[str, str]] = []
-        nodes: list[bytes] = []
+        nodes: list[str] = []
         new_table_entries: list[tuple[uint64, uint64]] = []
         unique_ids: dict[int, int] = {}
         count_ids: int = 0
-        trieds: list[bytes] = []
+        trieds: list[str] = []
         log.info("Serializing peer data")
         metadata.append(("key", str(address_manager.key)))
 
@@ -121,10 +88,10 @@ class AddressManagerStore:
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
-                nodes.append(bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info)))
+                nodes.append(info.to_string())
                 count_ids += 1
             if info.is_tried:
-                trieds.append(bytes(ExtendedPeerInfoSerialization.from_extended_peer_info(info)))
+                trieds.append(info.to_string())
         metadata.append(("new_count", str(count_ids)))
 
         nodes.extend(trieds)
@@ -170,16 +137,17 @@ class AddressManagerStore:
             address_manager.tried_count = 0
 
             n = 0
-            for node_bytes in peer_data.nodes[: address_manager.new_count]:
-                info = ExtendedPeerInfoSerialization.to_extended_peer_info(node_bytes)
+            for info_str in peer_data.nodes[: address_manager.new_count]:
+                info = ExtendedPeerInfo.from_string(info_str)
                 address_manager.map_addr[info.peer_info.host] = n
                 address_manager.map_info[n] = info
                 info.random_pos = len(address_manager.random_pos)
                 address_manager.random_pos.append(n)
                 n += 1
             address_manager.id_count = address_manager.new_count
-            for node_bytes in peer_data.nodes[address_manager.new_count :]:
-                info = ExtendedPeerInfoSerialization.to_extended_peer_info(node_bytes)
+            for info_str in peer_data.nodes[address_manager.new_count :]:
+                info = ExtendedPeerInfo.from_string(info_str)
+
                 tried_bucket = info.get_tried_bucket(address_manager.key)
                 tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
                 if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
@@ -228,7 +196,7 @@ class AddressManagerStore:
         cls,
         peers_file_path: Path,
         metadata: list[tuple[str, Any]],
-        nodes: list[bytes],
+        nodes: list[str],
         new_table: list[tuple[uint64, uint64]],
     ) -> None:
         """
