@@ -2902,13 +2902,17 @@ async def test_declare_proof_of_space_no_overflow(
     await add_blocks_in_batches(blocks, full_node_api.full_node)
     _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     dummy_peer = server_1.all_connections[dummy_node_id]
+    assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
     for i in range(10, 100):
-        sb = await add_tx_to_mempool(full_node_api, wallet, blocks[i - 8], coinbase_puzzlehash, bytes32(b"0" * 32))
+        sb = await add_tx_to_mempool(
+            full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+        )
         blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, False, spend_bundle=sb)
-        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, blocks[i])
-        compare_unfinished_blocks(unfinished_from_full_block(blocks[i]), unfinised_block)
-        await full_node_api.full_node.add_block(blocks[i])
-        assert full_node_api.full_node.blockchain.get_peak_height() == blocks[i].height
+        block = blocks[-1]
+        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
+        compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
+        await full_node_api.full_node.add_block(block)
+        assert full_node_api.full_node.blockchain.get_peak_height() == block.height
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
@@ -2927,13 +2931,17 @@ async def test_declare_proof_of_space_overflow(
     await add_blocks_in_batches(blocks, full_node_api.full_node)
     _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     dummy_peer = server_1.all_connections[dummy_node_id]
+    assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
     for i in range(10, 100):
-        sb = await add_tx_to_mempool(full_node_api, wallet, blocks[i - 8], coinbase_puzzlehash, bytes32(b"0" * 32))
+        sb = await add_tx_to_mempool(
+            full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+        )
         blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, force_overflow=True, spend_bundle=sb)
-        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, blocks[i])
-        compare_unfinished_blocks(unfinished_from_full_block(blocks[i]), unfinised_block)
-        await full_node_api.full_node.add_block(blocks[i])
-        assert full_node_api.full_node.blockchain.get_peak_height() == blocks[i].height
+        block = blocks[-1]
+        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
+        compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
+        await full_node_api.full_node.add_block(block)
+        assert full_node_api.full_node.blockchain.get_peak_height() == block.height
 
 
 def get_blocks_for_test(
@@ -2980,11 +2988,13 @@ def get_blocks_for_test(
                 if (
                     new_block.reward_chain_block.signage_point_index > bt.constants.NUM_SPS_SUB_SLOT - 2
                     or len(new_block.finished_sub_slots) > number_of_slots
+                    or min_signage_point == new_block.reward_chain_block.signage_point_index + 1
                 ):
                     skip_slots = True
                     min_signage_point = -1
                 else:
-                    min_signage_point = new_block.reward_chain_block.signage_point_index
+                    min_signage_point = new_block.reward_chain_block.signage_point_index + 1
+
                 number_of_slots = len(new_block.finished_sub_slots)
                 new_block = bt.get_consecutive_blocks(
                     block_list_input=blocks,
@@ -2997,8 +3007,9 @@ def get_blocks_for_test(
                     guarantee_transaction_block=transaction_block,
                     transaction_data=spend_bundle,
                 )[-1]
-
-                if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
+                if new_block.reward_chain_block.challenge_chain_sp_vdf is None:
+                    break
+                else:
                     cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
                     flag_one, flag_two = False, False
                     if cc_sp_hash not in cc_sub_slot_sps:
@@ -3012,7 +3023,7 @@ def get_blocks_for_test(
                     if flag_one and flag_two:
                         break
         blocks.append(new_block)
-    logging.info(f"Collisions: {collisions} height {blocks[-1].height}")
+    logging.debug(f"Collisions: {collisions} height {blocks[-1].height}")
     return blocks
 
 
@@ -3147,6 +3158,7 @@ async def add_tx_to_mempool(
     spend_block: FullBlock,
     coinbase_puzzlehash: bytes32,
     receiver_puzzlehash: bytes32,
+    amount: uint64,
 ) -> Optional[SpendBundle]:
     spend_coin = None
     coins = spend_block.get_included_reward_coins()
@@ -3155,9 +3167,10 @@ async def add_tx_to_mempool(
             spend_coin = coin
 
     assert spend_coin is not None
-    spend_bundle = wallet.generate_signed_transaction(uint64(1000), receiver_puzzlehash, spend_coin)
+    spend_bundle = wallet.generate_signed_transaction(amount, receiver_puzzlehash, spend_coin)
     assert spend_bundle is not None
-    await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+    assert response_msg is not None and TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
 
     await time_out_assert(
         20,
