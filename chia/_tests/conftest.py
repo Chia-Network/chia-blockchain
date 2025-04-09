@@ -463,6 +463,11 @@ def default_10000_blocks_compact(bt, consensus_mode):
     )
 
 
+# If you add another test chain, don't forget to also add a "build_test_chains"
+# generator to chia/_tests/blockchain/test_build_chains.py as well as a test in
+# the same file.
+
+
 @pytest.fixture(scope="function")
 def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
