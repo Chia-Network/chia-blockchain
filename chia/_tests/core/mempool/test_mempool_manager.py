@@ -10,7 +10,6 @@ import pytest
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
-    MEMPOOL_MODE,
     AugSchemeMPL,
     ConsensusConstants,
     G2Element,
@@ -49,7 +48,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
@@ -2268,10 +2267,7 @@ def make_singleton_spend(launcher_id: bytes32, parent_parent_id: bytes32 = bytes
     from chia_rs import supports_fast_forward
 
     from chia.wallet.lineage_proof import LineageProof
-    from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-        puzzle_for_singleton,
-        solution_for_singleton,
-    )
+    from chia.wallet.puzzles.singleton_top_layer_v1_1 import puzzle_for_singleton, solution_for_singleton
 
     singleton_puzzle = SerializedProgram.from_program(puzzle_for_singleton(launcher_id, Program.to(1)))
 
@@ -2701,7 +2697,7 @@ async def test_create_block_generator(
         bytes(new_block_gen.program),
         new_block_gen.generator_refs,
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-        MEMPOOL_MODE,
+        DEFAULT_FLAGS,
         new_block_gen.signature,
         None,
         DEFAULT_CONSTANTS,
@@ -2769,7 +2765,7 @@ async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bu
         bytes(new_block_gen.program),
         new_block_gen.generator_refs,
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-        MEMPOOL_MODE,
+        DEFAULT_FLAGS,
         new_block_gen.signature,
         None,
         DEFAULT_CONSTANTS,

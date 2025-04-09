@@ -19,7 +19,6 @@ from typing import Any, Callable, Optional
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import (
-    MEMPOOL_MODE,
     AugSchemeMPL,
     ChallengeChainSubSlot,
     ConsensusConstants,
@@ -79,7 +78,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     calculate_pos_challenge,
@@ -177,7 +176,7 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
 
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
-        cost, result = generator._run(INFINITE_COST, MEMPOOL_MODE, [DESERIALIZE_MOD, blocks])
+        cost, result = generator._run(INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -186,13 +185,13 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
             puzzle = spend.at("rf")
             solution = spend.at("rrrf")
 
-            cost, result = puzzle._run(INFINITE_COST, MEMPOOL_MODE, solution)
+            cost, result = puzzle._run(INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(result)
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, [generator, block_program_args])
+        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
 
         for res in result.first().as_iter():
             # each condition item is:
