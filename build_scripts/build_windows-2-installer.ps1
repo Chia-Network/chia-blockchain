@@ -80,7 +80,7 @@ If ($env:HAS_SIGNING_SECRET) {
    Get-ChildItem ".\dist\win-unpacked" -Recurse | Where-Object { $_.Extension -eq ".exe" } | ForEach-Object {
       $exePath = $_.FullName
       Write-Output "Signing $exePath"
-      signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $exePath
+      signtool.exe sign /debug /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $exePath
       Write-Output "Verify signature"
       signtool.exe verify /v /pa $exePath
   }
@@ -96,7 +96,7 @@ Write-Output "   ---"
 If ($env:HAS_SIGNING_SECRET) {
    Write-Output "   ---"
    Write-Output "Sign Final Installer App"
-   signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 .\dist\ChiaSetup-$packageVersion.exe
+   signtool.exe sign /debug /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 .\dist\ChiaSetup-$packageVersion.exe
    Write-Output "   ---"
    Write-Output "Verify signature"
    Write-Output "   ---"
