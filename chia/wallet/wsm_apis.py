@@ -88,7 +88,7 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
         )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class GetUnusedDerivationRecordResult:
     record: DerivationRecord
     create_more_puzzle_hashes_result: CreateMorePuzzleHashesResult

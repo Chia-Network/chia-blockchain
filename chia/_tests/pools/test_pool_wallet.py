@@ -55,7 +55,7 @@ class MockPoolWalletInfo:
     current: MockPoolState
 
 
-@dataclass
+@dataclass(frozen=True)
 class MockActionScope:
     payout_instructions_ph: bytes32
 

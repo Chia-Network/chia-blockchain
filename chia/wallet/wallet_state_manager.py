@@ -376,7 +376,7 @@ class WalletStateManager:
         up_to_index: Optional[uint32] = None,
         num_additional_phs: Optional[int] = None,
         previous_result: Optional[CreateMorePuzzleHashesResult] = None,
-        _commit_previous_result: bool = True,
+        commit_previous_result: bool = True,
     ) -> CreateMorePuzzleHashesResult:
         """
         For all wallets in the user store, generates the first few puzzle hashes so
@@ -389,7 +389,7 @@ class WalletStateManager:
                         raise ValueError(
                             "Called `create_more_puzzle_hashes` with a previous result and different configuration"
                         )
-                    if _commit_previous_result:
+                    if commit_previous_result:
                         await previous_result.commit(self)
                 targets = list(self.wallets.keys())
                 self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
@@ -576,7 +576,7 @@ class WalletStateManager:
                 if unused is None:
                     self.log.debug("No unused paths, generate more ")
                     create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
-                        previous_result=create_more_puzzle_hashes_result, _commit_previous_result=False
+                        previous_result=create_more_puzzle_hashes_result, commit_previous_result=False
                     )
                     await create_more_puzzle_hashes_result.commit(self)
                     # Now we must have unused public keys
@@ -597,7 +597,7 @@ class WalletStateManager:
                 create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
                     previous_result=create_more_puzzle_hashes_result,
                     up_to_index=record.index,
-                    _commit_previous_result=False,
+                    commit_previous_result=False,
                 )
                 await create_more_puzzle_hashes_result.commit(self)
                 raise PurposefulAbort(GetUnusedDerivationRecordResult(record, create_more_puzzle_hashes_result))
