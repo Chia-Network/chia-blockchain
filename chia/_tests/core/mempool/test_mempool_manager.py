@@ -58,7 +58,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.eligible_coin_spends import (
     DedupCoinSpend,
     EligibilityAndAdditions,
-    EligibleCoinSpends,
+    IdenticalSpendDedup,
     SkipDedup,
     UnspentLineageInfo,
     run_for_cost,
@@ -1505,14 +1505,14 @@ def test_dedup_info_nothing_to_do() -> None:
     ]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN, sig)
     mempool_item = mempool_item_from_spendbundle(sb)
-    eligible_coin_spends = EligibleCoinSpends()
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+    dedup_coin_spends = IdenticalSpendDedup()
+    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
     assert unique_additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))]
-    assert eligible_coin_spends == EligibleCoinSpends()
+    assert dedup_coin_spends == IdenticalSpendDedup()
 
 
 def test_dedup_info_eligible_1st_time() -> None:
@@ -1524,9 +1524,9 @@ def test_dedup_info_eligible_1st_time() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    eligible_coin_spends = EligibleCoinSpends()
+    dedup_coin_spends = IdenticalSpendDedup()
     solution = SerializedProgram.to(conditions)
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
     )
     assert unique_coin_spends == sb.coin_spends
@@ -1535,7 +1535,7 @@ def test_dedup_info_eligible_1st_time() -> None:
         Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1)),
         Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(TEST_COIN_AMOUNT - 1)),
     }
-    assert eligible_coin_spends == EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=None)})
+    assert dedup_coin_spends == IdenticalSpendDedup({TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=None)})
 
 
 def test_dedup_info_eligible_but_different_solution() -> None:
@@ -1545,12 +1545,12 @@ def test_dedup_info_eligible_but_different_solution() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT],
     ]
     initial_solution = SerializedProgram.to(initial_conditions)
-    eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
+    dedup_coin_spends = IdenticalSpendDedup({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT]]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     with pytest.raises(SkipDedup, match="Solution is different from what we're deduplicating on"):
-        eligible_coin_spends.get_deduplication_info(
+        dedup_coin_spends.get_deduplication_info(
             bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
         )
 
@@ -1562,7 +1562,7 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1],
     ]
     initial_solution = SerializedProgram.to(initial_conditions)
-    eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
+    dedup_coin_spends = IdenticalSpendDedup({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
     sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
     second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2]]
     second_solution = SerializedProgram.to(second_conditions)
@@ -1570,7 +1570,7 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
     )
     # Only the eligible one that we encountered more than once gets deduplicated
@@ -1580,13 +1580,13 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     assert unique_additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2)]
     # The coin we encountered a second time has its cost and additions properly updated
     # The coin we encountered for the first time gets cost None and an empty set of additions
-    expected_eligible_spends = EligibleCoinSpends(
+    expected_dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost),
             TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=None),
         }
     )
-    assert eligible_coin_spends == expected_eligible_spends
+    assert dedup_coin_spends == expected_dedup_coin_spends
 
 
 def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() -> None:
@@ -1599,7 +1599,7 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2]]
     second_solution = SerializedProgram.to(second_conditions)
     saved_cost = uint64(3600044)
-    eligible_coin_spends = EligibleCoinSpends(
+    dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost),
             TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=None),
@@ -1618,20 +1618,20 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
     )
     assert unique_coin_spends == sb3.coin_spends
     saved_cost2 = uint64(1800044)
     assert cost_saving == saved_cost + saved_cost2
     assert unique_additions == [Coin(TEST_COIN_ID3, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)]
-    expected_eligible_spends = EligibleCoinSpends(
+    expected_dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(initial_solution, saved_cost),
             TEST_COIN_ID2: DedupCoinSpend(second_solution, saved_cost2),
         }
     )
-    assert eligible_coin_spends == expected_eligible_spends
+    assert dedup_coin_spends == expected_dedup_coin_spends
 
 
 @pytest.mark.anyio
