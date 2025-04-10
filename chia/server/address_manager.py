@@ -6,6 +6,7 @@ import math
 import time
 from asyncio import Lock
 from dataclasses import dataclass, field
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from random import choice, randrange
 from secrets import randbits
 from typing import Optional
@@ -14,6 +15,7 @@ from chia_rs.sized_ints import uint16, uint64
 
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
+from chia.util.ip_address import IPAddress
 
 TRIED_BUCKETS_PER_GROUP = 8
 NEW_BUCKETS_PER_SOURCE_GROUP = 64
@@ -70,6 +72,66 @@ class ExtendedPeerInfo:
             + str(int(self.src.port))
         )
         return out
+
+    def to_bytes(self) -> bytes:
+        assert self.src is not None
+
+        def encode_ip(ip: IPAddress) -> bytes:
+            if isinstance(ip._inner, IPv4Address):
+                return b"\x00"
+            elif isinstance(ip._inner, IPv6Address):
+                return b"\x01"
+            raise TypeError("Unsupported IPAddress type.")
+
+        out = bytearray()
+        out.extend(encode_ip(self.peer_info._ip))
+        out.extend(self.peer_info._ip._inner.packed)
+        out.extend(self.peer_info.port.stream_to_bytes())
+        out.extend(uint64(self.timestamp).stream_to_bytes())
+        out.extend(encode_ip(self.src._ip))
+        out.extend(self.src._ip._inner.packed)
+        out.extend(self.src.port.stream_to_bytes())
+
+        return bytes(out)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> ExtendedPeerInfo:
+        def decode_ip(offset: int) -> tuple[str, int]:
+            ip_type = data[offset]
+            offset += 1
+            if ip_type == 0x00:
+                ip_len = 4
+            elif ip_type == 0x01:
+                ip_len = 16
+            else:
+                raise TypeError("Unknown IPAddress type byte.")
+            ip_bytes = data[offset : offset + ip_len]
+            ip = str(ip_address(ip_bytes))
+            return ip, offset + ip_len
+
+        def decode_uint16(offset: int) -> tuple[uint16, int]:
+            value = uint16.from_bytes(data[offset : offset + 2])
+            return value, offset + 2
+
+        def decode_uint64(offset: int) -> tuple[uint64, int]:
+            value = uint64.from_bytes(data[offset : offset + 8])
+            return value, offset + 8
+
+        offset = 0
+
+        # Decode peer_info
+        peer_ip, offset = decode_ip(offset)
+        peer_port, offset = decode_uint16(offset)
+        timestamp, offset = decode_uint64(offset)
+
+        # Decode src
+        src_ip, offset = decode_ip(offset)
+        src_port, offset = decode_uint16(offset)
+
+        peer_info = TimestampedPeerInfo(peer_ip, uint16(peer_port), uint64(timestamp))
+        src_peer = PeerInfo(src_ip, uint16(src_port))
+
+        return cls(peer_info, src_peer)
 
     @classmethod
     def from_string(cls, peer_str: str) -> ExtendedPeerInfo:

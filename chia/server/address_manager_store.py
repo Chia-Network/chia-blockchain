@@ -30,7 +30,7 @@ class PeerDataSerialization(Streamable):
     """
 
     metadata: list[tuple[str, str]]
-    nodes: list[str]
+    nodes: list[bytes]
     new_table: list[tuple[uint64, uint64]]
 
 
@@ -76,11 +76,11 @@ class AddressManagerStore:
         Serialize the address manager's peer data to a file.
         """
         metadata: list[tuple[str, str]] = []
-        nodes: list[str] = []
+        nodes: list[bytes] = []
         new_table_entries: list[tuple[uint64, uint64]] = []
         unique_ids: dict[int, int] = {}
         count_ids: int = 0
-        trieds: list[str] = []
+        trieds: list[bytes] = []
         log.info("Serializing peer data")
         metadata.append(("key", str(address_manager.key)))
 
@@ -88,10 +88,10 @@ class AddressManagerStore:
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
-                nodes.append(info.to_string())
+                nodes.append(info.to_bytes())
                 count_ids += 1
             if info.is_tried:
-                trieds.append(info.to_string())
+                trieds.append(info.to_bytes())
         metadata.append(("new_count", str(count_ids)))
 
         nodes.extend(trieds)
@@ -137,16 +137,16 @@ class AddressManagerStore:
             address_manager.tried_count = 0
 
             n = 0
-            for info_str in peer_data.nodes[: address_manager.new_count]:
-                info = ExtendedPeerInfo.from_string(info_str)
+            for info_bytes in peer_data.nodes[: address_manager.new_count]:
+                info = ExtendedPeerInfo.from_bytes(info_bytes)
                 address_manager.map_addr[info.peer_info.host] = n
                 address_manager.map_info[n] = info
                 info.random_pos = len(address_manager.random_pos)
                 address_manager.random_pos.append(n)
                 n += 1
             address_manager.id_count = address_manager.new_count
-            for info_str in peer_data.nodes[address_manager.new_count :]:
-                info = ExtendedPeerInfo.from_string(info_str)
+            for info_bytes in peer_data.nodes[address_manager.new_count :]:
+                info = ExtendedPeerInfo.from_bytes(info_bytes)
 
                 tried_bucket = info.get_tried_bucket(address_manager.key)
                 tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
@@ -196,7 +196,7 @@ class AddressManagerStore:
         cls,
         peers_file_path: Path,
         metadata: list[tuple[str, Any]],
-        nodes: list[str],
+        nodes: list[bytes],
         new_table: list[tuple[uint64, uint64]],
     ) -> None:
         """
