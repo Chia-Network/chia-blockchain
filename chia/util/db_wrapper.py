@@ -16,6 +16,7 @@ from typing import Any, Optional, TextIO, Union
 
 import aiosqlite
 import anyio
+import rocks_pyo3
 from typing_extensions import final
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
@@ -149,6 +150,7 @@ class DBWrapper2:
     _in_use: dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
     _current_writer: Optional[asyncio.Task[object]] = None
     _savepoint_name: int = 0
+    _rocks_db: Optional[rocks_pyo3.DB] = None
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -171,6 +173,7 @@ class DBWrapper2:
         synchronous: Optional[str] = None,
         foreign_keys: Optional[bool] = None,
         row_factory: Optional[type[aiosqlite.Row]] = None,
+        rocks_db: Optional[rocks_pyo3.DB] = None,
     ) -> AsyncIterator[DBWrapper2]:
         if foreign_keys is None:
             foreign_keys = False
@@ -193,7 +196,9 @@ class DBWrapper2:
 
             write_connection.row_factory = row_factory
 
-            self = cls(_write_connection=write_connection, db_version=db_version, _log_file=log_file)
+            self = cls(
+                _write_connection=write_connection, db_version=db_version, _log_file=log_file, _rocks_db=rocks_db
+            )
 
             for index in range(reader_count):
                 read_connection = await async_exit_stack.enter_async_context(

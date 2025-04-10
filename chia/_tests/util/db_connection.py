@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 import aiosqlite
+import rocks_pyo3
 
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 
@@ -18,15 +19,18 @@ async def DBConnection(
     row_factory: Optional[type[aiosqlite.Row]] = None,
 ) -> AsyncIterator[DBWrapper2]:
     db_uri = generate_in_memory_db_uri()
-    async with DBWrapper2.managed(
-        database=db_uri,
-        uri=True,
-        reader_count=4,
-        db_version=db_version,
-        foreign_keys=foreign_keys,
-        row_factory=row_factory,
-    ) as _db_wrapper:
-        yield _db_wrapper
+    with tempfile.TemporaryDirectory() as rocksdb_directory:
+        rocks_db: rocks_pyo3.DB = rocks_pyo3.DB(rocksdb_directory)
+        async with DBWrapper2.managed(
+            database=db_uri,
+            uri=True,
+            reader_count=4,
+            db_version=db_version,
+            foreign_keys=foreign_keys,
+            row_factory=row_factory,
+            rocks_db=rocks_db,
+        ) as _db_wrapper:
+            yield _db_wrapper
 
 
 @asynccontextmanager
