@@ -79,7 +79,7 @@ class PendingTxCache:
             # we start removing items with the highest assert_height first
             to_evict = self._by_height.items()[-1]
             if to_evict[1] == {}:
-                self._txs.pop(to_evict[0])
+                self._by_height.pop(to_evict[0])
                 continue
 
             first_in = next(iter(to_evict[1].keys()))

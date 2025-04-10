@@ -13,8 +13,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend
-from chia.types.internal_mempool_item import InternalMempoolItem
-from chia.types.mempool_item import BundleCoinSpend
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 
@@ -232,7 +231,7 @@ class EligibleCoinSpends:
     async def process_fast_forward_spends(
         self,
         *,
-        mempool_item: InternalMempoolItem,
+        mempool_item: MempoolItem,
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         height: uint32,
         constants: ConsensusConstants,
