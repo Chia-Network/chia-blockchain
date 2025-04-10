@@ -2123,13 +2123,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await generate_funds(full_node_api, env.wallet_1)
 
     env.wallet_2.node.config["enable_notifications"] = True
-    env.wallet_2.node.config["required_notification_amount"] = 100_000_000_000
+    env.wallet_2.node.config["required_notification_amount"] = 100000000000
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         tx = await client.send_notification(
             await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
             b"hello",
-            uint64(100_000_000_000),
-            fee=uint64(100_000_000_000),
+            uint64(100000000000),
+            fee=uint64(100000000000),
         )
 
     assert tx.spend_bundle is not None
@@ -2140,7 +2140,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
         tx.spend_bundle.name(),
     )
     await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
-    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100_000_000_000))
+    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
     assert [notification] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
@@ -2155,8 +2155,8 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
         tx = await client.send_notification(
             await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
             b"hello",
-            uint64(100_000_000_000),
-            fee=uint64(100_000_000_000),
+            uint64(100000000000),
+            fee=uint64(100000000000),
         )
 
     assert tx.spend_bundle is not None
@@ -2167,7 +2167,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
         tx.spend_bundle.name(),
     )
     await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
-    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200_000_000_000))
+    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
     assert await client_2.delete_notifications([notification.id])

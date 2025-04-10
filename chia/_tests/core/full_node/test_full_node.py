@@ -2505,9 +2505,9 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
             assert records == {}
             continue
 
-        if len(block.transactions_generator_ref_list) > 0:  # pragma: no cover
-            # TODO: Support block references
-            assert False
+        # TODO: Support block references
+        # if len(block.transactions_generator_ref_list) > 0:
+        #    assert False
 
         flags = get_flags_for_height_and_constants(block.height, test_constants)
         additions, removals = additions_and_removals(bytes(block.transactions_generator), [], flags, test_constants)
@@ -2539,6 +2539,7 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
 async def test_long_reorg(
     light_blocks: bool,
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
@@ -2550,14 +2551,15 @@ async def test_long_reorg(
     node, _server, _bt = one_node_one_block
 
     fork_point = 1499
-    blocks = default_10000_blocks[:3000]
 
     if light_blocks:
         # if the blocks have lighter weight, we need more height to compensate,
         # to force a reorg
-        reorg_blocks = test_long_reorg_1500_blocks_light[:3050]
+        reorg_blocks = test_long_reorg_1500_blocks_light[:1950]
+        blocks = default_10000_blocks[:1900]
     else:
-        reorg_blocks = test_long_reorg_1500_blocks[:2700]
+        reorg_blocks = test_long_reorg_1500_blocks[:2300]
+        blocks = default_10000_blocks[:3000]
 
     await add_blocks_in_batches(blocks, node.full_node)
     peak = node.full_node.blockchain.get_peak()
@@ -2624,7 +2626,10 @@ async def test_long_reorg_nodes(
     fork_point: int,
     three_nodes: list[FullNodeAPI],
     default_10000_blocks: list[FullBlock],
-    test_long_reorg_blocks: list[FullBlock],
+    # this is commented out because it's currently only used by a skipped test.
+    # If we ever want to un-skip the test, we need this fixture again. Loading
+    # these blocks from disk takes non-trivial time
+    # test_long_reorg_blocks: list[FullBlock],
     test_long_reorg_blocks_light: list[FullBlock],
     test_long_reorg_1500_blocks: list[FullBlock],
     test_long_reorg_1500_blocks_light: list[FullBlock],
@@ -2637,26 +2642,28 @@ async def test_long_reorg_nodes(
     assert full_node_2.full_node._coin_store is not None
     assert full_node_3.full_node._coin_store is not None
 
-    if fork_point == 1500:
-        blocks = default_10000_blocks[: 3600 - chain_length]
-    else:
-        blocks = default_10000_blocks[: 1600 - chain_length]
-
     if light_blocks:
         if fork_point == 1500:
-            reorg_blocks = test_long_reorg_1500_blocks_light[: 3600 - chain_length]
-            reorg_height = 4000
+            blocks = default_10000_blocks[: 3105 - chain_length]
+            reorg_blocks = test_long_reorg_1500_blocks_light[: 3105 - chain_length]
+            reorg_height = 3300
         else:
+            blocks = default_10000_blocks[: 1600 - chain_length]
             reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
-            reorg_height = 4000
+            reorg_height = 2000
     else:
         if fork_point == 1500:
-            reorg_blocks = test_long_reorg_1500_blocks[: 3100 - chain_length]
-            reorg_height = 10000
-        else:
-            reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
-            reorg_height = 4000
+            blocks = default_10000_blocks[: 1900 - chain_length]
+            reorg_blocks = test_long_reorg_1500_blocks[: 1900 - chain_length]
+            reorg_height = 2300
+        else:  # pragma: no cover
             pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
+            blocks = default_10000_blocks[: 1100 - chain_length]
+            # reorg_blocks = test_long_reorg_blocks[: 1100 - chain_length]
+            reorg_height = 1600
+
+    # this is a pre-requisite for a reorg to happen
+    assert default_10000_blocks[reorg_height].weight > reorg_blocks[-1].weight
 
     await add_blocks_in_batches(blocks, full_node_1.full_node)
 

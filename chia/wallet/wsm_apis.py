@@ -46,9 +46,9 @@ class StreamableCreateMorePuzzleHashesResult(Streamable):
 class CreateMorePuzzleHashesResult:
     derivation_paths: list[DerivationRecord]
     mark_existing_as_used: bool
-    unused: int
+    unused: int  # The first unusued puzzle hash
     new_unhardened_keys: bool
-    last_index: int
+    last_index: int  # The index we derived up to
 
     async def commit(self, wallet_state_manager: WalletStateManager) -> None:
         if len(self.derivation_paths) > 0:
@@ -88,7 +88,7 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
         )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class GetUnusedDerivationRecordResult:
     record: DerivationRecord
     create_more_puzzle_hashes_result: CreateMorePuzzleHashesResult

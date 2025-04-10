@@ -1355,7 +1355,7 @@ async def test_server_http_ban(
     async def mock_http_download(
         target_filename_path: Path,
         filename: str,
-        proxy_url: str,
+        proxy_url: Optional[str],
         server_info: ServerInfo,
         timeout: aiohttp.ClientTimeout,
         log: logging.Logger,
@@ -1885,7 +1885,7 @@ async def test_insert_from_delta_file(
     async def mock_http_download(
         target_filename_path: Path,
         filename: str,
-        proxy_url: str,
+        proxy_url: Optional[str],
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,
@@ -1895,7 +1895,7 @@ async def test_insert_from_delta_file(
     async def mock_http_download_2(
         target_filename_path: Path,
         filename: str,
-        proxy_url: str,
+        proxy_url: Optional[str],
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,

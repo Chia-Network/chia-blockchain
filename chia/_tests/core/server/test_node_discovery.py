@@ -20,15 +20,15 @@ async def test_enable_private_networks(
 
     # Missing `enable_private_networks` config entry in introducer_peer should default to False for back compat
     discovery0 = FullNodeDiscovery(
-        chia_server,
-        0,
-        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
-        {"host": "introducer.chia.net", "port": 8444},
-        [],
-        0,
-        chia_server.config["selected_network"],
-        None,
-        Logger("node_discovery_tests"),
+        server=chia_server,
+        target_outbound_count=0,
+        peers_file_path=SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        introducer_info={"host": "introducer.chia.net", "port": 8444},
+        dns_servers=[],
+        peer_connect_interval=0,
+        selected_network=chia_server.config["selected_network"],
+        default_port=None,
+        log=Logger("node_discovery_tests"),
     )
     assert discovery0 is not None
     assert discovery0.enable_private_networks is False
@@ -36,17 +36,31 @@ async def test_enable_private_networks(
     assert discovery0.address_manager is not None
     assert discovery0.address_manager.allow_private_subnets is False
 
+    # Missing `default_port` but known selected_network should automatically pick a port
+    discovery0 = FullNodeDiscovery(
+        server=chia_server,
+        target_outbound_count=0,
+        peers_file_path=SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        introducer_info={"host": "introducer.chia.net", "port": 8444},
+        dns_servers=[],
+        peer_connect_interval=0,
+        selected_network="testnet7",
+        default_port=None,
+        log=Logger("node_discovery_tests"),
+    )
+    assert discovery0.default_port == 58444
+
     # Test with enable_private_networks set to False in Config
     discovery1 = FullNodeDiscovery(
-        chia_server,
-        0,
-        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
-        {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": False},
-        [],
-        0,
-        chia_server.config["selected_network"],
-        None,
-        Logger("node_discovery_tests"),
+        server=chia_server,
+        target_outbound_count=0,
+        peers_file_path=SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        introducer_info={"host": "introducer.chia.net", "port": 8444, "enable_private_networks": False},
+        dns_servers=[],
+        peer_connect_interval=0,
+        selected_network=chia_server.config["selected_network"],
+        default_port=None,
+        log=Logger("node_discovery_tests"),
     )
     assert discovery1 is not None
     assert discovery1.enable_private_networks is False
@@ -56,15 +70,15 @@ async def test_enable_private_networks(
 
     # Test with enable_private_networks set to True in Config
     discovery2 = FullNodeDiscovery(
-        chia_server,
-        0,
-        SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
-        {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": True},
-        [],
-        0,
-        chia_server.config["selected_network"],
-        None,
-        Logger("node_discovery_tests"),
+        server=chia_server,
+        target_outbound_count=0,
+        peers_file_path=SIMULATOR_ROOT_PATH / Path(chia_server.config["peers_file_path"]),
+        introducer_info={"host": "introducer.chia.net", "port": 8444, "enable_private_networks": True},
+        dns_servers=[],
+        peer_connect_interval=0,
+        selected_network=chia_server.config["selected_network"],
+        default_port=None,
+        log=Logger("node_discovery_tests"),
     )
     assert discovery2 is not None
     assert discovery2.enable_private_networks is True

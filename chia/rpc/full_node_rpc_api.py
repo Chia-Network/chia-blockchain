@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs import SpendBundleConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
@@ -27,7 +28,6 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.log_exceptions import log_exceptions
@@ -852,6 +852,7 @@ class FullNodeRpcApi:
                     "additions": gen.additions,
                     "removals": gen.removals,
                     "sig": gen.signature,
+                    "cost": gen.cost,
                 }
 
             # Finds the last transaction block before this one
@@ -863,7 +864,7 @@ class FullNodeRpcApi:
             start_time = time.monotonic()
 
             try:
-                maybe_gen = await self.service.mempool_manager.create_block_generator(curr_l_tb.header_hash)
+                maybe_gen = await self.service.mempool_manager.create_block_generator2(curr_l_tb.header_hash)
                 if maybe_gen is None:
                     self.service.log.error(f"failed to create block generator, peak: {peak}")
                 else:
@@ -878,6 +879,7 @@ class FullNodeRpcApi:
             "additions": gen.additions,
             "removals": gen.removals,
             "sig": gen.signature,
+            "cost": gen.cost,
         }
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
