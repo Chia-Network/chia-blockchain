@@ -155,7 +155,7 @@ class Program(SExp):
     # (2 (1 . self) rest)
     #
     # Resulting in a function which places its own arguments after those
-    # curried in in the form of a proper list.
+    # curried in the form of a proper list.
     def curry(self, *args) -> Program:
         fixed_args: Any = 1
         for arg in reversed(args):
