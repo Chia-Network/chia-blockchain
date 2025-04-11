@@ -13,7 +13,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.db_wrapper import DBWrapper2, manage_connection
+from chia.util.db_wrapper import DBWrapper2, Writer, manage_connection
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -70,7 +70,7 @@ async def test_wsm_sign_transaction() -> None:
     async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="writer") as writer_conn:
         async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="reader") as reader_conn:
             wsm = WalletStateManager()
-            db = DBWrapper2(writer_conn)
+            db = DBWrapper2(Writer(_connection=writer_conn))
             await db.add_connection(reader_conn)
             wsm.puzzle_store = await WalletPuzzleStore.create(db)
             wsm.constants = DEFAULT_CONSTANTS
