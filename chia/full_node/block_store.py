@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
+from collections.abc import Collection
 from typing import Optional
 
 import typing_extensions
@@ -266,27 +267,43 @@ class BlockStore:
                     b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
                 )
 
-    async def get_generator(self, header_hash: bytes32) -> Optional[bytes]:
-        cached = self.block_cache.get(header_hash)
-        if cached is not None:
-            return None if cached.transactions_generator is None else bytes(cached.transactions_generator)
+    async def get_generators(self, header_hashes: Collection[bytes32]) -> dict[uint32, bytes]:
+        ret: dict[uint32, bytes] = {}
 
-        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
+        remaining: list[bytes32] = []
+        for header_hash in header_hashes:
+            cached = self.block_cache.get(header_hash)
+            if cached is not None:
+                if not cached.transactions_generator:
+                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                ret[cached.height] = bytes(cached.transactions_generator)
+            else:
+                remaining.append(header_hash)
+
+        if remaining == []:
+            return ret
+
+        formatted_str = f"SELECT block, height from full_blocks WHERE header_hash in ({'?,' * (len(remaining) - 1)}?)"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (header_hash,))
-            if row is None:
-                return None
-            block_bytes = zstd.decompress(row[0])
+            async with conn.execute(formatted_str, remaining) as cursor:
+                for row in await cursor.fetchall():
+                    block_bytes = zstd.decompress(row[0])
+                    try:
+                        gen = generator_from_block(block_bytes)
+                    except Exception as e:  # pragma: no cover
+                        log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                        # this is defensive, on the off-chance that
+                        # generator_from_block() fails, fall back to the reliable
+                        # definition of parsing a block
+                        b = FullBlock.from_bytes(block_bytes)
+                        if b.transactions_generator is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        gen = bytes(b.transactions_generator)
+                    if gen is None:
+                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                    ret[uint32(row[1])] = gen
 
-            try:
-                return generator_from_block(block_bytes)
-            except Exception as e:  # pragma: no cover
-                log.error(f"cheap parser failed for block at height {row[1]}: {e}")
-                # this is defensive, on the off-chance that
-                # generator_from_block() fails, fall back to the reliable
-                # definition of parsing a block
-                b = FullBlock.from_bytes(block_bytes)
-                return None if b.transactions_generator is None else bytes(b.transactions_generator)
+        return ret
 
     async def get_generators_at(self, heights: set[uint32]) -> dict[uint32, bytes]:
         if len(heights) == 0:
