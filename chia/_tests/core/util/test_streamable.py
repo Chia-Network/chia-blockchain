@@ -372,7 +372,7 @@ class PostInitTestClassBasic(Streamable):
 @dataclass(frozen=True)
 class PostInitTestClassBad(Streamable):
     a: uint8
-    b = 0
+    b = 0  # noqa: RUF045
 
 
 @streamable

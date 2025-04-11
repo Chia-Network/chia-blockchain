@@ -67,10 +67,10 @@ class PoolWallet:
 
         _protocol_check: ClassVar[WalletProtocol[object]] = cast("PoolWallet", None)
 
-    MINIMUM_INITIAL_BALANCE = 1
-    MINIMUM_RELATIVE_LOCK_HEIGHT = 5
-    MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
-    DEFAULT_MAX_CLAIM_SPENDS = 100
+    MINIMUM_INITIAL_BALANCE: ClassVar[int] = 1
+    MINIMUM_RELATIVE_LOCK_HEIGHT: ClassVar[int] = 5
+    MAXIMUM_RELATIVE_LOCK_HEIGHT: ClassVar[int] = 1000
+    DEFAULT_MAX_CLAIM_SPENDS: ClassVar[int] = 100
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger

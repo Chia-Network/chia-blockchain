@@ -161,7 +161,7 @@ def find_all_dependency_paths(dependency_graph: dict[str, list[str]], start: str
         if current in visited:
             return
         if current == target and len(path) > 0:
-            all_paths.append(path[1:] + [current])
+            all_paths.append([*path[1:], current])
             return
         visited.add(current)
         for provider in sorted(dependency_graph.get(current, [])):
