@@ -869,7 +869,7 @@ class WalletRpcApi:
                     await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                         request.fee,
                         inner_action_scope,
-                        (
+                        extra_conditions=(
                             *extra_conditions,
                             CreateCoinAnnouncement(
                                 create_coin_announcement.msg, announcement_origin
@@ -3618,6 +3618,7 @@ class WalletRpcApi:
         async with action_scope.use() as interface:
             sb = WalletSpendBundle.aggregate(
                 [tx.spend_bundle for tx in interface.side_effects.transactions if tx.spend_bundle is not None]
+                + [sb for sb in interface.side_effects.extra_spends]
             )
         nft_id_list = []
         for cs in sb.coin_spends:
