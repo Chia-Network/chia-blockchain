@@ -23,7 +23,11 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_config import (
+    PoolWalletConfig,
+    load_pool_config,
+    update_pool_config,
+)
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -306,6 +310,13 @@ async def join_pool(
     prompt: bool,
 ) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+
+    pool_wallet_info, _ = await wallet_info.client.pw_status(selected_wallet_id)
+    if (
+        pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
+        and pool_wallet_info.current.pool_url == pool_url
+    ):
+        raise CliRpcConnectionError(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
 
     enforce_https = wallet_info.config["selected_network"] == "mainnet"
 
