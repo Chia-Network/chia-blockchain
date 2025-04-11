@@ -244,6 +244,7 @@ async def insert_from_delta_file(
                     store_id,
                     None if root_hash == bytes32.zeros else root_hash,
                     target_filename_path,
+                    existing_generation,
                 )
                 log.info(
                     f"Successfully inserted hash {root_hash} from delta file. "
@@ -260,15 +261,15 @@ async def insert_from_delta_file(
 
                 await data_store.received_correct_file(store_id, server_info)
         except Exception:
-            try:
-                target_filename_path.unlink()
-            except FileNotFoundError:
-                pass
-
-            try:
-                filename_full_tree.unlink()
-            except FileNotFoundError:
-                pass
+            # try:
+            #     target_filename_path.unlink()
+            # except FileNotFoundError:
+            #     pass
+            #
+            # try:
+            #     filename_full_tree.unlink()
+            # except FileNotFoundError:
+            #     pass
 
             # await data_store.received_incorrect_file(store_id, server_info, timestamp)
             # incorrect file bans for 7 days which in practical usage
