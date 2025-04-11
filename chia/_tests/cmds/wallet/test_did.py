@@ -16,9 +16,7 @@ from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
-from chia.wallet.did_wallet.did_info import (
-    did_recovery_is_nil,
-)
+from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
