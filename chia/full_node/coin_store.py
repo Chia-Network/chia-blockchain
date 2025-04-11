@@ -406,7 +406,7 @@ class CoinStore:
 
         return coins
 
-    MAX_PUZZLE_HASH_BATCH_SIZE = SQLITE_MAX_VARIABLE_NUMBER - 10
+    MAX_PUZZLE_HASH_BATCH_SIZE: int = SQLITE_MAX_VARIABLE_NUMBER - 10
 
     async def batch_coin_states_by_puzzle_hashes(
         self,
