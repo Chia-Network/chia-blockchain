@@ -7,12 +7,12 @@ import logging
 import sqlite3
 import time
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Collection, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Optional, Union, Collection
+from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 import anyio
@@ -214,6 +214,7 @@ class DataStore:
         ref_time = now
 
         internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+        maybe_new_hashes = {*internal_nodes.keys(), *terminal_nodes.keys()}
 
         now = time.monotonic()
         delta_read_time = now - ref_time
@@ -256,8 +257,28 @@ class DataStore:
 
         for old_root_hash, (generation, indexes) in merkle_blob_queries.items():
             delta_reader.collect_from_merkle_blob(self.get_blob_path(old_root_hash).as_posix(), indexes=indexes)
+        now = time.monotonic()
+        process_queries_time = now - ref_time
+        ref_time = now
 
-        merkle_blob = delta_reader.create_merkle_blob(root_hash)
+        merkle_blob, hashes_and_indexes = delta_reader.create_merkle_blob(root_hash, maybe_new_hashes)
+
+        now = time.monotonic()
+        create_blob_time = now - ref_time
+        ref_time = now
+
+        async with self.db_wrapper.writer() as writer:
+            await writer.executemany(
+                """
+                INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    (store_id, hash, root_hash, root.generation + 1, index.raw)
+                    for hash, index in hashes_and_indexes
+                    # if hash not in existing_hashes
+                ),
+            )
         # merkle_blob = MerkleBlob.from_many(
         #     root_hash,
         #     {
@@ -271,7 +292,7 @@ class DataStore:
         # internal_nodes.update(more_internal_nodes)
         # terminal_nodes.update(more_terminal_nodes)
         now = time.monotonic()
-        process_queries_time = now - ref_time
+        add_nodes_time = now - ref_time
         ref_time = now
 
         now = time.monotonic()
@@ -279,7 +300,7 @@ class DataStore:
         # merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
 
         print(
-            f"getting missing hashes took: {delta_read_time + latest_blob_time + build_queries_time + process_queries_time:.1f} <- {delta_read_time:.1f} + {latest_blob_time:.1f} + {build_queries_time:.1f} + {process_queries_time:.1f}"
+            f"getting missing hashes took: {delta_read_time + latest_blob_time + build_queries_time + process_queries_time + create_blob_time + add_nodes_time:.1f} <- {delta_read_time:.1f} + {latest_blob_time:.1f} + {build_queries_time:.1f} + {process_queries_time:.1f} + {create_blob_time:.1f} + {add_nodes_time:.1f}"
         )
         # if len(missing_hashes) > 0:
         #     print(f"getting missing hashes took: {delta_read_time + latest_blob_time + build_queries_time + process_queries_time:.1f} <- {delta_read_time:.1f} + {latest_blob_time:.1f} + {build_queries_time:.1f} + {process_queries_time:.1f}")
@@ -386,6 +407,8 @@ class DataStore:
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
         adding_hashes = 0
+        load_time = 0
+        insert_time = 0
 
         while missing_hashes:
             found_hashes: set[bytes32] = set()
@@ -423,11 +446,13 @@ class DataStore:
                     raise Exception("Invalid delta file, cannot find all the required hashes")
 
                 ref_time = time.monotonic()
-                await self.add_node_hashes(store_id, current_generation)
+                this_load_time, this_insert_time = await self.add_node_hashes(store_id, current_generation)
+                load_time += this_load_time
+                insert_time += this_insert_time
                 adding_hashes += time.monotonic() - ref_time
                 log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
-        print(f"              adding hashes: {adding_hashes:.1f}")
+        print(f"              adding hashes: {adding_hashes:.1f} <- {load_time:.1f} + {insert_time:.1f}")
         return queries
 
     async def read_from_file(
@@ -805,23 +830,29 @@ class DataStore:
         root = await self.get_tree_root(store_id=store_id, generation=generation)
         if root.node_hash is None:
             return
-
+        ref_time = time.monotonic()
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash, read_only=True, update_cache=False)
         hash_to_index = merkle_blob.get_hashes_indexes()
+        # existing_hashes = await self.get_existing_hashes(hash_to_index.keys(), store_id)
+        now = time.monotonic()
+        load_time = now - ref_time
+        ref_time = time.monotonic()
 
-        existing_hashes = await self.get_existing_hashes(hash_to_index.keys(), store_id)
         async with self.db_wrapper.writer() as writer:
             await writer.executemany(
                 """
-                INSERT INTO nodes(store_id, hash, root_hash, generation, idx)
+                INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     (store_id, hash, root.node_hash, root.generation, index.raw)
                     for hash, index in hash_to_index.items()
-                    if hash not in existing_hashes
+                    # if hash not in existing_hashes
                 ),
             )
+        now = time.monotonic()
+        insert_time = now - ref_time
+        return load_time, insert_time
 
     async def _insert_root(
         self,
