@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Optional, Union
+from typing import Any, BinaryIO, Callable, Optional, Union, Collection
 
 import aiosqlite
 import anyio
@@ -385,6 +385,8 @@ class DataStore:
 
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
+        adding_hashes = 0
+
         while missing_hashes:
             found_hashes: set[bytes32] = set()
             async with self.db_wrapper.reader() as reader:
@@ -420,9 +422,12 @@ class DataStore:
                 else:
                     raise Exception("Invalid delta file, cannot find all the required hashes")
 
+                ref_time = time.monotonic()
                 await self.add_node_hashes(store_id, current_generation)
+                adding_hashes += time.monotonic() - ref_time
                 log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
+        print(f"              adding hashes: {adding_hashes:.1f}")
         return queries
 
     async def read_from_file(
@@ -430,6 +435,9 @@ class DataStore:
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
+
+        add_time = 0
+        start = time.monotonic()
 
         with open(filename, "rb") as reader:
             async with self.db_wrapper.writer() as writer:
@@ -461,15 +469,20 @@ class DataStore:
                         node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
                         internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
                     else:
+                        ref_time = time.monotonic()
                         kid, vid = await self.add_key_value(
                             serialized_node.value1,
                             serialized_node.value2,
                             store_id,
                             writer=writer,
                         )
+                        add_time += time.monotonic() - ref_time
                         node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
                         terminal_nodes[node_hash] = (kid, vid)
 
+        duration = time.monotonic() - start
+        not_add_time = duration - add_time
+        print(f"        read from file took: {duration:.1f} <- {not_add_time:.1f} + {add_time:.1f}")
         return internal_nodes, terminal_nodes
 
     async def migrate_db(self, server_files_location: Path) -> None:
@@ -769,13 +782,16 @@ class DataStore:
 
             return int(row[0])
 
-    async def get_existing_hashes(self, node_hashes: list[bytes32], store_id: bytes32) -> set[bytes32]:
+    async def get_existing_hashes(self, node_hashes: Collection[bytes32], store_id: bytes32) -> set[bytes32]:
         result: set[bytes32] = set()
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
         async with self.db_wrapper.reader() as reader:
-            for i in range(0, len(node_hashes), batch_size):
-                chunk = node_hashes[i : i + batch_size]
+            it = iter(node_hashes)
+            while True:
+                chunk = [*itertools.islice(it, batch_size)]
+                if len(chunk) == 0:
+                    break
                 placeholders = ",".join(["?"] * len(chunk))
                 query = f"SELECT hash FROM nodes WHERE store_id = ? AND hash IN ({placeholders}) LIMIT {len(chunk)}"
 
@@ -793,7 +809,7 @@ class DataStore:
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash, read_only=True, update_cache=False)
         hash_to_index = merkle_blob.get_hashes_indexes()
 
-        existing_hashes = await self.get_existing_hashes(list(hash_to_index.keys()), store_id)
+        existing_hashes = await self.get_existing_hashes(hash_to_index.keys(), store_id)
         async with self.db_wrapper.writer() as writer:
             await writer.executemany(
                 """
