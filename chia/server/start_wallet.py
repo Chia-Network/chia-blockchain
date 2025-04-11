@@ -74,11 +74,8 @@ def create_wallet_service(
     )
 
 
-async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml")
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
-    config[SERVICE_NAME] = service_config
+async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
+    service_config: dict[str, Any] = config[SERVICE_NAME]
 
     # This is simulator
     local_test = service_config.get("testing", False)
@@ -91,7 +88,6 @@ async def async_main(root_path: pathlib.Path) -> int:
         service_config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
     service = create_wallet_service(root_path, config, constants)
     async with SignalHandlers.manage() as signal_handlers:
@@ -105,10 +101,16 @@ def main() -> int:
     freeze_support()
     root_path = resolve_root_path(override=None)
 
+    # TODO: refactor to avoid the double load
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    config[SERVICE_NAME] = service_config
+    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
+
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        return async_run(coro=async_main(root_path=root_path))
+        return async_run(coro=async_main(root_path=root_path, config=config))
 
 
 if __name__ == "__main__":
