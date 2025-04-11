@@ -71,55 +71,13 @@ class AddressManagerStore:
         return address_manager
 
     @classmethod
-    async def serialize(cls, address_manager: AddressManager, peers_file_path: Path) -> None:
-        """
-        Serialize the address manager's peer data to a file.
-        """
-        metadata: list[tuple[str, str]] = []
-        nodes: bytearray = bytearray()
-        new_table_entries: list[tuple[uint64, uint64]] = []
-        unique_ids: dict[int, int] = {}
-        count_ids: int = 0
-        trieds: bytearray = bytearray()
-        log.info("Serializing peer data")
-        metadata.append(("key", str(address_manager.key)))
-
-        for node_id, info in address_manager.map_info.items():
-            unique_ids[node_id] = count_ids
-            if info.ref_count > 0:
-                assert count_ids != address_manager.new_count
-                nodes.append(info.to_bytes())
-                count_ids += 1
-            if info.is_tried:
-                trieds.append(info.to_bytes())
-        metadata.append(("new_count", str(count_ids)))
-
-        nodes.extend(trieds)
-
-        for bucket in range(NEW_BUCKET_COUNT):
-            for i in range(BUCKET_SIZE):
-                if address_manager.new_matrix[bucket][i] != -1:
-                    new_table_entries.append(
-                        (uint64(unique_ids[address_manager.new_matrix[bucket][i]]), uint64(bucket))
-                    )
-
-        try:
-            # Ensure the parent directory exists
-            peers_file_path.parent.mkdir(parents=True, exist_ok=True)
-            start_time = timer()
-            await cls._write_peers(peers_file_path, metadata, nodes, new_table_entries)
-            log.debug(f"Serializing peer data took {timer() - start_time} seconds")
-        except Exception:
-            log.exception(f"Failed to write peer data to {peers_file_path}")
-
-    @classmethod
     async def serialize_bytes(cls, address_manager: AddressManager, peers_file_path: Path) -> None:
         out = bytearray()
         nodes = bytearray()
         trieds = bytearray()
         new_table = bytearray()
         unique_ids: dict[int, int] = {}
-        count_ids: uint64 = 0
+        count_ids: int = 0
 
         for node_id, info in address_manager.map_info.items():
             unique_ids[node_id] = count_ids
@@ -133,15 +91,11 @@ class AddressManagerStore:
         out.extend(address_manager.key.to_bytes(32, byteorder="big"))
         out.extend(uint64(count_ids).stream_to_bytes())
 
-        # serialize new_table - this will break if we change bucket sizes, but thats ok
-        # for id_val, bucket in address_manager.new_matrix:
-        #     out.extend(uint64(id_val).stream_to_bytes())
-        #     out.extend(uint64(bucket).stream_to_bytes())
         count = 0
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
                 if address_manager.new_matrix[bucket][i] != -1:
-                    count += 1  # TODO: check if this is the same as count_ids - we can remove new_table bytearray if so
+                    count += 1
                     new_table.extend(uint64(unique_ids[address_manager.new_matrix[bucket][i]]).stream_to_bytes())
                     new_table.extend(uint64(bucket).stream_to_bytes())
 
@@ -154,7 +108,7 @@ class AddressManagerStore:
         await write_file_async(peers_file_path, bytes(out), file_mode=0o644)
 
     @classmethod
-    async def deserialize_bytes(cls, peers_file_path: Path) -> None:
+    async def deserialize_bytes(cls, peers_file_path: Path) -> AddressManager:
         data: Optional[bytes] = None
         address_manager = AddressManager()
         offset = 0
@@ -220,9 +174,9 @@ class AddressManagerStore:
                     address_manager.new_matrix[bucket][bucket_pos] = node_id
 
         # remove deads
-        for node_id, info in list(address_manager.map_info.items()):
+        for id, info in list(address_manager.map_info.items()):
             if not info.is_tried and info.ref_count == 0:
-                address_manager.delete_new_entry_(node_id)
+                address_manager.delete_new_entry_(id)
 
         address_manager.load_used_table_positions()
 

@@ -95,7 +95,7 @@ class ExtendedPeerInfo:
         return bytes(out)
 
     @classmethod
-    def from_bytes(cls, data: bytes, offset: int = 0) -> ExtendedPeerInfo:
+    def from_bytes(cls, data: bytes, offset: int = 0) -> tuple[ExtendedPeerInfo, int]:
         def decode_ip(offset: int) -> tuple[str, int]:
             ip_type = data[offset]
             offset += 1
