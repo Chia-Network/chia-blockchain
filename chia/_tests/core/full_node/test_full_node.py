@@ -14,11 +14,13 @@ from chia_rs import (
     AugSchemeMPL,
     Foliage,
     FoliageTransactionBlock,
+    FullBlock,
     G2Element,
     PrivateKey,
     RewardChainBlockUnfinished,
     SpendBundleConditions,
     TransactionsInfo,
+    UnfinishedBlock,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
@@ -86,11 +88,9 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err

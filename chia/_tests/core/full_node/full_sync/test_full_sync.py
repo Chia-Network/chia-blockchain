@@ -5,7 +5,7 @@ import logging
 import time
 
 import pytest
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
@@ -16,8 +16,6 @@ from chia.protocols import full_node_protocol
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
 from clvm.casts import int_to_bytes
@@ -27,8 +27,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 

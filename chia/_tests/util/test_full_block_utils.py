@@ -7,11 +7,14 @@ from typing import Optional
 import pytest
 from chia_rs import (
     ChallengeChainSubSlot,
+    EndOfSubSlotBundle,
     Foliage,
     FoliageBlockData,
     FoliageTransactionBlock,
+    FullBlock,
     G1Element,
     G2Element,
+    HeaderBlock,
     InfusedChallengeChainSubSlot,
     PoolTarget,
     RewardChainBlock,
@@ -26,9 +29,6 @@ from chia._tests.util.benchmarks import rand_bytes, rand_g1, rand_g2, rand_hash,
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.util.full_block_utils import (
     block_info_from_block,
     generator_from_block,

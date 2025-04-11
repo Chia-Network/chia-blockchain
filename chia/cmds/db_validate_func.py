@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
+from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.full_block import FullBlock
 from chia.util.config import load_config
 from chia.util.path import path_from_root
 

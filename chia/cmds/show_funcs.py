@@ -99,10 +99,10 @@ async def print_block_from_hash(
 ) -> None:
     import time
 
+    from chia_rs import FullBlock
     from chia_rs.sized_bytes import bytes32
 
     from chia.consensus.block_record import BlockRecord
-    from chia.types.full_block import FullBlock
     from chia.util.bech32m import encode_puzzle_hash
 
     block: Optional[BlockRecord] = await node_client.get_block_record(bytes32.from_hexstr(block_by_header_hash))

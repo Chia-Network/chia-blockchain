@@ -8,12 +8,14 @@ from chia_rs import (
     Foliage,
     FoliageBlockData,
     FoliageTransactionBlock,
+    FullBlock,
     G1Element,
     G2Element,
     PoolTarget,
     RewardChainBlock,
     RewardChainBlockUnfinished,
     TransactionsInfo,
+    UnfinishedBlock,
     compute_merkle_set_root,
 )
 from chia_rs.sized_bytes import bytes32, bytes100
@@ -30,10 +32,8 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 

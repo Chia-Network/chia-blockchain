@@ -5,13 +5,13 @@ from enum import IntEnum
 from typing import Optional
 
 import chia_rs
+from chia_rs import HeaderBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.full_node.fee_estimate import FeeEstimateGroup
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.streamable import Streamable, streamable
 

@@ -13,10 +13,13 @@ from typing import IO, Optional
 from chia_rs import (
     ChallengeChainSubSlot,
     ConsensusConstants,
+    EndOfSubSlotBundle,
+    HeaderBlock,
     RewardChainSubSlot,
     SubEpochChallengeSegment,
     SubEpochData,
     SubEpochSegments,
+    SubEpochSummary,
     SubSlotData,
 )
 from chia_rs.sized_bytes import bytes32
@@ -36,10 +39,7 @@ from chia.consensus.pot_iterations import (
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.header_block import HeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import (
     RecentChainData,

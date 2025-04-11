@@ -4,6 +4,7 @@ import logging
 import random
 
 import pytest
+from chia_rs import UnfinishedBlock
 from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
@@ -17,7 +18,6 @@ from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.unfinished_block import UnfinishedBlock
 
 log = logging.getLogger(__name__)
 

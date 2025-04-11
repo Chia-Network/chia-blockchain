@@ -7,6 +7,7 @@ from collections.abc import Collection
 from typing import Any, Optional, Union
 
 import anyio
+from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -24,7 +25,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain

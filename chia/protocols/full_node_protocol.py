@@ -3,15 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+from chia_rs import EndOfSubSlotBundle, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
 from chia.util.streamable import Streamable, streamable
 

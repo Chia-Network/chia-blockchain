@@ -8,15 +8,18 @@ from typing import Callable, Optional
 import chia_rs
 from chia_rs import (
     ConsensusConstants,
+    EndOfSubSlotBundle,
     Foliage,
     FoliageBlockData,
     FoliageTransactionBlock,
+    FullBlock,
     G1Element,
     G2Element,
     PoolTarget,
     RewardChainBlock,
     RewardChainBlockUnfinished,
     TransactionsInfo,
+    UnfinishedBlock,
     compute_merkle_set_root,
 )
 from chia_rs.sized_bytes import bytes32
@@ -31,10 +34,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import NewBlockGenerator
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.prev_transaction_block import get_prev_transaction_block
 

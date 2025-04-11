@@ -12,13 +12,17 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 import anyio
 from chia_rs import (
     AugSchemeMPL,
+    EndOfSubSlotBundle,
     FoliageBlockData,
     FoliageTransactionBlock,
+    FullBlock,
     G1Element,
     G2Element,
     MerkleSet,
     PoolTarget,
     RewardChainBlockUnfinished,
+    SubEpochSummary,
+    UnfinishedBlock,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
@@ -58,16 +62,12 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block

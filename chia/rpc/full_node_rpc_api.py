@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import SpendBundleConditions
+from chia_rs import FullBlock, SpendBundleConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
@@ -24,7 +24,6 @@ from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
