@@ -95,7 +95,7 @@ class ExtendedPeerInfo:
         return bytes(out)
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> ExtendedPeerInfo:
+    def from_bytes(cls, data: bytes, offset: int = 0) -> ExtendedPeerInfo:
         def decode_ip(offset: int) -> tuple[str, int]:
             ip_type = data[offset]
             offset += 1
@@ -117,8 +117,6 @@ class ExtendedPeerInfo:
             value = uint64.from_bytes(data[offset : offset + 8])
             return value, offset + 8
 
-        offset = 0
-
         # Decode peer_info
         peer_ip, offset = decode_ip(offset)
         peer_port, offset = decode_uint16(offset)
@@ -131,7 +129,7 @@ class ExtendedPeerInfo:
         peer_info = TimestampedPeerInfo(peer_ip, uint16(peer_port), uint64(timestamp))
         src_peer = PeerInfo(src_ip, uint16(src_port))
 
-        return cls(peer_info, src_peer)
+        return cls(peer_info, src_peer), offset
 
     @classmethod
     def from_string(cls, peer_str: str) -> ExtendedPeerInfo:
