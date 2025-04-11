@@ -38,6 +38,7 @@ from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndW
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.coin_store import CoinStore
@@ -47,6 +48,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols import full_node_protocol as fnp
+from chia.protocols.farmer_protocol import DeclareProofOfSpace
 from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
@@ -55,6 +57,7 @@ from chia.server.address_manager import AddressManager
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import (
     BlockTools,
@@ -75,6 +78,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_ph,
     calculate_plot_id_pk,
     calculate_pos_challenge,
+    verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
@@ -2888,3 +2892,320 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
     # Farming a block with this tx evicts those pk msg pairs from the BLS cache
     await full_node_1.full_node.add_block(blocks[-1], None, full_node_1.full_node._bls_cache)
     assert len(full_node_1.full_node._bls_cache.items()) == 0
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.anyio
+async def test_declare_proof_of_space_no_overflow(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    self_hostname: str,
+    bt: BlockTools,
+) -> None:
+    full_node_api, _, server_1, _, _, _, _ = wallet_nodes
+    wallet = WalletTool(test_constants)
+    coinbase_puzzlehash = wallet.get_new_puzzlehash()
+    blocks = get_blocks_for_test(10, bt, coinbase=coinbase_puzzlehash, force_overflow=False)
+    await add_blocks_in_batches(blocks, full_node_api.full_node)
+    _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    dummy_peer = server_1.all_connections[dummy_node_id]
+    assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
+    for i in range(10, 100):
+        sb = await add_tx_to_mempool(
+            full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+        )
+        blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, False, spend_bundle=sb)
+        block = blocks[-1]
+        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
+        compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
+        await full_node_api.full_node.add_block(block)
+        assert full_node_api.full_node.blockchain.get_peak_height() == block.height
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.anyio
+async def test_declare_proof_of_space_overflow(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    self_hostname: str,
+    bt: BlockTools,
+) -> None:
+    full_node_api, _, server_1, _, _, _, _ = wallet_nodes
+    wallet = WalletTool(test_constants)
+    coinbase_puzzlehash = wallet.get_new_puzzlehash()
+    blocks = get_blocks_for_test(10, bt, coinbase=coinbase_puzzlehash, force_overflow=True)
+    await add_blocks_in_batches(blocks, full_node_api.full_node)
+    _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    dummy_peer = server_1.all_connections[dummy_node_id]
+    assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
+    for i in range(10, 100):
+        sb = await add_tx_to_mempool(
+            full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+        )
+        blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, force_overflow=True, spend_bundle=sb)
+        block = blocks[-1]
+        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
+        compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
+        await full_node_api.full_node.add_block(block)
+        assert full_node_api.full_node.blockchain.get_peak_height() == block.height
+
+
+def get_blocks_for_test(
+    num_of_blocks: int,
+    bt: BlockTools,
+    blocks: list[FullBlock] = [],
+    coinbase: Optional[bytes32] = None,
+    force_overflow: bool = False,
+    spend_bundle: Optional[SpendBundle] = None,
+) -> list[FullBlock]:
+    collisions = 0
+    cc_sub_slot_sps: dict[bytes32, None] = {}
+    rc_sub_slot_sps: dict[bytes32, None] = {}
+    transaction_block = False if coinbase is None else True
+    slots = 0
+    for i in range(len(blocks) - 1, -1, -1):
+        curr = blocks[i]
+        if curr.reward_chain_block.challenge_chain_sp_vdf is not None:
+            cc_sub_slot_sps[curr.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()] = None
+            assert curr.reward_chain_block.reward_chain_sp_vdf is not None
+            rc_sub_slot_sps[curr.reward_chain_block.reward_chain_sp_vdf.output.get_hash()] = None
+        if curr.finished_sub_slots and (slots := slots + 1) == 2:
+            break
+
+    for i in range(0, num_of_blocks):
+        new_block = bt.get_consecutive_blocks(
+            block_list_input=blocks,
+            num_blocks=1,
+            skip_overflow=not force_overflow,
+            force_overflow=(i % 10 == 0) and force_overflow,
+            farmer_reward_puzzle_hash=coinbase,
+            guarantee_transaction_block=transaction_block,
+            transaction_data=spend_bundle,
+        )[-1]
+        if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
+            cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+            assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
+            rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
+            min_signage_point = -1
+            number_of_slots = len(new_block.finished_sub_slots)
+            while cc_sp_hash in cc_sub_slot_sps or rc_sp_hash in rc_sub_slot_sps:
+                collisions += 1
+                skip_slots = False
+                if (
+                    new_block.reward_chain_block.signage_point_index > bt.constants.NUM_SPS_SUB_SLOT - 2
+                    or len(new_block.finished_sub_slots) > number_of_slots
+                    or min_signage_point == new_block.reward_chain_block.signage_point_index + 1
+                ):
+                    skip_slots = True
+                    min_signage_point = -1
+                else:
+                    min_signage_point = new_block.reward_chain_block.signage_point_index + 1
+
+                number_of_slots = len(new_block.finished_sub_slots)
+                new_block = bt.get_consecutive_blocks(
+                    block_list_input=blocks,
+                    min_signage_point=min_signage_point,
+                    num_blocks=1,
+                    skip_slots=number_of_slots + 1 if skip_slots else 0,
+                    force_overflow=(i % 10 == 0) and force_overflow,
+                    skip_overflow=not force_overflow,
+                    farmer_reward_puzzle_hash=coinbase,
+                    guarantee_transaction_block=transaction_block,
+                    transaction_data=spend_bundle,
+                )[-1]
+                if new_block.reward_chain_block.challenge_chain_sp_vdf is None:
+                    break
+                else:
+                    cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+                    flag_one, flag_two = False, False
+                    if cc_sp_hash not in cc_sub_slot_sps:
+                        cc_sub_slot_sps[cc_sp_hash] = None
+                        flag_one = True
+                    assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
+                    rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
+                    if rc_sp_hash not in rc_sub_slot_sps:
+                        rc_sub_slot_sps[rc_sp_hash] = None
+                        flag_two = True
+                    if flag_one and flag_two:
+                        break
+        blocks.append(new_block)
+    logging.debug(f"Collisions: {collisions} height {blocks[-1].height}")
+    return blocks
+
+
+def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
+    unfinished_block_expected = UnfinishedBlock(
+        block.finished_sub_slots,
+        RewardChainBlockUnfinished(
+            block.reward_chain_block.total_iters,
+            block.reward_chain_block.signage_point_index,
+            block.reward_chain_block.pos_ss_cc_challenge_hash,
+            block.reward_chain_block.proof_of_space,
+            block.reward_chain_block.challenge_chain_sp_vdf,
+            block.reward_chain_block.challenge_chain_sp_signature,
+            block.reward_chain_block.reward_chain_sp_vdf,
+            block.reward_chain_block.reward_chain_sp_signature,
+        ),
+        block.challenge_chain_sp_proof,
+        block.reward_chain_sp_proof,
+        block.foliage,
+        block.foliage_transaction_block,
+        block.transactions_info,
+        block.transactions_generator,
+        block.transactions_generator_ref_list,
+    )
+
+    return unfinished_block_expected
+
+
+async def declare_pos_unfinished_block(
+    full_node_api: FullNodeAPI,
+    dummy_peer: WSChiaConnection,
+    block: FullBlock,
+) -> UnfinishedBlock:
+    blockchain = full_node_api.full_node.blockchain
+    full_node_store = full_node_api.full_node.full_node_store
+    overflow = is_overflow_block(blockchain.constants, block.reward_chain_block.signage_point_index)
+    challenge = get_block_challenge(blockchain.constants, block, blockchain, False, overflow, False)
+    assert block.reward_chain_block.pos_ss_cc_challenge_hash == challenge
+    if block.reward_chain_block.challenge_chain_sp_vdf is None:
+        challenge_chain_sp: bytes32 = challenge
+    else:
+        challenge_chain_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+    if block.reward_chain_block.reward_chain_sp_vdf is not None:
+        reward_chain_sp = block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
+    else:
+        if len(block.finished_sub_slots) > 0:
+            reward_chain_sp = block.finished_sub_slots[-1].reward_chain.get_hash()
+        else:
+            curr = blockchain.block_record(block.prev_header_hash)
+            while not curr.first_in_sub_slot:
+                curr = blockchain.block_record(curr.prev_hash)
+            assert curr.finished_reward_slot_hashes is not None
+            reward_chain_sp = curr.finished_reward_slot_hashes[-1]
+    farmer_reward_address = block.foliage.foliage_block_data.farmer_reward_puzzle_hash
+    pool_target = block.foliage.foliage_block_data.pool_target
+    pool_target_signature = block.foliage.foliage_block_data.pool_signature
+    peak = blockchain.get_peak()
+    full_peak = await blockchain.get_full_peak()
+    assert peak is not None
+    assert peak.height + 1 == block.height
+    ssi = peak.sub_slot_iters
+    prevb = blockchain.block_record(block.prev_header_hash)
+    assert prevb is not None
+    diff = uint64(peak.weight - prevb.weight)
+    if len(block.finished_sub_slots) > 0:
+        if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+            ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+        if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+            diff = block.finished_sub_slots[0].challenge_chain.new_difficulty
+
+    for eos in block.finished_sub_slots:
+        full_node_store.new_finished_sub_slot(
+            eos,
+            blockchain,
+            peak,
+            ssi if ssi is not None else None,
+            diff,
+            full_peak,
+        )
+
+    if block.reward_chain_block.challenge_chain_sp_vdf is not None:
+        sp = SignagePoint(
+            block.reward_chain_block.challenge_chain_sp_vdf,
+            block.challenge_chain_sp_proof,
+            block.reward_chain_block.reward_chain_sp_vdf,
+            block.reward_chain_sp_proof,
+        )
+        full_node_store.new_signage_point(block.reward_chain_block.signage_point_index, blockchain, prevb, ssi, sp)
+
+    pospace = DeclareProofOfSpace(
+        challenge,
+        challenge_chain_sp,
+        block.reward_chain_block.signage_point_index,
+        reward_chain_sp,
+        block.reward_chain_block.proof_of_space,
+        block.reward_chain_block.challenge_chain_sp_signature,
+        block.reward_chain_block.reward_chain_sp_signature,
+        farmer_reward_address,
+        pool_target,
+        pool_target_signature,
+        include_signature_source_data=True,
+    )
+    await full_node_api.declare_proof_of_space(pospace, dummy_peer)
+    q_str: Optional[bytes32] = verify_and_get_quality_string(
+        block.reward_chain_block.proof_of_space,
+        blockchain.constants,
+        challenge,
+        challenge_chain_sp,
+        height=block.reward_chain_block.height,
+    )
+    assert q_str is not None
+    unfinised_block = None
+    res = full_node_api.full_node.full_node_store.candidate_blocks.get(q_str)
+    if res is not None:
+        _, unfinised_block = res
+    elif unfinised_block is None:
+        res = full_node_api.full_node.full_node_store.candidate_backup_blocks.get(q_str)
+        assert res is not None
+        _, unfinised_block = res
+    unfinised_block = unfinised_block.replace(
+        finished_sub_slots=block.finished_sub_slots if overflow else unfinised_block.finished_sub_slots,
+        foliage_transaction_block=block.foliage_transaction_block,
+        foliage=block.foliage,
+    )
+
+    return unfinised_block
+
+
+async def add_tx_to_mempool(
+    full_node_api: FullNodeAPI,
+    wallet: WalletTool,
+    spend_block: FullBlock,
+    coinbase_puzzlehash: bytes32,
+    receiver_puzzlehash: bytes32,
+    amount: uint64,
+) -> Optional[SpendBundle]:
+    spend_coin = None
+    coins = spend_block.get_included_reward_coins()
+    for coin in coins:
+        if coin.puzzle_hash == coinbase_puzzlehash:
+            spend_coin = coin
+
+    assert spend_coin is not None
+    spend_bundle = wallet.generate_signed_transaction(amount, receiver_puzzlehash, spend_coin)
+    assert spend_bundle is not None
+    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+    assert (
+        response_msg is not None
+        and TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
+    )
+
+    await time_out_assert(
+        20,
+        full_node_api.full_node.mempool_manager.get_spendbundle,
+        spend_bundle,
+        spend_bundle.name(),
+    )
+    return spend_bundle
+
+
+def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) -> bool:
+    assert block1.finished_sub_slots == block2.finished_sub_slots, "Mismatch in finished_sub_slots"
+    assert block1.reward_chain_block == block2.reward_chain_block, "Mismatch in reward_chain_block"
+    assert block1.challenge_chain_sp_proof == block2.challenge_chain_sp_proof, "Mismatch in challenge_chain_sp_proof"
+    assert block1.reward_chain_sp_proof == block2.reward_chain_sp_proof, "Mismatch in reward_chain_sp_proof"
+    assert block1.total_iters == block2.total_iters, "Mismatch in total_iters"
+    assert block1.prev_header_hash == block2.prev_header_hash, "Mismatch in prev_header_hash"
+    assert block1.is_transaction_block() == block2.is_transaction_block(), "Mismatch in is_transaction_block"
+    assert block1.foliage == block2.foliage, "Mismatch in foliage"
+    assert block1.foliage_transaction_block == block2.foliage_transaction_block, "Mismatch in foliage_transaction_block"
+    assert block1.transactions_info == block2.transactions_info, "Mismatch in transactions_info"
+    assert block1.transactions_generator == block2.transactions_generator, "Mismatch in transactions_generator"
+    assert block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
+
+    # Final assertion to check the entire block
+    assert block1 == block2, "The entire block objects are not identical"
+    return True
