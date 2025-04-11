@@ -3,25 +3,41 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Union
 
+import pytest
 from chia_rs import G2Element
-from chia_rs.sized_bytes import bytes48
+from chia_rs.sized_bytes import bytes32, bytes48
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.rpc.wallet_request_types import DIDMessageSpendResponse, DIDTransferDIDResponse, DIDUpdateMetadataResponse
+from chia.types.blockchain_format.program import NIL, Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
+from chia.wallet.did_wallet.did_info import did_recovery_is_nil
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
+
+@pytest.mark.parametrize(
+    argnames=["program", "result"],
+    argvalues=[
+        (Program.to(NIL_TREEHASH), True),
+        (NIL, True),
+        (Program.to(bytes32([1] * 32)), False),
+    ],
+)
+def test_did_recovery_is_nil(program: Program, result: bool) -> None:
+    # test that the alternate wallet nil recovery list bytes are used
+    assert did_recovery_is_nil(program) is result
+
+
 # DID Commands
-
-
 def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
