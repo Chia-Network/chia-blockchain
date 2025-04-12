@@ -414,7 +414,7 @@ class FullNodeDiscovery:
             serialize_interval = random.randint(15 * 60, 30 * 60)
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
-                await AddressManagerStore.serialize(self.address_manager, self.peers_file_path)
+                await AddressManagerStore.serialize_bytes(self.address_manager, self.peers_file_path)
 
     async def _periodically_cleanup(self) -> None:
         while not self.is_closed:

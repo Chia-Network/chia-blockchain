@@ -30,7 +30,7 @@ class PeerDataSerialization(Streamable):
     """
 
     metadata: list[tuple[str, str]]
-    nodes: list[bytes]
+    nodes: list[tuple[uint64, str]]
     new_table: list[tuple[uint64, uint64]]
 
 
@@ -62,7 +62,12 @@ class AddressManagerStore:
                 log.info(f"Loading peers from {peers_file_path}")
                 address_manager = await cls.deserialize_bytes(peers_file_path)
             except Exception:
-                log.exception(f"Unable to create address_manager from {peers_file_path}")
+                try:
+                    # backup and try using the old method
+                    # the address manager will migrate itself to the new format naturally
+                    address_manager = await cls._deserialize(peers_file_path)
+                except Exception:
+                    log.exception(f"Unable to create address_manager from {peers_file_path}")
 
         if address_manager is None:
             log.info("Creating new address_manager")
@@ -182,6 +187,8 @@ class AddressManagerStore:
 
         return address_manager
 
+    # This function is deprecated in favour of deserialize_bytes()
+    # it remains here for backwards compatibility and migration
     @classmethod
     async def _deserialize(cls, peers_file_path: Path) -> AddressManager:
         """
@@ -197,7 +204,9 @@ class AddressManagerStore:
 
         if peer_data is not None:
             metadata: dict[str, str] = {key: value for key, value in peer_data.metadata}
-
+            nodes: list[tuple[int, ExtendedPeerInfo]] = [
+                (node_id, ExtendedPeerInfo.from_string(info_str)) for node_id, info_str in peer_data.nodes
+            ]
             new_table_entries: list[tuple[int, int]] = [(node_id, bucket) for node_id, bucket in peer_data.new_table]
             log.debug(f"Deserializing peer data took {timer() - start_time} seconds")
 
@@ -206,18 +215,16 @@ class AddressManagerStore:
             # address_manager.tried_count = int(metadata["tried_count"])
             address_manager.tried_count = 0
 
-            n = 0
-            for info_bytes in peer_data.nodes[: address_manager.new_count]:
-                info = ExtendedPeerInfo.from_bytes(info_bytes)
+            new_table_nodes = [(node_id, info) for node_id, info in nodes if node_id < address_manager.new_count]
+            for n, info in new_table_nodes:
                 address_manager.map_addr[info.peer_info.host] = n
                 address_manager.map_info[n] = info
                 info.random_pos = len(address_manager.random_pos)
                 address_manager.random_pos.append(n)
-                n += 1
-            address_manager.id_count = address_manager.new_count
-            for info_bytes in peer_data.nodes[address_manager.new_count :]:
-                info = ExtendedPeerInfo.from_bytes(info_bytes)
-
+            address_manager.id_count = len(new_table_nodes)
+            tried_table_nodes = [(node_id, info) for node_id, info in nodes if node_id >= address_manager.new_count]
+            # lost_count = 0
+            for node_id, info in tried_table_nodes:
                 tried_bucket = info.get_tried_bucket(address_manager.key)
                 tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
                 if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
@@ -266,7 +273,7 @@ class AddressManagerStore:
         cls,
         peers_file_path: Path,
         metadata: list[tuple[str, Any]],
-        nodes: list[bytes],
+        nodes: list[tuple[uint64, str]],
         new_table: list[tuple[uint64, uint64]],
     ) -> None:
         """
