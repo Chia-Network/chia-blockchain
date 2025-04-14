@@ -5,7 +5,7 @@ import logging
 import sqlite3
 import time
 from collections.abc import Collection
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 import typing_extensions
 from aiosqlite import Cursor
@@ -406,7 +406,7 @@ class CoinStore:
 
         return coins
 
-    MAX_PUZZLE_HASH_BATCH_SIZE = SQLITE_MAX_VARIABLE_NUMBER - 10
+    MAX_PUZZLE_HASH_BATCH_SIZE: ClassVar[int] = SQLITE_MAX_VARIABLE_NUMBER - 10
 
     async def batch_coin_states_by_puzzle_hashes(
         self,
