@@ -5,16 +5,16 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
@@ -177,38 +177,6 @@ class Wallet:
         public_key = await self.wallet_state_manager.get_public_key(puzzle_hash)
         return puzzle_for_pk(G1Element.from_bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        puzzle = puzzle_for_pk(dr.pubkey)
-        return puzzle
-
-    async def get_puzzle(self, new: bool) -> Program:
-        if new:
-            return await self.get_new_puzzle()
-        else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            if record is None:
-                return await self.get_new_puzzle()  # pragma: no cover
-            puzzle = puzzle_for_pk(record.pubkey)
-            return puzzle
-
-    async def get_puzzle_hash(self, new: bool) -> bytes32:
-        if new:
-            return await self.get_new_puzzlehash()
-        else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            if record is None:
-                return await self.get_new_puzzlehash()
-            return record.puzzle_hash
-
-    async def get_new_puzzlehash(self) -> bytes32:
-        puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
-        return puzhash
-
     def make_solution(
         self,
         primaries: list[CreateCoin],
@@ -338,15 +306,14 @@ class Wallet:
                 ]
 
                 if change > 0:
-                    if action_scope.config.tx_config.reuse_puzhash:
-                        change_puzzle_hash: bytes32 = coin.puzzle_hash
-                        for primary in primaries:
-                            if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
-                                # We cannot create two coins has same id, create a new puzhash for the change:
-                                change_puzzle_hash = await self.get_new_puzzlehash()
-                                break
-                    else:
-                        change_puzzle_hash = await self.get_new_puzzlehash()
+                    change_puzzle_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
+                    for primary in primaries:
+                        if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
+                            # We cannot create two coins has same id, create a new puzhash for the change:
+                            change_puzzle_hash = await action_scope.get_puzzle_hash(
+                                self.wallet_state_manager, override_reuse_puzhash_with=False
+                            )
+                            break
                     primaries.append(CreateCoin(change_puzzle_hash, uint64(change)))
                 message_list: list[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
@@ -522,6 +489,9 @@ class Wallet:
                 return True
         return False
 
+    def hardened_pubkey_for_path(self, path: list[int]) -> G1Element:
+        return _derive_path(self.wallet_state_manager.get_master_private_key(), path).get_g1()
+
     async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
         pk_parsed: G1Element = G1Element.from_bytes(pk)
         dr: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_puzzle_hash(
@@ -607,8 +577,7 @@ class Wallet:
                 if fingerprint_as_int not in pk_lookup:
                     if not partial_allowed:
                         raise ValueError(
-                            "No pubkey found (or path hinted to) for "
-                            f"fingerprint {int.from_bytes(fingerprint, 'big')}"
+                            f"No pubkey found (or path hinted to) for fingerprint {int.from_bytes(fingerprint, 'big')}"
                         )
                     else:
                         aggregate_responses_at_end = False

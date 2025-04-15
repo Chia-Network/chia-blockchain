@@ -10,6 +10,8 @@ from typing import Optional
 
 import aiosqlite
 import click
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -17,10 +19,8 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
 
 # the first transaction block. Each byte in transaction_height_delta is the
 # number of blocks to skip forward to get to the next transaction block

@@ -5,6 +5,7 @@ from collections.abc import Coroutine
 from typing import Any, Optional, TypeVar
 
 import pytest
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import FarmerOneHarvester
 from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc
@@ -19,7 +20,6 @@ from chia.protocols import farmer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.task_referencer import create_referenced_task
 
 T = TypeVar("T")

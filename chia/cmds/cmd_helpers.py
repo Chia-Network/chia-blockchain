@@ -7,12 +7,13 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+
 from chia.cmds.cmd_classes import ChiaCliContext, command_helper, option
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, TransactionBundle, get_wallet_client
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, TransactionFeeParamType, cli_amount_none
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
@@ -33,8 +34,7 @@ class NeedsWalletRPC:
         "-wp",
         "--wallet-rpc_port",
         help=(
-            "Set the port where the Wallet is hosting the RPC interface."
-            "See the rpc_port under wallet in config.yaml."
+            "Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml."
         ),
         type=int,
         default=None,

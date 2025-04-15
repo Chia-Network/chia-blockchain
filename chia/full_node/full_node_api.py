@@ -12,12 +12,18 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 import anyio
 from chia_rs import (
     AugSchemeMPL,
+    FoliageBlockData,
+    FoliageTransactionBlock,
     G1Element,
     G2Element,
     MerkleSet,
+    PoolTarget,
+    RewardChainBlockUnfinished,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -51,16 +57,12 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
@@ -71,7 +73,6 @@ from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
 
@@ -834,10 +835,7 @@ class FullNodeAPI:
             # 3. In a future sub-slot that we already know of
 
             # Grab best transactions from Mempool for given tip target
-            aggregate_signature: G2Element = G2Element()
-            block_generator: Optional[BlockGenerator] = None
-            additions: Optional[list[Coin]] = []
-            removals: Optional[list[Coin]] = []
+            new_block_gen: Optional[NewBlockGenerator]
             async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
 
@@ -862,16 +860,21 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        (
-                            block_generator,
-                            aggregate_signature,
-                            additions,
-                        ) = await self.full_node.mempool_manager.create_block_generator(
-                            curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
-                        )
+                        # TODO: once we're confident in the new block creation,
+                        # switch to it by default
+                        if self.full_node.config.get("original_block_creation", True):
+                            create_block = self.full_node.mempool_manager.create_block_generator
+                        else:
+                            create_block = self.full_node.mempool_manager.create_block_generator2
+
+                        new_block_gen = await create_block(curr_l_tb.header_hash)
+
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
+                        new_block_gen = None
+                else:
+                    new_block_gen = None
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1008,10 +1011,7 @@ class FullNodeAPI:
                 timestamp,
                 self.full_node.blockchain,
                 b"",
-                block_generator,
-                aggregate_signature,
-                additions,
-                removals,
+                new_block_gen,
                 prev_b,
                 finished_sub_slots,
             )
@@ -1067,9 +1067,6 @@ class FullNodeAPI:
                     timestamp,
                     self.full_node.blockchain,
                     b"",
-                    None,
-                    G2Element(),
-                    None,
                     None,
                     prev_b,
                     finished_sub_slots,
@@ -1953,7 +1950,7 @@ class FullNodeAPI:
                 hints_db: tuple[bytes, ...] = tuple(batch.entries)
                 cursor = await conn.execute(
                     f"SELECT coin_id from hints INDEXED BY hint_index "
-                    f'WHERE hint IN ({"?," * (len(batch.entries) - 1)}?)',
+                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?)",
                     hints_db,
                 )
                 for row in await cursor.fetchall():

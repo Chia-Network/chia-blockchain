@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
@@ -12,8 +14,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -101,8 +101,8 @@ class TestDLWallet:
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
 
-        new_puz = await dl_wallet.get_new_puzzle()
-        assert new_puz
+        async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await action_scope.get_puzzle(dl_wallet.wallet_state_manager)
 
     @pytest.mark.parametrize(
         "wallet_environments",

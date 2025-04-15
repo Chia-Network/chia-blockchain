@@ -13,6 +13,7 @@ import click
 import zstd
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    ENABLE_KECCAK,
     MEMPOOL_MODE,
     AugSchemeMPL,
     G1Element,
@@ -20,11 +21,11 @@ from chia_rs import (
     SpendBundleConditions,
     run_block_generator,
 )
+from chia_rs.sized_bytes import bytes32
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.full_block_utils import block_info_from_block, generator_from_block
@@ -118,11 +119,10 @@ def main(
 
         ref_lookup_time = time() - start_time
 
-        flags: int
+        flags = ENABLE_KECCAK
+
         if mempool_mode:
-            flags = MEMPOOL_MODE
-        else:
-            flags = 0
+            flags |= MEMPOOL_MODE
 
         call_f(block, hh, height, generator_blobs, ref_lookup_time, flags)
 

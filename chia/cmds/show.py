@@ -13,8 +13,7 @@ from chia.cmds.show_funcs import show_async
     "-p",
     "--rpc-port",
     help=(
-        "Set the port where the Full Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml"
+        "Set the port where the Full Node is hosting the RPC interface. See the rpc_port under full_node in config.yaml"
     ),
     type=int,
     default=None,

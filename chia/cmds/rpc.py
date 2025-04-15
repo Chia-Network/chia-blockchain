@@ -8,10 +8,10 @@ from typing import Any, Optional, TextIO
 
 import click
 from aiohttp import ClientResponseError
+from chia_rs.sized_ints import uint16
 
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
-from chia.util.ints import uint16
 
 services: list[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 

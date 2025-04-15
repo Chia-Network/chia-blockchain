@@ -4,18 +4,18 @@ import logging
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
@@ -174,9 +174,9 @@ class WalletBlockchain:
         if self._peak is not None:
             return self._peak
         header_block = await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
-        assert header_block is None or isinstance(
-            header_block, HeaderBlock
-        ), f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        assert header_block is None or isinstance(header_block, HeaderBlock), (
+            f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        )
         return header_block
 
     async def set_finished_sync_up_to(self, height: int, *, in_rollback: bool = False) -> None:

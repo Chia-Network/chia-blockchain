@@ -9,18 +9,18 @@ from typing import Any, Optional
 
 from aiohttp import ClientConnectorError
 from chia_rs import PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.start_funcs import async_start
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, save_config, set_peer_info
 from chia.util.errors import KeychainFingerprintExists
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,

@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Optional
 
 from chia_rs import CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
 
 
 class WalletRetryStore:
@@ -22,10 +22,7 @@ class WalletRetryStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS retry_store("
-                " coin_state blob PRIMARY KEY,"
-                " peer blob,"
-                " fork_height int)"
+                "CREATE TABLE IF NOT EXISTS retry_store( coin_state blob PRIMARY KEY, peer blob, fork_height int)"
             )
 
         return self

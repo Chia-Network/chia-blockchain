@@ -4,16 +4,18 @@ import json
 from pathlib import Path
 from typing import Any, Optional, Union
 
+from chia_rs.sized_bytes import bytes32
+
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:
     import time
 
+    from chia_rs.sized_ints import uint64
+
     from chia.cmds.cmds_util import format_bytes
     from chia.consensus.block_record import BlockRecord
-    from chia.util.ints import uint64
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:
@@ -97,8 +99,9 @@ async def print_block_from_hash(
 ) -> None:
     import time
 
+    from chia_rs.sized_bytes import bytes32
+
     from chia.consensus.block_record import BlockRecord
-    from chia.types.blockchain_format.sized_bytes import bytes32
     from chia.types.full_block import FullBlock
     from chia.util.bech32m import encode_puzzle_hash
 
