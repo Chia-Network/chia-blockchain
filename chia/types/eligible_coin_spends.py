@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import dataclasses
 from collections.abc import Awaitable
 from typing import Callable, Optional
@@ -261,18 +260,14 @@ class SingletonFastForward:
             If a fast forward cannot proceed, to prevent potential double spends
         """
 
-        # Let's first create a copy of the mempool item's `bundle_coin_spends`
-        # map to work on and return. This way we avoid the possibility of
-        # propagating a modified version of this item through the network.
-        bundle_coin_spends = copy.copy(mempool_item.bundle_coin_spends)
         new_coin_spends = []
-        # Map of rebased singleton coin ID to coin spend and metadata
-        ff_bundle_coin_spends = {}
-        replaced_coin_ids = []
-        for coin_id, spend_data in bundle_coin_spends.items():
+        new_bundle_coin_spends = {}
+        fast_forwarded_spends = 0
+        for coin_id, spend_data in mempool_item.bundle_coin_spends.items():
             if not spend_data.eligible_for_fast_forward:
                 # Nothing to do for this spend, moving on
                 new_coin_spends.append(spend_data.coin_spend)
+                new_bundle_coin_spends[coin_id] = spend_data
                 continue
 
             # NOTE: We need to support finding the most recent version of a singleton
@@ -299,6 +294,7 @@ class SingletonFastForward:
                     )
                     # Nothing more to do for this spend, moving on
                     new_coin_spends.append(spend_data.coin_spend)
+                    new_bundle_coin_spends[coin_id] = spend_data
                     continue
                 # We're not the most recent version, so let's fast forward
                 new_coin_spend, patched_additions = perform_the_fast_forward(
@@ -306,9 +302,7 @@ class SingletonFastForward:
                     spend_data=spend_data,
                     fast_forward_spends=self.fast_forward_spends,
                 )
-                # Mark this coin for a coin spend data update
-                replaced_coin_ids.append(coin_id)
-                ff_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
+                new_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                     coin_spend=new_coin_spend,
                     eligible_for_dedup=spend_data.eligible_for_dedup,
                     eligible_for_fast_forward=spend_data.eligible_for_fast_forward,
@@ -318,6 +312,7 @@ class SingletonFastForward:
                 # Update the list of coins spends that will make the new fast
                 # forward spend bundle
                 new_coin_spends.append(new_coin_spend)
+                fast_forwarded_spends += 1
                 # We're done here, moving on
                 continue
             # We've added a ff spend with this puzzle hash before, so build on that
@@ -330,9 +325,7 @@ class SingletonFastForward:
                 spend_data=spend_data,
                 fast_forward_spends=self.fast_forward_spends,
             )
-            # Mark this coin for a coin spend data update
-            replaced_coin_ids.append(coin_id)
-            ff_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
+            new_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                 coin_spend=new_coin_spend,
                 eligible_for_dedup=spend_data.eligible_for_dedup,
                 eligible_for_fast_forward=spend_data.eligible_for_fast_forward,
@@ -341,9 +334,10 @@ class SingletonFastForward:
             )
             # Update the list of coins spends that make the new fast forward bundle
             new_coin_spends.append(new_coin_spend)
-        if len(ff_bundle_coin_spends) == 0:
+            fast_forwarded_spends += 1
+        if fast_forwarded_spends == 0:
             # This item doesn't have any fast forward coins, nothing to do here
-            return bundle_coin_spends
+            return new_bundle_coin_spends
         # Update the mempool item after validating the new spend bundle
         new_sb = SpendBundle(
             coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
@@ -363,10 +357,4 @@ class SingletonFastForward:
                 raise ValueError(
                     "Mempool item became invalid after singleton fast forward with an unspecified error."
                 )  # pragma: no cover
-
-        # Update bundle_coin_spends using the map of rebased singleton coin ID
-        # to coin spend and metadata.
-        for coin_id in replaced_coin_ids:
-            bundle_coin_spends.pop(coin_id, None)
-        bundle_coin_spends.update(ff_bundle_coin_spends)
-        return bundle_coin_spends
+        return new_bundle_coin_spends
