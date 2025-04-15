@@ -477,6 +477,8 @@ class DataStore:
     ) -> Root:
         if not merkle_blob.empty():
             merkle_blob.calculate_lazy_hashes()
+        if self.recent_merkle_blobs.get_capacity() == 0:
+            update_cache = False
 
         root_hash = merkle_blob.get_root_hash()
         if old_root is not None and old_root.node_hash == root_hash:
@@ -491,7 +493,7 @@ class DataStore:
                     """,
                     (root_hash, zstd.compress(merkle_blob.blob), store_id),
                 )
-            if update_cache and self.recent_merkle_blobs.get_capacity() > 0:
+            if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
