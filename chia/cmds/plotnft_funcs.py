@@ -11,6 +11,7 @@ from pprint import pprint
 from typing import Any, Callable, Optional
 
 import aiohttp
+import click
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -316,7 +317,7 @@ async def join_pool(
         pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
         and pool_wallet_info.current.pool_url == pool_url
     ):
-        raise CliRpcConnectionError(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
+        raise click.ClickException(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
 
     enforce_https = wallet_info.config["selected_network"] == "mainnet"
 

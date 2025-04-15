@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from io import StringIO
 from typing import Optional, cast
 
+import click
 import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -482,7 +483,7 @@ async def test_plotnft_cli_join(
     wallet_id = await create_new_plotnft(wallet_environments)
 
     # Test joining the same pool again
-    with pytest.raises(CliRpcConnectionError, match="already farming to pool http://pool.example.com"):
+    with pytest.raises(click.ClickException, match="already farming to pool http://pool.example.com"):
         await JoinPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
