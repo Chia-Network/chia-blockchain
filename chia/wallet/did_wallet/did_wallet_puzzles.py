@@ -89,7 +89,7 @@ def get_inner_puzhash_by_p2(
     # in that case the list is ignored and the hash is used
     # this matches the behaviour of create_innerpuz
     if recovery_list_hash is not None:
-        backup_ids_hash = bytes(recovery_list_hash.as_atom())
+        backup_ids_hash = recovery_list_hash.as_atom()
     elif recovery_list is not None:
         backup_ids_hash = shatree_atom_list(recovery_list)
 
