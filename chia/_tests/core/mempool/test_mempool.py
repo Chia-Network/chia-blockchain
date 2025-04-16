@@ -3313,7 +3313,6 @@ def test_keccak() -> None:
     # the keccak operator is 62. The assemble() function doesn't support it
     # (yet)
 
-    # keccak256 is available when the softfork has activated
     keccak_prg = Program.to(
         assemble(
             "(softfork (q . 1134) (q . 1) (q a (i "
@@ -3339,11 +3338,6 @@ def test_keccak() -> None:
     )
     with pytest.raises(ValueError, match="clvm raise"):
         keccak_prg.run_with_flags(1215, 0, [])
-
-    # keccak is ignored when the softfork has not activated
-    cost, ret = keccak_prg.run_with_flags(1215, 0, [])
-    assert cost == 1215
-    assert ret.atom == b""
 
     # === HARD FORK ===
     # new operators *outside* the softfork guard
