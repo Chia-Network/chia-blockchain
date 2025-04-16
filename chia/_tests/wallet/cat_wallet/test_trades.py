@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Union
+from typing import Any
 
 import pytest
 from chia_rs import G2Element
@@ -28,7 +28,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -37,8 +37,6 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-OfferSummary = dict[Union[int, bytes32], int]
 
 
 async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) -> TradeStatus:

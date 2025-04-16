@@ -30,7 +30,12 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
-from chia.types.eligible_coin_spends import EligibleCoinSpends, SkipDedup, UnspentLineageInfo
+from chia.types.eligible_coin_spends import (
+    IdenticalSpendDedup,
+    SingletonFastForward,
+    SkipDedup,
+    UnspentLineageInfo,
+)
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
@@ -573,15 +578,16 @@ class Mempool:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         processed_spend_bundles = 0
         additions: list[Coin] = []
-        # This contains:
-        # 1. A map of coin ID to a coin spend solution and its isolated cost
-        #   We reconstruct it for every bundle we create from mempool items because we
-        #   deduplicate on the first coin spend solution that comes with the highest
-        #   fee rate item, and that can change across calls
-        # 2. A map of fast forward eligible singleton puzzle hash to the most
-        #   recent unspent singleton data, to allow chaining fast forward
-        #   singleton spends
-        eligible_coin_spends = EligibleCoinSpends()
+        # This contains a map of coin ID to a coin spend solution and its
+        # isolated cost. We reconstruct it for every bundle we create from
+        # mempool items because we deduplicate on the first coin spend solution
+        # that comes with the highest fee rate item, and that can change across
+        # calls.
+        dedup_coin_spends = IdenticalSpendDedup()
+        # This contains a map of fast forward eligible singleton puzzle hash to
+        # the most recent unspent singleton data, to allow chaining fast forward
+        # singleton spends.
+        singleton_ff = SingletonFastForward()
         coin_spends: list[CoinSpend] = []
         sigs: list[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
@@ -607,10 +613,7 @@ class Mempool:
                     # might fit, but we also want to avoid spending too much
                     # time on potentially expensive ones, hence this shortcut.
                     if any(
-                        map(
-                            lambda spend_data: (spend_data.eligible_for_dedup or spend_data.eligible_for_fast_forward),
-                            item.bundle_coin_spends.values(),
-                        )
+                        sd.eligible_for_dedup or sd.eligible_for_fast_forward for sd in item.bundle_coin_spends.values()
                     ):
                         log.info("Skipping transaction with dedup or FF spends {item.name}")
                         continue
@@ -622,13 +625,13 @@ class Mempool:
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
                 else:
-                    bundle_coin_spends = await eligible_coin_spends.process_fast_forward_spends(
+                    bundle_coin_spends = await singleton_ff.process_fast_forward_spends(
                         mempool_item=item,
                         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                         height=height,
                         constants=constants,
                     )
-                    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+                    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
                         bundle_coin_spends=bundle_coin_spends, max_cost=cost
                     )
                 item_cost = cost - cost_saving
@@ -699,7 +702,8 @@ class Mempool:
         additions: list[Coin] = []
         removals: list[Coin] = []
 
-        eligible_coin_spends = EligibleCoinSpends()
+        dedup_coin_spends = IdenticalSpendDedup()
+        singleton_ff = SingletonFastForward()
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
         cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
@@ -727,14 +731,14 @@ class Mempool:
             try:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
-                await eligible_coin_spends.process_fast_forward_spends(
+                bundle_coin_spends = await singleton_ff.process_fast_forward_spends(
                     mempool_item=item,
                     get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                     height=height,
                     constants=constants,
                 )
-                unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
-                    bundle_coin_spends=item.bundle_coin_spends, max_cost=cost
+                unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+                    bundle_coin_spends=bundle_coin_spends, max_cost=cost
                 )
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:

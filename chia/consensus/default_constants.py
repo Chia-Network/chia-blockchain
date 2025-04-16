@@ -38,7 +38,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # Default used for tests is std_hash(b'')
     GENESIS_CHALLENGE=bytes32.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
     # Forks of chia should change the AGG_SIG_*_ADDITIONAL_DATA values to provide
-    # replay attack protection. This is set to mainnet genesis challange
+    # replay attack protection. This is set to mainnet genesis challenge
     AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
     AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
     AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),

@@ -11,6 +11,7 @@ from chia_rs import (
     AugSchemeMPL,
     G1Element,
     G2Element,
+    SpendBundleConditions,
     run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
@@ -69,7 +70,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle, estimate_fees
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
@@ -2860,7 +2860,7 @@ class TestMaliciousGenerators:
         c = cs.coin
         coin_0 = Coin(c.parent_coin_info, bytes32([1] * 32), c.amount)
         coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
-        new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
+        new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
         res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
