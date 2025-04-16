@@ -867,7 +867,7 @@ class FullNodeAPI:
                         else:
                             create_block = self.full_node.mempool_manager.create_block_generator2
 
-                        new_block_gen = await create_block(curr_l_tb.header_hash)
+                        new_block_gen = create_block(curr_l_tb.header_hash)
 
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")

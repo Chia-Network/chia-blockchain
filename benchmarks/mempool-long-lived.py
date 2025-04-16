@@ -18,7 +18,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.eligible_coin_spends import UnspentLineageInfo
+from chia.types.mempool_item import UnspentLineageInfo
 from chia.types.spend_bundle import SpendBundle
 
 # this is one week worth of blocks
