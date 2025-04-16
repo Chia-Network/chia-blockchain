@@ -13,10 +13,15 @@ import zstd
 
 from chia._tests.util.full_sync import FakePeer, FakeServer, run_sync_test
 from chia.cmds.init_funcs import chia_init
+from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.full_block import FullBlock
+from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
 
 
@@ -123,7 +128,7 @@ async def run_sync_checkpoint(
     config = load_config(root_path, "config.yaml")
 
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
-    constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
     config["full_node"]["db_sync"] = "off"
     full_node = await FullNode.create(
         config["full_node"],
@@ -145,6 +150,7 @@ async def run_sync_checkpoint(
 
             block_batch = []
             peer_info = peer.get_peer_logging()
+            blockchain = AugmentedBlockchain(full_node.blockchain)
             async for r in rows:
                 block = FullBlock.from_bytes_unchecked(zstd.decompress(r[0]))
                 block_batch.append(block)
@@ -152,7 +158,21 @@ async def run_sync_checkpoint(
                 if len(block_batch) < 32:
                     continue
 
-                success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                block_record = await full_node.blockchain.get_block_record_from_db(block_batch[0].prev_header_hash)
+                ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                    full_node.constants, True, block_record, full_node.blockchain
+                )
+
+                fork_height = block_batch[0].height - 1
+                header_hash = block_batch[0].prev_header_hash
+
+                success, _ = await full_node.add_block_batch(
+                    block_batch,
+                    peer_info,
+                    ForkInfo(fork_height, fork_height, header_hash),
+                    ValidationState(ssi, diff, None),
+                    blockchain,
+                )
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -164,7 +184,19 @@ async def run_sync_checkpoint(
                 block_batch = []
 
             if len(block_batch) > 0:
-                success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                block_record = await full_node.blockchain.get_block_record_from_db(block_batch[0].prev_header_hash)
+                ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                    full_node.constants, True, block_record, full_node.blockchain
+                )
+                fork_height = block_batch[0].height - 1
+                fork_header_hash = block_batch[0].prev_header_hash
+                success, _ = await full_node.add_block_batch(
+                    block_batch,
+                    peer_info,
+                    ForkInfo(fork_height, fork_height, fork_header_hash),
+                    ValidationState(ssi, diff, None),
+                    blockchain,
+                )
                 if not success:
                     raise RuntimeError("failed to ingest block batch")
 
@@ -173,5 +205,4 @@ main.add_command(run)
 main.add_command(analyze)
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()

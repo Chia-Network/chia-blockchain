@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING, Callable, List
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Callable, Optional
 
 import aiosqlite
 import pytest
@@ -11,7 +12,9 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
-from chia.util.db_wrapper import DBWrapper2
+from chia._tests.util.misc import Marks, boolean_datacases, datacases
+from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError, NestedForeignKeyDelayedRequestError
+from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
     ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
@@ -52,7 +55,7 @@ async def decrement_counter(db_wrapper: DBWrapper2) -> None:
         await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
 
 
-async def sum_counter(db_wrapper: DBWrapper2, output: List[int]) -> None:
+async def sum_counter(db_wrapper: DBWrapper2, output: list[int]) -> None:
     async with db_wrapper.reader_no_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
             row = await cursor.fetchone()
@@ -117,7 +120,7 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
 
             tasks = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(increment_counter(db_wrapper))
+                task = create_referenced_task(increment_counter(db_wrapper))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -261,7 +264,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
         async with get_reader() as reader:
             assert await query_value(connection=reader) == 0
 
-            task = asyncio.create_task(write())
+            task = create_referenced_task(write())
             await writer_committed.wait()
 
             assert await query_value(connection=reader) == 0 if transactioned else 1
@@ -338,9 +341,9 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
                 await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
-            values: List[int] = []
+            values: list[int] = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(sum_counter(db_wrapper, values))
+                task = create_referenced_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -367,13 +370,13 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
                 await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
-            values: List[int] = []
+            values: list[int] = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(increment_counter(db_wrapper))
+                task = create_referenced_task(increment_counter(db_wrapper))
                 tasks.append(task)
-                task = asyncio.create_task(decrement_counter(db_wrapper))
+                task = create_referenced_task(decrement_counter(db_wrapper))
                 tasks.append(task)
-                task = asyncio.create_task(sum_counter(db_wrapper, values))
+                task = create_referenced_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -429,3 +432,135 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
             assert await query_value(connection=writer) == 1
 
         assert await query_value(connection=writer) == 1
+
+
+@boolean_datacases(name="initial", false="initially disabled", true="initially enabled")
+@boolean_datacases(name="forced", false="forced disabled", true="forced enabled")
+@pytest.mark.anyio
+async def test_foreign_key_pragma_controlled_by_writer(initial: bool, forced: bool) -> None:
+    async with DBConnection(2, foreign_keys=initial) as db_wrapper:
+        async with db_wrapper.writer(foreign_key_enforcement_enabled=forced) as writer:
+            async with writer.execute("PRAGMA foreign_keys") as cursor:
+                result = await cursor.fetchone()
+                assert result is not None
+                [actual] = result
+
+    assert actual == (1 if forced else 0)
+
+
+@pytest.mark.anyio
+async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
+    async with DBConnection(2, foreign_keys=True, row_factory=aiosqlite.Row) as db_wrapper:
+        async with db_wrapper.writer() as writer:
+            async with writer.execute(
+                """
+                CREATE TABLE people(
+                    id INTEGER NOT NULL,
+                    friend INTEGER,
+                    PRIMARY KEY (id),
+                    FOREIGN KEY (friend) REFERENCES people
+                )
+                """
+            ):
+                pass
+
+            async with writer.execute(
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
+                {"id": 1, "friend": None},
+            ):
+                pass
+
+            async with writer.execute(
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
+                {"id": 2, "friend": 1},
+            ):
+                pass
+
+        # make sure the writer raises a foreign key error on exit
+        with pytest.raises(ForeignKeyError):
+            async with db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+                async with writer.execute("DELETE FROM people WHERE id = 1"):
+                    pass
+
+                # make sure a foreign key error can be detected here
+                with pytest.raises(ForeignKeyError):
+                    await db_wrapper._check_foreign_keys()
+
+        async with writer.execute("SELECT * FROM people WHERE id = 1") as cursor:
+            [person] = await cursor.fetchall()
+
+        # make sure the delete was rolled back
+        assert dict(person) == {"id": 1, "friend": None}
+
+
+@dataclass
+class RowFactoryCase:
+    id: str
+    factory: Optional[type[aiosqlite.Row]]
+    marks: Marks = ()
+
+
+row_factory_cases: list[RowFactoryCase] = [
+    RowFactoryCase(id="default named tuple", factory=None),
+    RowFactoryCase(id="aiosqlite row", factory=aiosqlite.Row),
+]
+
+
+@datacases(*row_factory_cases)
+@pytest.mark.anyio
+async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> None:
+    async with DBConnection(2, foreign_keys=True, row_factory=case.factory) as db_wrapper:
+        async with db_wrapper.writer() as writer:
+            async with writer.execute(
+                """
+                CREATE TABLE people(
+                    id INTEGER NOT NULL,
+                    friend INTEGER,
+                    PRIMARY KEY (id),
+                    FOREIGN KEY (friend) REFERENCES people
+                )
+                """
+            ):
+                pass
+
+            async with writer.execute(
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
+                {"id": 1, "friend": None},
+            ):
+                pass
+
+            async with writer.execute(
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
+                {"id": 2, "friend": 1},
+            ):
+                pass
+
+        # make sure the writer raises a foreign key error on exit
+        with pytest.raises(ForeignKeyError) as error:
+            async with db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+                async with writer.execute("DELETE FROM people WHERE id = 1"):
+                    pass
+
+        assert error.value.violations == [{"table": "people", "rowid": 2, "parent": "people", "fkid": 0}]
+
+
+@pytest.mark.anyio
+async def test_set_foreign_keys_fails_within_acquired_writer() -> None:
+    async with DBConnection(2, foreign_keys=True) as db_wrapper:
+        async with db_wrapper.writer():
+            with pytest.raises(
+                InternalError,
+                match="Unable to set foreign key enforcement state while a writer is held",
+            ):
+                async with db_wrapper._set_foreign_key_enforcement(enabled=False):
+                    pass  # pragma: no cover
+
+
+@boolean_datacases(name="initial", false="initially disabled", true="initially enabled")
+@pytest.mark.anyio
+async def test_delayed_foreign_key_request_fails_when_nested(initial: bool) -> None:
+    async with DBConnection(2, foreign_keys=initial) as db_wrapper:
+        async with db_wrapper.writer():
+            with pytest.raises(NestedForeignKeyDelayedRequestError):
+                async with db_wrapper.writer(foreign_key_enforcement_enabled=True):
+                    pass  # pragma: no cover

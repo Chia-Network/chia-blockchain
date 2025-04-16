@@ -12,33 +12,15 @@ import pathlib
 import ssl
 import subprocess
 import sys
+from collections.abc import Awaitable, Collection, Iterator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
-from pathlib import Path
+from enum import Enum
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    ClassVar,
-    Collection,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Protocol,
-    TextIO,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    final,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Protocol, TextIO, TypeVar, Union, cast, final
 
 import aiohttp
 import pytest
@@ -47,17 +29,20 @@ import pytest
 from _pytest.nodes import Node
 from aiohttp import web
 from chia_rs import Coin
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 import chia
 import chia._tests
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
+from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
+from chia.server.outbound_message import Message
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
-from chia.util.misc import caller_file_and_line
 from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode
@@ -179,7 +164,7 @@ def measure_overhead(
     ],
     cycles: int = 10,
 ) -> float:
-    times: List[float] = []
+    times: list[float] = []
 
     for _ in range(cycles):
         with manager_maker() as results:
@@ -250,10 +235,10 @@ class BenchmarkData:
 
     label: str
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> BenchmarkData:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> BenchmarkData:
         return cls(
             duration=marshalled["duration"],
             path=pathlib.Path(marshalled["path"]),
@@ -262,7 +247,7 @@ class BenchmarkData:
             label=marshalled["label"],
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "duration": self.duration,
             "path": self.path.as_posix(),
@@ -329,7 +314,7 @@ class _AssertRuntime:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
@@ -366,7 +351,7 @@ class _AssertRuntime:
                 label=self.label,
             )
 
-            ether.record_property(  # pylint: disable=E1102
+            ether.record_property(
                 data.tag,
                 json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
             )
@@ -383,7 +368,6 @@ class BenchmarkRunner:
     test_id: Optional[TestId] = None
     overhead: Optional[float] = None
 
-    @functools.wraps(_AssertRuntime)
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
         kwargs.setdefault("overhead", self.overhead)
@@ -398,7 +382,7 @@ def assert_rpc_error(error: str) -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[subprocess.Popen[Any]]:
+def closing_chia_root_popen(chia_root: ChiaRoot, args: list[str]) -> Iterator[subprocess.Popen[Any]]:
     environment = {**os.environ, "CHIA_ROOT": os.fspath(chia_root.path)}
 
     with subprocess.Popen(args=args, env=environment) as process:
@@ -438,6 +422,16 @@ def named_datacases(name: str) -> DataCasesDecorator:
     return functools.partial(datacases, _name=name)
 
 
+def boolean_datacases(name: str, false: str, true: str) -> pytest.MarkDecorator:
+    return pytest.mark.parametrize(
+        argnames=name,
+        argvalues=[
+            pytest.param(False, id=false),
+            pytest.param(True, id=true),
+        ],
+    )
+
+
 @dataclasses.dataclass
 class CoinGenerator:
     _seed: int = -1
@@ -459,7 +453,7 @@ class CoinGenerator:
         return HintedCoin(Coin(parent_coin_id, self._get_hash(), self._get_amount()), hint)
 
 
-def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
+def coin_creation_args(hinted_coin: HintedCoin) -> list[Any]:
     if hinted_coin.hint is not None:
         memos = [hinted_coin.hint]
     else:
@@ -483,19 +477,24 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
 
 
 def invariant_check_mempool(mempool: Mempool) -> None:
-    with mempool._db_conn:
-        cursor = mempool._db_conn.execute("SELECT SUM(cost) FROM tx")
-        val = cursor.fetchone()[0]
-        if val is None:
-            val = 0
-    assert mempool._total_cost == val
+    with mempool._db_conn as conn:
+        cursor = conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
+        val = cursor.fetchone()
+        assert (mempool._total_cost, mempool._total_fee) == val
 
-    with mempool._db_conn:
-        cursor = mempool._db_conn.execute("SELECT SUM(fee) FROM tx")
-        val = cursor.fetchone()[0]
-        if val is None:
-            val = 0
-    assert mempool._total_fee == val
+    with mempool._db_conn as conn:
+        cursor = conn.execute("SELECT coin_id, tx FROM spends")
+        for coin_id, item_id in cursor.fetchall():
+            item = mempool._items.get(item_id)
+            assert item is not None
+            # item is expected to contain a spend of coin_id, but it might be a
+            # fast-forward spend, in which case the dictionary won't help us,
+            # but we'll have to do a linear search
+            if coin_id in item.bundle_coin_spends:
+                assert item.bundle_coin_spends[coin_id].coin_spend.coin.name() == coin_id
+                continue
+
+            assert any(i.latest_singleton_coin == coin_id for i in item.bundle_coin_spends.values())
 
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
@@ -507,7 +506,7 @@ async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
 @dataclass
 class RecordingWebServer:
     web_server: WebServer
-    requests: List[web.Request] = field(default_factory=list)
+    requests: list[web.Request] = field(default_factory=list)
 
     @classmethod
     async def create(
@@ -533,7 +532,7 @@ class RecordingWebServer:
         await web_server.start()
         return self
 
-    def get_routes(self) -> Dict[str, Callable[[web.Request], Awaitable[web.Response]]]:
+    def get_routes(self) -> dict[str, Callable[[web.Request], Awaitable[web.Response]]]:
         return {"/{path:.*}": self.handler}
 
     async def handler(self, request: web.Request) -> web.Response:
@@ -556,12 +555,12 @@ class RecordingWebServer:
 @dataclasses.dataclass(frozen=True)
 class TestId:
     platform: str
-    test_path: Tuple[str, ...]
-    ids: Tuple[str, ...]
+    test_path: tuple[str, ...]
+    ids: tuple[str, ...]
 
     @classmethod
     def create(cls, node: Node, platform: str = sys.platform) -> TestId:
-        test_path: List[str] = []
+        test_path: list[str] = []
         temp_node = node
         while True:
             name: str
@@ -580,8 +579,8 @@ class TestId:
             temp_node = temp_node.parent
 
         # TODO: can we avoid parsing the id's etc from the node name?
-        test_name, delimiter, rest = node.name.partition("[")
-        ids: Tuple[str, ...]
+        _test_name, delimiter, rest = node.name.partition("[")
+        ids: tuple[str, ...]
         if delimiter == "":
             ids = ()
         else:
@@ -594,14 +593,14 @@ class TestId:
         )
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> TestId:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> TestId:
         return cls(
             platform=marshalled["platform"],
             test_path=tuple(marshalled["test_path"]),
             ids=tuple(marshalled["ids"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "platform": self.platform,
             "test_path": self.test_path,
@@ -609,22 +608,82 @@ class TestId:
         }
 
 
-T = TypeVar("T")
+T_ComparableEnum = TypeVar("T_ComparableEnum", bound="ComparableEnum")
 
 
-@dataclasses.dataclass(frozen=True)
-class DataTypeProtocol(Protocol):
-    tag: ClassVar[str]
+class ComparableEnum(Enum):
+    def __lt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
 
-    line: int
-    path: Path
-    label: str
-    duration: float
-    limit: float
+        return self.value.__lt__(other.value)
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    def __le__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
 
-    @classmethod
-    def unmarshal(cls: Type[T], marshalled: Dict[str, Any]) -> T: ...
+        return self.value.__le__(other.value)
 
-    def marshal(self) -> Dict[str, Any]: ...
+    def __eq__(self: T_ComparableEnum, other: object) -> bool:
+        if self.__class__ is not other.__class__:
+            return False
+
+        return cast(bool, self.value.__eq__(cast(T_ComparableEnum, other).value))
+
+    def __ne__(self: T_ComparableEnum, other: object) -> bool:
+        if self.__class__ is not other.__class__:
+            return True
+
+        return cast(bool, self.value.__ne__(cast(T_ComparableEnum, other).value))
+
+    def __gt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+
+        return self.value.__gt__(other.value)
+
+    def __ge__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+
+        return self.value.__ge__(other.value)
+
+
+def is_attribute_local(o: object, name: str) -> bool:
+    return name in getattr(o, "__dict__", ()) or name in getattr(o, "__slots__", ())
+
+
+@contextlib.contextmanager
+def patch_request_handler(
+    api: Union[ApiProtocol, type[ApiProtocol]],
+    handler: Callable[..., Awaitable[Optional[Message]]],
+    request_type: Optional[ProtocolMessageTypes] = None,
+) -> Iterator[None]:
+    if request_type is None:
+        request_type = ProtocolMessageTypes[handler.__name__]
+
+    metadata = ApiMetadata.copy(api.metadata)
+    original_request = metadata.message_type_to_request.pop(request_type)
+    decorator = metadata.request(
+        peer_required=original_request.peer_required,
+        bytes_required=original_request.bytes_required,
+        execute_task=original_request.execute_task,
+        reply_types=original_request.reply_types,
+        request_type=original_request.request_type,
+    )
+    decorator(handler)
+
+    was_local = is_attribute_local(api, "metadata")
+    original = api.metadata
+    # when an instance is passed, this is intentionally assigning to an instance
+    # counter to the class variable hint
+    api.metadata = metadata  # type: ignore[misc]
+    try:
+        yield
+    finally:
+        if was_local:
+            # when an instance is passed, this is intentionally assigning to an instance
+            # counter to the class variable hint
+            api.metadata = original  # type: ignore[misc]
+        else:
+            del api.metadata

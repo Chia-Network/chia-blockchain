@@ -1,20 +1,27 @@
 from __future__ import annotations
 
-import dataclasses
 import json
 from pathlib import Path
-from typing import List
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.util.run_block import run_json_block
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.hash import std_hash
 
-constants = dataclasses.replace(
-    DEFAULT_CONSTANTS,
-    AGG_SIG_ME_ADDITIONAL_DATA=bytes.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2"),
+AGG_SIG_DATA = bytes32.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2")
+
+constants = DEFAULT_CONSTANTS.replace(
+    AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
+    AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
+    AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
+    AGG_SIG_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([45])),
+    AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([46])),
+    AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([47])),
+    AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([48])),
     DIFFICULTY_CONSTANT_FACTOR=uint128(10052721566054),
     DIFFICULTY_STARTING=uint64(30),
     EPOCH_BLOCKS=uint32(768),
@@ -25,8 +32,8 @@ constants = dataclasses.replace(
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bytes32.fromhex(
         "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),
-    MEMPOOL_BLOCK_BUFFER=10,
-    MIN_PLOT_SIZE=18,
+    MEMPOOL_BLOCK_BUFFER=uint8(10),
+    MIN_PLOT_SIZE=uint8(18),
 )
 retire_bytes = (
     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -34,7 +41,7 @@ retire_bytes = (
 )
 
 
-def find_retirement(tocheck: List[ConditionWithArgs]) -> bool:
+def find_retirement(tocheck: list[ConditionWithArgs]) -> bool:
     for c in tocheck:
         if c.opcode != ConditionOpcode.CREATE_COIN:
             continue

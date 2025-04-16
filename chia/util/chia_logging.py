@@ -4,21 +4,21 @@ import logging
 import os
 from logging.handlers import SysLogHandler
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 
-from chia.cmds.init_funcs import chia_full_version_str
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia import __version__
+from chia.util.chia_version import chia_short_version
 from chia.util.path import path_from_root
 
 default_log_level = "WARNING"
 
 
-def get_beta_logging_config() -> Dict[str, Any]:
+def get_beta_logging_config() -> dict[str, Any]:
     return {
-        "log_filename": f"{chia_full_version_str()}/chia-blockchain/beta.log",
+        "log_filename": f"{chia_short_version()}/chia-blockchain/beta.log",
         "log_level": "DEBUG",
         "log_stdout": False,
         "log_maxfilesrotation": 100,
@@ -28,7 +28,7 @@ def get_beta_logging_config() -> Dict[str, Any]:
 
 
 def get_file_log_handler(
-    formatter: logging.Formatter, root_path: Path, logging_config: Dict[str, object]
+    formatter: logging.Formatter, root_path: Path, logging_config: dict[str, object]
 ) -> ConcurrentRotatingFileHandler:
     log_path = path_from_root(root_path, str(logging_config.get("log_filename", "log/debug.log")))
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -44,24 +44,35 @@ def get_file_log_handler(
 
 def initialize_logging(
     service_name: str,
-    logging_config: Dict[str, Any],
+    logging_config: dict[str, Any],
     root_path: Path,
     beta_root_path: Optional[Path] = None,
 ) -> None:
+    log_backcompat = logging_config.get("log_backcompat", False)
     log_level = logging_config.get("log_level", default_log_level)
     file_name_length = 33 - len(service_name)
     log_date_format = "%Y-%m-%dT%H:%M:%S"
     file_log_formatter = logging.Formatter(
-        fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
+        fmt=(
+            f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s"
+            if log_backcompat
+            else f"%(asctime)s.%(msecs)03d {__version__} {service_name} %(name)-{file_name_length}s: "
+            f"%(levelname)-8s %(message)s"
+        ),
         datefmt=log_date_format,
     )
-    handlers: List[logging.Handler] = []
+    handlers: list[logging.Handler] = []
     if logging_config["log_stdout"]:
         stdout_handler = colorlog.StreamHandler()
         stdout_handler.setFormatter(
             colorlog.ColoredFormatter(
-                f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: "
-                f"%(log_color)s%(levelname)-8s%(reset)s %(message)s",
+                (
+                    f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: "
+                    f"%(log_color)s%(levelname)-8s%(reset)s %(message)s"
+                    if log_backcompat
+                    else f"%(asctime)s.%(msecs)03d {__version__} {service_name} %(name)-{file_name_length}s: "
+                    f"%(log_color)s%(levelname)-8s%(reset)s %(message)s"
+                ),
                 datefmt=log_date_format,
                 reset=True,
             )
@@ -81,31 +92,42 @@ def initialize_logging(
         handlers.append(get_file_log_handler(file_log_formatter, beta_root_path, get_beta_logging_config()))
 
     root_logger = logging.getLogger()
-    log_level_exceptions = {}
     for handler in handlers:
+        root_logger.addHandler(handler)
+
+    set_log_level(log_level=log_level, service_name=service_name)
+
+
+def set_log_level(log_level: str, service_name: str) -> list[str]:
+    root_logger = logging.getLogger()
+    log_level_exceptions = {}
+
+    for handler in root_logger.handlers:
         try:
             handler.setLevel(log_level)
         except Exception as e:
             handler.setLevel(default_log_level)
             log_level_exceptions[handler] = e
-        root_logger.addHandler(handler)
 
-    for handler, exception in log_level_exceptions.items():
-        root_logger.error(
-            f"Handler {handler}: Invalid log level '{log_level}' found in {service_name} config. "
-            f"Defaulting to: {default_log_level}. Error: {exception}"
-        )
+    error_strings = [
+        f"Handler {handler}: Invalid log level '{log_level}' for {service_name}. "
+        f"Defaulting to: {default_log_level}. Error: {exception}"
+        for handler, exception in log_level_exceptions.items()
+    ]
+    for error_string in error_strings:
+        root_logger.error(error_string)
 
     # Adjust the root logger to the smallest used log level since its default level is WARNING which would overwrite
     # the potentially smaller log levels of specific handlers.
-    root_logger.setLevel(min(handler.level for handler in handlers))
+    root_logger.setLevel(min(handler.level for handler in root_logger.handlers))
 
     if root_logger.level <= logging.DEBUG:
         logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
 
+    return error_strings
 
-def initialize_service_logging(service_name: str, config: Dict[str, Any]) -> None:
-    logging_root_path = DEFAULT_ROOT_PATH
+
+def initialize_service_logging(service_name: str, config: dict[str, Any], root_path: Path) -> None:
     if service_name == "daemon":
         # TODO: Maybe introduce a separate `daemon` section in the config instead of having `daemon_port`, `logging`
         #  and the daemon related stuff as top level entries.
@@ -117,6 +139,6 @@ def initialize_service_logging(service_name: str, config: Dict[str, Any]) -> Non
     initialize_logging(
         service_name=service_name,
         logging_config=logging_config,
-        root_path=logging_root_path,
+        root_path=root_path,
         beta_root_path=beta_config_path,
     )

@@ -59,23 +59,23 @@ following mechanism:
 from __future__ import annotations
 
 import hashlib
+from functools import lru_cache
 from typing import Union
 
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE
 from chia_rs import G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
-
-from .load_clvm import load_clvm_maybe_recompile
-from .p2_conditions import puzzle_for_conditions
+from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
-DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
+DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(=)` always fails
 
-MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
+MOD = Program.from_bytes(P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE)
 
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(MOD.get_tree_hash())
 
@@ -91,6 +91,7 @@ def calculate_synthetic_offset(public_key: G1Element, hidden_puzzle_hash: bytes3
     return offset
 
 
+@lru_cache(maxsize=1000)
 def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: bytes32) -> G1Element:
     synthetic_offset: PrivateKey = PrivateKey.from_bytes(
         calculate_synthetic_offset(public_key, hidden_puzzle_hash).to_bytes(32, "big")
@@ -98,6 +99,7 @@ def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: by
     return public_key + synthetic_offset.get_g1()
 
 
+@lru_cache(maxsize=1000)
 def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: bytes32) -> PrivateKey:
     secret_exponent = int.from_bytes(bytes(secret_key), "big")
     public_key = secret_key.get_g1()
@@ -113,7 +115,7 @@ def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> Program:
 
 
 def puzzle_hash_for_synthetic_public_key(synthetic_public_key: G1Element) -> bytes32:
-    public_key_hash = Program.to(bytes(synthetic_public_key)).get_tree_hash()
+    public_key_hash = shatree_atom(bytes(synthetic_public_key))
     return curry_and_treehash(QUOTED_MOD_HASH, public_key_hash)
 
 

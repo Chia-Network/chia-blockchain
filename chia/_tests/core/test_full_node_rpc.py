@@ -1,14 +1,13 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
-
-from typing import List
 
 import pytest
 from chia_rs import AugSchemeMPL
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8
 from clvm.casts import int_to_bytes
 
+from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
@@ -19,20 +18,19 @@ from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.outbound_message import NodeType
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
-from chia.util.ints import uint8
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @pytest.mark.anyio
@@ -44,13 +42,12 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
     full_node_api_2 = full_node_service_2._api
     server_2 = full_node_api_2.full_node.server
 
-    try:
-        client = await FullNodeRpcClient.create(
-            self_hostname,
-            full_node_service_1.rpc_server.listen_port,
-            full_node_service_1.root_path,
-            full_node_service_1.config,
-        )
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
         await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
         state = await client.get_blockchain_state()
         assert state["peak"] is None
@@ -97,20 +94,22 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         assert (await client.get_block_record_by_height(100)) is None
 
-        # TODO: Understand why the list(set()) is required to make this work and address it.  This shouldn't be needed.
-        ph = list(set(blocks[-1].get_included_reward_coins()))[0].puzzle_hash
+        # NOTE: indexing and hard coded values below depend on the ordering
+        included_reward_coins = sorted(blocks[-1].get_included_reward_coins(), key=lambda c: c.amount)
+
+        ph = included_reward_coins[0].puzzle_hash
         coins = await client.get_coin_records_by_puzzle_hash(ph)
         print(coins)
         assert len(coins) >= 1
 
-        pid = list(set(blocks[-1].get_included_reward_coins()))[0].parent_coin_info
-        pid_2 = list(set(blocks[-1].get_included_reward_coins()))[1].parent_coin_info
+        pid = included_reward_coins[0].parent_coin_info
+        pid_2 = included_reward_coins[1].parent_coin_info
         coins = await client.get_coin_records_by_parent_ids([pid, pid_2])
         print(coins)
         assert len(coins) == 2
 
-        name = list(set(blocks[-1].get_included_reward_coins()))[0].name()
-        name_2 = list(set(blocks[-1].get_included_reward_coins()))[1].name()
+        name = included_reward_coins[0].name()
+        name_2 = included_reward_coins[1].name()
         coins = await client.get_coin_records_by_names([name, name_2])
         print(coins)
         assert len(coins) == 2
@@ -138,7 +137,10 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 2
         assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
 
-        coin_to_spend = list(set(blocks[-1].get_included_reward_coins()))[0]
+        # NOTE: indexing and hard coded values below depend on the ordering
+        included_reward_coins = sorted(blocks[-1].get_included_reward_coins(), key=lambda c: c.amount)
+
+        coin_to_spend = included_reward_coins[0]
 
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
 
@@ -153,18 +155,22 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_all_mempool_items()) == 1
         assert len(await client.get_all_mempool_tx_ids()) == 1
         assert (
-            SpendBundle.from_json_dict(list((await client.get_all_mempool_items()).values())[0]["spend_bundle"])
+            WalletSpendBundle.from_json_dict(
+                next(iter((await client.get_all_mempool_items()).values()))["spend_bundle"]
+            )
             == spend_bundle
         )
         assert (await client.get_all_mempool_tx_ids())[0] == spend_bundle.name()
         assert (
-            SpendBundle.from_json_dict((await client.get_mempool_item_by_tx_id(spend_bundle.name()))["spend_bundle"])
+            WalletSpendBundle.from_json_dict(
+                (await client.get_mempool_item_by_tx_id(spend_bundle.name()))["spend_bundle"]
+            )
             == spend_bundle
         )
         assert (await client.get_coin_record_by_name(coin.name())) is None
 
         # Verify that the include_pending arg to get_mempool_item_by_tx_id works
-        coin_to_spend_pending = list(set(blocks[-1].get_included_reward_coins()))[1]
+        coin_to_spend_pending = included_reward_coins[1]
         ahr = ConditionOpcode.ASSERT_HEIGHT_RELATIVE  # to force pending/potential
         condition_dic = {ahr: [ConditionWithArgs(ahr, [int_to_bytes(100)])]}
         spend_bundle_pending = wallet.generate_signed_transaction(
@@ -178,7 +184,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), False)
         ) is None  # not strictly in the mempool
         assert (
-            SpendBundle.from_json_dict(
+            WalletSpendBundle.from_json_dict(
                 (await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), True))["spend_bundle"]
             )
             == spend_bundle_pending  # pending entry into mempool, so include_pending fetches
@@ -213,7 +219,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
                 coin_records[i].coin.amount, ph_receiver, coin_records[i].coin
             )
             await client.push_tx(spend_bundle)
-            coin_spends = coin_spends + spend_bundle.coin_spends
+            coin_spends += spend_bundle.coin_spends
             await time_out_assert(
                 5, full_node_api_1.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
             )
@@ -221,15 +227,14 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
         block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
 
-        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork, we don't compress blocks using
-            # block references anymore
-            assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
+        # since the hard fork, we no longer compress blocks using
+        # block references anymore
+        assert block.transactions_generator_ref_list == []
 
         block_spends = await client.get_block_spends(block.header_hash)
 
         assert len(block_spends) == 3
-        assert sorted(block_spends, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
+        assert sorted(block_spends, key=str) == sorted(coin_spends, key=str)
 
         block_spends_with_conditions = await client.get_block_spends_with_conditions(block.header_hash)
 
@@ -359,7 +364,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             state = await client.get_blockchain_state()
             block = await client.get_block(state["peak"].header_hash)
 
-            coin_to_spend = list(set(block.get_included_reward_coins()))[0]
+            coin_to_spend = block.get_included_reward_coins()[0]
 
             spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
             await client.push_tx(spend_bundle)
@@ -406,24 +411,19 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await client.close_connection(connections[0]["node_id"])
         await time_out_assert(10, num_connections, 0)
 
-        blocks: List[FullBlock] = await client.get_blocks(0, 5)
+        blocks: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(blocks) == 5
 
         await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32), None))
-        new_blocks_0: List[FullBlock] = await client.get_blocks(0, 5)
+        new_blocks_0: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(new_blocks_0) == 7
 
-        new_blocks: List[FullBlock] = await client.get_blocks(0, 5, exclude_reorged=True)
+        new_blocks: list[FullBlock] = await client.get_blocks(0, 5, exclude_reorged=True)
         assert len(new_blocks) == 5
         assert blocks[0].header_hash == new_blocks[0].header_hash
         assert blocks[1].header_hash == new_blocks[1].header_hash
         assert blocks[2].header_hash == new_blocks[2].header_hash
         assert blocks[3].header_hash != new_blocks[3].header_hash
-
-    finally:
-        # Checks that the RPC manages to stop the node
-        client.close()
-        await client.await_closed()
 
 
 @pytest.mark.anyio
@@ -440,14 +440,12 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-    try:
-        client = await FullNodeRpcClient.create(
-            self_hostname,
-            full_node_service_1.rpc_server.listen_port,
-            full_node_service_1.root_path,
-            full_node_service_1.config,
-        )
-
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
         # Only provide one
         res = await client.get_recent_signage_point_or_eos(None, None)
         assert res is None
@@ -535,8 +533,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
         # Perform a reorg
         blocks = bt.get_consecutive_blocks(12, seed=b"1234")
-        for block in blocks:
-            await full_node_api_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_api_1.full_node)
 
         # Signage point is no longer in the blockchain
         res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
@@ -551,15 +548,10 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
         assert res["eos"] == selected_eos
         assert res["reverted"]
 
-    finally:
-        # Checks that the RPC manages to stop the node
-        client.close()
-        await client.await_closed()
-
 
 @pytest.mark.anyio
 async def test_get_network_info(one_wallet_and_one_simulator_services, self_hostname):
-    nodes, _, bt = one_wallet_and_one_simulator_services
+    nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
 
     async with FullNodeRpcClient.create_as_context(
@@ -570,7 +562,29 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
     ) as client:
         await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
         network_info = await client.fetch("get_network_info", {})
-        assert network_info == {"network_name": "testnet0", "network_prefix": "txch", "success": True}
+        assert network_info == {
+            "network_name": "testnet0",
+            "network_prefix": "txch",
+            "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "success": True,
+        }
+
+
+@pytest.mark.anyio
+async def test_get_version(one_wallet_and_one_simulator_services, self_hostname):
+    nodes, _, _bt = one_wallet_and_one_simulator_services
+    (full_node_service_1,) = nodes
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
+        version = await client.fetch("get_version", {})
+        assert version == {
+            "success": True,
+            "version": __version__,
+        }
 
 
 @pytest.mark.anyio
@@ -596,7 +610,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert state["space"] == 0
         assert state["average_block_time"] is None
 
-        blocks: List[FullBlock] = bt.get_consecutive_blocks(num_blocks)
+        blocks: list[FullBlock] = bt.get_consecutive_blocks(num_blocks)
         blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
         for block in blocks:
@@ -619,7 +633,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert state["space"] > 0
         assert state["average_block_time"] > 0
 
-        block_records: List[BlockRecord] = [
+        block_records: list[BlockRecord] = [
             await full_node_api_1.full_node.blockchain.get_block_record_from_db(rec.header_hash) for rec in blocks
         ]
         first_non_transaction_block_index = -1
@@ -631,8 +645,8 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         # so first_non_transaction_block_index != 0
         assert first_non_transaction_block_index > 0
 
-        transaction_blocks: List[BlockRecord] = [b for b in block_records if b.is_transaction_block]
-        non_transaction_block: List[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
+        transaction_blocks: list[BlockRecord] = [b for b in block_records if b.is_transaction_block]
+        non_transaction_block: list[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
         assert len(transaction_blocks) > 0
         assert len(non_transaction_block) > 0
         assert transaction_blocks[0] == await get_nearest_transaction_block(
@@ -662,41 +676,31 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
 async def test_coin_name_not_in_request(one_node, self_hostname):
     [full_node_service], _, _ = one_node
 
-    try:
-        client = await FullNodeRpcClient.create(
-            self_hostname,
-            full_node_service.rpc_server.listen_port,
-            full_node_service.root_path,
-            full_node_service.config,
-        )
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service.rpc_server.listen_port,
+        full_node_service.root_path,
+        full_node_service.config,
+    ) as client:
         with pytest.raises(ValueError, match="No coin_name in request"):
             await client.fetch("get_mempool_items_by_coin_name", {})
-    finally:
-        # Checks that the RPC manages to stop the node
-        client.close()
-        await client.await_closed()
 
 
 @pytest.mark.anyio
 async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
     [full_node_service], _, _ = one_node
 
-    try:
-        client = await FullNodeRpcClient.create(
-            self_hostname,
-            full_node_service.rpc_server.listen_port,
-            full_node_service.root_path,
-            full_node_service.config,
-        )
-
-        empty_coin_name = bytes32([0] * 32)
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service.rpc_server.listen_port,
+        full_node_service.root_path,
+        full_node_service.config,
+    ) as client:
+        empty_coin_name = bytes32.zeros
         mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
-        assert mempool_item["success"] == True
+        assert mempool_item["success"]
         assert "mempool_items" in mempool_item
         assert len(mempool_item["mempool_items"]) == 0
-    finally:
-        client.close()
-        await client.await_closed()
 
 
 @pytest.mark.anyio
@@ -704,14 +708,12 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
     [full_node_service], _, bt = one_node
     full_node_api = full_node_service._api
 
-    try:
-        client = await FullNodeRpcClient.create(
-            self_hostname,
-            full_node_service.rpc_server.listen_port,
-            full_node_service.root_path,
-            full_node_service.config,
-        )
-
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service.rpc_server.listen_port,
+        full_node_service.root_path,
+        full_node_service.config,
+    ) as client:
         blocks = bt.get_consecutive_blocks(2)
         blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
 
@@ -748,7 +750,7 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
         # empty mempool
         assert len(await client.get_all_mempool_items()) == 0
 
-        coin_to_spend = list(set(blocks[-1].get_included_reward_coins()))[0]
+        coin_to_spend = blocks[-1].get_included_reward_coins()[0]
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
         await client.push_tx(spend_bundle)
 
@@ -758,13 +760,9 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
         mempool_item = await client.get_mempool_items_by_coin_name(coin_to_spend.name())
 
         # found coin in coin spends
-        assert mempool_item["success"] == True
+        assert mempool_item["success"]
         assert "mempool_items" in mempool_item
         assert len(mempool_item["mempool_items"]) > 0
         for item in mempool_item["mempool_items"]:
             removals = [Coin.from_json_dict(coin) for coin in item["removals"]]
             assert coin_to_spend.name() in [coin.name() for coin in removals]
-
-    finally:
-        client.close()
-        await client.await_closed()

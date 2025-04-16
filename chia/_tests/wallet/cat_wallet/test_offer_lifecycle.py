@@ -1,30 +1,29 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
-from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes
+from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes, CreateCoin
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import OFFER_MOD, Offer
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -32,8 +31,7 @@ acs_ph = acs.get_tree_hash()
 
 # Some methods mapping strings to CATs
 def str_to_tail(tail_str: str) -> Program:
-    # TODO: Remove cast when we improve typing
-    return cast(Program, Program.to([3, [], [1, tail_str], []]))
+    return Program.to([3, [], [1, tail_str], []])
 
 
 def str_to_tail_hash(tail_str: str) -> bytes32:
@@ -46,10 +44,10 @@ def str_to_cat_hash(tail_str: str) -> bytes32:
 
 # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
 async def generate_coins(
-    sim: SpendSim, sim_client: SimClient, requested_coins: Dict[Optional[str], List[int]]
-) -> Dict[Optional[str], List[Coin]]:
+    sim: SpendSim, sim_client: SimClient, requested_coins: dict[Optional[str], list[int]]
+) -> dict[Optional[str], list[Coin]]:
     await sim.farm_block(acs_ph)
-    parent_coin = [cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph)][0]
+    parent_coin = next(cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph))
 
     # We need to gather a list of initial coins to create as well as spends that do the eve spend for every CAT
     payments = []
@@ -61,7 +59,7 @@ async def generate_coins(
                 tail_hash = tail.get_tree_hash()
                 cat_puzzle = construct_cat_puzzle(CAT_MOD, tail_hash, acs)
                 cat_puzzle_hash = cat_puzzle.get_tree_hash()
-                payments.append(Payment(cat_puzzle_hash, uint64(amount)))
+                payments.append(CreateCoin(cat_puzzle_hash, uint64(amount)))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
                         CAT_MOD,
@@ -76,19 +74,19 @@ async def generate_coins(
                     )
                 )
             else:
-                payments.append(Payment(acs_ph, uint64(amount)))
+                payments.append(CreateCoin(acs_ph, uint64(amount)))
 
     # This bundle creates all of the initial coins
-    parent_bundle = SpendBundle(
+    parent_bundle = WalletSpendBundle(
         [make_spend(parent_coin, acs, Program.to([[51, p.puzzle_hash, p.amount] for p in payments]))], G2Element()
     )
 
     # Then we aggregate it with all of the eve spends
-    await sim_client.push_tx(SpendBundle.aggregate([parent_bundle, *cat_bundles]))
+    await sim_client.push_tx(WalletSpendBundle.aggregate([parent_bundle, *cat_bundles]))
     await sim.farm_block()
 
     # Search for all of the coins and put them into a dictionary
-    coin_dict: Dict[Optional[str], List[Coin]] = {}
+    coin_dict: dict[Optional[str], list[Coin]] = {}
     for tail_str, _ in requested_coins.items():
         if tail_str:
             tail_hash = str_to_tail_hash(tail_str)
@@ -113,22 +111,22 @@ async def generate_coins(
 # `generate_secure_bundle` simulates a wallet's `generate_signed_transaction`
 # but doesn't bother with non-offer announcements
 def generate_secure_bundle(
-    selected_coins: List[Coin],
-    announcements: List[AssertPuzzleAnnouncement],
+    selected_coins: list[Coin],
+    announcements: list[AssertPuzzleAnnouncement],
     offered_amount: uint64,
     tail_str: Optional[str] = None,
-) -> SpendBundle:
+) -> WalletSpendBundle:
     announcement_assertions = [a.to_program() for a in announcements]
-    selected_coin_amount = sum([c.amount for c in selected_coins])
+    selected_coin_amount = sum(c.amount for c in selected_coins)
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
-    inner_solution: List[List[Any]] = [
+    inner_solution: list[Any] = [
         [51, Offer.ph(), offered_amount],  # Offered coin
         [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
         *announcement_assertions,
     ]
 
     if tail_str is None:
-        bundle = SpendBundle(
+        bundle = WalletSpendBundle(
             [
                 make_spend(
                     selected_coins[0],
@@ -179,8 +177,11 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         driver_dict_as_infos = {key.hex(): value.info for key, value in driver_dict.items()}
 
         # Create an XCH Offer for RED
-        chia_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
-            str_to_tail_hash("red"): [Payment(acs_ph, uint64(100), [b"memo"]), Payment(acs_ph, uint64(200), [b"memo"])]
+        chia_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+            str_to_tail_hash("red"): [
+                CreateCoin(acs_ph, uint64(100), [b"memo"]),
+                CreateCoin(acs_ph, uint64(200), [b"memo"]),
+            ]
         }
         chia_notarized_payments = Offer.notarize_payments(chia_requested_payments, chia_coins)
         chia_announcements = Offer.calculate_announcements(chia_notarized_payments, driver_dict)
@@ -191,24 +192,24 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         # Create a RED Offer for XCH
         red_coins_1 = red_coins[0:1]
         red_coins_2 = red_coins[1:]
-        red_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
-            None: [Payment(acs_ph, uint64(300), [b"red memo"]), Payment(acs_ph, uint64(350), [b"red memo"])]
+        red_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+            None: [CreateCoin(acs_ph, uint64(300), [b"red memo"]), CreateCoin(acs_ph, uint64(350), [b"red memo"])]
         }
         red_notarized_payments = Offer.notarize_payments(red_requested_payments, red_coins_1)
         red_announcements = Offer.calculate_announcements(red_notarized_payments, driver_dict)
         red_secured_bundle = generate_secure_bundle(
-            red_coins_1, red_announcements, uint64(sum([c.amount for c in red_coins_1])), tail_str="red"
+            red_coins_1, red_announcements, uint64(sum(c.amount for c in red_coins_1)), tail_str="red"
         )
         red_offer = Offer(red_notarized_payments, red_secured_bundle, driver_dict)
         assert not red_offer.is_valid()
 
-        red_requested_payments_2: Dict[Optional[bytes32], List[Payment]] = {
-            None: [Payment(acs_ph, uint64(50), [b"red memo"])]
+        red_requested_payments_2: dict[Optional[bytes32], list[CreateCoin]] = {
+            None: [CreateCoin(acs_ph, uint64(50), [b"red memo"])]
         }
         red_notarized_payments_2 = Offer.notarize_payments(red_requested_payments_2, red_coins_2)
         red_announcements_2 = Offer.calculate_announcements(red_notarized_payments_2, driver_dict)
         red_secured_bundle_2 = generate_secure_bundle(
-            red_coins_2, red_announcements_2, uint64(sum([c.amount for c in red_coins_2])), tail_str="red"
+            red_coins_2, red_announcements_2, uint64(sum(c.amount for c in red_coins_2)), tail_str="red"
         )
         red_offer_2 = Offer(red_notarized_payments_2, red_secured_bundle_2, driver_dict)
         assert not red_offer_2.is_valid()
@@ -220,9 +221,9 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         assert new_offer.is_valid()
 
         # Create yet another offer of BLUE for XCH and RED
-        blue_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
-            None: [Payment(acs_ph, uint64(200), [b"blue memo"])],
-            str_to_tail_hash("red"): [Payment(acs_ph, uint64(50), [b"blue memo"])],
+        blue_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+            None: [CreateCoin(acs_ph, uint64(200), [b"blue memo"])],
+            str_to_tail_hash("red"): [CreateCoin(acs_ph, uint64(50), [b"blue memo"])],
         }
         blue_notarized_payments = Offer.notarize_payments(blue_requested_payments, blue_coins)
         blue_announcements = Offer.calculate_announcements(blue_notarized_payments, driver_dict)
@@ -253,16 +254,16 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
 
         # Test preventing TAIL from running during exchange
         blue_cat_puz = construct_cat_puzzle(CAT_MOD, str_to_tail_hash("blue"), OFFER_MOD)
-        random_hash = bytes32([0] * 32)
+        random_hash = bytes32.zeros
         blue_spend = make_spend(
             Coin(random_hash, blue_cat_puz.get_tree_hash(), uint64(0)),
             blue_cat_puz,
             Program.to([[random_hash, [random_hash, 200, ["hey there"]]]]),
         )
         new_spends_list = [blue_spend, *new_offer.to_spend_bundle().coin_spends]
-        tail_offer = Offer.from_spend_bundle(SpendBundle(new_spends_list, G2Element()))
+        tail_offer = Offer.from_spend_bundle(WalletSpendBundle(new_spends_list, G2Element()))
         valid_spend = tail_offer.to_valid_spend(random_hash)
-        real_blue_spend = [spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend)][0]
+        real_blue_spend = next(spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend))
         real_blue_spend_replaced = real_blue_spend.replace(
             solution=SerializedProgram.from_program(
                 real_blue_spend.solution.to_program().replace(
@@ -270,7 +271,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
                 )
             ),
         )
-        valid_spend = SpendBundle(
+        valid_spend = WalletSpendBundle(
             [real_blue_spend_replaced, *[spend for spend in valid_spend.coin_spends if spend != real_blue_spend]],
             G2Element(),
         )

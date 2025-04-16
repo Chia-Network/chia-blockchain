@@ -2,28 +2,27 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from typing import List
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
+from chia._tests.core.make_block_generator import make_block_generator
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-
-from .make_block_generator import make_block_generator
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
@@ -94,7 +93,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     assert spend_info.puzzle == coin_spend.puzzle_reveal
     assert spend_info.solution == coin_spend.solution
 
-    if softfork_height >= bt.constants.HARD_FORK_FIX_HEIGHT:
+    if softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
     else:
         clvm_cost = 404560
@@ -148,7 +147,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
             f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
         ).as_bin()
     )
-    generator = BlockGenerator(program, [], [])
+    generator = BlockGenerator(program, [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,
         bt.constants.MAX_BLOCK_COST_CLVM,
@@ -184,7 +183,7 @@ async def test_clvm_mempool_mode(softfork_height: int) -> None:
     # ("0xfe"). In mempool mode, this should fail, but in non-mempool
     # mode, the unknown operator should be treated as if it returns ().
     program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-    generator = BlockGenerator(program, [], [])
+    generator = BlockGenerator(program, [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,
         test_constants.MAX_BLOCK_COST_CLVM,
@@ -210,7 +209,7 @@ async def test_tx_generator_speed(softfork_height: int, benchmark_runner: Benchm
     program = SerializedProgram.from_bytes(generator_bytes)
 
     with benchmark_runner.assert_runtime(seconds=1.25):
-        generator = BlockGenerator(program, [], [])
+        generator = BlockGenerator(program, [])
         npc_result = get_name_puzzle_conditions(
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
@@ -238,7 +237,7 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     )
 
     # ensure we fail if the program exceeds the cost
-    generator = BlockGenerator(program, [], [])
+    generator = BlockGenerator(program, [])
     npc_result = get_name_puzzle_conditions(
         generator, 10000000, mempool_mode=False, height=uint32(softfork_height), constants=test_constants
     )
@@ -277,7 +276,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
     with benchmark_runner.assert_runtime(seconds=0.1):
         total_cost = 0
         for i in range(0, 1000):
-            cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+            cost, _result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
             total_cost += cost
 
 
@@ -293,12 +292,12 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     )
 
     coin_spends = result.first()
-    spent_coins: List[Coin] = []
+    spent_coins: list[Coin] = []
     for spend in coin_spends.as_iter():
         parent, puzzle, amount_program, _ = spend.as_iter()
         parent_coin_info = parent.as_atom()
         puzzle_hash = puzzle.get_tree_hash()
-        amount = amount_program.as_int()
+        amount = uint64(amount_program.as_int())
         coin = Coin(parent_coin_info=parent_coin_info, puzzle_hash=puzzle_hash, amount=amount)
         spent_coins.append(coin)
 
@@ -306,7 +305,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
 
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
-    generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
+    generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [])
     with benchmark_runner.assert_runtime(seconds=8.5):
         for _ in range(3):
             for c in spent_coins:

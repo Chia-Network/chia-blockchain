@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Optional, Union, cast
 
 import aiohttp
-import pkg_resources
 import pytest
+from aiohttp import WSMessage
 from aiohttp.web_ws import WebSocketResponse
+from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
 from chia._tests.util.misc import Marks, datacases
@@ -35,15 +37,15 @@ from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 
-chiapos_version = pkg_resources.get_distribution("chiapos").version
+chiapos_version = importlib.metadata.version("chiapos")
 
 
 @dataclass
 class RouteCase:
     route: str
     description: str
-    request: Dict[str, Any]
-    response: Dict[str, Any]
+    request: dict[str, Any]
+    response: dict[str, Any]
     marks: Marks = ()
 
     @property
@@ -55,9 +57,9 @@ class RouteCase:
 class RouteStatusCase:
     route: str
     description: str
-    request: Dict[str, Any]
-    response: Dict[str, Any]
-    status: Dict[str, Any]
+    request: dict[str, Any]
+    response: dict[str, Any]
+    status: dict[str, Any]
     marks: Marks = ()
 
     @property
@@ -68,8 +70,8 @@ class RouteStatusCase:
 @dataclass
 class WalletAddressCase:
     id: str
-    request: Dict[str, Any]
-    response: Dict[str, Any]
+    request: dict[str, Any]
+    response: dict[str, Any]
     pubkeys_only: bool = field(default=False)
     marks: Marks = ()
 
@@ -77,8 +79,8 @@ class WalletAddressCase:
 @dataclass
 class KeysForPlotCase:
     id: str
-    request: Dict[str, Any]
-    response: Dict[str, Any]
+    request: dict[str, Any]
+    response: dict[str, Any]
     marks: Marks = ()
 
 
@@ -100,8 +102,8 @@ class ChiaPlottersBladebitArgsCase:
     def id(self) -> str:
         return self.case_id
 
-    def to_command_array(self) -> List[str]:
-        command: List[str] = ["bladebit", self.plot_type]
+    def to_command_array(self) -> list[str]:
+        command: list[str] = ["bladebit", self.plot_type]
         command += ["-r", str(self.threads)]
         command += ["-n", str(self.count)]
         command += ["-c", self.pool_contract]
@@ -152,13 +154,13 @@ class Service:
 @dataclass
 class Daemon:
     # Instance variables used by WebSocketServer.is_running()
-    services: Dict[str, Union[List[Service], Service]]
-    connections: Dict[str, Optional[List[Any]]]
+    services: dict[str, Union[list[Service], Service]]
+    connections: dict[str, Optional[list[Any]]]
 
     # Instance variables used by WebSocketServer.get_wallet_addresses()
-    net_config: Dict[str, Any] = field(default_factory=dict)
+    net_config: dict[str, Any] = field(default_factory=dict)
 
-    def get_command_mapping(self) -> Dict[str, Any]:
+    def get_command_mapping(self) -> dict[str, Any]:
         return {
             "get_routes": None,
             "example_one": None,
@@ -169,23 +171,23 @@ class Daemon:
     def is_service_running(self, service_name: str) -> bool:
         return WebSocketServer.is_service_running(cast(WebSocketServer, self), service_name)
 
-    async def running_services(self) -> Dict[str, Any]:
+    async def running_services(self) -> dict[str, Any]:
         return await WebSocketServer.running_services(cast(WebSocketServer, self))
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def is_running(self, request: dict[str, Any]) -> dict[str, Any]:
         return await WebSocketServer.is_running(cast(WebSocketServer, self), request)
 
-    async def get_routes(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_routes(self, request: dict[str, Any]) -> dict[str, Any]:
         return await WebSocketServer.get_routes(
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
 
-    async def get_wallet_addresses(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_wallet_addresses(self, request: dict[str, Any]) -> dict[str, Any]:
         return await WebSocketServer.get_wallet_addresses(
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
 
-    async def get_keys_for_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_keys_for_plotting(self, request: dict[str, Any]) -> dict[str, Any]:
         return await WebSocketServer.get_keys_for_plotting(
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
@@ -232,14 +234,14 @@ plotter_request_ref = {
 }
 
 
-def add_private_key_response_data(fingerprint: int) -> Dict[str, object]:
+def add_private_key_response_data(fingerprint: int) -> dict[str, object]:
     return {
         "success": True,
         "fingerprint": fingerprint,
     }
 
 
-def fingerprint_missing_response_data(request_type: Type[object]) -> Dict[str, object]:
+def fingerprint_missing_response_data(request_type: type[object]) -> dict[str, object]:
     return {
         "success": False,
         "error": "malformed request",
@@ -247,7 +249,7 @@ def fingerprint_missing_response_data(request_type: Type[object]) -> Dict[str, o
     }
 
 
-def fingerprint_not_found_response_data(fingerprint: int) -> Dict[str, object]:
+def fingerprint_not_found_response_data(fingerprint: int) -> dict[str, object]:
     return {
         "success": False,
         "error": "key not found",
@@ -257,23 +259,23 @@ def fingerprint_not_found_response_data(fingerprint: int) -> Dict[str, object]:
     }
 
 
-def get_key_response_data(key: KeyData) -> Dict[str, object]:
+def get_key_response_data(key: KeyData) -> dict[str, object]:
     return {"success": True, **GetKeyResponse(key=key).to_json_dict()}
 
 
-def get_keys_response_data(keys: List[KeyData]) -> Dict[str, object]:
+def get_keys_response_data(keys: list[KeyData]) -> dict[str, object]:
     return {"success": True, **GetKeysResponse(keys=keys).to_json_dict()}
 
 
-def get_public_key_response_data(key: KeyData) -> Dict[str, object]:
+def get_public_key_response_data(key: KeyData) -> dict[str, object]:
     return {"success": True, **GetPublicKeyResponse(key=key).to_json_dict()}
 
 
-def get_public_keys_response_data(keys: List[KeyData]) -> Dict[str, object]:
+def get_public_keys_response_data(keys: list[KeyData]) -> dict[str, object]:
     return {"success": True, **GetPublicKeysResponse(keys=keys).to_json_dict()}
 
 
-def label_missing_response_data(request_type: Type[Any]) -> Dict[str, Any]:
+def label_missing_response_data(request_type: type[Any]) -> dict[str, Any]:
     return {
         "success": False,
         "error": "malformed request",
@@ -281,7 +283,7 @@ def label_missing_response_data(request_type: Type[Any]) -> Dict[str, Any]:
     }
 
 
-def label_exists_response_data(fingerprint: int, label: str) -> Dict[str, Any]:
+def label_exists_response_data(fingerprint: int, label: str) -> dict[str, Any]:
     return {
         "success": False,
         "error": "malformed request",
@@ -310,7 +312,7 @@ label_newline_or_tab_response_data = {
 
 def assert_response(
     response: aiohttp.http_websocket.WSMessage,
-    expected_response_data: Dict[str, Any],
+    expected_response_data: dict[str, Any],
     request_id: Optional[str] = None,
     ack: bool = True,
     command: Optional[str] = None,
@@ -330,7 +332,7 @@ def assert_response(
 
 def assert_response_success_only(
     response: aiohttp.http_websocket.WSMessage, request_id: Optional[str] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
@@ -341,7 +343,7 @@ def assert_response_success_only(
     return message
 
 
-def assert_running_services_response(response_dict: Dict[str, Any], expected_response_dict: Dict[str, Any]) -> None:
+def assert_running_services_response(response_dict: dict[str, Any], expected_response_dict: dict[str, Any]) -> None:
     for k, v in expected_response_dict.items():
         if k == "running_services":
             # Order of services is not guaranteed
@@ -403,8 +405,11 @@ def mock_daemon_with_config_and_keys(get_keychain_for_function, root_path_popula
     keychain = Keychain()
 
     # populate the keychain with some test keys
-    keychain.add_private_key(test_key_data.mnemonic_str())
-    keychain.add_private_key(test_key_data_2.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data_2.mnemonic_str())
+
+    # Throw in an unused pubkey-only entry
+    keychain.add_key(bytes(G1Element()).hex(), private=False)
 
     # Mock daemon server with net_config set for mainnet
     return Daemon(services={}, connections={}, net_config=config)
@@ -415,8 +420,8 @@ async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daem
     keychain = Keychain()
 
     # populate the keychain with some test keys
-    keychain.add_private_key(test_key_data.mnemonic_str())
-    keychain.add_private_key(test_key_data_2.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data_2.mnemonic_str())
 
     daemon = get_daemon
     client = await connect_to_daemon(
@@ -593,6 +598,7 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
         "success": True,
         "network_name": "testnet0",
         "network_prefix": "txch",
+        "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     }
 
 
@@ -603,6 +609,12 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
         response={
             "success": True,
             "wallet_addresses": {
+                G1Element().get_fingerprint(): [
+                    {
+                        "address": "xch1dr2sj4jqdt6nj4l32d4f5dk7mrwak3qw5hsykty5lhhd00053y0szaz8zj",
+                        "hd_path": "m/12381/8444/2/0",
+                    }
+                ],
                 test_key_data.fingerprint: [
                     {
                         "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
@@ -676,11 +688,27 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
         },
     ),
     WalletAddressCase(
-        id="missing private key",
-        request={"fingerprints": [test_key_data.fingerprint]},
+        id="missing private key hardened",
+        request={"fingerprints": [test_key_data.fingerprint], "non_observer_derivation": True},
         response={
             "success": False,
             "error": f"missing private key for key with fingerprint {test_key_data.fingerprint}",
+        },
+        pubkeys_only=True,
+    ),
+    WalletAddressCase(
+        id="missing private key unhardened",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
+                        "hd_path": "m/12381/8444/2/0",
+                    },
+                ],
+            },
         },
         pubkeys_only=True,
     ),
@@ -956,7 +984,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     missing_mnemonic_response_data = {
         "success": False,
         "error": "malformed request",
-        "error_details": {"message": "missing mnemonic"},
+        "error_details": {"message": "missing key information"},
     }
 
     mnemonic_with_typo_response_data = {
@@ -1004,10 +1032,10 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 
 @pytest.mark.anyio
 async def test_add_private_key_label(daemon_connection_and_temp_keychain):
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     async def assert_add_private_key_with_label(
-        key_data: KeyData, request: Dict[str, object], add_private_key_response: Dict[str, object]
+        key_data: KeyData, request: dict[str, object], add_private_key_response: dict[str, object]
     ) -> None:
         await ws.send_str(create_payload("add_private_key", request, "test", "daemon"))
         assert_response(await ws.receive(), add_private_key_response)
@@ -1046,7 +1074,7 @@ async def test_get_key(daemon_connection_and_temp_keychain):
     await ws.send_str(create_payload("get_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     assert_response(await ws.receive(), fingerprint_not_found_response_data(test_key_data.fingerprint))
 
-    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
 
     # without `include_secrets`
     await ws.send_str(create_payload("get_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
@@ -1084,7 +1112,7 @@ async def test_get_keys(daemon_connection_and_temp_keychain):
     keys = [KeyData.generate() for _ in range(5)]
     keys_added = []
     for key_data in keys:
-        keychain.add_private_key(key_data.mnemonic_str())
+        keychain.add_key(key_data.mnemonic_str())
         keys_added.append(key_data)
 
         get_keys_response_data_without_secrets = get_keys_response_data(
@@ -1112,7 +1140,7 @@ async def test_get_public_key(daemon_connection_and_temp_keychain):
     await ws.send_str(create_payload("get_public_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     assert_response(await ws.receive(), fingerprint_not_found_response_data(test_key_data.fingerprint))
 
-    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
 
     await ws.send_str(create_payload("get_public_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     response = await ws.receive()
@@ -1138,7 +1166,7 @@ async def test_get_public_keys(daemon_connection_and_temp_keychain):
     keys = [KeyData.generate() for _ in range(5)]
     keys_added = []
     for key_data in keys:
-        keychain.add_private_key(key_data.mnemonic_str())
+        keychain.add_key(key_data.mnemonic_str())
         keys_added.append(key_data)
 
     get_public_keys_response = get_public_keys_response_data(keys_added)
@@ -1158,7 +1186,7 @@ async def test_get_public_keys(daemon_connection_and_temp_keychain):
 @pytest.mark.anyio
 async def test_key_renaming(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
-    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_key(test_key_data.mnemonic_str())
     # Rename the key three times
     for i in range(3):
         key_data = replace(test_key_data_no_secrets, label=f"renaming_{i}")
@@ -1183,7 +1211,7 @@ async def test_key_renaming(daemon_connection_and_temp_keychain):
 async def test_key_label_deletion(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
 
-    keychain.add_private_key(test_key_data.mnemonic_str(), "key_0")
+    keychain.add_key(test_key_data.mnemonic_str(), "key_0")
     assert keychain.get_key(test_key_data.fingerprint).label == "key_0"
     await ws.send_str(create_payload("delete_label", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
     assert_response(await ws.receive(), success_response_data)
@@ -1254,16 +1282,16 @@ async def test_key_label_deletion(daemon_connection_and_temp_keychain):
 )
 @pytest.mark.anyio
 async def test_key_label_methods(
-    daemon_connection_and_temp_keychain, method: str, parameter: Dict[str, Any], response_data_dict: Dict[str, Any]
+    daemon_connection_and_temp_keychain, method: str, parameter: dict[str, Any], response_data_dict: dict[str, Any]
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
-    keychain.add_private_key(test_key_data.mnemonic_str(), "key_0")
+    keychain.add_key(test_key_data.mnemonic_str(), "key_0")
     await ws.send_str(create_payload(method, parameter, "test", "daemon"))
     assert_response(await ws.receive(), response_data_dict)
 
 
 @pytest.mark.anyio
-async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]) -> None:
+async def test_bad_json(daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain]) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
     await ws.send_str("{doo: '12'}")  # send some bad json
@@ -1362,7 +1390,7 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
 )
 @pytest.mark.anyio
 async def test_misc_daemon_ws(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
     case: RouteCase,
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
@@ -1376,7 +1404,7 @@ async def test_misc_daemon_ws(
 
 @pytest.mark.anyio
 async def test_unexpected_json(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
@@ -1396,7 +1424,7 @@ async def test_unexpected_json(
 )
 @pytest.mark.anyio
 async def test_commands_with_no_data(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], command_to_test: str
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], command_to_test: str
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
@@ -1440,7 +1468,7 @@ async def test_commands_with_no_data(
 )
 @pytest.mark.anyio
 async def test_set_keyring_passphrase_ws(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
     case: RouteCase,
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
@@ -1543,7 +1571,7 @@ async def test_set_keyring_passphrase_ws(
 )
 @pytest.mark.anyio
 async def test_passphrase_apis(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
     case: RouteCase,
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
@@ -1624,7 +1652,7 @@ async def test_passphrase_apis(
 )
 @pytest.mark.anyio
 async def test_keychain_status_messages(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
     case: RouteStatusCase,
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
@@ -1672,7 +1700,7 @@ async def test_keychain_status_messages(
 )
 @pytest.mark.anyio
 async def test_keyring_file_deleted(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
     case: RouteCase,
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
@@ -1730,9 +1758,9 @@ async def test_keyring_file_deleted(
 )
 @pytest.mark.anyio
 async def test_plotter_errors(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     payload = create_payload(
         case.route,
@@ -1843,11 +1871,11 @@ async def test_plotter_errors(
 )
 @pytest.mark.anyio
 async def test_plotter_options(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
     get_b_tools: BlockTools,
     case: RouteCase,
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     # register for chia_plotter events
     service_name = "chia_plotter"
@@ -1909,9 +1937,9 @@ def check_plot_queue_log(
 
 @pytest.mark.anyio
 async def test_plotter_roundtrip(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     # register for chia_plotter events
     service_name = "chia_plotter"
@@ -1923,7 +1951,7 @@ async def test_plotter_roundtrip(
 
     root_path = get_b_tools.root_path
 
-    plotting_request: Dict[str, Any] = {
+    plotting_request: dict[str, Any] = {
         **plotter_request_ref,
         "d": str(root_path),
         "t": str(root_path),
@@ -1981,9 +2009,9 @@ async def test_plotter_roundtrip(
 
 @pytest.mark.anyio
 async def test_plotter_stop_plotting(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     # register for chia_plotter events
     service_name = "chia_plotter"
@@ -1995,7 +2023,7 @@ async def test_plotter_stop_plotting(
 
     root_path = get_b_tools.root_path
 
-    plotting_request: Dict[str, Any] = {
+    plotting_request: dict[str, Any] = {
         **plotter_request_ref,
         "d": str(root_path),
         "t": str(root_path),
@@ -2038,17 +2066,32 @@ async def test_plotter_stop_plotting(
     payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
-    # 3) removing
-    response = await ws.receive()
-    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "REMOVING")
+    responses: list[WSMessage] = []
 
-    # 4) Finished
-    response = await ws.receive()
-    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
+    # 3, 4, and 5)
+    #   Removing
+    #   Finished
+    #   Finally, get the "ack" for the stop_plotting payload
+    for _ in range(3):
+        responses.append(await ws.receive())
 
-    # 5) Finally, get the "ack" for the stop_plotting payload
-    response = await ws.receive()
-    assert_response(response, {"success": True}, stop_plotting_request_id)
+    state_changes: list[WSMessage] = []
+    finished: list[WSMessage] = []
+
+    for response in responses:
+        message = json.loads(response.data.strip())
+        command = message.get("command")
+        if command == "state_changed":
+            state_changes.append(response)
+        else:
+            finished.append(response)
+
+    assert len(state_changes) == 2
+    assert len(finished) == 1
+
+    assert_plot_queue_response(state_changes[0], "state_changed", "state_changed", plot_id, "REMOVING")
+    assert_plot_queue_response(state_changes[1], "state_changed", "state_changed", plot_id, "FINISHED")
+    assert_response(finished[0], {"success": True}, stop_plotting_request_id)
 
 
 @datacases(
@@ -2070,7 +2113,7 @@ def test_run_plotter_bladebit(
     def bladebit_exists(x: Path) -> bool:
         return True if isinstance(x, Path) and x.parent == root_path / "plotters" else mocker.DEFAULT
 
-    def get_bladebit_version(_: Path) -> Tuple[bool, List[str]]:
+    def get_bladebit_version(_: Path) -> tuple[bool, list[str]]:
         return True, ["3", "0", "0"]
 
     mocker.patch("os.path.exists", side_effect=bladebit_exists)

@@ -6,14 +6,14 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32
 
 from chia._tests.util.db_connection import DBConnection
 from chia.full_node.block_height_map import BlockHeightMap, SesCache
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.files import write_file_async
-from chia.util.ints import uint8, uint32
 
 
 def gen_block_hash(height: int) -> bytes32:
@@ -71,7 +71,7 @@ async def setup_chain(
 ) -> None:
     height = start_height
     peak_hash = gen_block_hash(height + chain_id * 65536)
-    parent_hash = bytes32([0] * 32)
+    parent_hash = bytes32.zeros
     while height < length:
         ses = None
         if ses_every is not None and height % ses_every == 0:

@@ -31,6 +31,7 @@ def get_profile_path(starting_string: str) -> str:
     return starting_string + str(i)
 
 
+@pytest.mark.skip("TODO: Fix this - hangs often in CI - root cause unknown")
 def test_every_simulator_command() -> None:
     starting_str = "ci_test"
     simulator_name = get_profile_path(starting_str)

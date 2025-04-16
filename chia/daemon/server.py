@@ -5,25 +5,27 @@ import dataclasses
 import json
 import logging
 import os
+import shutil
 import signal
 import ssl
 import subprocess
 import sys
-import time
 import traceback
 import uuid
+from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 from types import FrameType
-from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
+from typing import Any, Optional, TextIO
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
+from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
@@ -31,25 +33,27 @@ from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
+from chia.server.signal_handlers import SignalHandlers
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.chia_logging import initialize_service_logging
+from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
-from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
-from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
+from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 from chia.wallet.derive_keys import (
+    master_pk_to_wallet_pk_unhardened,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
-    master_sk_to_wallet_sk_unhardened,
 )
 
 io_pool_exc = ThreadPoolExecutor()
@@ -59,7 +63,7 @@ try:
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
-    quit()
+    sys.exit()
 
 
 log = logging.getLogger(__name__)
@@ -111,19 +115,20 @@ else:
     application_path = os.path.dirname(__file__)
 
     def executable_for_service(service_name: str) -> str:
-        return service_name
+        cmd_to_exec = shutil.which(service_name)
+        return cmd_to_exec if cmd_to_exec is not None else service_name
 
 
-async def ping() -> Dict[str, Any]:
+async def ping() -> dict[str, Any]:
     response = {"success": True, "value": "pong"}
     return response
 
 
 class Command(Protocol):
-    async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]: ...
+    async def __call__(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]: ...
 
 
-def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[List[KeyData], Set[uint32]]:
+def _get_keys_by_fingerprints(fingerprints: Optional[list[uint32]]) -> tuple[list[KeyData], set[uint32]]:
     all_keys = Keychain().get_keys(include_secrets=True)
     missing_fingerprints = set()
 
@@ -150,7 +155,7 @@ class StatusMessage:
     command: str
     destination: str
     origin: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
     def create_payload(self) -> str:
         return create_payload(command=self.command, data=self.data, origin=self.origin, destination=self.destination)
@@ -168,9 +173,9 @@ class WebSocketServer:
     ):
         self.root_path = root_path
         self.log = log
-        self.services: Dict[str, List[subprocess.Popen]] = dict()
-        self.plots_queue: List[Dict] = []
-        self.connections: Dict[str, Set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
+        self.services: dict[str, list[subprocess.Popen]] = dict()
+        self.plots_queue: list[dict] = []
+        self.connections: dict[str, set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
         self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
@@ -208,7 +213,7 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        self.state_changed_task = asyncio.create_task(self._process_state_changed_queue())
+        self.state_changed_task = create_referenced_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
             port=self.daemon_port,
@@ -237,22 +242,15 @@ class WebSocketServer:
         self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
         await self.stop()
 
-    def cancel_task_safe(self, task: Optional[asyncio.Task]):
-        if task is not None:
-            try:
-                task.cancel()
-            except Exception as e:
-                self.log.error(f"Error while canceling task.{e} {task}")
-
-    async def stop_command(self, websocket: WebSocketResponse, request: Dict[str, Any] = {}) -> Dict[str, Any]:
+    async def stop_command(self, websocket: WebSocketResponse, request: dict[str, Any] = {}) -> dict[str, Any]:
         return await self.stop()
 
-    async def stop(self) -> Dict[str, Any]:
-        self.cancel_task_safe(self.ping_job)
-        self.cancel_task_safe(self.state_changed_task)
+    async def stop(self) -> dict[str, Any]:
+        cancel_task_safe(self.ping_job, self.log)
+        cancel_task_safe(self.state_changed_task, self.log)
         service_names = list(self.services.keys())
         stop_service_jobs = [
-            asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+            create_referenced_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
         ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
@@ -327,7 +325,7 @@ class WebSocketServer:
 
         return ws
 
-    async def send_all_responses(self, connections: Set[WebSocketResponse], response: str) -> None:
+    async def send_all_responses(self, connections: set[WebSocketResponse], response: str) -> None:
         for connection in connections.copy():
             try:
                 await connection.send_str(response)
@@ -345,7 +343,7 @@ class WebSocketServer:
 
                 await connection.close()
 
-    def remove_connection(self, websocket: WebSocketResponse) -> List[str]:
+    def remove_connection(self, websocket: WebSocketResponse) -> list[str]:
         """Returns a list of service names from which the connection was removed"""
         service_names = []
         for service_name, connections in self.connections.items():
@@ -393,7 +391,7 @@ class WebSocketServer:
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
-    ) -> Optional[Tuple[str, Set[WebSocketResponse]]]:
+    ) -> Optional[tuple[str, set[WebSocketResponse]]]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -434,7 +432,7 @@ class WebSocketServer:
         full_response = format_response(message, response)
         return full_response, {websocket}
 
-    def get_command_mapping(self) -> Dict[str, Command]:
+    def get_command_mapping(self) -> dict[str, Command]:
         """
         Returns a mapping of commands to their respective function calls.
         """
@@ -462,28 +460,34 @@ class WebSocketServer:
             "get_network_info": self.get_network_info,
         }
 
-    async def get_network_info(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_network_info(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         network_name = self.net_config["selected_network"]
         address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
-        response: Dict[str, Any] = {"success": True, "network_name": network_name, "network_prefix": address_prefix}
+        genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
+        response: dict[str, Any] = {
+            "success": True,
+            "network_name": network_name,
+            "network_prefix": address_prefix,
+            "genesis_challenge": genesis_challenge,
+        }
         return response
 
-    async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def is_keyring_locked(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
-        response: Dict[str, Any] = {"success": True, "is_keyring_locked": locked}
+        response: dict[str, Any] = {"success": True, "is_keyring_locked": locked}
         return response
 
-    async def keyring_status_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def keyring_status_command(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         return await self.keyring_status()
 
-    async def keyring_status(self) -> Dict[str, Any]:
+    async def keyring_status(self) -> dict[str, Any]:
         can_save_passphrase: bool = supports_os_passphrase_storage()
         user_passphrase_is_set: bool = Keychain.has_master_passphrase() and not using_default_passphrase()
         locked: bool = Keychain.is_keyring_locked()
         can_set_passphrase_hint: bool = True
         passphrase_hint: str = Keychain.get_master_passphrase_hint() or ""
-        requirements: Dict[str, Any] = passphrase_requirements()
-        response: Dict[str, Any] = {
+        requirements: dict[str, Any] = passphrase_requirements()
+        response: dict[str, Any] = {
             "success": True,
             "is_keyring_locked": locked,
             "can_save_passphrase": can_save_passphrase,
@@ -496,7 +500,7 @@ class WebSocketServer:
         self.log.debug(f"Keyring status: {response}")
         return response
 
-    async def unlock_keyring(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def unlock_keyring(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         key: Optional[str] = request.get("key", None)
@@ -525,14 +529,14 @@ class WebSocketServer:
                 tb = traceback.format_exc()
                 self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
     async def validate_keyring_passphrase(
         self,
         websocket: WebSocketResponse,
-        request: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        request: dict[str, Any],
+    ) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         key: Optional[str] = request.get("key", None)
@@ -546,10 +550,10 @@ class WebSocketServer:
             self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
             error = "validation exception"
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def set_keyring_passphrase(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def set_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
@@ -590,10 +594,10 @@ class WebSocketServer:
             # Inform the GUI of keyring status changes
             self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def remove_keyring_passphrase(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def remove_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
@@ -617,28 +621,28 @@ class WebSocketServer:
             # Inform the GUI of keyring status changes
             self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def get_status(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_status(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
         return response
 
-    async def get_version(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_version(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         response = {"success": True, "version": __version__}
         return response
 
-    async def get_plotters(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        plotters: Dict[str, Any] = get_available_plotters(self.root_path)
-        response: Dict[str, Any] = {"success": True, "plotters": plotters}
+    async def get_plotters(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
+        plotters: dict[str, Any] = get_available_plotters(self.root_path)
+        response: dict[str, Any] = {"success": True, "plotters": plotters}
         return response
 
-    async def get_routes(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_routes(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         routes = list(self.get_command_mapping().keys())
-        response: Dict[str, Any] = {"success": True, "routes": routes}
+        response: dict[str, Any] = {"success": True, "routes": routes}
         return response
 
-    async def get_wallet_addresses(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_wallet_addresses(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         fingerprints = request.get("fingerprints", None)
         keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
         if len(missing_fingerprints) > 0:
@@ -655,16 +659,17 @@ class WebSocketServer:
         for key in keys:
             address_entries = []
 
-            # we require access to the private key to generate wallet addresses
-            if key.secrets is None:
+            # we require access to the private key to generate wallet addresses for non observer
+            if key.secrets is None and non_observer_derivation:
                 return {"success": False, "error": f"missing private key for key with fingerprint {key.fingerprint}"}
 
             for i in range(index, index + count):
                 if non_observer_derivation:
-                    sk = master_sk_to_wallet_sk(key.secrets.private_key, uint32(i))
+                    sk = master_sk_to_wallet_sk(key.private_key, uint32(i))
+                    pk = sk.get_g1()
                 else:
-                    sk = master_sk_to_wallet_sk_unhardened(key.secrets.private_key, uint32(i))
-                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
+                    pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
+                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
                 else:
@@ -674,17 +679,19 @@ class WebSocketServer:
 
             wallet_addresses_by_fingerprint[key.fingerprint] = address_entries
 
-        response: Dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
+        response: dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
         return response
 
-    async def get_keys_for_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_keys_for_plotting(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         fingerprints = request.get("fingerprints", None)
         keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
         if len(missing_fingerprints) > 0:
             return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
 
-        keys_for_plot: Dict[uint32, Any] = {}
+        keys_for_plot: dict[uint32, Any] = {}
         for key in keys:
+            if key.secrets is None:
+                continue
             sk = key.private_key
             farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()
             pool_public_key: G1Element = master_sk_to_pool_sk(sk).get_g1()
@@ -692,13 +699,13 @@ class WebSocketServer:
                 "farmer_public_key": bytes(farmer_public_key).hex(),
                 "pool_public_key": bytes(pool_public_key).hex(),
             }
-        response: Dict[str, Any] = {
+        response: dict[str, Any] = {
             "success": True,
             "keys": keys_for_plot,
         }
         return response
 
-    def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> Dict[str, Any]:
+    def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> dict[str, Any]:
         error = plot_queue_item.get("error")
         has_error = error is not None
 
@@ -725,7 +732,7 @@ class WebSocketServer:
         }
         return message
 
-    def extract_plot_queue(self, id=None) -> List[Dict]:
+    def extract_plot_queue(self, id=None) -> list[dict]:
         send_full_log = id is None
         data = []
         for item in self.plots_queue:
@@ -766,14 +773,14 @@ class WebSocketServer:
                 websockets.remove(websocket)
                 await websocket.close()
 
-    def state_changed(self, service: str, message: Dict[str, Any]) -> None:
+    def state_changed(self, service: str, message: dict[str, Any]) -> None:
         self.state_changed_msg_queue.put_nowait(
             StatusMessage(
                 service=service, command="state_changed", destination="wallet_ui", origin=service, data=message
             )
         )
 
-    def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str) -> None:
+    def keyring_status_changed(self, keyring_status: dict[str, Any], destination: str) -> None:
         self.state_changed_msg_queue.put_nowait(
             StatusMessage(
                 service="wallet_ui",
@@ -787,7 +794,7 @@ class WebSocketServer:
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
         id: str = config["id"]
         plotter: str = config["plotter"]
-        final_words: List[str] = []
+        final_words: list[str] = []
 
         if plotter == "chiapos":
             final_words = ["Renamed final file"]
@@ -812,7 +819,7 @@ class WebSocketServer:
             if config["state"] is not PlotState.RUNNING:
                 return None
 
-            if new_data not in (None, ""):
+            if new_data not in {None, ""}:
                 config["log"] = new_data if config["log"] is None else config["log"] + new_data
                 config["log_new"] = new_data
                 self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.LOG_CHANGED, id))
@@ -822,14 +829,14 @@ class WebSocketServer:
                     if word in new_data:
                         return None
             else:
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
         with open(file_path) as fp:
             await self._watch_file_changes(config, fp, loop)
 
-    def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         n = 1 if ignoreCount else request["n"]  # Plot count
         d = request["d"]  # Final directory
         r = request["r"]  # Threads
@@ -837,7 +844,7 @@ class WebSocketServer:
         p = request.get("p")  # Pool pubkey
         c = request.get("c")  # Pool contract address
 
-        command_args: List[str] = ["-n", str(n), "-d", d, "-r", str(r)]
+        command_args: list[str] = ["-n", str(n), "-d", d, "-r", str(r)]
 
         if f is not None:
             command_args.append("-f")
@@ -851,7 +858,7 @@ class WebSocketServer:
 
         return command_args
 
-    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         k = request["k"]  # Plot size
         t = request["t"]  # Temp directory
         t2 = request.get("t2")  # Temp2 directory
@@ -862,7 +869,7 @@ class WebSocketServer:
         x = request["x"]  # Exclude final directory
         override_k = request["overrideK"]  # Force plot sizes < k32
 
-        command_args: List[str] = ["-k", str(k), "-t", t, "-b", str(b), "-u", str(u)]
+        command_args: list[str] = ["-k", str(k), "-t", t, "-b", str(b), "-u", str(u)]
 
         if t2 is not None:
             command_args.append("-2")
@@ -879,12 +886,12 @@ class WebSocketServer:
 
         return command_args
 
-    def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         plot_type = request["plot_type"]
-        if plot_type not in ["ramplot", "diskplot", "cudaplot"]:
+        if plot_type not in {"ramplot", "diskplot", "cudaplot"}:
             raise ValueError(f"Unknown plot_type: {plot_type}")
 
-        command_args: List[str] = []
+        command_args: list[str] = []
 
         # Common options among diskplot, ramplot, cudaplot
         w = request.get("w", False)  # Warm start
@@ -979,7 +986,7 @@ class WebSocketServer:
 
         return command_args
 
-    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
+    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> list[str]:
         k = request["k"]  # Plot size
         t = request["t"]  # Temp directory
         t2 = request["t2"]  # Temp2 directory
@@ -988,7 +995,7 @@ class WebSocketServer:
         K = request.get("K", 1)  # Thread multiplier for phase 2
         G = request.get("G", False)  # Alternate tmpdir/tmp2dir
 
-        command_args: List[str] = []
+        command_args: list[str] = []
         command_args.append(f"-k{k}")
         command_args.append(f"-u{u}")
         command_args.append(f"-v{v}")
@@ -1005,15 +1012,15 @@ class WebSocketServer:
 
         return command_args
 
-    def _build_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
+    def _build_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> list[str]:
         plotter: str = request.get("plotter", "chiapos")
-        command_args: List[str] = ["chia", "plotters", plotter]
+        command_args: list[str] = ["chia", "plotters", plotter]
 
         if plotter == "bladebit":
             # plotter command must be either
             # 'chia plotters bladebit ramplot' or 'chia plotters bladebit diskplot'
             plot_type = request["plot_type"]
-            assert plot_type == "diskplot" or plot_type == "ramplot" or plot_type == "cudaplot"
+            assert plot_type in {"diskplot", "ramplot", "cudaplot"}
             command_args.append(plot_type)
 
         command_args.extend(self._common_plotting_command_args(request, ignoreCount))
@@ -1050,9 +1057,9 @@ class WebSocketServer:
                 break
 
         if next_plot_id is not None:
-            loop.create_task(self._start_plotting(next_plot_id, loop, queue))
+            create_referenced_task(self._start_plotting(next_plot_id, loop, queue))
 
-    def _post_process_plotting_job(self, job: Dict[str, Any]):
+    def _post_process_plotting_job(self, job: dict[str, Any]):
         id: str = job["id"]
         final_dir: str = job["final_dir"]
         exclude_final_dir: bool = job["exclude_final_dir"]
@@ -1092,7 +1099,7 @@ class WebSocketServer:
 
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
-            process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
+            process, _pid_path = launch_plotter(self.root_path, service_name, command_args, id)
 
             current_process = process
 
@@ -1125,11 +1132,14 @@ class WebSocketServer:
 
         finally:
             if current_process is not None:
-                self.services[service_name].remove(current_process)
+                try:
+                    self.services[service_name].remove(current_process)
+                except KeyError:
+                    pass
                 current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
-    async def start_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def start_plotting(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         service_name = request["service"]
 
         plotter = request.get("plotter", "chiapos")
@@ -1150,7 +1160,7 @@ class WebSocketServer:
             }
             return response
 
-        ids: List[str] = []
+        ids: list[str] = []
         for k in range(count):
             id = str(uuid.uuid4())
             ids.append(id)
@@ -1185,7 +1195,8 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._start_plotting(id, loop, queue))
+                # TODO: stop dropping tasks on the floor
+                create_referenced_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1197,7 +1208,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def stop_plotting(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
@@ -1239,7 +1250,7 @@ class WebSocketServer:
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
             return {"success": False}
 
-    async def start_service(self, websocket: WebSocketResponse, request: Dict[str, Any]):
+    async def start_service(self, websocket: WebSocketResponse, request: dict[str, Any]):
         service_command = request["service"]
 
         error = None
@@ -1273,7 +1284,7 @@ class WebSocketServer:
                 exe_command = service_command
                 if testing is True:
                     exe_command = f"{service_command} --testing=true"
-                process, pid_path = launch_service(self.root_path, exe_command)
+                process, _pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = [process]
                 success = True
             except (subprocess.SubprocessError, OSError):
@@ -1283,14 +1294,14 @@ class WebSocketServer:
         response = {"success": success, "service": service_command, "error": error}
         return response
 
-    async def stop_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def stop_service(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         service_name = request["service"]
         result = await kill_service(self.root_path, self.services, service_name)
         response = {"success": result, "service_name": service_name}
         return response
 
     def is_service_running(self, service_name: str) -> bool:
-        processes: List[subprocess.Popen]
+        processes: list[subprocess.Popen]
         if service_name == service_plotter:
             processes = self.services.get(service_name, [])
             is_running = len(processes) > 0
@@ -1305,19 +1316,19 @@ class WebSocketServer:
                     is_running = len(service_connections) > 0
         return is_running
 
-    async def running_services_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def running_services_command(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         return await self.running_services()
 
-    async def running_services(self) -> Dict[str, Any]:
+    async def running_services(self) -> dict[str, Any]:
         services = list({*self.services.keys(), *self.connections.keys()})
         running_services = [service_name for service_name in services if self.is_service_running(service_name)]
 
         return {"success": True, "running_services": running_services}
 
-    async def is_running_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def is_running_command(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         return await self.is_running(request=request)
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def is_running(self, request: dict[str, Any]) -> dict[str, Any]:
         service_name = request["service"]
         is_running = self.is_service_running(service_name)
         return {"success": True, "service_name": service_name, "is_running": is_running}
@@ -1328,7 +1339,7 @@ class WebSocketServer:
             await self.webserver.await_closed()
         log.info("chia daemon exiting")
 
-    async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def register_service(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         self.log.info(f"Register service {request}")
         service = request.get("service")
         if service is None:
@@ -1338,7 +1349,7 @@ class WebSocketServer:
             self.connections[service] = set()
         self.connections[service].add(websocket)
 
-        response: Dict[str, Any] = {"success": True}
+        response: dict[str, Any] = {"success": True}
         if service == service_plotter:
             response = {
                 "success": True,
@@ -1347,7 +1358,7 @@ class WebSocketServer:
             }
         else:
             if self.ping_job is None:
-                self.ping_job = asyncio.create_task(self.ping_task())
+                self.ping_job = create_referenced_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response
@@ -1382,8 +1393,8 @@ def plotter_log_path(root_path: Path, id: str):
 
 
 def launch_plotter(
-    root_path: Path, service_name: str, service_array: List[str], id: str
-) -> Tuple[subprocess.Popen, Path]:
+    root_path: Path, service_name: str, service_array: list[str], id: str
+) -> tuple[subprocess.Popen, Path]:
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
@@ -1426,7 +1437,7 @@ def launch_plotter(
     return process, pid_path
 
 
-def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, Path]:
+def launch_service(root_path: Path, service_command) -> tuple[subprocess.Popen, Path]:
     """
     Launch a child process.
     """
@@ -1470,7 +1481,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
 
 
 async def kill_processes(
-    processes: List[subprocess.Popen],
+    processes: list[subprocess.Popen],
     root_path: Path,
     service_name: str,
     id: str,
@@ -1514,7 +1525,7 @@ async def kill_processes(
 
 
 async def kill_service(
-    root_path: Path, services: Dict[str, List[subprocess.Popen]], service_name: str, delay_before_kill: int = 15
+    root_path: Path, services: dict[str, list[subprocess.Popen]], service_name: str, delay_before_kill: int = 15
 ) -> bool:
     processes = services.get(service_name)
     if processes is None:
@@ -1524,7 +1535,7 @@ async def kill_service(
     return result
 
 
-def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool:
+def is_running(services: dict[str, subprocess.Popen], service_name: str) -> bool:
     process = services.get(service_name)
     return process is not None and process.poll() is None
 
@@ -1535,26 +1546,15 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
-    initialize_service_logging("daemon", config)
+    initialize_service_logging("daemon", config, root_path=root_path)
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     sys.stdout.flush()
-    json_msg = dict_to_json_str(
-        {
-            "message": "cert_path",
-            "success": True,
-            "cert": f"{crt_path}",
-            "key": f"{key_path}",
-            "ca_crt": f"{ca_crt_path}",
-        }
-    )
-    sys.stdout.write("\n" + json_msg + "\n")
-    sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
-            log.info(f"chia-blockchain version: {chia_full_version_str()}")
+            log.info(f"chia-blockchain version: {chia_short_version()}")
 
             beta_metrics = None
             if config.get("beta", {}).get("enabled", False):
@@ -1593,11 +1593,13 @@ def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
 
 
 def main() -> int:
-    from chia.util.default_root import DEFAULT_ROOT_PATH
+    from chia.util.default_root import resolve_root_path
     from chia.util.keychain import Keychain
 
+    root_path = resolve_root_path(override=None)
+
     wait_for_unlock = "--wait-for-unlock" in sys.argv[1:] and Keychain.is_keyring_locked()
-    return run_daemon(DEFAULT_ROOT_PATH, wait_for_unlock)
+    return run_daemon(root_path, wait_for_unlock)
 
 
 if __name__ == "__main__":

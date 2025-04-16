@@ -1,40 +1,32 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from clvm_tools import binutils
 
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.wallet.conditions import AssertPuzzleAnnouncement
-from chia.wallet.puzzles.load_clvm import load_clvm
-
-SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clsp")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-
-LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
-SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
+from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_MOD, SINGLETON_MOD, SINGLETON_MOD_HASH
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH as LAUNCHER_PUZZLE_HASH
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
-def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
+def singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
     return SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_puzzle_hash)), inner_puzzle)
 
 
-def p2_singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:
+def p2_singleton_puzzle(launcher_id: bytes32, launcher_puzzle_hash: bytes32) -> Program:
     return P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash)
 
 
-def singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> bytes32:
+def singleton_puzzle_hash(launcher_id: bytes32, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> bytes32:
     return singleton_puzzle(launcher_id, launcher_puzzle_hash, inner_puzzle).get_tree_hash()
 
 
-def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32) -> bytes32:
+def p2_singleton_puzzle_hash(launcher_id: bytes32, launcher_puzzle_hash: bytes32) -> bytes32:
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 

@@ -5,26 +5,32 @@ import logging
 import shutil
 import tempfile
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional, cast
+from typing import Callable, Optional, cast
 
 import aiosqlite
 import zstd
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
 
 from chia._tests.util.constants import test_constants as TEST_CONSTANTS
 from chia.cmds.init_funcs import chia_init
+from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.simulator.block_tools import make_unfinished_block
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
+from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
-from chia.util.ints import uint16
 
 
 class ExitOnError(logging.Handler):
@@ -55,13 +61,13 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 
 class FakeServer:
     async def send_to_all(
-        self, messages: List[Message], node_type: NodeType, exclude: Optional[bytes32] = None
+        self, messages: list[Message], node_type: NodeType, exclude: Optional[bytes32] = None
     ) -> None:
         pass
 
     async def send_to_all_if(
         self,
-        messages: List[Message],
+        messages: list[Message],
         node_type: NodeType,
         predicate: Callable[[WSChiaConnection], bool],
         exclude: Optional[bytes32] = None,
@@ -76,7 +82,7 @@ class FakeServer:
 
     def get_connections(
         self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = False
-    ) -> List[WSChiaConnection]:
+    ) -> list[WSChiaConnection]:
         return []
 
     def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
@@ -139,7 +145,7 @@ async def run_sync_test(
             constants = TEST_CONSTANTS
         else:
             overrides = config["network_overrides"]["constants"][config["selected_network"]]
-            constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+            constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
         if single_thread:
             config["full_node"]["single_threaded"] = True
         config["full_node"]["db_sync"] = db_sync
@@ -179,6 +185,7 @@ async def run_sync_test(
                 worst_batch_height = None
                 worst_batch_time_per_block = None
                 peer_info = peer.get_peer_logging()
+                blockchain = AugmentedBlockchain(full_node.blockchain)
                 async for r in rows:
                     batch_start_time = time.monotonic()
                     with enable_profiler(profile, height):
@@ -196,9 +203,23 @@ async def run_sync_test(
                         if keep_up:
                             for b in block_batch:
                                 await full_node.add_unfinished_block(make_unfinished_block(b, constants), peer)
-                                await full_node.add_block(b)
+                                await full_node.add_block(b, None, full_node._bls_cache)
                         else:
-                            success, summary, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                            block_record = await full_node.blockchain.get_block_record_from_db(
+                                block_batch[0].prev_header_hash
+                            )
+                            ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                                full_node.constants, True, block_record, full_node.blockchain
+                            )
+                            fork_height = block_batch[0].height - 1
+                            header_hash = block_batch[0].prev_header_hash
+                            success, summary = await full_node.add_block_batch(
+                                block_batch,
+                                peer_info,
+                                ForkInfo(fork_height, fork_height, header_hash),
+                                ValidationState(ssi, diff, None),
+                                blockchain,
+                            )
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -208,7 +229,7 @@ async def run_sync_test(
                             assert summary is not None
 
                         time_per_block = (time.monotonic() - batch_start_time) / len(block_batch)
-                        if not worst_batch_height or worst_batch_time_per_block > time_per_block:
+                        if worst_batch_time_per_block is None or worst_batch_time_per_block > time_per_block:
                             worst_batch_height = height
                             worst_batch_time_per_block = time_per_block
 

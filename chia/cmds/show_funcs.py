@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
+
+from chia_rs.sized_bytes import bytes32
 
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[str, Any]) -> bool:
+async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:
     import time
 
+    from chia_rs.sized_ints import uint64
+
+    from chia.cmds.cmds_util import format_bytes
     from chia.consensus.block_record import BlockRecord
-    from chia.util.ints import uint64
-    from chia.util.misc import format_bytes
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:
@@ -43,7 +45,8 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         sync_current_block = blockchain_state["sync"]["sync_progress_height"]
         print(
             f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block} "
-            f"({sync_max_block - sync_current_block} behind)."
+            f"({sync_max_block - sync_current_block} behind). "
+            f"({sync_current_block * 100.0 / sync_max_block:2.2f}% synced)"
         )
         print("Peak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
     elif peak is not None:
@@ -78,7 +81,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
         print("\n  Height: |   Hash:")
 
-        added_blocks: List[BlockRecord] = []
+        added_blocks: list[BlockRecord] = []
         curr = await node_client.get_block_record(peak.header_hash)
         while curr is not None and len(added_blocks) < num_blocks and curr.height > 0:
             added_blocks.append(curr)
@@ -92,12 +95,13 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
 
 
 async def print_block_from_hash(
-    node_client: FullNodeRpcClient, config: Dict[str, Any], block_by_header_hash: str
+    node_client: FullNodeRpcClient, config: dict[str, Any], block_by_header_hash: str
 ) -> None:
     import time
 
+    from chia_rs.sized_bytes import bytes32
+
     from chia.consensus.block_record import BlockRecord
-    from chia.types.blockchain_format.sized_bytes import bytes32
     from chia.types.full_block import FullBlock
     from chia.util.bech32m import encode_puzzle_hash
 
@@ -196,7 +200,7 @@ async def show_async(
 ) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         # Check State
         if print_state:
             if await print_blockchain_state(node_client, config) is True:

@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, fields, replace
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, cast, final, get_type_hints
+from typing import Any, ClassVar, Optional, TypeVar, Union, final, get_type_hints
 
-from chia_rs import G1Element
+from chia_rs import Coin, G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
@@ -23,7 +24,7 @@ class Condition(Streamable, ABC):
 
     @classmethod
     @abstractmethod
-    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition: ...
+    def from_program(cls: type[_T_Condition], program: Program) -> _T_Condition: ...
 
 
 @final
@@ -220,13 +221,13 @@ class AggSigMe(Condition):
         )
 
 
-@final
+# @final  # subclassing allowed for NotarizedPayment
 @streamable
 @dataclass(frozen=True)
 class CreateCoin(Condition):
     puzzle_hash: bytes32
     amount: uint64
-    memos: Optional[List[bytes]] = None
+    memos: Optional[list[bytes]] = None
 
     def to_program(self) -> Program:
         condition_args = [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount]
@@ -236,7 +237,7 @@ class CreateCoin(Condition):
         return condition
 
     @classmethod
-    def from_program(cls, program: Program) -> CreateCoin:
+    def from_program(cls: type[_T_CreateCoin], program: Program) -> _T_CreateCoin:
         potential_memos: Program = program.at("rrr")
         return cls(
             bytes32(program.at("rf").as_atom()),
@@ -247,6 +248,12 @@ class CreateCoin(Condition):
                 else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
             ),
         )
+
+    def as_condition_args(self) -> list[Union[bytes32, uint64, Optional[list[bytes]]]]:
+        return [self.puzzle_hash, self.amount, self.memos]
+
+
+_T_CreateCoin = TypeVar("_T_CreateCoin", bound=CreateCoin)
 
 
 @final
@@ -402,6 +409,233 @@ class CreatePuzzleAnnouncement(Condition):
             program.at("rf").as_atom(),
             puzzle_hash,
         )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class MessageParticipant(Streamable):
+    mode_integer: Optional[uint8] = None
+    parent_id_committed: Optional[bytes32] = None
+    puzzle_hash_committed: Optional[bytes32] = None
+    amount_committed: Optional[uint64] = None
+    coin_id_committed: Optional[bytes32] = None
+
+    def __post_init__(self) -> None:
+        if (
+            self.parent_id_committed is None
+            and self.puzzle_hash_committed is None
+            and self.amount_committed is None
+            and self.coin_id_committed is None
+            and self.mode_integer is None
+        ):
+            raise ValueError("Must specify at least one committment. Anyone-can-send/recieve is not allowed.")
+        if self.coin_id_committed is not None:
+            if self.parent_id_committed is None or self.puzzle_hash_committed is None or self.amount_committed is None:
+                if not (
+                    self.parent_id_committed is None
+                    and self.puzzle_hash_committed is None
+                    and self.amount_committed is None
+                ):
+                    raise ValueError(
+                        "Cannot commit to coin_id and only specify some of the other arguments. "
+                        "You must specify all or none of them."
+                    )
+            else:
+                assert (
+                    Coin(
+                        parent_coin_info=self.parent_id_committed,
+                        puzzle_hash=self.puzzle_hash_committed,
+                        amount=self.amount_committed,
+                    ).name()
+                    == self.coin_id_committed
+                ), "The value for coin_id_committed must be equal to the implied ID of the other three arguments"
+        if self.mode_integer is not None:
+            assert self.mode == self.mode_integer, (
+                "If mode_integer is manually specified, you must specify committments that match with the mode"
+            )
+
+    @property
+    def _nothing_committed(self) -> bool:
+        return (
+            self.coin_id_committed is None
+            and self.parent_id_committed is None
+            and self.puzzle_hash_committed is None
+            and self.amount_committed is None
+        )
+
+    @property
+    def mode(self) -> uint8:
+        if self._nothing_committed:
+            # The non-None-ness of this is asserted by __post_init__
+            return self.mode_integer  # type: ignore[return-value]
+        if self.coin_id_committed is not None:
+            return uint8(0b111)
+
+        def convert_noneness_to_bit(maybe_none: Optional[Any]) -> int:
+            return 1 if maybe_none is not None else 0
+
+        return uint8(
+            (convert_noneness_to_bit(self.parent_id_committed) << 2)
+            | (convert_noneness_to_bit(self.puzzle_hash_committed) << 1)
+            | convert_noneness_to_bit(self.amount_committed)
+        )
+
+    @property
+    def necessary_args(self) -> list[Program]:
+        if self._nothing_committed:
+            raise ValueError("Cannot generate necessary_args for a participant without committment information")
+
+        if self.coin_id_committed:
+            return [Program.to(self.coin_id_committed)]
+
+        condition_args = []
+        if self.parent_id_committed is not None:
+            condition_args.append(Program.to(self.parent_id_committed))
+        if self.puzzle_hash_committed is not None:
+            condition_args.append(Program.to(self.puzzle_hash_committed))
+        if self.amount_committed is not None:
+            condition_args.append(Program.to(self.amount_committed))
+        return condition_args
+
+    @classmethod
+    def from_mode_and_maybe_args(
+        cls, sender: bool, full_mode: uint8, args: Optional[Iterable[Program]] = None
+    ) -> MessageParticipant:
+        if sender:
+            mode = full_mode >> 3
+        else:
+            mode = full_mode & 0b000111
+
+        if args is None:
+            return cls(mode_integer=uint8(mode))
+
+        if mode == 0b111:
+            return cls(mode_integer=uint8(mode), coin_id_committed=next(bytes32(arg.as_atom()) for arg in args))
+
+        parent_id_committed: Optional[bytes32] = None
+        puzzle_hash_committed: Optional[bytes32] = None
+        amount_committed: Optional[uint64] = None
+        # This loop probably looks a little strange
+        # It's trying to account for the fact that the arguments may be any 1 or 2 of these arguments in this order
+        # Not sure of a more elgant way to do it
+        original_mode = mode
+        for arg in args:
+            if mode & 0b100:
+                parent_id_committed = bytes32(arg.as_atom())
+                mode &= 0b011
+                continue
+            if mode & 0b010:
+                puzzle_hash_committed = bytes32(arg.as_atom())
+                mode &= 0b101
+                continue
+            if mode & 0b001:
+                amount_committed = uint64(arg.as_int())
+                break
+
+        return cls(
+            mode_integer=uint8(original_mode),
+            parent_id_committed=parent_id_committed,
+            puzzle_hash_committed=puzzle_hash_committed,
+            amount_committed=amount_committed,
+        )
+
+
+_T_MessageCondition = TypeVar("_T_MessageCondition", bound="SendMessage")
+
+
+@streamable
+@dataclass(frozen=True)
+class SendMessage(Condition):
+    msg: bytes
+    var_args: Optional[list[Program]] = None
+    mode_integer: Optional[uint8] = None
+    sender: Optional[MessageParticipant] = None
+    receiver: Optional[MessageParticipant] = None
+    _other_party_is_receiver: ClassVar[bool] = True
+
+    @property
+    def _other_party(self) -> Optional[MessageParticipant]:
+        return self.receiver
+
+    @property
+    def _opcode(self) -> ConditionOpcode:
+        return ConditionOpcode.SEND_MESSAGE
+
+    def __post_init__(self) -> None:
+        if self.mode_integer is None and (self.sender is None or self.receiver is None):
+            raise ValueError("Must specify either mode_integer or both sender and reciever")
+
+        if self.mode_integer is not None and self.sender is not None:
+            assert self.mode_integer >> 3 == self.sender.mode, (
+                "The first 3 bits of mode_integer don't match the sender's mode"
+            )
+
+        if self.mode_integer is not None and self.receiver is not None:
+            assert self.mode_integer & 0b000111 == self.receiver.mode, (
+                "The last 3 bits of mode_integer don't match the receiver's mode"
+            )
+
+        if self.var_args is None and self._other_party is None:
+            raise ValueError(
+                f"Must specify either var_args or {'receiver' if self._other_party_is_receiver else 'sender'}"
+            )
+
+        if self.var_args is not None and self._other_party is not None and not self._other_party._nothing_committed:
+            assert self.var_args == self._other_party.necessary_args, (
+                f"The implied arguments for {self._other_party} do not match the specified arguments {self.var_args}"
+            )
+
+    @property
+    def args(self) -> list[Program]:
+        if self.var_args is not None:
+            return self.var_args
+
+        # The non-None-ness of this is asserted in __post_init__
+        return self._other_party.necessary_args  # type: ignore[union-attr]
+
+    @property
+    def mode(self) -> uint8:
+        if self.mode_integer is not None:
+            return self.mode_integer
+
+        # The non-None-ness of these are asserted in __post_init__
+        return uint8((self.sender.mode << 3) | self.receiver.mode)  # type: ignore[union-attr]
+
+    def to_program(self) -> Program:
+        condition: Program = Program.to([self._opcode, self.mode, self.msg, *self.args])
+        return condition
+
+    @classmethod
+    def from_program(cls: type[_T_MessageCondition], program: Program) -> _T_MessageCondition:
+        full_mode = uint8(program.at("rf").as_int())
+        var_args = list(program.at("rrr").as_iter())
+        return cls(
+            program.at("rrf").as_atom(),
+            var_args,
+            full_mode,
+            MessageParticipant.from_mode_and_maybe_args(
+                True, full_mode, var_args if not cls._other_party_is_receiver else None
+            ),
+            MessageParticipant.from_mode_and_maybe_args(
+                False, full_mode, var_args if cls._other_party_is_receiver else None
+            ),
+        )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class ReceiveMessage(SendMessage):
+    _other_party_is_receiver: ClassVar[bool] = False
+
+    @property
+    def _other_party(self) -> Optional[MessageParticipant]:
+        return self.sender
+
+    @property
+    def _opcode(self) -> ConditionOpcode:
+        return ConditionOpcode.RECEIVE_MESSAGE
 
 
 @final
@@ -694,7 +928,7 @@ class AssertBeforeHeightAbsolute(Condition):
 @dataclass(frozen=True)
 class Softfork(Condition):
     cost: uint64
-    conditions: List[Program]
+    conditions: list[Program]
 
     def to_program(self) -> Program:
         condition: Program = Program.to([ConditionOpcode.SOFTFORK, self.cost, self.conditions])
@@ -730,11 +964,10 @@ class Remark(Condition):
 @dataclass(frozen=True)
 class UnknownCondition(Condition):
     opcode: Program
-    args: List[Program]
+    args: list[Program]
 
     def to_program(self) -> Program:
-        # TODO: Remove cast when we have proper hinting for this
-        return cast(Program, self.opcode.cons(Program.to(self.args)))
+        return self.opcode.cons(Program.to(self.args))
 
     @classmethod
     def from_program(cls, program: Program) -> UnknownCondition:
@@ -770,7 +1003,7 @@ class AggSig(Condition):
             condition_driver.pubkey,  # type: ignore[attr-defined]
             condition_driver.msg,  # type: ignore[attr-defined]
             opcode,
-            **{key: value for key, value in condition_driver.__dict__.items() if key not in ["pubkey", "msg"]},
+            **{key: value for key, value in condition_driver.__dict__.items() if key not in {"pubkey", "msg"}},
         )
 
 
@@ -882,15 +1115,15 @@ TIMELOCK_TYPES = Union[
 ]
 
 
-TIMELOCK_DRIVERS: Tuple[
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
+TIMELOCK_DRIVERS: tuple[
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
 ] = (
     AssertSecondsRelative,
     AssertHeightRelative,
@@ -901,46 +1134,46 @@ TIMELOCK_DRIVERS: Tuple[
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 )
-SECONDS_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+SECONDS_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertSecondsAbsolute,
     AssertBeforeSecondsRelative,
     AssertBeforeSecondsAbsolute,
 }
-HEIGHT_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+HEIGHT_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertHeightRelative,
     AssertHeightAbsolute,
     AssertBeforeHeightRelative,
     AssertBeforeHeightAbsolute,
 }
-AFTER_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+AFTER_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertHeightRelative,
     AssertSecondsAbsolute,
     AssertHeightAbsolute,
 }
-BEFORE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+BEFORE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertBeforeSecondsRelative,
     AssertBeforeHeightRelative,
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 }
-RELATIVE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+RELATIVE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertHeightRelative,
     AssertBeforeSecondsRelative,
     AssertBeforeHeightRelative,
 }
-ABSOLUTE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+ABSOLUTE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsAbsolute,
     AssertHeightAbsolute,
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 }
-TIMELOCK_DRIVERS_SET: Set[Type[TIMELOCK_TYPES]] = set(TIMELOCK_DRIVERS)
+TIMELOCK_DRIVERS_SET: set[type[TIMELOCK_TYPES]] = set(TIMELOCK_DRIVERS)
 
 
-TIMELOCK_OPCODES: Set[bytes] = {
+TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
@@ -950,37 +1183,37 @@ TIMELOCK_OPCODES: Set[bytes] = {
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-SECONDS_TIMELOCK_OPCODES: Set[bytes] = {
+SECONDS_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
 }
-HEIGHT_TIMELOCK_OPCODES: Set[bytes] = {
+HEIGHT_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-AFTER_TIMELOCK_OPCODES: Set[bytes] = {
+AFTER_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
 }
-BEFORE_TIMELOCK_OPCODES: Set[bytes] = {
+BEFORE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-RELATIVE_TIMELOCK_OPCODES: Set[bytes] = {
+RELATIVE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
 }
-ABSOLUTE_TIMELOCK_OPCODES: Set[bytes] = {
+ABSOLUTE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
@@ -1013,7 +1246,7 @@ class Timelock(Condition):
         else:
             potential_drivers -= SECONDS_TIMELOCK_DRIVERS
 
-        driver: Type[TIMELOCK_TYPES] = next(iter(potential_drivers))
+        driver: type[TIMELOCK_TYPES] = next(iter(potential_drivers))
 
         if self.seconds_not_height:
             # Semantics here mean that we're assuredly passing a uint64 to a class that expects it
@@ -1048,7 +1281,7 @@ class Timelock(Condition):
         )
 
 
-CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
+CONDITION_DRIVERS: dict[bytes, type[Condition]] = {
     ConditionOpcode.AGG_SIG_PARENT.value: AggSigParent,
     ConditionOpcode.AGG_SIG_PUZZLE.value: AggSigPuzzle,
     ConditionOpcode.AGG_SIG_AMOUNT.value: AggSigAmount,
@@ -1063,6 +1296,8 @@ CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertCoinAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreatePuzzleAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertPuzzleAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,
@@ -1083,10 +1318,10 @@ CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.SOFTFORK.value: Softfork,
     ConditionOpcode.REMARK.value: Remark,
 }
-DRIVERS_TO_OPCODES: Dict[Type[Condition], bytes] = {v: k for k, v in CONDITION_DRIVERS.items()}
+DRIVERS_TO_OPCODES: dict[type[Condition], bytes] = {v: k for k, v in CONDITION_DRIVERS.items()}
 
 
-CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
+CONDITION_DRIVERS_W_ABSTRACTIONS: dict[bytes, type[Condition]] = {
     ConditionOpcode.AGG_SIG_PARENT.value: AggSig,
     ConditionOpcode.AGG_SIG_PUZZLE.value: AggSig,
     ConditionOpcode.AGG_SIG_AMOUNT.value: AggSig,
@@ -1101,6 +1336,8 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreateAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,
@@ -1126,11 +1363,11 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
 def parse_conditions_non_consensus(
     conditions: Iterable[Program],
     abstractions: bool = True,  # Use abstractions like *Announcement or Timelock instead of specific condition class
-) -> List[Condition]:
-    driver_dictionary: Dict[bytes, Type[Condition]] = (
+) -> list[Condition]:
+    driver_dictionary: dict[bytes, type[Condition]] = (
         CONDITION_DRIVERS_W_ABSTRACTIONS if abstractions else CONDITION_DRIVERS
     )
-    final_condition_list: List[Condition] = []
+    final_condition_list: list[Condition] = []
     for condition in conditions:
         try:
             final_condition_list.append(driver_dictionary[condition.at("f").as_atom()].from_program(condition))
@@ -1140,8 +1377,8 @@ def parse_conditions_non_consensus(
     return final_condition_list
 
 
-def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Condition]:
-    final_condition_list: List[Condition] = []
+def conditions_from_json_dicts(conditions: Iterable[dict[str, Any]]) -> list[Condition]:
+    final_condition_list: list[Condition] = []
     for condition in conditions:
         opcode_specified: Union[str, int] = condition["opcode"]
         if isinstance(opcode_specified, str):
@@ -1164,7 +1401,7 @@ def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Con
     return final_condition_list
 
 
-def conditions_to_json_dicts(conditions: Iterable[Condition]) -> List[Dict[str, Any]]:
+def conditions_to_json_dicts(conditions: Iterable[Condition]) -> list[dict[str, Any]]:
     return [
         {
             "opcode": int_from_bytes(DRIVERS_TO_OPCODES[condition.__class__]),
@@ -1186,8 +1423,8 @@ class ConditionValidTimes(Streamable):
     max_blocks_after_created: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
     max_height: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_ABSOLUTE
 
-    def to_conditions(self) -> List[Condition]:
-        final_condition_list: List[Condition] = []
+    def to_conditions(self) -> list[Condition]:
+        final_condition_list: list[Condition] = []
         if self.min_secs_since_created is not None:
             final_condition_list.append(AssertSecondsRelative(self.min_secs_since_created))
         if self.min_time is not None:
@@ -1209,7 +1446,7 @@ class ConditionValidTimes(Streamable):
 
 
 condition_valid_times_hints = get_type_hints(ConditionValidTimes)
-condition_valid_times_types: Dict[str, Type[int]] = {}
+condition_valid_times_types: dict[str, type[int]] = {}
 for field in fields(ConditionValidTimes):
     hint = condition_valid_times_hints[field.name]
     [type_] = [type_ for type_ in hint.__args__ if type_ is not type(None)]
@@ -1217,23 +1454,23 @@ for field in fields(ConditionValidTimes):
 
 
 # Properties of the dataclass above, grouped by their property
-SECONDS_PROPERTIES: Set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
-HEIGHT_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
-AFTER_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "min_secs_since_created", "min_time"}
-BEFORE_PROPERTIES: Set[str] = {"max_blocks_after_created", "max_height", "max_secs_after_created", "max_time"}
-RELATIVE_PROPERTIES: Set[str] = {
+SECONDS_PROPERTIES: set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
+HEIGHT_PROPERTIES: set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
+AFTER_PROPERTIES: set[str] = {"min_blocks_since_created", "min_height", "min_secs_since_created", "min_time"}
+BEFORE_PROPERTIES: set[str] = {"max_blocks_after_created", "max_height", "max_secs_after_created", "max_time"}
+RELATIVE_PROPERTIES: set[str] = {
     "min_blocks_since_created",
     "min_secs_since_created",
     "max_secs_after_created",
     "max_blocks_after_created",
 }
-ABSOLUTE_PROPERTIES: Set[str] = {"min_time", "max_time", "min_height", "max_height"}
-ALL_PROPERTIES: Set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
+ABSOLUTE_PROPERTIES: set[str] = {"min_time", "max_time", "min_height", "max_height"}
+ALL_PROPERTIES: set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
 
 
 def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
     valid_times: ConditionValidTimes = ConditionValidTimes()
-    properties: Set[str] = ALL_PROPERTIES.copy()
+    properties: set[str] = ALL_PROPERTIES.copy()
     for condition in conditions:
         if isinstance(condition, TIMELOCK_DRIVERS):
             timelock: Timelock = Timelock.from_program(condition.to_program())
@@ -1274,7 +1511,7 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
             new_value = timelock.timestamp
 
         final_type = condition_valid_times_types[final_property]
-        replacement: Dict[str, int] = {final_property: final_type(new_value)}
+        replacement: dict[str, int] = {final_property: final_type(new_value)}
         # the type is enforced above
         valid_times = replace(valid_times, **replacement)  # type: ignore[arg-type]
 

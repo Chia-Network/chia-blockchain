@@ -5,13 +5,12 @@ from typing import Optional, cast
 
 import chia_rs
 from bitstring import BitArray
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 from chiapos import Verifier
 
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
 
 ProofOfSpace = chia_rs.ProofOfSpace
 
@@ -86,7 +85,7 @@ def passes_plot_filter(
 
 
 def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
-    prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER
+    prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER)
     if height >= constants.PLOT_FILTER_32_HEIGHT:
         prefix_bits -= 4
     elif height >= constants.PLOT_FILTER_64_HEIGHT:

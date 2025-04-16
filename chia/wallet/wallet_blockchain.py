@@ -1,27 +1,34 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
+
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 log = logging.getLogger(__name__)
 
 
-class WalletBlockchain(BlockchainInterface):
+# implements BlockchainInterface
+class WalletBlockchain:
+    if TYPE_CHECKING:
+        from chia.consensus.blockchain_interface import BlockRecordsProtocol
+
+        _protocol_check: ClassVar[BlockRecordsProtocol] = cast("WalletBlockchain", None)
+
     constants: ConsensusConstants
     _basic_store: KeyValStore
     _weight_proof_handler: WalletWeightProofHandler
@@ -30,8 +37,8 @@ class WalletBlockchain(BlockchainInterface):
     _finished_sync_up_to: uint32
 
     _peak: Optional[HeaderBlock]
-    _height_to_hash: Dict[uint32, bytes32]
-    _block_records: Dict[bytes32, BlockRecord]
+    _height_to_hash: dict[uint32, bytes32]
+    _block_records: dict[bytes32, BlockRecord]
     _latest_timestamp: uint64
     _sub_slot_iters: uint64
     _difficulty: uint64
@@ -64,7 +71,7 @@ class WalletBlockchain(BlockchainInterface):
 
         return self
 
-    async def new_valid_weight_proof(self, weight_proof: WeightProof, records: List[BlockRecord]) -> None:
+    async def new_valid_weight_proof(self, weight_proof: WeightProof, records: list[BlockRecord]) -> None:
         peak: Optional[HeaderBlock] = await self.get_peak_block()
 
         if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
@@ -79,8 +86,7 @@ class WalletBlockchain(BlockchainInterface):
                 self.add_block_record(record)
                 if record.is_transaction_block:
                     assert record.timestamp is not None
-                    if record.timestamp > latest_timestamp:
-                        latest_timestamp = record.timestamp
+                    latest_timestamp = max(latest_timestamp, record.timestamp)
 
             self._sub_slot_iters = records[-1].sub_slot_iters
             self._difficulty = uint64(records[-1].weight - records[-2].weight)
@@ -89,7 +95,7 @@ class WalletBlockchain(BlockchainInterface):
             await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
             await self.clean_block_records()
 
-    async def add_block(self, block: HeaderBlock) -> Tuple[AddBlockResult, Optional[Err]]:
+    async def add_block(self, block: HeaderBlock) -> tuple[AddBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None
         if not self.contains_block(block.prev_header_hash) and block.height > 0:
@@ -106,9 +112,8 @@ class WalletBlockchain(BlockchainInterface):
             difficulty = self._difficulty
 
         # Validation requires a block cache (self) that goes back to a subepoch barrier
-        required_iters, error = validate_finished_header_block(
-            self.constants, self, block, False, difficulty, sub_slot_iters, False
-        )
+        expected_vs = ValidationState(sub_slot_iters, difficulty, None)
+        required_iters, error = validate_finished_header_block(self.constants, self, block, False, expected_vs, False)
         if error is not None:
             return AddBlockResult.INVALID_BLOCK, error.code
         if required_iters is None:
@@ -116,9 +121,7 @@ class WalletBlockchain(BlockchainInterface):
 
         # We are passing in sub_slot_iters here so we don't need to backtrack until the start of the epoch to find
         # the sub slot iters and difficulty. This allows us to keep the cache small.
-        block_record: BlockRecord = block_to_block_record(
-            self.constants, self, required_iters, None, block, sub_slot_iters
-        )
+        block_record: BlockRecord = block_to_block_record(self.constants, self, required_iters, block, sub_slot_iters)
         self.add_block_record(block_record)
         if self._peak is None:
             if block_record.is_transaction_block:
@@ -171,9 +174,9 @@ class WalletBlockchain(BlockchainInterface):
         if self._peak is not None:
             return self._peak
         header_block = await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
-        assert header_block is None or isinstance(
-            header_block, HeaderBlock
-        ), f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        assert header_block is None or isinstance(header_block, HeaderBlock), (
+            f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        )
         return header_block
 
     async def set_finished_sync_up_to(self, height: int, *, in_rollback: bool = False) -> None:
@@ -190,12 +193,11 @@ class WalletBlockchain(BlockchainInterface):
     def get_latest_timestamp(self) -> uint64:
         return self._latest_timestamp
 
-    def contains_block(self, header_hash: bytes32) -> bool:
-        return header_hash in self._block_records
-
-    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
-        # the wallet doesn't have the blockchain DB, this implements the
-        # blockchain_interface
+    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
+        """
+        True if we have already added this block to the chain. This may return false for orphan blocks
+        that we have added but no longer keep in memory.
+        """
         return header_hash in self._block_records
 
     def contains_height(self, height: uint32) -> bool:
@@ -207,6 +209,11 @@ class WalletBlockchain(BlockchainInterface):
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records.get(header_hash)
 
+    def height_to_block_record(self, height: uint32) -> BlockRecord:
+        header_hash: Optional[bytes32] = self.height_to_hash(height)
+        assert header_hash is not None
+        return self._block_records[header_hash]
+
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
 
@@ -215,7 +222,7 @@ class WalletBlockchain(BlockchainInterface):
         # blockchain_interface
         return self._block_records.get(header_hash)
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret = []
         for h in header_hashes:
             ret.append(self._block_records[h].prev_hash)
@@ -233,7 +240,7 @@ class WalletBlockchain(BlockchainInterface):
         if len(self._block_records) < self.CACHE_SIZE:
             return None
 
-        to_remove: List[bytes32] = []
+        to_remove: list[bytes32] = []
         for header_hash, block_record in self._block_records.items():
             if block_record.height < height_limit:
                 to_remove.append(header_hash)

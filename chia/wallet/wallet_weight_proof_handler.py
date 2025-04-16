@@ -6,13 +6,14 @@ import tempfile
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, List, Optional
+from typing import IO, Optional
+
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries, validate_weight_proof_inner
 from chia.types.weight_proof import WeightProof
-from chia.util.ints import uint32
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class WalletWeightProofHandler:
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation: bool = False, old_proof: Optional[WeightProof] = None
-    ) -> List[BlockRecord]:
+    ) -> list[BlockRecord]:
         start_time = time.time()
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code

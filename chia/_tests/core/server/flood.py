@@ -9,6 +9,7 @@ import sys
 import time
 
 from chia._tests.util.misc import create_logger
+from chia.util.task_referencer import create_referenced_task
 
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
@@ -28,7 +29,7 @@ async def tcp_echo_client(task_counter: str, logger: logging.Logger) -> None:
             writer = None
             try:
                 logger.info(f"Opening connection: {label}")
-                reader, writer = await asyncio.open_connection(IP, PORT)
+                _reader, writer = await asyncio.open_connection(IP, PORT)
                 total_open_connections += 1
                 logger.info(f"Opened connection: {label} (total: {total_open_connections})")
                 assert writer is not None
@@ -56,12 +57,13 @@ async def main() -> None:
     out_path = shutdown_path.with_suffix(".out")
 
     async def dun() -> None:
-        while shutdown_path.exists():
+        # TODO: switch to event driven code
+        while shutdown_path.exists():  # noqa: ASYNC110
             await asyncio.sleep(0.25)
 
         task.cancel()
 
-    file_task = asyncio.create_task(dun())
+    file_task = create_referenced_task(dun())
 
     with out_path.open(mode="w") as file:
         logger = create_logger(file=file)
@@ -69,7 +71,7 @@ async def main() -> None:
         async def f() -> None:
             await asyncio.gather(*[tcp_echo_client(task_counter=f"{i}", logger=logger) for i in range(0, NUM_CLIENTS)])
 
-        task = asyncio.create_task(f())
+        task = create_referenced_task(f())
         try:
             await task
         except asyncio.CancelledError:

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.util.ints import uint8, uint32, uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata, CRCATVersion
@@ -56,7 +57,7 @@ class WalletCoinRecord:
     def to_coin_record(self, timestamp: uint64) -> CoinRecord:
         return CoinRecord(self.coin, self.confirmed_block_height, self.spent_block_height, self.coinbase, timestamp)
 
-    def to_json_dict_parsed_metadata(self) -> Dict[str, Any]:
+    def to_json_dict_parsed_metadata(self) -> dict[str, Any]:
         # TODO: Merge wallet_type and wallet_id into `wallet_identifier`, make `spent` an attribute based
         #  on `spent_height` make `WalletCoinRecord` streamable and use Streamable.to_json_dict as base here if we have
         #  streamable enums.

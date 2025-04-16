@@ -2,20 +2,20 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
-from enum import IntEnum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from enum import Enum, IntEnum
+from hashlib import sha256
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-# TODO: remove or formalize this
-import aiosqlite as aiosqlite
+import aiosqlite
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint64
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 
@@ -25,10 +25,8 @@ if TYPE_CHECKING:
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)  # type: ignore[no-any-return] # noqa: E501
+    # see test for the definition this is optimized from
+    return bytes32(sha256(b"\2" + left_hash + right_hash).digest())
 
 
 def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:
@@ -41,28 +39,27 @@ def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: by
 
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
+    # see test for the definition this is optimized from
+    return bytes32(sha256(b"\2" + sha256(b"\1" + key).digest() + sha256(b"\1" + value).digest()).digest())
 
 
 def key_hash(key: bytes) -> bytes32:
-    return Program.to(key).get_tree_hash()  # type: ignore[no-any-return]
+    # see test for the definition this is optimized from
+    return bytes32(sha256(b"\1" + key).digest())
 
 
 @dataclasses.dataclass(frozen=True)
 class PaginationData:
     total_pages: int
     total_bytes: int
-    hashes: List[bytes32]
+    hashes: list[bytes32]
 
 
-def get_hashes_for_page(page: int, lengths: Dict[bytes32, int], max_page_size: int) -> PaginationData:
+def get_hashes_for_page(page: int, lengths: dict[bytes32, int], max_page_size: int) -> PaginationData:
     current_page = 0
     current_page_size = 0
     total_bytes = 0
-    hashes: List[bytes32] = []
+    hashes: list[bytes32] = []
     for hash, length in sorted(lengths.items(), key=lambda x: (-x[1], x[0])):
         if length > max_page_size:
             raise RuntimeError(
@@ -91,15 +88,19 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {dict(row)}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(tree_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(tree_id=store_id, root_hash=root_hash)
+async def _dot_dump(
+    data_store: DataStore,
+    store_id: bytes32,
+    root_hash: bytes32,
+) -> str:
+    terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
+    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
     n = 8
 
-    dot_nodes: List[str] = []
-    dot_connections: List[str] = []
-    dot_pair_boxes: List[str] = []
+    dot_nodes: list[str] = []
+    dot_connections: list[str] = []
+    dot_pair_boxes: list[str] = []
 
     for terminal_node in terminal_nodes:
         hash = terminal_node.hash.hex()
@@ -178,6 +179,7 @@ class CommitState(IntEnum):
 Node = Union["TerminalNode", "InternalNode"]
 
 
+@final
 @dataclass(frozen=True)
 class TerminalNode:
     hash: bytes32
@@ -185,11 +187,16 @@ class TerminalNode:
     key: bytes
     value: bytes
 
+    # left for now for interface back-compat even though it is constant
     atom: None = field(init=False, default=None)
 
-    @property
-    def pair(self) -> Tuple[bytes32, bytes32]:
-        return Program.to(self.key), Program.to(self.value)
+    @classmethod
+    def from_key_value(cls, key: bytes, value: bytes) -> TerminalNode:
+        return cls(
+            hash=leaf_hash(key=key, value=value),
+            key=key,
+            value=value,
+        )
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
@@ -238,7 +245,7 @@ other_side_to_bit = {Side.LEFT: 1, Side.RIGHT: 0}
 class ProofOfInclusion:
     node_hash: bytes32
     # children before parents
-    layers: List[ProofOfInclusionLayer]
+    layers: list[ProofOfInclusionLayer]
 
     @property
     def root_hash(self) -> bytes32:
@@ -250,13 +257,11 @@ class ProofOfInclusion:
     def sibling_sides_integer(self) -> int:
         return sum(other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers))
 
-    def sibling_hashes(self) -> List[bytes32]:
+    def sibling_hashes(self) -> list[bytes32]:
         return [layer.other_hash for layer in self.layers]
 
     def as_program(self) -> Program:
-        # https://github.com/Chia-Network/clvm/pull/102
-        # https://github.com/Chia-Network/clvm/pull/106
-        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])  # type: ignore[no-any-return]
+        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])
 
     def valid(self) -> bool:
         existing_hash = self.node_hash
@@ -277,6 +282,7 @@ class ProofOfInclusion:
         return True
 
 
+@final
 @dataclass(frozen=True)
 class InternalNode:
     hash: bytes32
@@ -284,8 +290,18 @@ class InternalNode:
     left_hash: bytes32
     right_hash: bytes32
 
-    pair: Optional[Tuple[Node, Node]] = None
-    atom: None = None
+    left: Optional[Node] = None
+    right: Optional[Node] = None
+
+    @classmethod
+    def from_child_nodes(cls, left: Node, right: Node) -> InternalNode:
+        return cls(
+            hash=internal_hash(left_hash=left.hash, right_hash=right.hash),
+            left_hash=left.hash,
+            right_hash=right.hash,
+            left=left,
+            right=right,
+        )
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:
@@ -315,9 +331,22 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
+class Unspecified(Enum):
+    # not beautiful, improve when a better way is known
+    # https://github.com/python/typing/issues/236#issuecomment-229515556
+
+    instance = None
+
+    def __repr__(self) -> str:
+        return "Unspecified"
+
+
+unspecified = Unspecified.instance
+
+
 @dataclass(frozen=True)
 class Root:
-    tree_id: bytes32
+    store_id: bytes32
     node_hash: Optional[bytes32]
     generation: int
     status: Status
@@ -331,39 +360,39 @@ class Root:
             node_hash = bytes32(raw_node_hash)
 
         return cls(
-            tree_id=bytes32(row["tree_id"]),
+            store_id=bytes32(row["tree_id"]),
             node_hash=node_hash,
             generation=row["generation"],
             status=Status(row["status"]),
         )
 
-    def to_row(self) -> Dict[str, Any]:
+    def to_row(self) -> dict[str, Any]:
         return {
-            "tree_id": self.tree_id,
+            "tree_id": self.store_id,
             "node_hash": self.node_hash,
             "generation": self.generation,
             "status": self.status.value,
         }
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> Root:
         return cls(
-            tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
+            store_id=bytes32.from_hexstr(marshalled["tree_id"]),
             node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
             generation=marshalled["generation"],
             status=Status(marshalled["status"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
-            "tree_id": self.tree_id.hex(),
+            "tree_id": self.store_id.hex(),
             "node_hash": None if self.node_hash is None else self.node_hash.hex(),
             "generation": self.generation,
             "status": self.status.value,
         }
 
 
-node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]] = {
+node_type_to_class: dict[NodeType, Union[type[InternalNode], type[TerminalNode]]] = {
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }
@@ -378,8 +407,8 @@ class ServerInfo:
 
 @dataclass(frozen=True)
 class Subscription:
-    tree_id: bytes32
-    servers_info: List[ServerInfo]
+    store_id: bytes32
+    servers_info: list[ServerInfo]
 
 
 @dataclass(frozen=True)
@@ -404,13 +433,13 @@ class KeyValue:
     value: bytes
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> KeyValue:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> KeyValue:
         return cls(
             key=hexstr_to_bytes(marshalled["key"]),
             value=hexstr_to_bytes(marshalled["value"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "key": self.key.hex(),
             "value": self.value.hex(),
@@ -420,16 +449,16 @@ class KeyValue:
 @dataclasses.dataclass(frozen=True)
 class OfferStore:
     store_id: bytes32
-    inclusions: Tuple[KeyValue, ...]
+    inclusions: tuple[KeyValue, ...]
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> OfferStore:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> OfferStore:
         return cls(
             store_id=bytes32.from_hexstr(marshalled["store_id"]),
             inclusions=tuple(KeyValue.unmarshal(key_value) for key_value in marshalled["inclusions"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "store_id": self.store_id.hex(),
             "inclusions": [key_value.marshal() for key_value in self.inclusions],
@@ -446,14 +475,14 @@ class Layer:
     combined_hash: bytes32
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> Layer:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> Layer:
         return cls(
             other_hash_side=Side.unmarshal(marshalled["other_hash_side"]),
             other_hash=bytes32.from_hexstr(marshalled["other_hash"]),
             combined_hash=bytes32.from_hexstr(marshalled["combined_hash"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "other_hash_side": self.other_hash_side.marshal(),
             "other_hash": self.other_hash.hex(),
@@ -463,19 +492,19 @@ class Layer:
 
 @dataclasses.dataclass(frozen=True)
 class MakeOfferRequest:
-    maker: Tuple[OfferStore, ...]
-    taker: Tuple[OfferStore, ...]
+    maker: tuple[OfferStore, ...]
+    taker: tuple[OfferStore, ...]
     fee: Optional[uint64]
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> MakeOfferRequest:
         return cls(
             maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
             fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "maker": [offer_store.marshal() for offer_store in self.maker],
             "taker": [offer_store.marshal() for offer_store in self.taker],
@@ -488,10 +517,10 @@ class Proof:
     key: bytes
     value: bytes
     node_hash: bytes32
-    layers: Tuple[Layer, ...]
+    layers: tuple[Layer, ...]
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> Proof:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> Proof:
         return cls(
             key=hexstr_to_bytes(marshalled["key"]),
             value=hexstr_to_bytes(marshalled["value"]),
@@ -505,7 +534,7 @@ class Proof:
 
         return self.layers[-1].combined_hash
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "key": self.key.hex(),
             "value": self.value.hex(),
@@ -517,16 +546,16 @@ class Proof:
 @dataclasses.dataclass(frozen=True)
 class StoreProofs:
     store_id: bytes32
-    proofs: Tuple[Proof, ...]
+    proofs: tuple[Proof, ...]
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> StoreProofs:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> StoreProofs:
         return cls(
             store_id=bytes32.from_hexstr(marshalled["store_id"]),
             proofs=tuple(Proof.unmarshal(proof) for proof in marshalled["proofs"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "store_id": self.store_id.hex(),
             "proofs": [proof.marshal() for proof in self.proofs],
@@ -537,11 +566,11 @@ class StoreProofs:
 class Offer:
     trade_id: bytes
     offer: bytes
-    taker: Tuple[OfferStore, ...]
-    maker: Tuple[StoreProofs, ...]
+    taker: tuple[OfferStore, ...]
+    maker: tuple[StoreProofs, ...]
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> Offer:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> Offer:
         return cls(
             trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
             offer=hexstr_to_bytes(marshalled["offer"]),
@@ -549,7 +578,7 @@ class Offer:
             maker=tuple(StoreProofs.unmarshal(store_proof) for store_proof in marshalled["maker"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "trade_id": self.trade_id.hex(),
             "offer": self.offer.hex(),
@@ -564,13 +593,13 @@ class MakeOfferResponse:
     offer: Offer
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferResponse:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> MakeOfferResponse:
         return cls(
             success=marshalled["success"],
             offer=Offer.unmarshal(marshalled["offer"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "offer": self.offer.marshal(),
@@ -583,13 +612,13 @@ class TakeOfferRequest:
     fee: Optional[uint64]
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferRequest:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> TakeOfferRequest:
         return cls(
             offer=Offer.unmarshal(marshalled["offer"]),
             fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "offer": self.offer.marshal(),
             "fee": None if self.fee is None else int(self.fee),
@@ -602,13 +631,13 @@ class TakeOfferResponse:
     trade_id: bytes32
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferResponse:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> TakeOfferResponse:
         return cls(
             success=marshalled["success"],
             trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "trade_id": self.trade_id.hex(),
@@ -624,7 +653,7 @@ class VerifyOfferResponse:
     fee: Optional[uint64] = None
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyOfferResponse:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> VerifyOfferResponse:
         return cls(
             success=marshalled["success"],
             valid=marshalled["valid"],
@@ -632,7 +661,7 @@ class VerifyOfferResponse:
             fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "valid": self.valid,
@@ -649,14 +678,14 @@ class CancelOfferRequest:
     fee: Optional[uint64]
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> CancelOfferRequest:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> CancelOfferRequest:
         return cls(
             trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
             secure=marshalled["secure"],
             fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "trade_id": self.trade_id.hex(),
             "secure": self.secure,
@@ -669,12 +698,12 @@ class CancelOfferResponse:
     success: bool
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> CancelOfferResponse:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> CancelOfferResponse:
         return cls(
             success=marshalled["success"],
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "success": self.success,
         }
@@ -686,12 +715,12 @@ class ClearPendingRootsRequest:
     store_id: bytes32
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> ClearPendingRootsRequest:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> ClearPendingRootsRequest:
         return cls(
             store_id=bytes32.from_hexstr(marshalled["store_id"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "store_id": self.store_id.hex(),
         }
@@ -703,19 +732,19 @@ class ClearPendingRootsResponse:
     success: bool
 
     root: Optional[Root]
-    # tree_id: bytes32
+    # store_id: bytes32
     # node_hash: Optional[bytes32]
     # generation: int
     # status: Status
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> ClearPendingRootsResponse:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> ClearPendingRootsResponse:
         return cls(
             success=marshalled["success"],
             root=None if marshalled["root"] is None else Root.unmarshal(marshalled["root"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "root": None if self.root is None else self.root.marshal(),
@@ -735,22 +764,22 @@ class SyncStatus:
 class PluginRemote:
     url: str
     # repr=False to avoid leaking secrets
-    headers: Dict[str, str] = dataclasses.field(default_factory=dict, hash=False, repr=False)
+    headers: dict[str, str] = dataclasses.field(default_factory=dict, hash=False, repr=False)
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> PluginRemote:
         return cls(
             url=marshalled["url"],
-            headers=marshalled["headers"],
+            headers=marshalled.get("headers", {}),
         )
 
 
 @dataclasses.dataclass(frozen=True)
 class PluginStatus:
-    uploaders: Dict[str, Dict[str, Any]]
-    downloaders: Dict[str, Dict[str, Any]]
+    uploaders: dict[str, dict[str, Any]]
+    downloaders: dict[str, dict[str, Any]]
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "plugin_status": {
                 "uploaders": self.uploaders,
@@ -767,15 +796,15 @@ class InsertResult:
 
 @dataclasses.dataclass(frozen=True)
 class UnsubscribeData:
-    tree_id: bytes32
+    store_id: bytes32
     retain_data: bool
 
 
 @dataclasses.dataclass(frozen=True)
 class KeysValuesCompressed:
-    keys_values_hashed: Dict[bytes32, bytes32]
-    key_hash_to_length: Dict[bytes32, int]
-    leaf_hash_to_length: Dict[bytes32, int]
+    keys_values_hashed: dict[bytes32, bytes32]
+    key_hash_to_length: dict[bytes32, int]
+    leaf_hash_to_length: dict[bytes32, int]
     root_hash: Optional[bytes32]
 
 
@@ -783,7 +812,7 @@ class KeysValuesCompressed:
 class KeysPaginationData:
     total_pages: int
     total_bytes: int
-    keys: List[bytes]
+    keys: list[bytes]
     root_hash: Optional[bytes32]
 
 
@@ -791,7 +820,7 @@ class KeysPaginationData:
 class KeysValuesPaginationData:
     total_pages: int
     total_bytes: int
-    keys_values: List[TerminalNode]
+    keys_values: list[TerminalNode]
     root_hash: Optional[bytes32]
 
 
@@ -799,7 +828,7 @@ class KeysValuesPaginationData:
 class KVDiffPaginationData:
     total_pages: int
     total_bytes: int
-    kv_diff: List[DiffData]
+    kv_diff: list[DiffData]
 
 
 #
@@ -820,7 +849,7 @@ class HashOnlyProof(Streamable):
     key_clvm_hash: bytes32
     value_clvm_hash: bytes32
     node_hash: bytes32
-    layers: List[ProofLayer]
+    layers: list[ProofLayer]
 
     def root(self) -> bytes32:
         if len(self.layers) == 0:
@@ -828,7 +857,7 @@ class HashOnlyProof(Streamable):
         return self.layers[-1].combined_hash
 
     @classmethod
-    def from_key_value(cls, key: bytes, value: bytes, node_hash: bytes32, layers: List[ProofLayer]) -> HashOnlyProof:
+    def from_key_value(cls, key: bytes, value: bytes, node_hash: bytes32, layers: list[ProofLayer]) -> HashOnlyProof:
         return cls(
             key_clvm_hash=Program.to(key).get_tree_hash(),
             value_clvm_hash=Program.to(value).get_tree_hash(),
@@ -848,21 +877,21 @@ class KeyValueHashes(Streamable):
 @dataclasses.dataclass(frozen=True)
 class ProofResultInclusions(Streamable):
     store_id: bytes32
-    inclusions: List[KeyValueHashes]
+    inclusions: list[KeyValueHashes]
 
 
 @streamable
 @dataclasses.dataclass(frozen=True)
 class GetProofRequest(Streamable):
     store_id: bytes32
-    keys: List[bytes]
+    keys: list[bytes]
 
 
 @streamable
 @dataclasses.dataclass(frozen=True)
 class StoreProofsHashes(Streamable):
     store_id: bytes32
-    proofs: List[HashOnlyProof]
+    proofs: list[HashOnlyProof]
 
 
 @streamable
@@ -888,10 +917,10 @@ class VerifyProofResponse(Streamable):
     success: bool
 
 
-def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> List[KeyValueHashes]:
+def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[KeyValueHashes]:
     """Verify a proof of inclusion for a DL singleton"""
 
-    verified_keys: List[KeyValueHashes] = []
+    verified_keys: list[KeyValueHashes] = []
 
     for reference_proof in dl_proof.store_proofs.proofs:
         inner_puz_hash = dl_proof.inner_puzzle_hash
@@ -933,10 +962,10 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> List[Ke
 
 
 async def dl_verify_proof(
-    request: Dict[str, Any],
+    request: dict[str, Any],
     wallet_node: WalletNode,
     peer: WSChiaConnection,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Verify a proof of inclusion for a DL singleton"""
 
     dlproof = DLProof.from_json_dict(request)

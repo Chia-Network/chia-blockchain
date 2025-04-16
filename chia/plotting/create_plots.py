@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -15,7 +16,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_pk,
     generate_plot_public_key,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk, master_sk_to_pool_sk
@@ -105,7 +105,7 @@ class PlotKeysResolver:
             except Exception as e:
                 log.error(f"Keychain proxy failed with error: {e}")
         else:
-            sk_ent: Optional[Tuple[PrivateKey, bytes]] = None
+            sk_ent: Optional[tuple[PrivateKey, bytes]] = None
             keychain: Keychain = Keychain()
             if self.alt_fingerprint is not None:
                 sk_ent = keychain.get_private_key_by_fingerprint(self.alt_fingerprint)
@@ -151,8 +151,8 @@ async def create_plots(
     args: Params,
     keys: PlotKeys,
     use_datetime: bool = True,
-    test_private_keys: Optional[List[PrivateKey]] = None,
-) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
+    test_private_keys: Optional[list[PrivateKey]] = None,
+) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
@@ -182,8 +182,8 @@ async def create_plots(
 
     args.final_dir.mkdir(parents=True, exist_ok=True)
 
-    created_plots: Dict[bytes32, Path] = {}
-    existing_plots: Dict[bytes32, Path] = {}
+    created_plots: dict[bytes32, Path] = {}
+    existing_plots: dict[bytes32, Path] = {}
     for i in range(num):
         # Generate a random master secret key
         if test_private_keys is not None:
@@ -202,7 +202,7 @@ async def create_plots(
         # The plot id is based on the harvester, farmer, and pool keys
         if keys.pool_public_key is not None:
             plot_id: bytes32 = calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
-            plot_memo: bytes32 = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
+            plot_memo: bytes = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
         else:
             assert keys.pool_contract_puzzle_hash is not None
             plot_id = calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
@@ -210,11 +210,21 @@ async def create_plots(
 
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")
-            plot_id = bytes32(bytes.fromhex(args.plotid))
+            # Check if args.memo is of type bytes and convert it to a string if so
+            if isinstance(args.plotid, bytes):
+                plot_str = args.plotid.hex()  # Convert bytes to hex string
+            else:
+                plot_str = args.plotid
+            plot_id = bytes32.fromhex(plot_str)
 
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
-            plot_memo = bytes32.fromhex(args.memo)
+            # Check if args.memo is of type bytes and convert it to a string if so
+            if isinstance(args.memo, bytes):
+                memo_str = args.memo.hex()  # Convert bytes to hex string
+            else:
+                memo_str = args.memo
+            plot_memo = bytes.fromhex(memo_str)
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 

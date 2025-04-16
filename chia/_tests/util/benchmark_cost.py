@@ -4,15 +4,15 @@ import random
 import time
 
 from chia_rs import AugSchemeMPL, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.ints import uint32
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
@@ -66,15 +66,15 @@ def benchmark_all_operators():
     point_add = "(point_add"
     " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb)"
     " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
-    point_add_cost, point_add_time = run_and_return_cost_time(point_add)
+    _point_add_cost, point_add_time = run_and_return_cost_time(point_add)
     addition_cost, addition_time = run_and_return_cost_time(addition)
-    substraction_cost, substraction_time = run_and_return_cost_time(substraction)
-    multiply_cost, multiply_time = run_and_return_cost_time(multiply)
-    greater_cost, greater_time = run_and_return_cost_time(greater)
-    equal_cost, equal_time = run_and_return_cost_time(equal)
-    if_cost, if_time = run_and_return_cost_time(if_clvm)
-    sha256tree_cost, sha256tree_time = run_and_return_cost_time(sha256tree)
-    pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(pubkey_for_exp)
+    _substraction_cost, substraction_time = run_and_return_cost_time(substraction)
+    _multiply_cost, multiply_time = run_and_return_cost_time(multiply)
+    _greater_cost, greater_time = run_and_return_cost_time(greater)
+    _equal_cost, equal_time = run_and_return_cost_time(equal)
+    _if_cost, if_time = run_and_return_cost_time(if_clvm)
+    _sha256tree_cost, sha256tree_time = run_and_return_cost_time(sha256tree)
+    _pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(pubkey_for_exp)
 
     one_addition = 1
     one_substraction = get_cost_compared_to_addition(addition_cost, addition_time, substraction_time) / addition_cost
@@ -167,4 +167,4 @@ if __name__ == "__main__":
     constant = clvm_should_cost / clvm_cost
     format = float_to_str(constant)
     print(f"Constant factor: {format}")
-    print(f"CLVM RATIO MULTIPLIER: {1/constant}")
+    print(f"CLVM RATIO MULTIPLIER: {1 / constant}")

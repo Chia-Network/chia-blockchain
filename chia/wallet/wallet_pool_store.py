@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple
+
+from chia_rs.sized_ints import uint32
 
 from chia.types.coin_spend import CoinSpend
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)
 
@@ -60,9 +60,7 @@ class WalletPoolStore:
             else:
                 existing = list(
                     await conn.execute_fetchall(
-                        "SELECT COUNT(*) "
-                        "FROM pool_state_transitions "
-                        "WHERE wallet_id=? AND height=? AND coin_spend=?",
+                        "SELECT COUNT(*) FROM pool_state_transitions WHERE wallet_id=? AND height=? AND coin_spend=?",
                         (wallet_id, height, serialized_spend),
                     )
                 )
@@ -89,7 +87,7 @@ class WalletPoolStore:
             )
             await cursor.close()
 
-    async def get_spends_for_wallet(self, wallet_id: int) -> List[Tuple[uint32, CoinSpend]]:
+    async def get_spends_for_wallet(self, wallet_id: int) -> list[tuple[uint32, CoinSpend]]:
         """
         Retrieves all entries for a wallet ID.
         """

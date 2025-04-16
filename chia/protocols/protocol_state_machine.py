@@ -13,6 +13,8 @@ NO_REPLY_EXPECTED = [
     pmt.request_mempool_transactions,
     pmt.new_compact_vdf,
     pmt.coin_state_update,
+    pmt.mempool_items_added,
+    pmt.mempool_items_removed,
 ]
 
 """
@@ -39,14 +41,19 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_compact_vdf: [pmt.respond_compact_vdf],
     pmt.request_peers: [pmt.respond_peers],
     pmt.request_header_blocks: [pmt.respond_header_blocks, pmt.reject_header_blocks, pmt.reject_block_headers],
-    pmt.register_interest_in_puzzle_hash: [pmt.respond_to_ph_update],
-    pmt.register_interest_in_coin: [pmt.respond_to_coin_update],
+    pmt.register_for_ph_updates: [pmt.respond_to_ph_updates],
+    pmt.register_for_coin_updates: [pmt.respond_to_coin_updates],
     pmt.request_children: [pmt.respond_children],
     pmt.request_ses_hashes: [pmt.respond_ses_hashes],
     pmt.request_block_headers: [pmt.respond_block_headers, pmt.reject_block_headers, pmt.reject_header_blocks],
     pmt.request_peers_introducer: [pmt.respond_peers_introducer],
     pmt.request_puzzle_solution: [pmt.respond_puzzle_solution, pmt.reject_puzzle_solution],
     pmt.send_transaction: [pmt.transaction_ack],
+    pmt.request_remove_puzzle_subscriptions: [pmt.respond_remove_puzzle_subscriptions],
+    pmt.request_remove_coin_subscriptions: [pmt.respond_remove_coin_subscriptions],
+    pmt.request_puzzle_state: [pmt.respond_puzzle_state, pmt.reject_puzzle_state],
+    pmt.request_coin_state: [pmt.respond_coin_state, pmt.reject_coin_state],
+    pmt.request_cost_info: [pmt.respond_cost_info],
 }
 
 

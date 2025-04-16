@@ -17,31 +17,60 @@ on:
       - "**"
 
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   test_scripts:
-    name: Test Install Scripts - ${{ matrix.development.name }}
-    runs-on: ${{ matrix.os.runs-on }}
+    name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
       matrix:
         python:
           - major-dot-minor: "3.10"
         os:
-          - runs-on: macos-latest
-            matrix: macos
-          - runs-on: ubuntu-latest
+          - name: Linux
+            emoji: 🐧
+            runs-on:
+              arm: [Linux, ARM64]
+              intel: ubuntu-latest
             matrix: linux
-          - runs-on: windows-latest
+          - name: macOS
+            emoji: 🍎
+            runs-on:
+              arm: macos-latest
+              intel: macos-13
+            matrix: macos
+          - name: Windows
+            emoji: 🪟
+            runs-on:
+              intel: windows-latest
             matrix: windows
+        arch:
+          - name: ARM
+            emoji: 💪
+            matrix: arm
+          - name: Intel
+            emoji: 🌀
+            matrix: intel
         development:
-          - name: Non-development
+          - name: Non-dev
             value: false
-          - name: Development
+          - name: Dev
             value: true
+        editable:
+          - name: Non-edit
+            value: false
+            matrix: non-editable
+          - name: Edit
+            value: true
+            matrix: editable
+        exclude:
+          - os:
+              matrix: windows
+            arch:
+              matrix: arm
 
     steps:
       - name: Checkout Code
@@ -58,6 +87,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
           development: ${{ matrix.development.value }}
+          editable: ${{ matrix.editable.value }}
           do-system-installs: true
 
       - uses: chia-network/actions/activate-venv@main
@@ -76,8 +106,34 @@ jobs:
         run: |
           ./Install-gui.ps1
 
+      - name: Collect editable info
+        id: editable-info
+        shell: bash
+        run: |
+          echo "pre-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
+          echo '__version__ = "shooby-doowah"' >> chia/__init__.py
+          echo "post-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
+
+      - name: Check editable
+        if: matrix.editable.matrix == 'editable'
+        shell: bash
+        env:
+          PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
+          POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
+        run: |
+          [ "$POST_VERSION" = "shooby-doowah" ] && [ "$PRE_VERSION" != "shooby-doowah" ]
+
+      - name: Check non-editable
+        if: matrix.editable.matrix == 'non-editable'
+        shell: bash
+        env:
+          PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
+          POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
+        run: |
+          [ "$POST_VERSION" != "shooby-doowah" ] && [ "$PRE_VERSION" = "$POST_VERSION" ]
+
   test_scripts_in_docker:
-    name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:
@@ -126,6 +182,10 @@ jobs:
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
             url: "docker://ubuntu:jammy"
+          - name: ubuntu:noble (24.04)
+            type: ubuntu
+            # https://packages.ubuntu.com/noble/python3 (24.04, 3.12)
+            url: "docker://ubuntu:noble"
         arch:
           - name: ARM64
             matrix: arm
@@ -134,8 +194,11 @@ jobs:
         exclude:
           - distribution:
               type: arch
-            arch:
-              matrix: arm
+          # TODO: arch brought in glibc 2.41 which became more sensitive around execstack
+          #       which is enabled in libbladebit.  fixes will be made to main and this
+          #       should be re-enabled then.
+          #    arch:
+          #      matrix: arm
 
     steps:
       - name: Prepare Amazon Linux
@@ -151,7 +214,7 @@ jobs:
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
-          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
+          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.12.7-1-x86_64.pkg.tar.zst
 
       - name: Prepare Debian
         if: ${{ matrix.distribution.type == 'debian' }}
@@ -176,12 +239,13 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # for bionic
           apt-get --yes update
-          apt-get install --yes software-properties-common
-          add-apt-repository --yes ppa:git-core/ppa
-          apt-get --yes update
-          apt-get install --yes git lsb-release sudo python3-venv
+          apt-get install --yes git lsb-release sudo
+          MINIMUM=3.9
+          if ! apt satisfy --yes "python3-venv (>= ${MINIMUM})"
+          then
+            apt-get install --yes python${MINIMUM}-venv
+          fi
 
       - name: Add safe git directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -194,7 +258,6 @@ jobs:
 
       - uses: ./.github/actions/install
         with:
-          python-version: ${{ matrix.python-version }}
           development: true
           do-system-installs: true
 

@@ -1,26 +1,25 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.util.key_tool import KeyTool
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.errors import Err
-from chia.util.ints import uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.drivers import (
     create_augmented_cond_puzzle_hash,
     create_clawback_merkle_tree,
@@ -39,6 +38,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.merkle_utils import check_merkle_proof
 from chia.wallet.util.wallet_types import RemarkDataType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()
@@ -47,8 +47,8 @@ ACS_PH = ACS.get_tree_hash()
 async def do_spend(
     sim: SpendSim,
     sim_client: SimClient,
-    spend_bundle: SpendBundle,
-    expected_result: Tuple[MempoolInclusionStatus, Optional[Err]],
+    spend_bundle: WalletSpendBundle,
+    expected_result: tuple[MempoolInclusionStatus, Optional[Err]],
     cost_logger: Optional[CostLogger] = None,
     cost_log_msg: str = "",
 ) -> int:
@@ -66,7 +66,7 @@ async def do_spend(
 class TestClawbackLifecycle:
     # Helper function
     def sign_coin_spend(self, coin_spend: CoinSpend, index: int) -> G2Element:
-        synthetic_secret_key: PrivateKey = calculate_synthetic_secret_key(  # noqa
+        synthetic_secret_key: PrivateKey = calculate_synthetic_secret_key(
             PrivateKey.from_bytes(
                 secret_exponent_for_index(index).to_bytes(32, "big"),
             ),
@@ -75,10 +75,9 @@ class TestClawbackLifecycle:
 
         conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
         signatures = []
-        for pk_bytes, msg in pkm_pairs_for_conditions_dict(
+        for pk, msg in pkm_pairs_for_conditions_dict(
             conditions_dict, coin_spend.coin, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
         ):
-            pk = G1Element.from_bytes(pk_bytes)
             signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
             assert AugSchemeMPL.verify(pk, msg, signature)
             signatures.append(signature)
@@ -127,7 +126,7 @@ class TestClawbackLifecycle:
             )
             coin_spend = make_spend(starting_coin, sender_puz, sender_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
-            spend_bundle = SpendBundle([coin_spend], sig)
+            spend_bundle = WalletSpendBundle([coin_spend], sig)
 
             await do_spend(
                 sim,
@@ -154,7 +153,7 @@ class TestClawbackLifecycle:
             claim_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, recipient_puz, recipient_sol)
             coin_spend = make_spend(clawback_coin, cb_puzzle, claim_sol)
             sig = self.sign_coin_spend(coin_spend, recipient_index)
-            spend_bundle = SpendBundle([coin_spend], sig)
+            spend_bundle = WalletSpendBundle([coin_spend], sig)
 
             await do_spend(
                 sim,
@@ -186,7 +185,7 @@ class TestClawbackLifecycle:
             new_coin = (await sim_client.get_coin_records_by_puzzle_hash(sender_ph, include_spent_coins=False))[0].coin
             coin_spend = make_spend(new_coin, sender_puz, sender_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
-            spend_bundle = SpendBundle([coin_spend], sig)
+            spend_bundle = WalletSpendBundle([coin_spend], sig)
 
             await do_spend(
                 sim,
@@ -205,7 +204,7 @@ class TestClawbackLifecycle:
             claw_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, sender_puz, sender_claw_sol)
             coin_spend = make_spend(new_cb_coin, cb_puzzle, claw_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
-            spend_bundle = SpendBundle([coin_spend], sig)
+            spend_bundle = WalletSpendBundle([coin_spend], sig)
 
             await do_spend(
                 sim,
@@ -278,7 +277,7 @@ class TestClawbackLifecycle:
         cb_sender_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, sender_puz, sender_sol)
 
         conds = conditions_dict_for_solution(clawback_puz, cb_sender_sol, INFINITE_COST)
-        assert isinstance(conds, Dict)
+        assert isinstance(conds, dict)
         create_coins = conds[ConditionOpcode.CREATE_COIN]
         assert len(create_coins) == 1
         assert create_coins[0].vars[0] == sender_ph
@@ -287,7 +286,7 @@ class TestClawbackLifecycle:
         cb_recipient_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, recipient_puz, recipient_sol)
         clawback_puz.run(cb_recipient_sol)
         conds = conditions_dict_for_solution(clawback_puz, cb_recipient_sol, INFINITE_COST)
-        assert isinstance(conds, Dict)
+        assert isinstance(conds, dict)
         create_coins = conds[ConditionOpcode.CREATE_COIN]
         assert len(create_coins) == 1
         assert create_coins[0].vars[0] == recipient_ph

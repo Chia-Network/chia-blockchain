@@ -9,13 +9,12 @@ on:
       - "release/**"
 
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   pre-commit:
-    name: ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
@@ -30,8 +29,8 @@ jobs:
           - name: macOS
             matrix: macos
             runs-on:
-              intel: macos-latest
-              arm: [macos, arm64]
+              intel: macos-13
+              arm: macos-13-arm64
           - name: Windows
             matrix: windows
             runs-on:
@@ -42,7 +41,10 @@ jobs:
           - name: Intel
             matrix: intel
         python:
+          - major_dot_minor: "3.9"
           - major_dot_minor: "3.10"
+          - major_dot_minor: "3.11"
+          - major_dot_minor: "3.12"
         exclude:
           - os:
               matrix: windows

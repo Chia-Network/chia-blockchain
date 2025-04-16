@@ -35,6 +35,7 @@ Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
+$NPM_PATH = $pwd.PATH + "\node_modules\.bin"
 
 Set-Location -Path "..\..\" -PassThru
 
@@ -68,7 +69,8 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-builder create package directory"
-npx electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
+& "$NPM_PATH/electron-builder.ps1" --version
+& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
@@ -88,7 +90,7 @@ If ($env:HAS_SIGNING_SECRET) {
 
 Write-Output "   ---"
 Write-Output "electron-builder create installer"
-npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
+& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {

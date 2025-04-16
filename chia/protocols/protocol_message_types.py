@@ -100,10 +100,10 @@ class ProtocolMessageTypes(Enum):
 
     # More wallet protocol
     coin_state_update = 69
-    register_interest_in_puzzle_hash = 70
-    respond_to_ph_update = 71
-    register_interest_in_coin = 72
-    respond_to_coin_update = 73
+    register_for_ph_updates = 70
+    respond_to_ph_updates = 71
+    register_for_coin_updates = 72
+    respond_to_coin_updates = 73
     request_children = 74
     respond_children = 75
     request_ses_hashes = 76
@@ -117,5 +117,23 @@ class ProtocolMessageTypes(Enum):
     # new Full Node protocol messages
     new_unfinished_block2 = 92
     request_unfinished_block2 = 93
+
+    # New wallet sync protocol
+    request_remove_puzzle_subscriptions = 94
+    respond_remove_puzzle_subscriptions = 95
+    request_remove_coin_subscriptions = 96
+    respond_remove_coin_subscriptions = 97
+    request_puzzle_state = 98
+    respond_puzzle_state = 99
+    reject_puzzle_state = 100
+    request_coin_state = 101
+    respond_coin_state = 102
+    reject_coin_state = 103
+
+    # Wallet protocol mempool updates
+    mempool_items_added = 104
+    mempool_items_removed = 105
+    request_cost_info = 106
+    respond_cost_info = 107
 
     error = 255

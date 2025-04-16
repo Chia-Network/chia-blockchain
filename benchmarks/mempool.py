@@ -2,24 +2,27 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
 from time import monotonic
-from typing import Collection, Dict, Iterator, List, Optional, Tuple
+from typing import Optional
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
-from chia.util.misc import to_batches
+from chia.util.batches import to_batches
+from chia.util.task_referencer import create_referenced_task
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -40,7 +43,7 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
     check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot", output_file + ".profile"])
     with open(output_file + ".png", "w+") as f:
         check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
-    print("  output written to: %s.png" % output_file)
+    print(f"  output written to: {output_file}.png")
 
 
 def make_hash(height: int) -> bytes32:
@@ -77,10 +80,10 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 
 
 async def run_mempool_benchmark() -> None:
-    all_coins: Dict[bytes32, CoinRecord] = {}
+    all_coins: dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_records(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
-        ret: List[CoinRecord] = []
+    async def get_coin_records(coin_ids: Collection[bytes32]) -> list[CoinRecord]:
+        ret: list[CoinRecord] = []
         for name in coin_ids:
             r = all_coins.get(name)
             if r is not None:
@@ -93,24 +96,24 @@ async def run_mempool_benchmark() -> None:
 
     wt = WalletTool(DEFAULT_CONSTANTS)
 
-    spend_bundles: List[List[SpendBundle]] = []
+    spend_bundles: list[list[SpendBundle]] = []
 
     # these spend the same coins as spend_bundles but with a higher fee
-    replacement_spend_bundles: List[List[SpendBundle]] = []
+    replacement_spend_bundles: list[list[SpendBundle]] = []
 
     # these spend the same coins as spend_bundles, but they are organized in
     # much larger bundles
-    large_spend_bundles: List[List[SpendBundle]] = []
+    large_spend_bundles: list[list[SpendBundle]] = []
 
     timestamp = uint64(1631794488)
 
     height = uint32(1)
 
-    print("Building SpendBundles")
+    print("Building spend bundles")
     for peer in range(NUM_PEERS):
         print(f"  peer {peer}")
         print("     reward coins")
-        unspent: List[Coin] = []
+        unspent: list[Coin] = []
         for idx in range(NUM_ITERS):
             height = uint32(height + 1)
 
@@ -129,11 +132,9 @@ async def run_mempool_benchmark() -> None:
             unspent.extend([farmer_coin, pool_coin])
 
         print("     spend bundles")
-        bundles: List[SpendBundle] = []
+        bundles = []
         for coin in unspent:
-            tx: SpendBundle = wt.generate_signed_transaction(
-                uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx
-            )
+            tx = wt.generate_signed_transaction(uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx)
             bundles.append(tx)
         spend_bundles.append(bundles)
 
@@ -166,20 +167,25 @@ async def run_mempool_benchmark() -> None:
         else:
             print("\n== Multi-threaded")
 
-        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(
+            get_coin_records,
+            get_unspent_lineage_info_for_puzzle_hash,
+            DEFAULT_CONSTANTS,
+            single_threaded=single_threaded,
+        )
 
         height = start_height
         rec = fake_block_record(height, timestamp)
         await mempool.new_peak(rec, None)
 
-        async def add_spend_bundles(spend_bundles: List[SpendBundle]) -> None:
+        async def add_spend_bundles(spend_bundles: list[SpendBundle]) -> None:
             for tx in spend_bundles:
                 spend_bundle_id = tx.name()
-                npc = await mempool.pre_validate_spendbundle(tx, None, spend_bundle_id)
+                npc = await mempool.pre_validate_spendbundle(tx, spend_bundle_id)
                 assert npc is not None
-                _, status, error = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
-                assert status == MempoolInclusionStatus.SUCCESS
-                assert error is None
+                info = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
+                assert info.status == MempoolInclusionStatus.SUCCESS
+                assert info.error is None
 
         suffix = "st" if single_threaded else "mt"
 
@@ -190,13 +196,18 @@ async def run_mempool_benchmark() -> None:
             start = monotonic()
             for peer in range(NUM_PEERS):
                 total_bundles += len(large_spend_bundles[peer])
-                tasks.append(asyncio.create_task(add_spend_bundles(large_spend_bundles[peer])))
+                tasks.append(create_referenced_task(add_spend_bundles(large_spend_bundles[peer])))
             await asyncio.gather(*tasks)
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
 
-        mempool = MempoolManager(get_coin_records, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(
+            get_coin_records,
+            get_unspent_lineage_info_for_puzzle_hash,
+            DEFAULT_CONSTANTS,
+            single_threaded=single_threaded,
+        )
 
         height = start_height
         rec = fake_block_record(height, timestamp)
@@ -209,7 +220,7 @@ async def run_mempool_benchmark() -> None:
             start = monotonic()
             for peer in range(NUM_PEERS):
                 total_bundles += len(spend_bundles[peer])
-                tasks.append(asyncio.create_task(add_spend_bundles(spend_bundles[peer])))
+                tasks.append(create_referenced_task(add_spend_bundles(spend_bundles[peer])))
             await asyncio.gather(*tasks)
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
@@ -222,26 +233,34 @@ async def run_mempool_benchmark() -> None:
             start = monotonic()
             for peer in range(NUM_PEERS):
                 total_bundles += len(replacement_spend_bundles[peer])
-                tasks.append(asyncio.create_task(add_spend_bundles(replacement_spend_bundles[peer])))
+                tasks.append(create_referenced_task(add_spend_bundles(replacement_spend_bundles[peer])))
             await asyncio.gather(*tasks)
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
 
-        print("\nProfiling create_bundle_from_mempool()")
+        print("\nProfiling create_block_generator()")
         with enable_profiler(True, f"create-{suffix}"):
             start = monotonic()
-            for _ in range(500):
-                await mempool.create_bundle_from_mempool(
+            for _ in range(10):
+                await mempool.create_block_generator(
                     last_tb_header_hash=rec.header_hash,
-                    get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
                 )
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / 500 * 1000:0.2f}ms")
+        print(f"  per call: {(stop - start) / 10 * 1000:0.2f}ms")
+
+        print("\nProfiling create_block_generator2()")
+        with enable_profiler(True, f"create2-{suffix}"):
+            start = monotonic()
+            for _ in range(10):
+                await mempool.create_block_generator2(last_tb_header_hash=rec.header_hash)
+            stop = monotonic()
+        print(f"  time: {stop - start:0.4f}s")
+        print(f"  per call: {(stop - start) / 10 * 1000:0.2f}ms")
 
         print("\nProfiling new_peak() (optimized)")
-        blocks: List[Tuple[BenchBlockRecord, List[bytes32]]] = []
+        blocks: list[tuple[BenchBlockRecord, list[bytes32]]] = []
         for coin_id in all_coins.keys():
             height = uint32(height + 1)
             timestamp = uint64(timestamp + 19)

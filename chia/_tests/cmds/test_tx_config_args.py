@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
 
 import click
+from chia_rs.sized_bytes import bytes32
 from click.testing import CliRunner
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, coin_selection_args, tx_config_args
+from chia.cmds.param_types import CliAmount
 from chia.util.config import create_default_chia_config, load_config
 
 
@@ -14,10 +17,10 @@ def test_coin_selection_args() -> None:
     @click.command()
     @coin_selection_args
     def test_cmd(
-        min_coin_amount: Optional[str],
-        max_coin_amount: Optional[str],
-        coins_to_exclude: Sequence[str],
-        amounts_to_exclude: Sequence[str],
+        min_coin_amount: CliAmount,
+        max_coin_amount: CliAmount,
+        coins_to_exclude: Sequence[bytes32],
+        amounts_to_exclude: Sequence[CliAmount],
     ) -> None:
         print(
             CMDCoinSelectionConfigLoader(
@@ -95,10 +98,10 @@ def test_tx_config_args() -> None:
         @click.command()
         @tx_config_args
         def test_cmd(
-            min_coin_amount: Optional[str],
-            max_coin_amount: Optional[str],
-            coins_to_exclude: Sequence[str],
-            amounts_to_exclude: Sequence[str],
+            min_coin_amount: CliAmount,
+            max_coin_amount: CliAmount,
+            coins_to_exclude: Sequence[bytes32],
+            amounts_to_exclude: Sequence[CliAmount],
             reuse: Optional[bool],
         ) -> None:
             print(

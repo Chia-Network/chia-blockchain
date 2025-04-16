@@ -3,15 +3,16 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
 from chia.util.service_groups import all_groups, services_for_groups
 
 
-async def async_stop(root_path: Path, config: Dict[str, Any], group: tuple[str, ...], stop_daemon: bool) -> int:
+async def async_stop(root_path: Path, config: dict[str, Any], group: tuple[str, ...], stop_daemon: bool) -> int:
     from chia.daemon.client import connect_to_daemon_and_validate
 
     daemon = await connect_to_daemon_and_validate(root_path, config)
@@ -54,7 +55,7 @@ async def async_stop(root_path: Path, config: Dict[str, Any], group: tuple[str, 
 def stop_cmd(ctx: click.Context, daemon: bool, group: tuple[str, ...]) -> None:
     from chia.cmds.beta_funcs import warn_if_beta_enabled
 
-    root_path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.set_default(ctx).root_path
     config = load_config(root_path, "config.yaml")
     warn_if_beta_enabled(config)
 

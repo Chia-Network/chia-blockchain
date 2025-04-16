@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import PROOF_FLAGS_CHECKER, construct_cr_layer, match_cr_layer, solve_cr_layer
@@ -23,11 +23,11 @@ class CROuterPuzzle:
     _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
     def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
-        args: Optional[Tuple[List[bytes32], Program, Program]] = match_cr_layer(puzzle)
+        args: Optional[tuple[list[bytes32], Program, Program]] = match_cr_layer(puzzle)
         if args is None:
             return None
         authorized_providers, proofs_checker, inner_puzzle = args
-        constructor_dict: Dict[str, Any] = {
+        constructor_dict: dict[str, Any] = {
             "type": "credential restricted",
             "authorized_providers": ["0x" + ap.hex() for ap in authorized_providers],
             "proofs_checker": disassemble(proofs_checker),
@@ -38,7 +38,7 @@ class CROuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
-        args: Optional[Tuple[List[bytes32], Program, Program]] = match_cr_layer(puzzle_reveal)
+        args: Optional[tuple[list[bytes32], Program, Program]] = match_cr_layer(puzzle_reveal)
         if args is None:
             raise ValueError("This driver is not for the specified puzzle reveal")  # pragma: no cover
         _, _, inner_puzzle = args

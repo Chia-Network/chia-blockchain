@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Optional
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 from sortedcontainers import SortedDict
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint32
 
 
 @dataclass
@@ -15,7 +15,7 @@ class ConflictTxCache:
     _cache_max_total_cost: int
     _cache_max_size: int = 1000
     _cache_cost: int = field(default=0, init=False)
-    _txs: Dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
+    _txs: dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
 
     def get(self, bundle_name: bytes32) -> Optional[MempoolItem]:
         return self._txs.get(bundle_name, None)
@@ -34,11 +34,11 @@ class ConflictTxCache:
         self._cache_cost += item.cost
 
         while self._cache_cost > self._cache_max_total_cost or len(self._txs) > self._cache_max_size:
-            first_in = list(self._txs.keys())[0]
+            first_in = next(iter(self._txs.keys()))
             self._cache_cost -= self._txs[first_in].cost
             self._txs.pop(first_in)
 
-    def drain(self) -> Dict[bytes32, MempoolItem]:
+    def drain(self) -> dict[bytes32, MempoolItem]:
         ret = self._txs
         self._txs = {}
         self._cache_cost = 0
@@ -53,8 +53,8 @@ class PendingTxCache:
     _cache_max_total_cost: int
     _cache_max_size: int = 3000
     _cache_cost: int = field(default=0, init=False)
-    _txs: Dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
-    _by_height: SortedDict[uint32, Dict[bytes32, MempoolItem]] = field(default_factory=SortedDict, init=False)
+    _txs: dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
+    _by_height: SortedDict[uint32, dict[bytes32, MempoolItem]] = field(default_factory=SortedDict, init=False)
 
     def get(self, bundle_name: bytes32) -> Optional[MempoolItem]:
         return self._txs.get(bundle_name, None)
@@ -82,15 +82,15 @@ class PendingTxCache:
                 self._txs.pop(to_evict[0])
                 continue
 
-            first_in = list(to_evict[1].keys())[0]
+            first_in = next(iter(to_evict[1].keys()))
             removed_item = self._txs.pop(first_in)
             self._cache_cost -= removed_item.cost
             to_evict[1].pop(first_in)
             if to_evict[1] == {}:
                 self._by_height.popitem()
 
-    def drain(self, up_to_height: uint32) -> Dict[bytes32, MempoolItem]:
-        ret: Dict[bytes32, MempoolItem] = {}
+    def drain(self, up_to_height: uint32) -> dict[bytes32, MempoolItem]:
+        ret: dict[bytes32, MempoolItem] = {}
 
         if self._txs == {}:
             return ret

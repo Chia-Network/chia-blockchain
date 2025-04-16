@@ -3,18 +3,18 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint32
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
@@ -28,7 +28,7 @@ class WalletSingletonStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_WalletSingletonStore], wrapper: DBWrapper2) -> _T_WalletSingletonStore:
+    async def create(cls: type[_T_WalletSingletonStore], wrapper: DBWrapper2) -> _T_WalletSingletonStore:
         self = cls()
         self.db_wrapper = wrapper
 
@@ -102,19 +102,21 @@ class WalletSingletonStore:
             coin_state.puzzle_reveal, coin_state.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         )
 
-        cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
+        cc_cond = next(
+            cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1
+        )
 
-        coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
+        coin = Coin(coin_state.coin.name(), cc_cond.vars[0], uint64(int_from_bytes(cc_cond.vars[1])))
         inner_puz = get_inner_puzzle_from_singleton(coin_state.puzzle_reveal)
         if inner_puz is None:  # pragma: no cover
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
 
         lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
         if len(lineage_bytes) == 2:
-            lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, int_from_bytes(lineage_bytes[1]))
+            lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, uint64(int_from_bytes(lineage_bytes[1])))
         else:
             lineage_proof = LineageProof(
-                bytes32(lineage_bytes[0]), bytes32(lineage_bytes[1]), int_from_bytes(lineage_bytes[2])
+                bytes32(lineage_bytes[0]), bytes32(lineage_bytes[1]), uint64(int_from_bytes(lineage_bytes[2]))
             )
         # Create and save the new singleton record
         new_record = SingletonRecord(
@@ -125,7 +127,6 @@ class WalletSingletonStore:
         current_records = await self.get_records_by_coin_id(coin_state.coin.name())
         if len(current_records) > 0:
             await self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
-        return
 
     def _to_singleton_record(self, row: Row) -> SingletonRecord:
         return SingletonRecord(
@@ -183,7 +184,7 @@ class WalletSingletonStore:
             )
             return c.rowcount > 0
 
-    async def get_records_by_wallet_id(self, wallet_id: int) -> List[SingletonRecord]:
+    async def get_records_by_wallet_id(self, wallet_id: int) -> list[SingletonRecord]:
         """
         Retrieves all entries for a wallet ID.
         """
@@ -195,7 +196,7 @@ class WalletSingletonStore:
             )
         return [self._to_singleton_record(row) for row in rows]
 
-    async def get_records_by_coin_id(self, coin_id: bytes32) -> List[SingletonRecord]:
+    async def get_records_by_coin_id(self, coin_id: bytes32) -> list[SingletonRecord]:
         """
         Retrieves all entries for a coin ID.
         """
@@ -207,7 +208,7 @@ class WalletSingletonStore:
             )
         return [self._to_singleton_record(row) for row in rows]
 
-    async def get_records_by_singleton_id(self, singleton_id: bytes32) -> List[SingletonRecord]:
+    async def get_records_by_singleton_id(self, singleton_id: bytes32) -> list[SingletonRecord]:
         """
         Retrieves all entries for a singleton ID.
         """
@@ -234,7 +235,7 @@ class WalletSingletonStore:
 
     async def count(self, wallet_id: Optional[uint32] = None) -> int:
         sql = "SELECT COUNT(singleton_id) FROM singletons WHERE removed_height=0"
-        params: List[uint32] = []
+        params: list[uint32] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)
@@ -246,7 +247,7 @@ class WalletSingletonStore:
 
     async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
         sql = "SELECT 1 FROM singletons WHERE removed_height=0"
-        params: List[Union[uint32, bytes32]] = []
+        params: list[Union[uint32, bytes32]] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)

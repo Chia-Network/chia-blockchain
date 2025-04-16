@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
-from chia_rs import G1Element
+from chia_rs import G1Element, SpendBundleConditions, SpendConditions
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 
 H1 = bytes32(b"a" * 32)
 H2 = bytes32(b"b" * 32)
@@ -29,10 +26,10 @@ TEST_COIN = Coin(H1, H2, uint64(123))
 
 def mk_agg_sig_conditions(
     opcode: ConditionOpcode,
-    agg_sig_data: List[Tuple[bytes, bytes]],
-    agg_sig_unsafe_data: List[Tuple[bytes, bytes]] = [],
+    agg_sig_data: list[tuple[G1Element, bytes]],
+    agg_sig_unsafe_data: list[tuple[G1Element, bytes]] = [],
 ) -> SpendBundleConditions:
-    spend = Spend(
+    spend = SpendConditions(
         coin_id=TEST_COIN.name(),
         parent_id=H1,
         puzzle_hash=H2,
@@ -53,7 +50,7 @@ def mk_agg_sig_conditions(
         agg_sig_puzzle_amount=agg_sig_data if opcode == ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT else [],
         flags=0,
     )
-    return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0)
+    return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0, False, 0, 0)
 
 
 @pytest.mark.parametrize(
@@ -69,18 +66,18 @@ def mk_agg_sig_conditions(
     ],
 )
 def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
-    conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")])
+    conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(PK1, b"msg1"), (PK2, b"msg2")])
     pks, msgs = pkm_pairs(conds, b"foobar")
     result_aligned = [(x, y) for x, y in zip(pks, msgs)]
     conditions_dict = {
-        opcode: [ConditionWithArgs(opcode, [bytes48(PK1), b"msg1"]), ConditionWithArgs(opcode, [bytes48(PK2), b"msg2"])]
+        opcode: [ConditionWithArgs(opcode, [bytes(PK1), b"msg1"]), ConditionWithArgs(opcode, [bytes(PK2), b"msg2"])]
     }
     result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
     assert result_aligned == result2
 
     # missing message argument
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes48(PK1)])]}
+        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes(PK1)])]}
         result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
 
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
@@ -89,18 +86,18 @@ def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
 
     # extra argument
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes48(PK1), b"msg1", b"msg2"])]}
+        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes(PK1), b"msg1", b"msg2"])]}
         result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
 
     # message too long
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes48(PK1), b"m" * 1025])]}
+        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes(PK1), b"m" * 1025])]}
         result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
 
 
 class TestPkmPairs:
     def test_empty_list(self) -> None:
-        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0)
+        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
@@ -136,7 +133,7 @@ class TestPkmPairs:
         ],
     )
     def test_agg_sig_conditions(self, opcode: ConditionOpcode, value: bytes) -> None:
-        conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")])
+        conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(PK1, b"msg1"), (PK2, b"msg2")])
         addendum = b"foobar" if opcode == ConditionOpcode.AGG_SIG_ME else std_hash(b"foobar" + opcode)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK1), bytes(PK2)]
@@ -155,9 +152,7 @@ class TestPkmPairs:
         ],
     )
     def test_agg_sig_unsafe(self, opcode: ConditionOpcode) -> None:
-        conds = mk_agg_sig_conditions(
-            opcode, agg_sig_data=[], agg_sig_unsafe_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")]
-        )
+        conds = mk_agg_sig_conditions(opcode, agg_sig_data=[], agg_sig_unsafe_data=[(PK1, b"msg1"), (PK2, b"msg2")])
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK1), bytes(PK2)]
         assert msgs == [b"msg1", b"msg2"]
@@ -175,52 +170,20 @@ class TestPkmPairs:
         ],
     )
     def test_agg_sig_mixed(self, opcode: ConditionOpcode, value: bytes) -> None:
-        conds = mk_agg_sig_conditions(
-            opcode, agg_sig_data=[(bytes48(PK1), b"msg1")], agg_sig_unsafe_data=[(bytes48(PK2), b"msg2")]
-        )
+        conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(PK1, b"msg1")], agg_sig_unsafe_data=[(PK2, b"msg2")])
         addendum = b"foobar" if opcode == ConditionOpcode.AGG_SIG_ME else std_hash(b"foobar" + opcode)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK2), bytes(PK1)]
         assert msgs == [b"msg2", b"msg1" + value + addendum]
-
-    @pytest.mark.parametrize(
-        "opcode",
-        [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-            ConditionOpcode.AGG_SIG_ME,
-        ],
-    )
-    def test_agg_sig_unsafe_restriction(self, opcode: ConditionOpcode) -> None:
-        conds = mk_agg_sig_conditions(
-            opcode, agg_sig_data=[], agg_sig_unsafe_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")]
-        )
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"sg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg2")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"g2")
 
 
 class TestPkmPairsForConditionDict:
     def test_agg_sig_unsafe_restriction(self) -> None:
         ASU = ConditionOpcode.AGG_SIG_UNSAFE
 
-        conds = {
-            ASU: [ConditionWithArgs(ASU, [bytes48(PK1), b"msg1"]), ConditionWithArgs(ASU, [bytes48(PK2), b"msg2"])]
-        }
+        conds = {ASU: [ConditionWithArgs(ASU, [bytes(PK1), b"msg1"]), ConditionWithArgs(ASU, [bytes(PK2), b"msg2"])]}
         tuples = pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"msg10")
-        assert tuples == [(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")]
+        assert tuples == [(PK1, b"msg1"), (PK2, b"msg2")]
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
             pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"msg1")

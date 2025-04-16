@@ -8,8 +8,9 @@ import random
 import subprocess
 import sys
 import threading
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import AsyncIterator, List, Optional
+from typing import Optional
 
 import anyio
 import pytest
@@ -17,6 +18,7 @@ import pytest
 from chia._tests.core.server import serve
 from chia._tests.util.misc import create_logger
 from chia.server import chia_policy
+from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout
 
 here = pathlib.Path(__file__).parent
@@ -57,8 +59,8 @@ class Client:
 
     @classmethod
     @contextlib.asynccontextmanager
-    async def open_several(cls, count: int, ip: str, port: int) -> AsyncIterator[List[Client]]:
-        clients: List[Client] = await asyncio.gather(*(cls.open(ip=ip, port=port) for _ in range(count)))
+    async def open_several(cls, count: int, ip: str, port: int) -> AsyncIterator[list[Client]]:
+        clients: list[Client] = await asyncio.gather(*(cls.open(ip=ip, port=port) for _ in range(count)))
         try:
             yield [*clients]
         finally:
@@ -98,7 +100,7 @@ class ServeInThread:
     server_task: Optional[asyncio.Task[None]] = None
     thread: Optional[threading.Thread] = None
     thread_end_event: threading.Event = field(default_factory=threading.Event)
-    port_holder: List[int] = field(default_factory=list)
+    port_holder: list[int] = field(default_factory=list)
 
     def start(self) -> None:
         self.original_connection_limit = chia_policy.global_max_concurrent_connections
@@ -122,7 +124,7 @@ class ServeInThread:
             asyncio.set_event_loop_policy(original_event_loop_policy)
 
     async def main(self) -> None:
-        self.server_task = asyncio.create_task(
+        self.server_task = create_referenced_task(
             serve.async_main(
                 out_path=self.out_path,
                 ip=self.ip,
@@ -161,7 +163,8 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     flood_file.touch()
 
     logger.info(" ==== launching serve.py")
-    with subprocess.Popen(
+    # TODO: is there some reason not to use an async process here?
+    with subprocess.Popen(  # noqa: ASYNC220
         [sys.executable, "-m", "chia._tests.core.server.serve", os.fspath(serve_file)],
     ):
         logger.info(" ====           serve.py running")
@@ -169,7 +172,8 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         await asyncio.sleep(adjusted_timeout(5))
 
         logger.info(" ==== launching flood.py")
-        with subprocess.Popen(
+        # TODO: is there some reason not to use an async process here?
+        with subprocess.Popen(  # noqa: ASYNC220
             [sys.executable, "-m", "chia._tests.core.server.flood", os.fspath(flood_file)],
         ):
             logger.info(" ====           flood.py running")
@@ -189,7 +193,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         try:
             logger.info(" ==== attempting a single new connection")
             with anyio.fail_after(delay=adjusted_timeout(1)):
-                reader, writer = await asyncio.open_connection(IP, PORT)
+                _reader, writer = await asyncio.open_connection(IP, PORT)
             logger.info(" ==== connection succeeded")
             post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:
@@ -214,10 +218,10 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
 
     over = []
     connection_limit = 25
-    accept_loop_count_over: List[int] = []
+    accept_loop_count_over: list[int] = []
     server_output_lines = serve_output.splitlines()
     found_shutdown = False
-    shutdown_lines: List[str] = []
+    shutdown_lines: list[str] = []
     for line in server_output_lines:
         if not found_shutdown:
             if not line.casefold().endswith("shutting down"):
@@ -241,9 +245,9 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     assert "Traceback" not in serve_output
     assert "paused accepting connections" in serve_output
     assert post_connection_succeeded, post_connection_error
-    assert all(
-        "new connection" not in line.casefold() for line in shutdown_lines
-    ), "new connection found during shut down"
+    assert all("new connection" not in line.casefold() for line in shutdown_lines), (
+        "new connection found during shut down"
+    )
 
     logger.info(" ==== all checks passed")
 

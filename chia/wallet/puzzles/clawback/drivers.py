@@ -1,39 +1,52 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional, Set, Union
+from typing import Any, Optional, Union
+
+from chia_puzzles_py.programs import (
+    AUGMENTED_CONDITION as AUGMENTED_CONDITION_BYTES,
+)
+from chia_puzzles_py.programs import (
+    AUGMENTED_CONDITION_HASH as AUGMENTED_CONDITION_HASH_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_1_OF_N as P2_1_OF_N_BYTES,
+)
+from chia_puzzles_py.programs import (
+    P2_PUZZLE_HASH,
+    P2_PUZZLE_HASH_HASH,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_for_solution
-from chia.util.ints import uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.wallet_types import RemarkDataType
 
-P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clsp")
-P2_CURRIED_PUZZLE_MOD = load_clvm_maybe_recompile("p2_puzzle_hash.clsp")
-P2_CURRIED_PUZZLE_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_CURRIED_PUZZLE_MOD.get_tree_hash())
-AUGMENTED_CONDITION = load_clvm_maybe_recompile("augmented_condition.clsp")
-AUGMENTED_CONDITION_HASH = AUGMENTED_CONDITION.get_tree_hash()
+P2_1_OF_N = Program.from_bytes(P2_1_OF_N_BYTES)
+P2_CURRIED_PUZZLE_MOD = Program.from_bytes(P2_PUZZLE_HASH)
+P2_CURRIED_PUZZLE_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_PUZZLE_HASH_HASH)
+AUGMENTED_CONDITION = Program.from_bytes(AUGMENTED_CONDITION_BYTES)
+AUGMENTED_CONDITION_HASH = bytes32(AUGMENTED_CONDITION_HASH_BYTES)
 log = logging.getLogger(__name__)
 
 
-def create_augmented_cond_puzzle(condition: List[Union[int, uint64]], puzzle: Program) -> Program:
+def create_augmented_cond_puzzle(condition: list[Union[int, uint64]], puzzle: Program) -> Program:
     return AUGMENTED_CONDITION.curry(condition, puzzle)
 
 
-def create_augmented_cond_puzzle_hash(condition: List[Any], puzzle_hash: bytes32) -> bytes32:
+def create_augmented_cond_puzzle_hash(condition: list[Any], puzzle_hash: bytes32) -> bytes32:
     hash_of_quoted_mod_hash = calculate_hash_of_quoted_mod_hash(AUGMENTED_CONDITION_HASH)
     hashed_args = [Program.to(condition).get_tree_hash(), puzzle_hash]
     return curry_and_treehash(hash_of_quoted_mod_hash, *hashed_args)
@@ -76,7 +89,7 @@ def create_merkle_proof(merkle_tree: MerkleTree, puzzle_hash: bytes32) -> Progra
     To spend a p2_1_of_n clawback we recreate the full merkle tree
     The required proof is then selected from the merkle tree based on the puzzle_hash of the puzzle we
     want to execute
-    Returns a proof: (int, List[bytes32]) which can be provided to the p2_1_of_n solution
+    Returns a proof: (int, list[bytes32]) which can be provided to the p2_1_of_n solution
     """
     proof = merkle_tree.generate_proof(puzzle_hash)
     program: Program = Program.to((proof[0], proof[1][0]))
@@ -129,10 +142,18 @@ def match_clawback_puzzle(
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:
         return None
+    if not isinstance(inner_puzzle, SerializedProgram):
+        inner_puzzle = SerializedProgram.from_program(inner_puzzle)
+    if not isinstance(inner_solution, SerializedProgram):
+        inner_solution = SerializedProgram.from_program(inner_solution)
     # Fetch Remark condition
-    conditions = conditions_for_solution(inner_puzzle, inner_solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8)
+    conditions = conditions_for_solution(
+        inner_puzzle,
+        inner_solution,
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
+    )
     metadata: Optional[ClawbackMetadata] = None
-    new_puzhash: Set[bytes32] = set()
+    new_puzhash: set[bytes32] = set()
     if conditions is not None:
         for condition in conditions:
             if (

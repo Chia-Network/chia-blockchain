@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import datetime
-from typing import List, Tuple, Union
+from typing import Union
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.time_out_assert import time_out_assert
@@ -14,17 +15,16 @@ from chia.protocols.wallet_protocol import RespondFeeEstimates
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.util.ints import uint64
 from chia.wallet.wallet import Wallet
 
 
 @pytest.mark.anyio
 async def test_protocol_messages(
-    simulator_and_wallet: Tuple[
-        List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools
-    ]
+    simulator_and_wallet: tuple[
+        list[Union[FullNodeAPI, FullNodeSimulator]], list[tuple[Wallet, ChiaServer]], BlockTools
+    ],
 ) -> None:
-    full_nodes, wallets, bt = simulator_and_wallet
+    full_nodes, _wallets, bt = simulator_and_wallet
     a_wallet = bt.get_pool_wallet_tool()
     reward_ph = a_wallet.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(

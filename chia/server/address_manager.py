@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import functools
 import logging
 import math
 import time
 from asyncio import Lock
+from dataclasses import dataclass, field
 from random import choice, randrange
 from secrets import randbits
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
+
+from chia_rs.sized_ints import uint16, uint64
 
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint64
 
 TRIED_BUCKETS_PER_GROUP = 8
 NEW_BUCKETS_PER_SOURCE_GROUP = 64
@@ -81,7 +84,7 @@ class ExtendedPeerInfo:
             bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[:8]),
             byteorder="big",
         )
-        hash1 = hash1 % TRIED_BUCKETS_PER_GROUP
+        hash1 %= TRIED_BUCKETS_PER_GROUP
         hash2 = int.from_bytes(
             bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_group() + bytes([hash1]))[:8]),
             byteorder="big",
@@ -96,7 +99,7 @@ class ExtendedPeerInfo:
             bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_group() + src_peer.get_group())[:8]),
             byteorder="big",
         )
-        hash1 = hash1 % NEW_BUCKETS_PER_SOURCE_GROUP
+        hash1 %= NEW_BUCKETS_PER_SOURCE_GROUP
         hash2 = int.from_bytes(
             bytes(std_hash(key.to_bytes(32, byteorder="big") + src_peer.get_group() + bytes([hash1]))[:8]),
             byteorder="big",
@@ -158,42 +161,32 @@ class ExtendedPeerInfo:
         return chance
 
 
+def create_tried_matrix() -> list[list[int]]:
+    return [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
+
+
+def create_new_matrix() -> list[list[int]]:
+    return [[-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)]
+
+
 # This is a Python port from 'CAddrMan' class from Bitcoin core code.
+@dataclass
 class AddressManager:
-    id_count: int
-    key: int
-    random_pos: List[int]
-    tried_matrix: List[List[int]]
-    new_matrix: List[List[int]]
-    tried_count: int
-    new_count: int
-    map_addr: Dict[str, int]
-    map_info: Dict[int, ExtendedPeerInfo]
-    last_good: int
-    tried_collisions: List[int]
-    used_new_matrix_positions: Set[Tuple[int, int]]
-    used_tried_matrix_positions: Set[Tuple[int, int]]
-    allow_private_subnets: bool
-
-    def __init__(self) -> None:
-        self.clear()
-        self.lock: Lock = Lock()
-
-    def clear(self) -> None:
-        self.id_count = 0
-        self.key = randbits(256)
-        self.random_pos = []
-        self.tried_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
-        self.new_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)]
-        self.tried_count = 0
-        self.new_count = 0
-        self.map_addr = {}
-        self.map_info = {}
-        self.last_good = 1
-        self.tried_collisions = []
-        self.used_new_matrix_positions = set()
-        self.used_tried_matrix_positions = set()
-        self.allow_private_subnets = False
+    id_count: int = 0
+    key: int = field(default_factory=functools.partial(randbits, 256))
+    random_pos: list[int] = field(default_factory=list)
+    tried_matrix: list[list[int]] = field(default_factory=create_tried_matrix)
+    new_matrix: list[list[int]] = field(default_factory=create_new_matrix)
+    tried_count: int = 0
+    new_count: int = 0
+    map_addr: dict[str, int] = field(default_factory=dict)
+    map_info: dict[int, ExtendedPeerInfo] = field(default_factory=dict)
+    last_good: int = 1
+    tried_collisions: list[int] = field(default_factory=list)
+    used_new_matrix_positions: set[tuple[int, int]] = field(default_factory=set)
+    used_tried_matrix_positions: set[tuple[int, int]] = field(default_factory=set)
+    allow_private_subnets: bool = False
+    lock: Lock = field(default_factory=Lock)
 
     def make_private_subnets_valid(self) -> None:
         self.allow_private_subnets = True
@@ -230,7 +223,7 @@ class AddressManager:
                 if self.tried_matrix[bucket][pos] != -1:
                     self.used_tried_matrix_positions.add((bucket, pos))
 
-    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> Tuple[ExtendedPeerInfo, int]:
+    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
         self.map_info[node_id] = ExtendedPeerInfo(addr, addr_src)
@@ -239,7 +232,7 @@ class AddressManager:
         self.random_pos.append(node_id)
         return (self.map_info[node_id], node_id)
 
-    def find_(self, addr: PeerInfo) -> Tuple[Optional[ExtendedPeerInfo], Optional[int]]:
+    def find_(self, addr: PeerInfo) -> tuple[Optional[ExtendedPeerInfo], Optional[int]]:
         if addr.host not in self.map_addr:
             return (None, None)
         node_id = self.map_addr[addr.host]
@@ -445,7 +438,7 @@ class AddressManager:
         if not new_only and self.tried_count > 0 and (self.new_count == 0 or randrange(2) == 0):
             chance = 1.0
             start = time.time()
-            cached_tried_matrix_positions: List[Tuple[int, int]] = []
+            cached_tried_matrix_positions: list[tuple[int, int]] = []
             if len(self.used_tried_matrix_positions) < math.sqrt(TRIED_BUCKET_COUNT * BUCKET_SIZE):
                 cached_tried_matrix_positions = list(self.used_tried_matrix_positions)
             while True:
@@ -475,7 +468,7 @@ class AddressManager:
         else:
             chance = 1.0
             start = time.time()
-            cached_new_matrix_positions: List[Tuple[int, int]] = []
+            cached_new_matrix_positions: list[tuple[int, int]] = []
             if len(self.used_new_matrix_positions) < math.sqrt(NEW_BUCKET_COUNT * BUCKET_SIZE):
                 cached_new_matrix_positions = list(self.used_new_matrix_positions)
             while True:
@@ -542,11 +535,9 @@ class AddressManager:
         old_id = self.tried_matrix[tried_bucket][tried_bucket_pos]
         return self.map_info[old_id]
 
-    def get_peers_(self) -> List[TimestampedPeerInfo]:
-        addr: List[TimestampedPeerInfo] = []
-        num_nodes = math.ceil(23 * len(self.random_pos) / 100)
-        if num_nodes > 1000:
-            num_nodes = 1000
+    def get_peers_(self) -> list[TimestampedPeerInfo]:
+        addr: list[TimestampedPeerInfo] = []
+        num_nodes = min(1000, math.ceil(23 * len(self.random_pos) / 100))
         for n in range(len(self.random_pos)):
             if len(addr) >= num_nodes:
                 return addr
@@ -598,7 +589,7 @@ class AddressManager:
 
     async def add_to_new_table(
         self,
-        addresses: List[TimestampedPeerInfo],
+        addresses: list[TimestampedPeerInfo],
         source: Optional[PeerInfo] = None,
         penalty: int = 0,
     ) -> bool:
@@ -649,7 +640,7 @@ class AddressManager:
             return self.select_peer_(new_only)
 
     # Return a bunch of addresses, selected at random.
-    async def get_peers(self) -> List[TimestampedPeerInfo]:
+    async def get_peers(self) -> list[TimestampedPeerInfo]:
         async with self.lock:
             return self.get_peers_()
 

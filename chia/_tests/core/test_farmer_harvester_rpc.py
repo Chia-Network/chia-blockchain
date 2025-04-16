@@ -5,13 +5,16 @@ import logging
 import operator
 import sys
 import time
+from collections.abc import Awaitable
 from math import ceil
 from os import mkdir
 from pathlib import Path
 from shutil import copy
-from typing import Any, Awaitable, Callable, Dict, List, Union, cast
+from typing import Any, Callable, Union, cast
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.plot_sync.test_delta import dummy_plot
@@ -20,7 +23,7 @@ from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
-from chia.plot_sync.receiver import Receiver
+from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
@@ -33,12 +36,9 @@ from chia.rpc.farmer_rpc_api import (
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.simulator.block_tools import get_plot_dir
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
-from chia.util.misc import get_list_or_len
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 
 log = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) -> None:
     def wait() -> bool:
         current_last_sync_id = receiver.last_sync().sync_id
-        return current_last_sync_id != 0 and current_last_sync_id != previous_last_sync_id
+        return current_last_sync_id not in {0, previous_last_sync_id}
 
     await time_out_assert(30, wait)
 
@@ -359,8 +359,8 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
 @pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
-    endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
-    filtering: Union[List[FilterItem], List[str]],
+    endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[dict[str, Any]]],
+    filtering: Union[list[FilterItem], list[str]],
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,
@@ -379,12 +379,12 @@ async def test_farmer_get_harvester_plots_endpoints(
     request: PaginatedRequestData
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         request = PlotInfoRequestData(
-            harvester_id, uint32(0), uint32(0), cast(List[FilterItem], filtering), sort_key, reverse
+            harvester_id, uint32(0), uint32(0), cast(list[FilterItem], filtering), sort_key, reverse
         )
     else:
-        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(List[str], filtering), reverse)
+        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(list[str], filtering), reverse)
 
-    def add_plot_directories(prefix: str, count: int) -> List[Path]:
+    def add_plot_directories(prefix: str, count: int) -> list[Path]:
         new_paths = []
         for i in range(count):
             new_paths.append(harvester.root_path / f"{prefix}_{i}")

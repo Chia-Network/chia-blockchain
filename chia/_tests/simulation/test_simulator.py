@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.cmds.units import units
@@ -10,7 +9,6 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
@@ -21,7 +19,7 @@ from chia.wallet.wallet_node import WalletNode
 async def test_simulation_farm_blocks_to_puzzlehash(
     count: int,
     guarantee_transaction_blocks: bool,
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
     [[full_node_api], _, _] = simulator_and_wallet
 
@@ -41,7 +39,7 @@ async def test_simulation_farm_blocks_to_puzzlehash(
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 async def test_simulation_farm_blocks_to_wallet(
     count: int,
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -79,7 +77,7 @@ async def test_simulation_farm_blocks_to_wallet(
 async def test_simulation_farm_rewards_to_wallet(
     amount: int,
     coin_count: int,
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -107,7 +105,7 @@ async def test_simulation_farm_rewards_to_wallet(
 
 @pytest.mark.anyio
 async def test_wait_transaction_records_entered_mempool(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
     repeats = 50
     tx_amount = 1
@@ -127,22 +125,23 @@ async def test_wait_transaction_records_entered_mempool(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        [tx] = await wallet.generate_signed_transaction(
-            amount=uint64(tx_amount),
-            puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_config=DEFAULT_TX_CONFIG,
-            coins={coin},
-        )
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                amounts=[uint64(tx_amount)],
+                puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
+                action_scope=action_scope,
+                coins={coin},
+            )
 
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        [tx] = action_scope.side_effects.transactions
+        await full_node_api.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
         assert tx.spend_bundle is not None
         assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
 
 
 @pytest.mark.anyio
 async def test_process_transaction_records(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
     repeats = 50
     tx_amount = 1
@@ -162,15 +161,15 @@ async def test_process_transaction_records(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        [tx] = await wallet.generate_signed_transaction(
-            amount=uint64(tx_amount),
-            puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_config=DEFAULT_TX_CONFIG,
-            coins={coin},
-        )
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                amounts=[uint64(tx_amount)],
+                puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
+                action_scope=action_scope,
+                coins={coin},
+            )
 
-        await full_node_api.process_transaction_records(records=[tx])
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
 
@@ -186,7 +185,7 @@ async def test_process_transaction_records(
     ],
 )
 async def test_create_coins_with_amounts(
-    self_hostname: str, amounts: List[uint64], simulator_and_wallet: OldSimulatorsAndWallets
+    self_hostname: str, amounts: list[uint64], simulator_and_wallet: OldSimulatorsAndWallets
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
@@ -196,8 +195,8 @@ async def test_create_coins_with_amounts(
     await full_node_api.farm_rewards_to_wallet(amount=sum(amounts), wallet=wallet)
     # Get some more coins.  The creator helper doesn't get you all the coins you
     # need yet.
-    await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
-    coins = await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
+    await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet, timeout=30)
+    coins = await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet, timeout=60)
     assert sorted(coin.amount for coin in coins) == sorted(amounts)
 
 
@@ -212,8 +211,8 @@ async def test_create_coins_with_amounts(
     ids=lambda amounts: ", ".join(str(amount) for amount in amounts),
 )
 async def test_create_coins_with_invalid_amounts_raises(
-    amounts: List[int],
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    amounts: list[int],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 

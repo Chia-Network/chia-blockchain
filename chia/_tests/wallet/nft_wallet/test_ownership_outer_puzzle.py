@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Optional
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
 from clvm_tools.binutils import assemble
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16
 from chia.wallet.nft_wallet.ownership_outer_puzzle import puzzle_for_ownership_layer
 from chia.wallet.nft_wallet.transfer_program_puzzle import puzzle_for_transfer_program
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
@@ -17,7 +17,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 def test_ownership_outer_puzzle() -> None:
     ACS = Program.to(1)
     NIL = Program.to([])
-    owner = bytes32([0] * 32)
+    owner = bytes32.zeros
     # (mod (current_owner conditions solution)
     #     (list current_owner () conditions)
     # )
@@ -27,8 +27,8 @@ def test_ownership_outer_puzzle() -> None:
         """
     )
     transfer_program_default: Program = puzzle_for_transfer_program(bytes32([1] * 32), bytes32([2] * 32), uint16(5000))
-    ownership_puzzle: Program = puzzle_for_ownership_layer(owner, transfer_program, ACS)
-    ownership_puzzle_empty: Program = puzzle_for_ownership_layer(NIL, transfer_program, ACS)
+    ownership_puzzle: Program = puzzle_for_ownership_layer(owner, Program.to(transfer_program), ACS)
+    ownership_puzzle_empty: Program = puzzle_for_ownership_layer(NIL, Program.to(transfer_program), ACS)
     ownership_puzzle_default: Program = puzzle_for_ownership_layer(owner, transfer_program_default, ACS)
     ownership_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle))
     ownership_driver_empty: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle_empty))

@@ -6,7 +6,10 @@ import random
 import sys
 from pathlib import Path
 from time import monotonic
-from typing import List
+
+from chia_rs import Foliage, FoliageBlockData, FoliageTransactionBlock, PoolTarget, RewardChainBlock, TransactionsInfo
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import (
@@ -22,15 +25,10 @@ from chia._tests.util.benchmarks import (
 )
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.block_store import BlockStore
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 # to run this benchmark:
 # python -m benchmarks.coin_store
@@ -47,8 +45,8 @@ async def run_add_block_benchmark(version: int) -> None:
     # keep track of benchmark total time
     all_test_time = 0.0
 
-    prev_block = bytes32([0] * 32)
-    prev_ses_hash = bytes32([0] * 32)
+    prev_block = bytes32.zeros
+    prev_ses_hash = bytes32.zeros
 
     header_hashes = []
 
@@ -64,7 +62,7 @@ async def run_add_block_benchmark(version: int) -> None:
         sub_slot_iters = uint64(10)
         required_iters = uint64(100)
         transaction_block_counter = 0
-        prev_transaction_block = bytes32([0] * 32)
+        prev_transaction_block = bytes32.zeros
         prev_transaction_height = uint32(0)
         total_time = 0.0
         ses_counter = 0
@@ -72,7 +70,7 @@ async def run_add_block_benchmark(version: int) -> None:
         if verbose:
             print("profiling add_full_block", end="")
 
-        tx_block_heights: List[uint32] = []
+        tx_block_heights: list[uint32] = []
 
         for height in range(block_height, block_height + NUM_ITERS):
             is_transaction = transaction_block_counter == 0
@@ -135,7 +133,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 pool_target,
                 rand_g2() if has_pool_pk else None,  # pool_signature
                 rand_hash(),  # farmer_reward_puzzle_hash
-                bytes32([0] * 32),  # extension_data
+                bytes32.zeros,  # extension_data
             )
 
             foliage = Foliage(
@@ -209,7 +207,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 deficit == 16,
                 prev_transaction_height,
                 timestamp if is_transaction else None,
-                prev_transaction_block if prev_transaction_block != bytes32([0] * 32) else None,
+                prev_transaction_block if prev_transaction_block != bytes32.zeros else None,
                 None if fees == 0 else fees,
                 reward_claims_incorporated,
                 finished_challenge_slot_hashes,
@@ -332,7 +330,7 @@ async def run_add_block_benchmark(version: int) -> None:
 
         start = monotonic()
         for i in tx_block_heights:
-            gens = await block_store.get_generators_at([i])
+            gens = await block_store.get_generators_at({i})
             assert len(gens) == 1
 
         stop = monotonic()
@@ -448,7 +446,7 @@ async def run_add_block_benchmark(version: int) -> None:
             print("profiling get_block_records_close_to_peak")
 
         start = monotonic()
-        block_dict, peak_h = await block_store.get_block_records_close_to_peak(99)
+        block_dict, _peak_h = await block_store.get_block_records_close_to_peak(99)
         assert len(block_dict) == 100
 
         stop = monotonic()
@@ -491,7 +489,7 @@ async def run_add_block_benchmark(version: int) -> None:
         print(f"all tests completed in {all_test_time:0.4f}s")
 
         db_size = os.path.getsize(Path("block-store-benchmark.db"))
-        print(f"database size: {db_size/1000000:.3f} MB")
+        print(f"database size: {db_size / 1000000:.3f} MB")
 
 
 if __name__ == "__main__":

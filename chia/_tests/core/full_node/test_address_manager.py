@@ -5,11 +5,11 @@ import time
 from pathlib import Path
 
 import pytest
+from chia_rs.sized_ints import uint16, uint64
 
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import AddressManagerStore
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.util.ints import uint16, uint64
 
 
 class AddressManagerTest(AddressManager):
@@ -238,7 +238,7 @@ class TestPeerManager:
 
         peer1 = PeerInfo("250.1.2.1", 8444)
         t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
-        info, node_id = addrman.create_(t_peer, peer1)
+        info, _node_id = addrman.create_(t_peer, peer1)
         assert info.peer_info == peer1
         info, _ = addrman.find_(peer1)
         assert info.peer_info == peer1
@@ -250,7 +250,7 @@ class TestPeerManager:
 
         peer1 = PeerInfo("250.1.2.1", 8444)
         t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
-        info, node_id = addrman.create_(t_peer, peer1)
+        _info, node_id = addrman.create_(t_peer, peer1)
 
         # Test: Delete should actually delete the addr.
         assert await addrman.size() == 1

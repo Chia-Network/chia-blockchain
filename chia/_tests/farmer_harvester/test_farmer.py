@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-import dataclasses
 import json
 import logging
 from dataclasses import dataclass
 from time import time
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Optional, Union, cast
+from unittest.mock import ANY
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
 from yarl import URL
 
+from chia import __version__
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -29,32 +32,30 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     verify_and_get_quality_string,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 log = logging.getLogger(__name__)
 
 
 class StripOldEntriesCase:
-    pairs: List[Tuple[float, int]]
+    pairs: list[tuple[float, int]]
     before: float
-    expected_result: List[Tuple[float, int]]
+    expected_result: list[tuple[float, int]]
 
-    def __init__(self, pairs: List[Tuple[float, int]], before: float, expected_result: List[Tuple[float, int]]):
+    def __init__(self, pairs: list[tuple[float, int]], before: float, expected_result: list[tuple[float, int]]):
         self.pairs = pairs
         self.before = before
         self.expected_result = expected_result
 
 
 class IncrementPoolStatsCase:
-    pool_states: Dict[bytes32, Any]
+    pool_states: dict[bytes32, Any]
     p2_singleton_puzzle_hash: bytes32
     name: str
     current_time: float
     count: int
-    value: Optional[Union[int, Dict[str, Any]]]
+    value: Optional[Union[int, dict[str, Any]]]
     expected_result: Any
 
     def __init__(
@@ -63,7 +64,7 @@ class IncrementPoolStatsCase:
         name: str,
         current_time: float,
         count: int,
-        value: Optional[Union[int, Dict[str, Any]]],
+        value: Optional[Union[int, dict[str, Any]]],
         expected_result: Any,
     ):
         prepared_p2_singleton_puzzle_hash = std_hash(b"11223344")
@@ -86,9 +87,11 @@ class IncrementPoolStatsCase:
 class DummyHarvesterPeer:
     return_invalid_response: bool
     peer_node_id: bytes32 = std_hash(b"1")
+    version: str
 
-    def __init__(self, return_valid_response: bool):
-        self.return_invalid_response = return_valid_response
+    def __init__(self, return_invalid_response: bool = False, version: str = "1.0.0"):
+        self.return_invalid_response = return_invalid_response
+        self.version = version
 
     async def send_message(self, arg1: Any) -> None:
         pass
@@ -139,10 +142,10 @@ class NewProofOfSpaceCase:
     pool_config: PoolWalletConfig
     pool_difficulty: Optional[uint64]
     authentication_token_timeout: Optional[uint8]
-    farmer_private_keys: List[PrivateKey]
-    authentication_keys: Dict[bytes32, PrivateKey]
+    farmer_private_keys: list[PrivateKey]
+    authentication_keys: dict[bytes32, PrivateKey]
     use_invalid_peer_response: bool
-    expected_pool_state: Dict[str, Any]
+    expected_pool_state: dict[str, Any]
     marks: Marks = ()
 
     # This creates a test case whose proof of space passes plot filter and quality check
@@ -156,7 +159,7 @@ class NewProofOfSpaceCase:
         authentication_token_timeout: Optional[uint8],
         use_invalid_peer_response: bool,
         has_valid_authentication_keys: bool,
-        expected_pool_stats: Dict[str, Any],
+        expected_pool_stats: dict[str, Any],
     ) -> NewProofOfSpaceCase:
         p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
         pool_config = PoolWalletConfig(
@@ -188,8 +191,7 @@ class NewProofOfSpaceCase:
             plot_challenge=bytes32.fromhex("7580e4c366dc2c94c37ce44943f9629a3cd6e027d7b24cd014adeaa578d4b0a2"),
             plot_public_key=G1Element.from_bytes(
                 bytes.fromhex(
-                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3e"
-                    "d69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
+                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3ed69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
                 )
             ),
             pool_public_key=None,
@@ -345,23 +347,24 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
                     "pool_errors_24h": [],
-                    "valid_partials_since_start": 0,
-                    "valid_partials_24h": [],
+                    "valid_partials_since_start": 1,
+                    "valid_partials_24h": [1],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
                     "insufficient_partials_since_start": 0,
                     "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
-                    "missing_partials_since_start": 1,
-                    "missing_partials_24h": [1],
+                    "missing_partials_since_start": 0,
+                    "missing_partials_24h": [],
                 },
             ),
+            # Empty pool_url means solo plotNFT farming
             id="empty_pool_url",
         ),
         pytest.param(
@@ -376,7 +379,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -407,7 +410,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -438,7 +441,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -469,7 +472,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -500,7 +503,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -531,7 +534,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 1,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [1],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -557,7 +560,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
     case: NewProofOfSpaceCase,
 ) -> None:
-    farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
+    farmer_service, _farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     sp = farmer_protocol.NewSignagePoint(
@@ -589,7 +592,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     )
 
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
-    farmer_api.farmer.constants = dataclasses.replace(DEFAULT_CONSTANTS, POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
+    farmer_api.farmer.constants = DEFAULT_CONSTANTS.replace(POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
     farmer_api.farmer._private_keys = case.farmer_private_keys
     farmer_api.farmer.authentication_keys = case.authentication_keys
     farmer_api.farmer.sps[case.sp_hash] = [sp]
@@ -668,7 +671,7 @@ class DummyPoolResponse:
     new_difficulty: Optional[int] = None
 
     async def text(self) -> str:
-        json_dict: Dict[str, Any] = dict()
+        json_dict: dict[str, Any] = dict()
         if self.error_code:
             json_dict["error_code"] = self.error_code
             json_dict["error_message"] = self.error_message if self.error_message else "error-msg"
@@ -682,14 +685,14 @@ class DummyPoolResponse:
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
         pass
 
 
-def create_valid_pos(farmer: Farmer) -> Tuple[farmer_protocol.NewSignagePoint, ProofOfSpace, NewProofOfSpace]:
+def create_valid_pos(farmer: Farmer) -> tuple[farmer_protocol.NewSignagePoint, ProofOfSpace, NewProofOfSpace]:
     case = NewProofOfSpaceCase.create_verified_quality_case(
         difficulty=uint64(1),
         sub_slot_iters=uint64(1000000000000),
@@ -728,7 +731,7 @@ def create_valid_pos(farmer: Farmer) -> Tuple[farmer_protocol.NewSignagePoint, P
         fee_info=None,
     )
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
-    farmer.constants = dataclasses.replace(DEFAULT_CONSTANTS, POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
+    farmer.constants = DEFAULT_CONSTANTS.replace(POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
     farmer._private_keys = case.farmer_private_keys
     farmer.authentication_keys = case.authentication_keys
     farmer.sps[case.sp_hash] = [sp]
@@ -760,11 +763,11 @@ def create_valid_pos(farmer: Farmer) -> Tuple[farmer_protocol.NewSignagePoint, P
     return sp, pos, new_pos
 
 
-def override_pool_state(overrides: Dict[str, Any]) -> Dict[str, Any]:
+def override_pool_state(overrides: dict[str, Any]) -> dict[str, Any]:
     pool_state = {
         "points_found_since_start": 0,
         # Original item format here is (timestamp, value) but we'll ignore timestamp part
-        # so every `xxx_24h` item in this dict will be List[Any].
+        # so every `xxx_24h` item in this dict will be list[Any].
         "points_found_24h": [],
         "points_acknowledged_since_start": 0,
         "points_acknowledged_24h": [],
@@ -789,7 +792,7 @@ def override_pool_state(overrides: Dict[str, Any]) -> Dict[str, Any]:
 class PoolStateCase:
     id: str
     pool_response: DummyPoolResponse
-    expected_pool_state: Dict[str, Any]
+    expected_pool_state: dict[str, Any]
     marks: Marks = ()
 
 
@@ -863,7 +866,7 @@ class PoolStateCase:
 @pytest.mark.anyio
 async def test_farmer_pool_response(
     mocker: MockerFixture,
-    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
     case: PoolStateCase,
 ) -> None:
     _, farmer_service, _ = farmer_one_harvester
@@ -923,7 +926,7 @@ async def test_farmer_pool_response(
     assert_stats_24h("missing_partials_24h")
 
 
-def make_pool_list_entry(overrides: Dict[str, Any]) -> Dict[str, Any]:
+def make_pool_list_entry(overrides: dict[str, Any]) -> dict[str, Any]:
     pool_list_entry = {
         "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",  # noqa: E501
         "p2_singleton_puzzle_hash": "302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df",
@@ -937,7 +940,7 @@ def make_pool_list_entry(overrides: Dict[str, Any]) -> Dict[str, Any]:
     return pool_list_entry
 
 
-def make_pool_info() -> Dict[str, Any]:
+def make_pool_info() -> dict[str, Any]:
     return {
         "name": "Pool Name",
         "description": "Pool Description",
@@ -951,7 +954,7 @@ def make_pool_info() -> Dict[str, Any]:
     }
 
 
-def make_pool_state(p2_singleton_puzzle_hash: bytes32, overrides: Dict[str, Any]) -> Dict[str, Any]:
+def make_pool_state(p2_singleton_puzzle_hash: bytes32, overrides: dict[str, Any]) -> dict[str, Any]:
     pool_info = {
         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
         "points_found_since_start": 0,
@@ -991,8 +994,8 @@ class DummyPoolInfoResponse:
     ok: bool
     status: int
     url: URL
-    pool_info: Optional[Dict[str, Any]] = None
-    history: Tuple[DummyClientResponse, ...] = ()
+    pool_info: Optional[dict[str, Any]] = None
+    history: tuple[DummyClientResponse, ...] = ()
 
     async def text(self) -> str:
         if self.pool_info is None:
@@ -1005,7 +1008,7 @@ class DummyPoolInfoResponse:
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
@@ -1167,7 +1170,7 @@ class PoolInfoCase(DataCase):
 @pytest.mark.anyio
 async def test_farmer_pool_info_config_update(
     mocker: MockerFixture,
-    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
     case: PoolInfoCase,
 ) -> None:
     _, farmer_service, _ = farmer_one_harvester
@@ -1202,3 +1205,59 @@ async def test_farmer_pool_info_config_update(
     assert len(config["pool"]["pool_list"]) == 1
     assert config["pool"]["pool_list"][0]["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex()
     assert config["pool"]["pool_list"][0]["pool_url"] == case.expected_pool_url_in_config
+
+
+@dataclass
+class PartialSubmitHeaderCase(DataCase):
+    _id: str
+    harvester_peer: DummyHarvesterPeer
+    expected_headers: dict[str, str]
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+
+@datacases(
+    PartialSubmitHeaderCase(
+        "additional version headers",
+        harvester_peer=DummyHarvesterPeer(
+            version="1.2.3.asdf42",
+        ),
+        expected_headers={
+            "User-Agent": f"Chia Blockchain v.{__version__}",
+            "chia-farmer-version": __version__,
+            "chia-harvester-version": "1.2.3.asdf42",
+        },
+    ),
+)
+@pytest.mark.anyio
+async def test_farmer_additional_headers_on_partial_submit(
+    mocker: MockerFixture,
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
+    case: PartialSubmitHeaderCase,
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    assert farmer_service.rpc_server is not None
+    farmer_api = farmer_service._api
+
+    sp, pos, new_pos = create_valid_pos(farmer_api.farmer)
+    assert pos.pool_contract_puzzle_hash is not None
+
+    assert (
+        verify_and_get_quality_string(
+            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+        )
+        is not None
+    )
+
+    mock_http_post = mocker.patch(
+        "aiohttp.ClientSession.post",
+        return_value=DummyPoolResponse(True, 200, new_difficulty=123),
+    )
+
+    peer = cast(WSChiaConnection, case.harvester_peer)
+    await farmer_api.new_proof_of_space(new_pos, peer)
+
+    mock_http_post.assert_called_once_with(ANY, json=ANY, ssl=ANY, headers=case.expected_headers)

@@ -4,12 +4,14 @@ import os
 import pathlib
 import sys
 import time
-from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
+from collections.abc import AsyncIterable, Awaitable, Iterator
+from typing import Any, Callable
 
 import pytest
 
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import (
     ChiaRoot,
@@ -21,7 +23,6 @@ from chia._tests.core.data_layer.util import (
 from chia._tests.util.misc import closing_chia_root_popen
 from chia.data_layer.data_layer_util import NodeType, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 # TODO: These are more general than the data layer and should either move elsewhere or
 #       be replaced with an existing common approach.  For now they can at least be
@@ -52,9 +53,9 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(name="tree_id", scope="function")
-def tree_id_fixture() -> bytes32:
-    base = b"a tree id"
+@pytest.fixture(name="store_id", scope="function")
+def store_id_fixture() -> bytes32:
+    base = b"a store id"
     pad = b"." * (32 - len(base))
     return bytes32(pad + base)
 
@@ -66,8 +67,8 @@ async def raw_data_store_fixture(database_uri: str) -> AsyncIterable[DataStore]:
 
 
 @pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
-    await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+async def data_store_fixture(raw_data_store: DataStore, store_id: bytes32) -> AsyncIterable[DataStore]:
+    await raw_data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
 
     await raw_data_store.check()
     yield raw_data_store
@@ -82,14 +83,14 @@ def node_type_fixture(request: SubRequest) -> NodeType:
 @pytest.fixture(name="valid_node_values")
 async def valid_node_values_fixture(
     data_store: DataStore,
-    tree_id: bytes32,
+    store_id: bytes32,
     node_type: NodeType,
-) -> Dict[str, Any]:
-    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+) -> dict[str, Any]:
+    await add_01234567_example(data_store=data_store, store_id=store_id)
 
     if node_type == NodeType.INTERNAL:
-        node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
-        node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+        node_a = await data_store.get_node_by_key(key=b"\x02", store_id=store_id)
+        node_b = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
         return create_valid_node_values(node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
     elif node_type == NodeType.TERMINAL:
         return create_valid_node_values(node_type=node_type)
@@ -98,7 +99,7 @@ async def valid_node_values_fixture(
 
 
 @pytest.fixture(name="bad_node_type", params=range(2 * len(NodeType)))
-def bad_node_type_fixture(request: SubRequest, valid_node_values: Dict[str, Any]) -> int:
+def bad_node_type_fixture(request: SubRequest, valid_node_values: dict[str, Any]) -> int:
     if request.param == valid_node_values["node_type"]:
         pytest.skip("Actually, this is a valid node type")
 

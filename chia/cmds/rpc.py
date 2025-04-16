@@ -3,30 +3,40 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any, Dict, List, Optional, TextIO
+from pathlib import Path
+from typing import Any, Optional, TextIO
 
 import click
 from aiohttp import ClientResponseError
+from chia_rs.sized_ints import uint16
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
 
-services: List[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
+services: list[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 
 
 async def call_endpoint(
-    service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any], quiet: bool = False
-) -> Dict[str, Any]:
+    service: str,
+    endpoint: str,
+    request: dict[str, Any],
+    config: dict[str, Any],
+    root_path: Path,
+    quiet: bool = False,
+) -> dict[str, Any]:
     if service == "daemon":
-        return await call_daemon_command(endpoint, request, config, quiet)
+        return await call_daemon_command(endpoint, request, config, root_path=root_path, quiet=quiet)
 
-    return await call_rpc_service_endpoint(service, endpoint, request, config)
+    return await call_rpc_service_endpoint(service, endpoint, request, config, root_path=root_path)
 
 
 async def call_rpc_service_endpoint(
-    service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]
-) -> Dict[str, Any]:
+    service: str,
+    endpoint: str,
+    request: dict[str, Any],
+    config: dict[str, Any],
+    root_path: Path,
+) -> dict[str, Any]:
     from chia.rpc.rpc_client import RpcClient
 
     port: uint16
@@ -37,10 +47,10 @@ async def call_rpc_service_endpoint(
         port = uint16(config[service]["rpc_port"])
 
     try:
-        client = await RpcClient.create(config["self_hostname"], port, DEFAULT_ROOT_PATH, config)
+        client = await RpcClient.create(config["self_hostname"], port, root_path, config)
     except Exception as e:
         raise Exception(f"Failed to create RPC client {service}: {e}")
-    result: Dict[str, Any]
+    result: dict[str, Any]
     try:
         result = await client.fetch(endpoint, request)
     except ClientResponseError as e:
@@ -56,16 +66,16 @@ async def call_rpc_service_endpoint(
 
 
 async def call_daemon_command(
-    command: str, request: Dict[str, Any], config: Dict[str, Any], quiet: bool = False
-) -> Dict[str, Any]:
+    command: str, request: dict[str, Any], config: dict[str, Any], root_path: Path, quiet: bool = False
+) -> dict[str, Any]:
     from chia.daemon.client import connect_to_daemon_and_validate
 
-    daemon = await connect_to_daemon_and_validate(DEFAULT_ROOT_PATH, config, quiet=quiet)
+    daemon = await connect_to_daemon_and_validate(root_path, config, quiet=quiet)
 
     if daemon is None:
         raise Exception("Failed to connect to chia daemon")
 
-    result: Dict[str, Any]
+    result: dict[str, Any]
     try:
         ws_request = daemon.format_request(command, request)
         ws_response = await daemon._get(ws_request)
@@ -77,12 +87,12 @@ async def call_daemon_command(
     return result
 
 
-def print_result(json_dict: Dict[str, Any]) -> None:
+def print_result(json_dict: dict[str, Any]) -> None:
     print(json.dumps(json_dict, indent=2, sort_keys=True))
 
 
-def get_routes(service: str, config: Dict[str, Any], quiet: bool = False) -> Dict[str, Any]:
-    return asyncio.run(call_endpoint(service, "get_routes", {}, config, quiet))
+def get_routes(service: str, config: dict[str, Any], root_path: Path, quiet: bool = False) -> dict[str, Any]:
+    return asyncio.run(call_endpoint(service, "get_routes", {}, config, root_path=root_path, quiet=quiet))
 
 
 @click.group("rpc", help="RPC Client")
@@ -92,10 +102,12 @@ def rpc_cmd() -> None:
 
 @rpc_cmd.command("endpoints", help="Print all endpoints of a service")
 @click.argument("service", type=click.Choice(services))
-def endpoints_cmd(service: str) -> None:
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+@click.pass_context
+def endpoints_cmd(ctx: click.Context, service: str) -> None:
+    root_path = ChiaCliContext.set_default(ctx).root_path
+    config = load_config(root_path, "config.yaml")
     try:
-        routes = get_routes(service, config)
+        routes = get_routes(service, config, root_path=root_path)
         for route in routes["routes"]:
             print(route.lstrip("/"))
     except Exception as e:
@@ -104,21 +116,21 @@ def endpoints_cmd(service: str) -> None:
 
 @rpc_cmd.command("status", help="Print the status of all available RPC services")
 @click.option("--json-output", "json_output", is_flag=True, help="Output status as JSON")
-def status_cmd(json_output: bool) -> None:
+@click.pass_context
+def status_cmd(ctx: click.Context, json_output: bool) -> None:
     import json
 
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    root_path = ChiaCliContext.set_default(ctx).root_path
+    config = load_config(root_path, "config.yaml")
 
     def print_row(c0: str, c1: str) -> None:
-        c0 = "{:<12}".format(f"{c0}")
-        c1 = "{:<9}".format(f"{c1}")
-        print(f"│ {c0} │ {c1} │")
+        print(f"│ {c0:<12} │ {c1:<9} │")
 
     status_data = {}
     for service in services:
         status = "ACTIVE"
         try:
-            if not get_routes(service, config, quiet=True)["success"]:
+            if not get_routes(service, config, root_path=root_path, quiet=True)["success"]:
                 raise Exception()
         except Exception:
             status = "INACTIVE"
@@ -158,16 +170,22 @@ def create_commands() -> None:
             type=click.File("r"),
             default=None,
         )
+        @click.pass_context
         def rpc_client_cmd(
-            endpoint: str, request: Optional[str], json_file: Optional[TextIO], service: str = service
+            ctx: click.Context,
+            endpoint: str,
+            request: Optional[str],
+            json_file: Optional[TextIO],
+            service: str = service,
         ) -> None:
-            config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+            root_path: Path = ChiaCliContext.set_default(ctx).root_path
+            config = load_config(root_path, "config.yaml")
             if request is not None and json_file is not None:
                 sys.exit(
                     "Can only use one request source: REQUEST argument OR -j/--json-file option. See the help with -h"
                 )
 
-            request_json: Dict[str, Any] = {}
+            request_json: dict[str, Any] = {}
             if json_file is not None:
                 try:
                     request_json = json.load(json_file)
@@ -182,7 +200,7 @@ def create_commands() -> None:
             try:
                 if endpoint[0] == "/":
                     endpoint = endpoint[1:]
-                print_result(asyncio.run(call_endpoint(service, endpoint, request_json, config)))
+                print_result(asyncio.run(call_endpoint(service, endpoint, request_json, config, root_path=root_path)))
             except Exception as e:
                 sys.exit(str(e))
 

@@ -2,22 +2,20 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar
+from typing import Optional, TypeVar
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD as NFT_MOD
+from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD
 
 log = logging.getLogger(__name__)
-SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-NFT_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
-    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
 
 _T_UncurriedNFT = TypeVar("_T_UncurriedNFT", bound="UncurriedNFT")
 
@@ -91,7 +89,7 @@ class UncurriedNFT(Streamable):
     trade_price_percentage: Optional[uint16]
 
     @classmethod
-    def uncurry(cls: Type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
+    def uncurry(cls: type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
@@ -144,26 +142,28 @@ class UncurriedNFT(Streamable):
                     edition_number = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"st":
                     edition_total = kv_pair.rest()
-            current_did = None
+            current_did: Optional[bytes32] = None
             transfer_program = None
             transfer_program_args = None
-            royalty_address = None
-            royalty_percentage = None
+            royalty_address: Optional[bytes32] = None
+            royalty_percentage: Optional[uint16] = None
             nft_inner_puzzle_mod = None
             mod, ol_args = inner_puzzle.uncurry()
             supports_did = False
             if mod == NFT_OWNERSHIP_LAYER:
                 supports_did = True
                 log.debug("Parsing ownership layer")
-                _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
-                transfer_program_mod, transfer_program_args = transfer_program.uncurry()
-                _, royalty_address_p, royalty_percentage = transfer_program_args.as_iter()
-                royalty_percentage = uint16(royalty_percentage.as_int())
-                royalty_address = royalty_address_p.atom
-                current_did = current_did.atom
-                if current_did == b"":
+                _, current_did_p, transfer_program, p2_puzzle = ol_args.as_iter()
+                _, transfer_program_args = transfer_program.uncurry()
+                _, royalty_address_p, royalty_percentage_p = transfer_program_args.as_iter()
+                royalty_percentage = uint16(royalty_percentage_p.as_int())
+                royalty_address = bytes32(royalty_address_p.as_atom())
+                current_did_atom = current_did_p.as_atom()
+                if current_did_atom == b"":
                     # For unassigned NFT, set owner DID to None
                     current_did = None
+                else:
+                    current_did = bytes32(current_did_atom)
             else:
                 log.debug("Creating a standard NFT puzzle")
                 p2_puzzle = inner_puzzle
@@ -172,11 +172,11 @@ class UncurriedNFT(Streamable):
             return None
 
         return cls(
-            nft_mod_hash=bytes32(nft_mod_hash.atom),
+            nft_mod_hash=bytes32(nft_mod_hash.as_atom()),
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
-            singleton_launcher_id=singleton_launcher_id.atom,
+            singleton_launcher_id=bytes32(singleton_launcher_id.as_atom()),
             launcher_puzhash=launcher_puzhash,
             metadata=metadata,
             data_uris=data_uris,
@@ -202,7 +202,7 @@ class UncurriedNFT(Streamable):
     def get_innermost_solution(self, solution: Program) -> Program:
         state_layer_inner_solution: Program = solution.at("rrff")
         if self.supports_did:
-            return state_layer_inner_solution.first()  # type: ignore
+            return state_layer_inner_solution.first()
         else:
             return state_layer_inner_solution
 

@@ -6,6 +6,7 @@ from typing import Optional
 import click
 import yaml
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.server.outbound_message import NodeType
 from chia.util.config import (
     initial_config_file,
@@ -103,7 +104,7 @@ def configure(
             print("Target peer count updated")
             change_made = True
         if testnet:
-            if testnet == "true" or testnet == "t":
+            if testnet in {"true", "t"}:
                 print("Setting Testnet")
                 # check if network_overrides.constants.testnet11 exists
                 if (
@@ -167,7 +168,7 @@ def configure(
                 print("Default full node port, introducer and network setting updated")
                 change_made = True
 
-            elif testnet == "false" or testnet == "f":
+            elif testnet in {"false", "f"}:
                 print("Setting Mainnet")
                 mainnet_port = "8444"
                 mainnet_introducer = "introducer.chia.net"
@@ -313,7 +314,7 @@ def configure_cmd(
     seeder_nameserver: str,
 ) -> None:
     configure(
-        ctx.obj["root_path"],
+        ChiaCliContext.set_default(ctx).root_path,
         set_farmer_peer,
         set_node_introducer,
         set_fullnode_port,

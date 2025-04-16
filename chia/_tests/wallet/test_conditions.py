@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, Optional, Union
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import (
     CONDITION_DRIVERS,
     CONDITION_DRIVERS_W_ABSTRACTIONS,
@@ -48,8 +48,10 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
+    ReceiveMessage,
     Remark,
     ReserveFee,
+    SendMessage,
     Softfork,
     Timelock,
     UnknownCondition,
@@ -64,8 +66,8 @@ from chia.wallet.conditions import (
 class ConditionSerializations:
     opcode: bytes
     program_args: Program
-    json_keys: List[str]
-    json_args: List[Any]
+    json_keys: list[str]
+    json_args: list[Any]
 
     @property
     def program(self) -> Program:
@@ -73,7 +75,7 @@ class ConditionSerializations:
         return prog
 
 
-HASH: bytes32 = bytes32([0] * 32)
+HASH: bytes32 = bytes32.zeros
 HASH_HEX: str = HASH.hex()
 PK: bytes = b"\xc0" + bytes(47)
 PK_HEX: str = PK.hex()
@@ -151,6 +153,30 @@ def test_completeness() -> None:
             [AMT, ["81f6", "a0" + HASH_HEX]],
         ),
         ConditionSerializations(ConditionOpcode.REMARK, Program.to([]), ["rest"], ["80"]),
+        ConditionSerializations(
+            ConditionOpcode.SEND_MESSAGE,
+            Program.to([0x3F, b"foobar", Program.to(HASH)]),
+            ["mode_integer", "msg", "var_args", "sender", "receiver"],
+            [
+                "63",
+                "0x" + b"foobar".hex(),
+                ["a0" + HASH_HEX],
+                {"mode_integer": 0b111},
+                {"mode_integer": 0b111, "coin_id_committed": "0x" + HASH_HEX},
+            ],
+        ),
+        ConditionSerializations(
+            ConditionOpcode.RECEIVE_MESSAGE,
+            Program.to([0x3F, b"foobar", Program.to(HASH)]),
+            ["mode_integer", "msg", "var_args", "sender", "receiver"],
+            [
+                "63",
+                "0x" + b"foobar".hex(),
+                ["a0" + HASH_HEX],
+                {"mode_integer": 0b111, "coin_id_committed": "0x" + HASH_HEX},
+                {"mode_integer": 0b111},
+            ],
+        ),
     ],
 )
 def test_condition_serialization(serializations: ConditionSerializations, abstractions: bool) -> None:
@@ -189,10 +215,10 @@ def test_unknown_condition() -> None:
 )
 def test_announcement_inversions(
     drivers: Union[
-        Tuple[Type[CreateCoinAnnouncement], Type[AssertCoinAnnouncement]],
-        Tuple[Type[CreatePuzzleAnnouncement], Type[AssertPuzzleAnnouncement]],
-        Tuple[Type[CreateAnnouncement], Type[AssertAnnouncement]],
-    ]
+        tuple[type[CreateCoinAnnouncement], type[AssertCoinAnnouncement]],
+        tuple[type[CreatePuzzleAnnouncement], type[AssertPuzzleAnnouncement]],
+        tuple[type[CreateAnnouncement], type[AssertAnnouncement]],
+    ],
 ) -> None:
     create_driver, assert_driver = drivers
     # mypy is not smart enough to understand that this `if` narrows down the potential types it could be
@@ -222,9 +248,9 @@ def test_announcement_inversions(
 
 @dataclass(frozen=True)
 class TimelockInfo:
-    drivers: List[Condition]
+    drivers: list[Condition]
     parsed_info: ConditionValidTimes
-    conditions_after: Optional[List[Condition]] = None
+    conditions_after: Optional[list[Condition]] = None
 
 
 @pytest.mark.parametrize(
@@ -307,6 +333,8 @@ def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
         CreateAnnouncement,
         AssertAnnouncement,
         Timelock,
+        SendMessage,
+        ReceiveMessage,
     ],
 )
 @pytest.mark.parametrize(
@@ -320,7 +348,7 @@ def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
     ],
 )
 def test_invalid_condition(
-    cond: Type[
+    cond: type[
         Union[
             AggSigParent,
             AggSigPuzzle,
@@ -359,11 +387,13 @@ def test_invalid_condition(
             CreateAnnouncement,
             AssertAnnouncement,
             Timelock,
+            SendMessage,
+            ReceiveMessage,
         ]
     ],
     prg: bytes,
 ) -> None:
-    if (cond == Remark or cond == UnknownCondition) and prg != b"\x80":
+    if (cond in {Remark, UnknownCondition}) and prg != b"\x80":
         pytest.skip("condition takes arbitrary arguments")
 
     with pytest.raises((ValueError, EvalError, KeyError)):

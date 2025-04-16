@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-from typing import List
+from chia_rs import SpendBundleConditions, SpendConditions
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 parent_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 phs = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
-spends: List[Spend] = [
-    Spend(
+spends: list[SpendConditions] = [
+    SpendConditions(
         coin_ids[0],
         parent_ids[0],
         phs[0],
@@ -38,7 +37,7 @@ spends: List[Spend] = [
         [],
         0,
     ),
-    Spend(
+    SpendConditions(
         coin_ids[1],
         parent_ids[1],
         phs[0],
@@ -67,7 +66,9 @@ spends: List[Spend] = [
 
 
 def test_tx_removals_and_additions() -> None:
-    conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0)
+    conditions = SpendBundleConditions(
+        spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0, False, 0, 0
+    )
     expected_rems = [coin_ids[0], coin_ids[1]]
     expected_additions = []
     for spend in spends:

@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import List, Tuple
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.consensus.constants import ConsensusConstants
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
-from chia.util.ints import uint32
 
 
 def run_and_get_removals_and_additions(
@@ -19,10 +18,10 @@ def run_and_get_removals_and_additions(
     *,
     height: uint32,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
-    mempool_mode=False,
-) -> Tuple[List[bytes32], List[Coin]]:
-    removals: List[bytes32] = []
-    additions: List[Coin] = []
+    mempool_mode: bool = False,
+) -> tuple[list[bytes32], list[Coin]]:
+    removals: list[bytes32] = []
+    additions: list[Coin] = []
 
     assert len(block.transactions_generator_ref_list) == 0
     if not block.is_transaction_block():
@@ -30,7 +29,7 @@ def run_and_get_removals_and_additions(
 
     if block.transactions_generator is not None:
         npc_result = get_name_puzzle_conditions(
-            BlockGenerator(block.transactions_generator, [], []),
+            BlockGenerator(block.transactions_generator, []),
             max_cost,
             mempool_mode=mempool_mode,
             height=height,

@@ -3,15 +3,15 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import aiofiles
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.files import write_file_async
-from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 @streamable
 @dataclass(frozen=True)
 class SesCache(Streamable):
-    content: List[Tuple[uint32, bytes]]
+    content: list[tuple[uint32, bytes]]
 
 
 class BlockHeightMap:
@@ -38,7 +38,7 @@ class BlockHeightMap:
     # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
     # (height_included, SubEpochSummary). Note: ONLY for the blocks in the path to the peak
     # The value is a serialized SubEpochSummary object
-    __sub_epoch_summaries: Dict[uint32, bytes]
+    __sub_epoch_summaries: dict[uint32, bytes]
 
     # count how many blocks have been added since the cache was last written to
     # disk
@@ -56,7 +56,9 @@ class BlockHeightMap:
     __ses_filename: Path
 
     @classmethod
-    async def create(cls, blockchain_dir: Path, db: DBWrapper2) -> BlockHeightMap:
+    async def create(
+        cls, blockchain_dir: Path, db: DBWrapper2, selected_network: Optional[str] = None
+    ) -> BlockHeightMap:
         if db.db_version != 2:
             raise RuntimeError(f"BlockHeightMap does not support database schema v{db.db_version}")
         self = BlockHeightMap()
@@ -66,8 +68,9 @@ class BlockHeightMap:
         self.__first_dirty = 0
         self.__height_to_hash = bytearray()
         self.__sub_epoch_summaries = {}
-        self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
-        self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
+        suffix = "" if (selected_network is None or selected_network == "mainnet") else f"-{selected_network}"
+        self.__height_to_hash_filename = blockchain_dir / f"height-to-hash{suffix}"
+        self.__ses_filename = blockchain_dir / f"sub-epoch-summaries{suffix}"
 
         async with self.db.reader_no_transaction() as conn:
             async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
@@ -124,7 +127,7 @@ class BlockHeightMap:
 
         log.info(
             f"Loaded sub-epoch-summaries: {len(self.__sub_epoch_summaries)} "
-            f"height-to-hash: {len(self.__height_to_hash)//32}"
+            f"height-to-hash: {len(self.__height_to_hash) // 32}"
         )
 
         # prepopulate the height -> hash mapping
@@ -194,7 +197,7 @@ class BlockHeightMap:
             async with self.db.reader_no_transaction() as conn:
                 async with conn.execute(query, (window_end, height)) as cursor:
                     # maps block-hash -> (height, prev-hash, sub-epoch-summary)
-                    ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
+                    ordered: dict[bytes32, tuple[uint32, bytes32, Optional[bytes]]] = {}
 
                     for r in await cursor.fetchall():
                         ordered[r[0]] = (r[2], r[1], r[3])
@@ -246,20 +249,26 @@ class BlockHeightMap:
         # fork height may be -1, in which case all blocks are different and we
         # should clear all sub epoch summaries
         heights_to_delete = []
-        log.log(
-            logging.WARNING if fork_height < 100 else logging.INFO,
-            f"rolling back height-to-hash and sub-epoch-summaries cache to {fork_height}",
-        )
+
         for ses_included_height in self.__sub_epoch_summaries.keys():
             if ses_included_height > fork_height:
                 heights_to_delete.append(ses_included_height)
+
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
+
         del self.__height_to_hash[(fork_height + 1) * 32 :]
         self.__first_dirty = min(self.__first_dirty, fork_height + 1)
+
+        if len(heights_to_delete) > 0:
+            log.log(
+                logging.WARNING if fork_height < 100 else logging.INFO,
+                f"rolling back {len(heights_to_delete)} blocks in "
+                f"height-to-hash and sub-epoch-summaries cache, to height {fork_height}",
+            )
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
 
-    def get_ses_heights(self) -> List[uint32]:
+    def get_ses_heights(self) -> list[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())

@@ -99,7 +99,7 @@ def test_uncurry_top_level_garbage():
 
 
 def test_uncurry_not_pair():
-    # the second item in the list is expected to be a pair, with a qoute
+    # the second item in the list is expected to be a pair, with a quote
     plus = Program.to(assemble("(2 1 (c (q . 1) (q . 1)))"))
     assert plus.uncurry() == (plus, Program.to(0))
 
@@ -108,3 +108,43 @@ def test_uncurry_args_garbage():
     # there's garbage at the end of the args list
     plus = Program.to(assemble("(2 (q . 1) (c (q . 1) (q . 1) (q . 0x1337)))"))
     assert plus.uncurry() == (plus, Program.to(0))
+
+
+def test_run() -> None:
+    div = Program.to(assemble("(/ 2 5)"))
+    ret = div.run([10, 5])
+    assert ret.atom == bytes([2])
+
+    ret = div.run([10, -5])
+    assert ret.atom == bytes([0xFE])
+
+    # run()
+    cost, ret = div.run_with_cost(100000, [10, -5], 0)
+    assert cost == 1107
+    print(ret)
+    assert ret.atom == bytes([0xFE])
+
+    cost, ret = div.run_with_cost(100000, [10, -5], 0)
+    assert cost == 1107
+    print(ret)
+    assert ret.atom == bytes([0xFE])
+
+    # run_with_flags()
+    cost, ret = div.run_with_flags(100000, 0, [10, -5])
+    assert cost == 1107
+    print(ret)
+    assert ret.atom == bytes([0xFE])
+
+    cost, ret = div.run_with_flags(100000, 0, [10, -5])
+    assert cost == 1107
+    print(ret)
+    assert ret.atom == bytes([0xFE])
+
+    # run_with_cost()
+    ret = div.run([10, -5], 100000, 0)
+    print(ret)
+    assert ret.atom == bytes([0xFE])
+
+    ret = div.run([10, -5], 100000, 0)
+    print(ret)
+    assert ret.atom == bytes([0xFE])
