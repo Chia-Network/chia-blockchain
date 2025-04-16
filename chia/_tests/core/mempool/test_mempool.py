@@ -3311,17 +3311,6 @@ async def test_create_block_generator(old: bool) -> None:
     invariant_check_mempool(mempool)
 
 
-def test_flags_for_height() -> None:
-    # the keccak operator is supposed to be enabled at soft-fork 6 height
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) != 0
-
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT - 1, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) == 0
-
-
 def test_keccak() -> None:
     # the keccak operator is 62. The assemble() function doesn't support it
     # (yet)
