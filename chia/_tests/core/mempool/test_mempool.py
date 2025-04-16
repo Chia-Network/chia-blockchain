@@ -8,13 +8,11 @@ from typing import Callable, Optional
 import pytest
 from chia_rs import (
     ELIGIBLE_FOR_FF,
-    ENABLE_KECCAK,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
     G1Element,
     G2Element,
     SpendBundleConditions,
-    get_flags_for_height_and_constants,
     run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
@@ -3326,11 +3324,6 @@ def test_keccak() -> None:
         )
     )
 
-    cost, ret = keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
-    assert cost == 1215
-    assert ret.atom == b""
-
-    # keccak is ignored when the softfork has not activated
     cost, ret = keccak_prg.run_with_flags(1215, 0, [])
     assert cost == 1215
     assert ret.atom == b""
@@ -3345,7 +3338,7 @@ def test_keccak() -> None:
         )
     )
     with pytest.raises(ValueError, match="clvm raise"):
-        keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
+        keccak_prg.run_with_flags(1215, 0, [])
 
     # keccak is ignored when the softfork has not activated
     cost, ret = keccak_prg.run_with_flags(1215, 0, [])
@@ -3364,7 +3357,7 @@ def test_keccak() -> None:
         )
     )
 
-    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK | ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
+    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
     assert cost == 994
     assert ret.atom == b""
 
