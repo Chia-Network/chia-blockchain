@@ -256,21 +256,28 @@ class HarvesterAPI:
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         time_taken = time.time() - start
         total_proofs_found = 0
-        for filename_sublist_awaitable in asyncio.as_completed(awaitables):
-            filename, sublist = await filename_sublist_awaitable
-            time_taken = time.time() - start
-            if time_taken > 8:
-                self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
-                    f" to minimize risk of losing rewards."
+        for filename_sublist_awaitable in asyncio.as_completed(awaitables, timeout=45):
+            try:
+                filename, sublist = await filename_sublist_awaitable
+                time_taken = time.time() - start
+                if time_taken > 8:
+                    self.harvester.log.warning(
+                        f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
+                        f" to minimize risk of losing rewards."
+                    )
+                else:
+                    pass
+                    # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
+                for response in sublist:
+                    total_proofs_found += 1
+                    msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
+                    await peer.send_message(msg)
+            except asyncio.TimeoutError:
+                self.harvester.log.error(
+                    f"Timed out 45 seconds looking up qualities on {filename}. Please check disks."
                 )
-            else:
-                pass
-                # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
-            for response in sublist:
-                total_proofs_found += 1
-                msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
-                await peer.send_message(msg)
+            except Exception:
+                self.harvester.log.exception(f"Unexpected error looking up qualities on {filename}")
 
         now = uint64(int(time.time()))
 
