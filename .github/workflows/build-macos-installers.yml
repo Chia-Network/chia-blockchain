@@ -226,11 +226,6 @@ jobs:
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
-      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
-      - name: Delete signing keychain
-        if: always()
-        run: security delete-keychain signing_temp.keychain || true
-
   publish:
     name: 📦 Publish Installers
     uses: ./.github/workflows/reflow-publish-installer.yml
