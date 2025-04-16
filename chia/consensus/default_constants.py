@@ -85,5 +85,4 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
     if network_id == "testnet11":
-        if "SOFT_FORK6_HEIGHT" not in overrides:
-            overrides["SOFT_FORK6_HEIGHT"] = 2000000
+        pass

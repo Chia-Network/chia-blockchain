@@ -8,9 +8,7 @@ from chia.consensus.default_constants import update_testnet_overrides
 def test_testnet11() -> None:
     overrides: dict[str, Any] = {}
     update_testnet_overrides("testnet11", overrides)
-    assert overrides == {
-        "SOFT_FORK6_HEIGHT": 2000000,
-    }
+    assert overrides == {}
 
 
 def test_mainnet() -> None:
