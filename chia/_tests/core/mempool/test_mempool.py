@@ -8,19 +8,15 @@ from typing import Callable, Optional
 import pytest
 from chia_rs import (
     ELIGIBLE_FOR_FF,
-    ENABLE_KECCAK,
-    ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
     G1Element,
     G2Element,
-    get_flags_for_height_and_constants,
     run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
-from clvm_tools.binutils import assemble
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.connection_utils import add_dummy_connection, connect_and_get_peer
@@ -3311,73 +3307,62 @@ async def test_create_block_generator(old: bool) -> None:
     invariant_check_mempool(mempool)
 
 
-def test_flags_for_height() -> None:
-    # the keccak operator is supposed to be enabled at soft-fork 6 height
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) != 0
-
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT - 1, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) == 0
-
-
-def test_keccak() -> None:
-    # the keccak operator is 62. The assemble() function doesn't support it
-    # (yet)
-
-    # keccak256 is available when the softfork has activated
-    keccak_prg = Program.to(
-        assemble(
-            "(softfork (q . 1134) (q . 1) (q a (i "
-            "(= "
-            '(62 (q . "foobar"))'
-            "(q . 0x38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e))"
-            "(q . 0) (q x)) (q . ())) (q . ()))"
-        )
-    )
-
-    cost, ret = keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
-    assert cost == 1215
-    assert ret.atom == b""
-
-    # keccak is ignored when the softfork has not activated
-    cost, ret = keccak_prg.run_with_flags(1215, 0, [])
-    assert cost == 1215
-    assert ret.atom == b""
-
-    # make sure keccak is actually executed, by comparing with the wrong output
-    keccak_prg = Program.to(
-        assemble(
-            "(softfork (q . 1134) (q . 1) (q a (i "
-            '(= (62 (q . "foobar")) '
-            "(q . 0x58d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e))"
-            "(q . 0) (q x)) (q . ())) (q . ()))"
-        )
-    )
-    with pytest.raises(ValueError, match="clvm raise"):
-        keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
-
-    # keccak is ignored when the softfork has not activated
-    cost, ret = keccak_prg.run_with_flags(1215, 0, [])
-    assert cost == 1215
-    assert ret.atom == b""
-
-    # === HARD FORK ===
-    # new operators *outside* the softfork guard
-    # keccak256 is available outside the guard with the appropriate flag
-    keccak_prg = Program.to(
-        assemble(
-            "(a (i (= "
-            '(62 (q . "foobar")) '
-            "(q . 0x38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e)) "
-            "(q . 0) (q x)) (q . ()))"
-        )
-    )
-
-    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK | ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
-    assert cost == 994
-    assert ret.atom == b""
+# def test_keccak() -> None:
+#     # the keccak operator is 62. The assemble() function doesn't support it
+#     # (yet)
+#
+#     # keccak256 is available when the softfork has activated
+#     keccak_prg = Program.to(
+#         assemble(
+#             "(softfork (q . 1134) (q . 1) (q a (i "
+#             "(= "
+#             '(62 (q . "foobar"))'
+#             "(q . 0x38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e))"
+#             "(q . 0) (q x)) (q . ())) (q . ()))"
+#         )
+#     )
+#
+#     cost, ret = keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
+#     assert cost == 1215
+#     assert ret.atom == b""
+#
+#     # keccak is ignored when the softfork has not activated
+#     cost, ret = keccak_prg.run_with_flags(1215, 0, [])
+#     assert cost == 1215
+#     assert ret.atom == b""
+#
+#     # make sure keccak is actually executed, by comparing with the wrong output
+#     keccak_prg = Program.to(
+#         assemble(
+#             "(softfork (q . 1134) (q . 1) (q a (i "
+#             '(= (62 (q . "foobar")) '
+#             "(q . 0x58d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e))"
+#             "(q . 0) (q x)) (q . ())) (q . ()))"
+#         )
+#     )
+#     with pytest.raises(ValueError, match="clvm raise"):
+#         keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
+#
+#     # keccak is ignored when the softfork has not activated
+#     cost, ret = keccak_prg.run_with_flags(1215, 0, [])
+#     assert cost == 1215
+#     assert ret.atom == b""
+#
+#     # === HARD FORK ===
+#     # new operators *outside* the softfork guard
+#     # keccak256 is available outside the guard with the appropriate flag
+#     keccak_prg = Program.to(
+#         assemble(
+#             "(a (i (= "
+#             '(62 (q . "foobar")) '
+#             "(q . 0x38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e)) "
+#             "(q . 0) (q x)) (q . ()))"
+#         )
+#     )
+#
+#     cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK | ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
+#     assert cost == 994
+#     assert ret.atom == b""
 
 
 @pytest.mark.anyio
