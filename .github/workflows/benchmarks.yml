@@ -59,7 +59,7 @@ jobs:
         python-version: ["3.10"]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      BLOCKS_AND_PLOTS_VERSION: 0.41.0
+      BLOCKS_AND_PLOTS_VERSION: 0.43.0
 
     steps:
       - name: Clean workspace

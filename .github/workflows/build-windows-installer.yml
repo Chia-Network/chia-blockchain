@@ -143,7 +143,7 @@ jobs:
           smksp_registrar.exe list
           smctl.exe keypair ls
           C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
-          smksp_cert_sync.exe
+          smctl.exe windows certsync --keypair-alias=${{ secrets.SM_CERTKEY_ALIAS }}
 
       - name: Get latest madmax plotter
         env:

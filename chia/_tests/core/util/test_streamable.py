@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, Optional, get_type_hints
+from typing import Any, Callable, ClassVar, Optional, get_type_hints
 
 import pytest
 from chia_rs import G1Element, SubEpochChallengeSegment
@@ -372,7 +372,7 @@ class PostInitTestClassBasic(Streamable):
 @dataclass(frozen=True)
 class PostInitTestClassBad(Streamable):
     a: uint8
-    b = 0
+    b: ClassVar[uint8] = uint8(0)
 
 
 @streamable

@@ -1,109 +1,87 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-import random
-from collections.abc import Coroutine
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64, uint128
+from chia_rs.sized_ints import uint16, uint32, uint64
 
-from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia._tests.util.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program
-from chia.types.peer_info import PeerInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet_node import WalletNode
-
-# from clvm_tools.binutils import disassemble
 
 logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
-
-
-def mempool_not_empty(fnapi: FullNodeSimulator) -> bool:
-    return fnapi.full_node.mempool_manager.mempool.size() > 0
-
-
-async def farm_blocks_until(
-    predicate_f: Callable[[], Coroutine[Any, Any, bool]], fnapi: FullNodeSimulator, ph: bytes32
-) -> None:
-    for i in range(50):
-        await fnapi.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        if await predicate_f():
-            return None
-        await asyncio.sleep(0.3)
-    raise TimeoutError()
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
     return await wallet.get_nft_count()
 
 
-def trusted_setup_helper(
-    trusted: bool, wallet_node_maker: WalletNode, wallet_node_taker: WalletNode, full_node_api: FullNodeSimulator
-) -> None:
-    if trusted:
-        wallet_node_maker.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_taker.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_maker.config["trusted_peers"] = {}
-        wallet_node_taker.config["trusted_peers"] = {}
-
-
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
-async def test_nft_offer_sell_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-    wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
+async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+    wallet_maker = env_maker.xch_wallet
+    wallet_taker = env_taker.xch_wallet
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
+
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
 
-    trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
-
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-    await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds - 1)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     hex_did_id = did_wallet_maker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -112,7 +90,7 @@ async def test_nft_offer_sell_nft(
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
         [
@@ -121,7 +99,9 @@ async def test_nft_offer_sell_nft(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
             action_scope,
@@ -130,21 +110,41 @@ async def test_nft_offer_sell_nft(
             royalty_basis_pts,
             did_id,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
-    await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     # TAKER SETUP -  NO DID
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
+        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
     )
 
     # maker create offer: NFT for xch
@@ -161,9 +161,11 @@ async def test_nft_offer_sell_nft(
     xch_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
         )
@@ -172,75 +174,140 @@ async def test_nft_offer_sell_nft(
     assert trade_make is not None
 
     taker_fee = 1
-    assert not mempool_not_empty(full_node_api)
-    peer = wallet_node_taker.get_full_node_peer()
+    peer = env_taker.node.get_full_node_peer()
 
-    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
         )
 
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
-
     assert trade_take is not None
 
-    async def maker_0_taker_1() -> bool:
-        return await nft_wallet_maker.get_nft_count() == 0 and await nft_wallet_taker.get_nft_count() == 1
-
-    await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
+    expected_royalty = uint64(xch_requested * royalty_basis_pts / 10000)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": maker_fee,
+                        "<=#max_send_amount": maker_fee,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "did": {},
+                    "nft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": (xch_requested + expected_royalty) - maker_fee,
+                        "unconfirmed_wallet_balance": (xch_requested + expected_royalty) - maker_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "did": {},
+                    "nft": {
+                        "unspent_coin_count": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -(taker_fee + xch_requested + expected_royalty),
+                        "<=#spendable_balance": -(taker_fee + xch_requested + expected_royalty),
+                        "<=#max_send_amount": -(taker_fee + xch_requested + expected_royalty),
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft": {
+                        "init": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -(taker_fee + xch_requested + expected_royalty),
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
+    )
 
     await time_out_assert(20, get_nft_count, 0, nft_wallet_maker)
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
-    # assert payments and royalties
-    expected_royalty = uint64(xch_requested * royalty_basis_pts / 10000)
-    expected_maker_balance = funds - 2 - maker_fee + xch_requested + expected_royalty
-    expected_taker_balance = funds - taker_fee - xch_requested - expected_royalty
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, expected_maker_balance)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
 
-
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
-async def test_nft_offer_request_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-    wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
+async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+    wallet_maker = env_maker.xch_wallet
+    wallet_taker = env_taker.xch_wallet
 
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+    }
+
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
 
-    trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
-
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
+            env_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-    await time_out_assert(20, wallet_taker.get_pending_change_balance, 0)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
     hex_did_id = did_wallet_taker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -249,7 +316,7 @@ async def test_nft_offer_request_nft(
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
+        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
     )
     metadata = Program.to(
         [
@@ -257,10 +324,10 @@ async def test_nft_offer_request_nft(
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
         ]
     )
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds - 1)
 
-    async with nft_wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
             action_scope,
@@ -269,21 +336,43 @@ async def test_nft_offer_request_nft(
             royalty_basis_pts,
             did_id,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # MAKER SETUP -  NO DID
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET MAKER"
+        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET MAKER"
     )
 
     # maker create offer: NFT for xch
@@ -299,13 +388,16 @@ async def test_nft_offer_request_nft(
 
     assert isinstance(nft_to_request_info, PuzzleInfo)
     nft_to_request_asset_id = create_asset_id(nft_to_request_info)
+    assert nft_to_request_asset_id is not None
     xch_offered = 1000
-    maker_fee = 10
+    maker_fee = uint64(10)
     driver_dict = {nft_to_request_asset_id: nft_to_request_info}
 
-    offer_dict = {nft_to_request_asset_id: 1, wallet_maker.id(): -xch_offered}
+    offer_dict: OfferSummary = {nft_to_request_asset_id: 1, wallet_maker.id(): -xch_offered}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             offer_dict, action_scope, driver_dict, fee=maker_fee
         )
@@ -315,70 +407,139 @@ async def test_nft_offer_request_nft(
 
     taker_fee = 1
 
-    peer = wallet_node_taker.get_full_node_peer()
-    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    peer = env_taker.node.get_full_node_peer()
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
         )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
 
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
-    async def maker_1_taker_0() -> bool:
-        return await nft_wallet_maker.get_nft_count() == 1 and await nft_wallet_taker.get_nft_count() == 0
-
-    await farm_blocks_until(maker_1_taker_0, full_node_api, ph_token)
-
-    # assert payments and royalties
     expected_royalty = uint64(xch_offered * royalty_basis_pts / 10000)
-    expected_maker_balance = funds - maker_fee - xch_offered - expected_royalty
-    expected_taker_balance = funds - 2 - taker_fee + xch_offered + expected_royalty
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, expected_maker_balance)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -(maker_fee + xch_offered + expected_royalty),
+                        "<=#max_send_amount": -(maker_fee + xch_offered + expected_royalty),
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft": {
+                        "init": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -(maker_fee + xch_offered + expected_royalty),
+                        "unconfirmed_wallet_balance": -(maker_fee + xch_offered + expected_royalty),
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        # royalty information doesn't show up in unconfirmed balance
+                        "unconfirmed_wallet_balance": xch_offered - taker_fee,
+                        "<=#spendable_balance": -taker_fee,
+                        "<=#max_send_amount": -taker_fee,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "did": {},
+                    "nft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": xch_offered + expected_royalty - taker_fee,
+                        "unconfirmed_wallet_balance": expected_royalty,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "did": {},
+                    "nft": {
+                        "unspent_coin_count": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+        ]
+    )
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
-async def test_nft_offer_sell_did_to_did(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-    wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
+async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+    wallet_maker = env_maker.xch_wallet
+    wallet_taker = env_taker.xch_wallet
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft1": 3,
+        "nft0": 4,
+    }
+
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
 
-    trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
-
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-    await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     hex_did_id = did_wallet_maker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -387,7 +548,7 @@ async def test_nft_offer_sell_did_to_did(
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
         [
@@ -396,10 +557,9 @@ async def test_nft_offer_sell_did_to_did(
         ]
     )
 
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds - 1)
-
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
             action_scope,
@@ -408,33 +568,107 @@ async def test_nft_offer_sell_did_to_did(
             royalty_basis_pts,
             did_id,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
-    await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     # TAKER SETUP -  WITH DID
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
+            env_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-    await time_out_assert(20, wallet_taker.get_pending_change_balance, 0)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
     hex_did_id_taker = did_wallet_taker.get_my_DID()
     did_id_taker = bytes32.fromhex(hex_did_id_taker)
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER", did_id=did_id_taker
+        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER", did_id=did_id_taker
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
     )
 
     # maker create offer: NFT for xch
@@ -449,9 +683,11 @@ async def test_nft_offer_sell_did_to_did(
     xch_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
         )
@@ -461,79 +697,141 @@ async def test_nft_offer_sell_did_to_did(
 
     taker_fee = 1
 
-    peer = wallet_node_taker.get_full_node_peer()
-    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    peer = env_taker.node.get_full_node_peer()
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
         )
-
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
 
-    async def maker_0_taker_1() -> bool:
-        return (
-            await nft_wallet_maker.get_nft_count() == 0
-            and len(wallet_taker.wallet_state_manager.wallets) == 4
-            and await wallet_taker.wallet_state_manager.wallets[4].get_nft_count() == 1
-        )
-
-    await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
-
-    await time_out_assert(20, get_nft_count, 0, nft_wallet_maker)
-    # assert nnew nft wallet is created for taker
-    await time_out_assert(20, len, 4, wallet_taker.wallet_state_manager.wallets)
-    await time_out_assert(20, get_nft_count, 1, wallet_taker.wallet_state_manager.wallets[4])
-    assert await wallet_taker.wallet_state_manager.wallets[4].nft_store.get_nft_by_id(nft_to_offer_asset_id) is not None
-    # assert payments and royalties
     expected_royalty = uint64(xch_requested * royalty_basis_pts / 10000)
-    expected_maker_balance = funds - 2 - maker_fee + xch_requested + expected_royalty
-    expected_taker_balance = funds - 1 - taker_fee - xch_requested - expected_royalty
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, expected_maker_balance)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": maker_fee,
+                        "<=#max_send_amount": maker_fee,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "did": {},
+                    "nft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": (xch_requested + expected_royalty) - maker_fee,
+                        "unconfirmed_wallet_balance": (xch_requested + expected_royalty) - maker_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "did": {},
+                    "nft": {
+                        "unspent_coin_count": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -(taker_fee + xch_requested + expected_royalty),
+                        "<=#spendable_balance": -(taker_fee + xch_requested + expected_royalty),
+                        "<=#max_send_amount": -(taker_fee + xch_requested + expected_royalty),
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -(taker_fee + xch_requested + expected_royalty),
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft0": {
+                        "init": True,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
+    )
+
+    nft_0_wallet_taker = env_taker.wallet_state_manager.wallets[uint32(4)]
+    assert isinstance(nft_0_wallet_taker, NFTWallet)
+    await time_out_assert(20, get_nft_count, 0, nft_wallet_maker)
+    await time_out_assert(20, get_nft_count, 1, nft_0_wallet_taker)
+    assert await nft_0_wallet_taker.nft_store.get_nft_by_id(nft_to_offer_asset_id) is not None
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
-async def test_nft_offer_sell_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-    wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
+async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+    wallet_maker = env_maker.xch_wallet
+    wallet_taker = env_taker.xch_wallet
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+        "cat": 4,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+        "cat": 3,
+    }
+
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
 
-    trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
-
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-    await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds - 1)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     hex_did_id = did_wallet_maker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -542,7 +840,7 @@ async def test_nft_offer_sell_nft_for_cat(
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
         [
@@ -551,7 +849,9 @@ async def test_nft_offer_sell_nft_for_cat(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
             action_scope,
@@ -560,22 +860,44 @@ async def test_nft_offer_sell_nft_for_cat(
             royalty_basis_pts,
             did_id,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
-    await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     # TAKER SETUP -  NO DID
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
+        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
     )
+
+    await env_taker.change_balances({"nft": {"init": True}})
 
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
@@ -590,39 +912,90 @@ async def test_nft_offer_sell_nft_for_cat(
     # Trade them between maker and taker to ensure multiple coins for each cat
     cats_to_mint = 100000
     cats_to_trade = uint64(10000)
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        full_node_api.full_node.log.warning(f"Mempool size: {full_node_api.full_node.mempool_manager.mempool.size()}")
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            wallet_node_maker.wallet_state_manager,
+            env_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
             uint64(cats_to_mint),
             action_scope,
         )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
-    await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, cats_to_mint)
-    await time_out_assert(20, cat_wallet_maker.get_unconfirmed_balance, cats_to_mint)
-
-    cat_wallet_taker: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
-        wallet_node_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
     )
 
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-        ph_taker_cat_2 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-    async with cat_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    cat_wallet_taker: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
+        env_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+    )
+
+    await env_taker.change_balances({"cat": {"init": True}})
+
+    with wallet_environments.new_puzzle_hashes_allowed():
+        async with wallet_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+            ph_taker_cat_2 = await action_scope.get_puzzle_hash(
+                wallet_taker.wallet_state_manager, override_reuse_puzhash_with=False
+            )
+    async with cat_wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await cat_wallet_maker.generate_signed_transaction(
             [cats_to_trade, cats_to_trade],
             [ph_taker_cat_1, ph_taker_cat_2],
             action_scope,
             memos=[[ph_taker_cat_1], [ph_taker_cat_2]],
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "cat": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
     maker_cat_balance = cats_to_mint - (2 * cats_to_trade)
     taker_cat_balance = 2 * cats_to_trade
@@ -634,9 +1007,11 @@ async def test_nft_offer_sell_nft_for_cat(
     cats_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, cat_wallet_maker.id(): cats_requested}
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, cat_wallet_maker.id(): cats_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
         )
@@ -647,75 +1022,159 @@ async def test_nft_offer_sell_nft_for_cat(
 
     taker_fee = 1
 
-    peer = wallet_node_taker.get_full_node_peer()
-    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    peer = env_taker.node.get_full_node_peer()
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
         )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
-
-    async def maker_0_taker_1() -> bool:
-        return (
-            len(await nft_wallet_maker.get_current_nfts()) == 0 and len(await nft_wallet_taker.get_current_nfts()) == 1
-        )
-
-    await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
 
     # assert payments and royalties
     expected_royalty = uint64(cats_requested * royalty_basis_pts / 10000)
-    expected_maker_balance = funds - 2 - cats_to_mint - maker_fee
-    expected_taker_balance = funds - taker_fee
-    expected_maker_cat_balance = maker_cat_balance + cats_requested + expected_royalty
-    expected_taker_cat_balance = taker_cat_balance - cats_requested - expected_royalty
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, expected_maker_balance)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
-    await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, expected_maker_cat_balance)
-    await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, expected_taker_cat_balance)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -maker_fee,
+                        "<=#max_send_amount": -maker_fee,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {},
+                    "did": {},
+                    "nft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -maker_fee,
+                        "unconfirmed_wallet_balance": -maker_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {
+                        "unconfirmed_wallet_balance": cats_requested + expected_royalty,
+                        "confirmed_wallet_balance": cats_requested + expected_royalty,
+                        "spendable_balance": cats_requested + expected_royalty,
+                        "max_send_amount": cats_requested + expected_royalty,
+                        "unspent_coin_count": 2 if expected_royalty > 0 else 1,
+                    },
+                    "did": {},
+                    "nft": {
+                        "unspent_coin_count": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -taker_fee,
+                        "<=#spendable_balance": -taker_fee,
+                        "<=#max_send_amount": -taker_fee,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {
+                        "unconfirmed_wallet_balance": -(cats_requested + expected_royalty),
+                        "<=#spendable_balance": -(cats_requested + expected_royalty),
+                        "<=#max_send_amount": -(cats_requested + expected_royalty),
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft": {
+                        "init": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -taker_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {
+                        "confirmed_wallet_balance": -(cats_requested + expected_royalty),
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
+    )
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.parametrize("test_change", [True, False])
 @pytest.mark.anyio
-async def test_nft_offer_request_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: bool, test_change: bool, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-    wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
+async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFramework, test_change: bool) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+    wallet_maker = env_maker.xch_wallet
+    wallet_taker = env_taker.xch_wallet
 
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+        "cat": 3,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+        "cat": 4,
+    }
+
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
 
-    trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
-
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
+            env_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-    await time_out_assert(20, wallet_taker.get_pending_change_balance, 0)
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds - 1)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
     hex_did_id = did_wallet_taker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -724,7 +1183,7 @@ async def test_nft_offer_request_nft_for_cat(
     royalty_basis_pts = uint16(5000)  # 50%
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
+        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
     )
     metadata = Program.to(
         [
@@ -733,7 +1192,9 @@ async def test_nft_offer_request_nft_for_cat(
         ]
     )
 
-    async with nft_wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
             action_scope,
@@ -742,22 +1203,46 @@ async def test_nft_offer_request_nft_for_cat(
             royalty_basis_pts,
             did_id,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # MAKER SETUP -  NO DID
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET MAKER"
+        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET MAKER"
     )
+
+    await env_maker.change_balances({"nft": {"init": True}})
 
     # maker create offer: NFT for CAT
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
@@ -772,65 +1257,137 @@ async def test_nft_offer_request_nft_for_cat(
     # Trade them between maker and taker to ensure multiple coins for each cat
     cats_to_mint = 100000
     cats_to_trade = uint64(20000)
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            wallet_node_maker.wallet_state_manager,
+            env_maker.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
             uint64(cats_to_mint),
             action_scope,
         )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
-    await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, cats_to_mint)
-    await time_out_assert(20, cat_wallet_maker.get_unconfirmed_balance, cats_to_mint)
-
-    cat_wallet_taker: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
-        wallet_node_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
     )
-    if test_change:
-        async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            cat_1 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-            cat_2 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    else:
-        async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-            cat_2 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+
+    await CATWallet.get_or_create_wallet_for_cat(
+        env_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+    )
+
+    await env_taker.change_balances({"cat": {"init": True}})
+
+    with wallet_environments.new_puzzle_hashes_allowed():
+        if test_change:
+            async with wallet_maker.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                cat_1 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
+                cat_2 = await action_scope.get_puzzle_hash(
+                    wallet_maker.wallet_state_manager, override_reuse_puzhash_with=False
+                )
+        else:
+            async with wallet_taker.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
+                cat_2 = await action_scope.get_puzzle_hash(
+                    wallet_taker.wallet_state_manager, override_reuse_puzhash_with=False
+                )
     puzzle_hashes = [cat_1, cat_2]
     amounts = [cats_to_trade, cats_to_trade]
     if test_change:
-        async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        async with wallet_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
             ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
         extra_change = cats_to_mint - (2 * cats_to_trade)
         amounts.append(uint64(extra_change))
         puzzle_hashes.append(ph_taker_cat_1)
-    async with cat_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await cat_wallet_maker.generate_signed_transaction(amounts, puzzle_hashes, action_scope)
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
-    if test_change:
-        taker_cat_balance = cats_to_mint - (2 * cats_to_trade)
-        maker_cat_balance = 2 * cats_to_trade
     else:
-        maker_cat_balance = cats_to_mint - (2 * cats_to_trade)
-        taker_cat_balance = 2 * cats_to_trade
-    await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, maker_cat_balance)
-    await time_out_assert(15, cat_wallet_taker.get_confirmed_balance, taker_cat_balance)
+        extra_change = 0  # for mypy sake, not useful
+
+    async with cat_wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
+        await cat_wallet_maker.generate_signed_transaction(amounts, puzzle_hashes, action_scope)
+
+    taker_diff = extra_change if test_change else 2 * cats_to_trade
+    maker_diff = -taker_diff
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": maker_diff,
+                        "<=#spendable_balance": maker_diff,
+                        "<=#max_send_amount": maker_diff,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": maker_diff,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": 1,
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1 if test_change else 0,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": taker_diff,
+                        "unconfirmed_wallet_balance": taker_diff,
+                        "spendable_balance": taker_diff,
+                        "max_send_amount": taker_diff,
+                        "unspent_coin_count": 1 if test_change else 2,
+                    },
+                },
+            ),
+        ]
+    )
 
     nft_to_request = coins_taker[0]
-    nft_to_request_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_request.full_puzzle))
-    nft_to_request_asset_id: bytes32 = create_asset_id(nft_to_request_info)  # type: ignore
+    nft_to_request_info = match_puzzle(uncurry_puzzle(nft_to_request.full_puzzle))
+    assert nft_to_request_info is not None
+    nft_to_request_asset_id = create_asset_id(nft_to_request_info)
+    assert nft_to_request_asset_id is not None
     cats_requested = 10000
     maker_fee = uint64(433)
     driver_dict = {nft_to_request_asset_id: nft_to_request_info}
 
-    offer_dict = {nft_to_request_asset_id: 1, cat_wallet_maker.id(): -cats_requested}
+    offer_dict: OfferSummary = {nft_to_request_asset_id: 1, cat_wallet_maker.id(): -cats_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             offer_dict, action_scope, driver_dict, fee=maker_fee
         )
@@ -840,79 +1397,152 @@ async def test_nft_offer_request_nft_for_cat(
 
     taker_fee = 1
 
-    peer = wallet_node_taker.get_full_node_peer()
-    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    peer = env_taker.node.get_full_node_peer()
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
         )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
 
-    async def maker_1_taker_0() -> bool:
-        return (
-            len(await nft_wallet_maker.get_current_nfts()) == 1 and len(await nft_wallet_taker.get_current_nfts()) == 0
-        )
-
-    await farm_blocks_until(maker_1_taker_0, full_node_api, ph_token)
-
-    # assert payments and royalties
     expected_royalty = uint64(cats_requested * royalty_basis_pts / 10000)
-    expected_maker_balance = funds - cats_to_mint - maker_fee
-    expected_taker_balance = funds - 2 - taker_fee
-    expected_maker_cat_balance = maker_cat_balance - cats_requested - expected_royalty
-    expected_taker_cat_balance = taker_cat_balance + cats_requested + expected_royalty
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, expected_maker_balance)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, expected_taker_balance)
-    await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, expected_maker_cat_balance)
-    await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, expected_taker_cat_balance)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -maker_fee,
+                        "<=#max_send_amount": -maker_fee,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {
+                        "<=#spendable_balance": -(cats_requested + expected_royalty),
+                        "<=#max_send_amount": -(cats_requested + expected_royalty),
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft": {
+                        "init": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -maker_fee,
+                        "unconfirmed_wallet_balance": -maker_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {
+                        "confirmed_wallet_balance": -(cats_requested + expected_royalty),
+                        "unconfirmed_wallet_balance": -(cats_requested + expected_royalty),
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -taker_fee,
+                        "<=#spendable_balance": -taker_fee,
+                        "<=#max_send_amount": -taker_fee,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {
+                        # Normally taker is not royalty holder so this is an edge case
+                        "unconfirmed_wallet_balance": cats_requested  # + expected_royalty,
+                    },
+                    "did": {},
+                    "nft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -taker_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {
+                        "confirmed_wallet_balance": cats_requested + expected_royalty,
+                        "unconfirmed_wallet_balance": expected_royalty,  # only find out after sync
+                        "spendable_balance": cats_requested + expected_royalty,
+                        "max_send_amount": cats_requested + expected_royalty,
+                        "unspent_coin_count": 2,
+                    },
+                    "did": {},
+                    "nft": {
+                        "unspent_coin_count": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+        ]
+    )
+
+    assert len(await nft_wallet_maker.get_current_nfts()) == 1
+    assert len(await nft_wallet_taker.get_current_nfts()) == 0
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [2]}], indirect=True)
 @pytest.mark.anyio
-# @pytest.mark.skip
-async def test_nft_offer_sell_cancel(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
+async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -> None:
+    env_maker = wallet_environments.environments[0]
+    wallet_maker = env_maker.xch_wallet
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+    }
+
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
 
-    if trusted:
-        wallet_node_maker.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_maker.config["trusted_peers"] = {}
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
-
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker], timeout=20)
 
-    await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds - 1)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "init": True,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            )
+        ]
+    )
 
     hex_did_id = did_wallet_maker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -921,7 +1551,7 @@ async def test_nft_offer_sell_cancel(
     royalty_basis_pts = uint16(200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
         [
@@ -930,7 +1560,11 @@ async def test_nft_offer_sell_cancel(
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    await env_maker.change_balances({"nft": {"init": True}})
+
+    async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
             action_scope,
@@ -939,14 +1573,35 @@ async def test_nft_offer_sell_cancel(
             royalty_basis_pts,
             did_id,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "set_remainder": True,
+                    },
+                },
             )
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker], timeout=20)
+        ]
+    )
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
@@ -957,20 +1612,27 @@ async def test_nft_offer_sell_cancel(
     assert len(coins_maker) == 1
 
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
-    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
+    nft_to_offer_info = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
+    assert nft_to_offer_info is not None
+    nft_to_offer_asset_id = create_asset_id(nft_to_offer_info)
+    assert nft_to_offer_asset_id is not None
     xch_requested = 1000
     maker_fee = uint64(433)
 
-    offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
+    offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         _success, trade_make, _error = await trade_manager_maker.create_offer_for_ids(
             offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
         )
+    assert trade_make is not None
 
     FEE = uint64(2000000000000)
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=FEE, secure=True)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
@@ -978,129 +1640,41 @@ async def test_nft_offer_sell_cancel(
         return TradeStatus(trade_rec.status)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker], timeout=20)
 
-    await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
-
-
-@pytest.mark.parametrize(
-    "trusted",
-    [True],
-)
-@pytest.mark.anyio
-async def test_nft_offer_sell_cancel_in_batch(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
-) -> None:
-    num_blocks = 3
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
-
-    if trusted:
-        wallet_node_maker.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_maker.config["trusted_peers"] = {}
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
-    )
-    await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
-
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
-        )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-
-    await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds - 1)
-
-    hex_did_id = did_wallet_maker.get_my_DID()
-    did_id = bytes32.fromhex(hex_did_id)
-    target_puzhash = ph_maker
-    royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
-
-    nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
-    )
-    metadata = Program.to(
+    await wallet_environments.process_pending_states(
         [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -FEE,
+                        "<=#spendable_balance": -FEE,
+                        "<=#max_send_amount": -FEE,
+                        "pending_coin_removal_count": 3,
+                    },
+                    "nft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -FEE,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "unspent_coin_count": -2,
+                        "pending_coin_removal_count": -3,
+                    },
+                    "nft": {
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            )
         ]
     )
 
-    async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await nft_wallet_maker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash,
-            royalty_puzhash,
-            royalty_basis_pts,
-            did_id,
-        )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            assert compute_memos(tx.spend_bundle)
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
-
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-
-    await time_out_assert(10, get_nft_count, 1, nft_wallet_maker)
-
-    # maker create offer: NFT for xch
-    trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
-
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    assert len(coins_maker) == 1
-
-    nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
-    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
-    xch_requested = 1000
-    maker_fee = uint64(433)
-
-    offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
-
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-        _success, trade_make, _error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
-        )
-
-    FEE = uint64(2000000000000)
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=FEE, secure=True)
-
-    async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
-        trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-        return TradeStatus(trade_rec.status)
-
-    await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
-
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes
 @pytest.mark.parametrize(
     "royalty_pts",
     [
@@ -1111,88 +1685,143 @@ async def test_nft_offer_sell_cancel_in_batch(
         (100000, 10001, 10005),  # 1000% shouldn't work
     ],
 )
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [3, 3], "config_overrides": {"automatically_add_unknown_cats": True}}],
+    indirect=True,
+)
 @pytest.mark.anyio
-async def test_complex_nft_offer(
-    self_hostname: str,
-    two_wallet_nodes: Any,
-    trusted: Any,
-    royalty_pts: tuple[int, int, int],
-    seeded_random: random.Random,
-) -> None:
+async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royalty_pts: tuple[int, int, int]) -> None:
     """
     This test is going to create an offer where the maker offers 1 NFT and 1 CAT for 2 NFTs, an XCH and a CAT
     """
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
-    wsm_maker = wallet_node_maker.wallet_state_manager
-    wsm_taker = wallet_node_taker.wallet_state_manager
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+    wsm_maker = env_maker.wallet_state_manager
+    wsm_taker = env_taker.wallet_state_manager
     wallet_maker = wsm_maker.main_wallet
     wallet_taker = wsm_taker.main_wallet
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "cat_maker": 2,
+        "nft0": 3,
+        "did": 4,
+        "nft1": 5,
+        "cat_taker": 6,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "cat_taker": 2,
+        "nft0": 3,
+        "did": 4,
+        "nft1": 5,
+        "cat_maker": 6,
+    }
+
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
-
-    trusted_setup_helper(trusted, wallet_node_maker, wallet_node_taker, full_node_api)
-    wallet_node_maker.config["automatically_add_unknown_cats"] = True
-    wallet_node_taker.config["automatically_add_unknown_cats"] = True
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    # Need money for fees and offering
-    funds_maker = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
-    funds_taker = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 6))
-
-    await full_node_api.farm_rewards_to_wallet(amount=funds_maker, wallet=wsm_maker.main_wallet, timeout=60)
-    await full_node_api.farm_rewards_to_wallet(amount=funds_taker, wallet=wsm_taker.main_wallet, timeout=60)
 
     CAT_AMOUNT = uint64(100000000)
-    txs = []
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wsm_maker, wallet_maker, {"identifier": "genesis_by_id"}, CAT_AMOUNT, action_scope
         )
-    txs.extend(action_scope.side_effects.transactions)
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         cat_wallet_taker = await CATWallet.create_new_cat_wallet(
             wsm_taker, wallet_taker, {"identifier": "genesis_by_id"}, CAT_AMOUNT, action_scope
         )
-    txs.extend(action_scope.side_effects.transactions)
+    await env_maker.change_balances({"cat_maker": {"init": True}})
+    await env_taker.change_balances({"cat_taker": {"init": True}})
 
     # We'll need these later
     basic_nft_wallet_maker = await NFTWallet.create_new_nft_wallet(wsm_maker, wallet_maker, name="NFT WALLET MAKER")
     basic_nft_wallet_taker = await NFTWallet.create_new_nft_wallet(wsm_taker, wallet_taker, name="NFT WALLET TAKER")
+    await env_maker.change_balances({"nft0": {"init": True}})
+    await env_taker.change_balances({"nft0": {"init": True}})
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
             wsm_maker, wallet_maker, uint64(1), action_scope
         )
-    txs.extend(action_scope.side_effects.transactions)
-    async with wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
             wsm_taker, wallet_taker, uint64(1), action_scope
         )
-    txs.extend(action_scope.side_effects.transactions)
+    await env_maker.change_balances({"did": {"init": True}})
+    await env_taker.change_balances({"did": {"init": True}})
 
-    await full_node_api.process_transaction_records(records=txs)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat_maker": {
+                        "set_remainder": True,
+                    },
+                    "nft0": {},
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat_maker": {
+                        "set_remainder": True,
+                    },
+                    "nft0": {},
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat_taker": {
+                        "set_remainder": True,
+                    },
+                    "nft0": {},
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "cat_taker": {
+                        "set_remainder": True,
+                    },
+                    "nft0": {},
+                    "did": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
-    funds_maker = funds_maker - 1 - CAT_AMOUNT
-    funds_taker = funds_taker - 1 - CAT_AMOUNT
-
-    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
-    await time_out_assert(30, cat_wallet_maker.get_confirmed_balance, CAT_AMOUNT)
-    await time_out_assert(30, cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT)
-    await time_out_assert(30, cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT)
-    await time_out_assert(30, cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT)
     did_id_maker = bytes32.fromhex(did_wallet_maker.get_my_DID())
     did_id_taker = bytes32.fromhex(did_wallet_taker.get_my_DID())
     target_puzhash_maker = ph_maker
@@ -1206,11 +1835,14 @@ async def test_complex_nft_offer(
     )
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
+        wsm_maker, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
     )
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID 1", did_id=did_id_taker
+        wsm_taker, wallet_taker, name="NFT WALLET DID 1", did_id=did_id_taker
     )
+    await env_maker.change_balances({"nft1": {"init": True}})
+    await env_taker.change_balances({"nft1": {"init": True}})
+
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
@@ -1220,7 +1852,7 @@ async def test_complex_nft_offer(
     if royalty_basis_pts_maker > 65535:
         with pytest.raises(ValueError):
             async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG, push=False
+                wallet_environments.tx_config, push=False
             ) as action_scope:
                 await nft_wallet_maker.generate_new_nft(
                     metadata,
@@ -1232,7 +1864,9 @@ async def test_complex_nft_offer(
                 )
         return
     else:
-        async with nft_wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
             await nft_wallet_maker.generate_new_nft(
                 metadata,
                 action_scope,
@@ -1241,13 +1875,10 @@ async def test_complex_nft_offer(
                 uint16(royalty_basis_pts_maker),
                 did_id_maker,
             )
-        for tx in action_scope.side_effects.transactions:
-            if tx.spend_bundle is not None:
-                await time_out_assert_not_none(
-                    20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-                )
 
-    async with nft_wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
             action_scope,
@@ -1256,25 +1887,67 @@ async def test_complex_nft_offer(
             royalty_basis_pts_taker_1,
             did_id_taker,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    funds_maker -= 1
-    funds_taker -= 1
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
-    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_maker)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_taker)
 
     # MAke one more NFT for the taker
-    async with nft_wallet_taker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with nft_wallet_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
             action_scope,
@@ -1283,17 +1956,37 @@ async def test_complex_nft_offer(
             royalty_basis_pts_taker_2,
             did_id_taker,
         )
-    for tx in action_scope.side_effects.transactions:
-        if tx.spend_bundle is not None:
-            await time_out_assert_not_none(
-                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
-            )
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    funds_taker -= 1
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "did": {
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "set_remainder": True,
+                    },
+                },
+            ),
+        ]
+    )
 
-    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
     await time_out_assert(30, get_nft_count, 2, nft_wallet_taker)
 
     trade_manager_maker = wsm_maker.trade_manager
@@ -1312,7 +2005,7 @@ async def test_complex_nft_offer(
         CAT_REQUESTED = 100000
         FEE = uint64(2000000000000)
 
-    complex_nft_offer = {
+    complex_nft_offer: OfferSummary = {
         nft_to_offer_asset_id_maker: -1,
         cat_wallet_maker.id(): CAT_REQUESTED * -1,
         1: XCH_REQUESTED,
@@ -1321,9 +2014,13 @@ async def test_complex_nft_offer(
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): CAT_REQUESTED,
     }
 
+    nft_taker_1_info = match_puzzle(uncurry_puzzle(taker_nfts[0].full_puzzle))
+    nft_taker_2_info = match_puzzle(uncurry_puzzle(taker_nfts[1].full_puzzle))
+    assert nft_taker_1_info is not None
+    assert nft_taker_2_info is not None
     driver_dict = {
-        nft_to_offer_asset_id_taker_1: match_puzzle(uncurry_puzzle(taker_nfts[0].full_puzzle)),
-        nft_to_offer_asset_id_taker_2: match_puzzle(uncurry_puzzle(taker_nfts[1].full_puzzle)),
+        nft_to_offer_asset_id_taker_1: nft_taker_1_info,
+        nft_to_offer_asset_id_taker_2: nft_taker_2_info,
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
             {
                 "type": "CAT",
@@ -1332,7 +2029,9 @@ async def test_complex_nft_offer(
         ),
     }
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             complex_nft_offer, action_scope, driver_dict=driver_dict, fee=FEE
         )
@@ -1340,17 +2039,15 @@ async def test_complex_nft_offer(
     assert success
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
-    )
+    [maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(trade_make.offer)])
     if royalty_basis_pts_maker == 10000:
         with pytest.raises(ValueError):
             async with trade_manager_taker.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+                wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
             ) as action_scope:
                 trade_take = await trade_manager_taker.respond_to_offer(
                     Offer.from_bytes(trade_make.offer),
-                    wallet_node_taker.get_full_node_peer(),
+                    env_taker.node.get_full_node_peer(),
                     action_scope,
                     fee=FEE,
                 )
@@ -1358,19 +2055,16 @@ async def test_complex_nft_offer(
         return
     else:
         async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+            wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
         ) as action_scope:
             trade_take = await trade_manager_taker.respond_to_offer(
                 maker_offer,
-                wallet_node_taker.get_full_node_peer(),
+                env_taker.node.get_full_node_peer(),
                 action_scope,
                 fee=FEE,
             )
     assert trade_take is not None
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=60)
 
-    # Now let's make sure the final wallet state is correct
     maker_royalty_summary = NFTWallet.royalty_calculation(
         {
             nft_to_offer_asset_id_maker: (royalty_puzhash_maker, uint16(royalty_basis_pts_maker)),
@@ -1395,37 +2089,124 @@ async def test_complex_nft_offer(
         taker_royalty_summary[nft_to_offer_asset_id_taker_1][0]["amount"]
         + taker_royalty_summary[nft_to_offer_asset_id_taker_2][0]["amount"]
     )
-    funds_maker = int(funds_maker - FEE + XCH_REQUESTED + maker_xch_royalties_expected)
-    funds_taker = int(funds_taker - FEE - XCH_REQUESTED - maker_xch_royalties_expected)
 
-    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
-
-    async def get_cat_wallet_and_check_balance(asset_id: str, wsm: Any) -> uint128:
-        cat_wallet = await wsm.get_wallet_for_asset_id(asset_id)
-        if cat_wallet is None:
-            return uint128(0)
-        else:
-            return uint128(await cat_wallet.get_confirmed_balance())
-
-    taker_cat_funds_maker = CAT_REQUESTED + maker_cat_royalties_expected
-    maker_cat_funds_taker = CAT_REQUESTED + taker_cat_royalties_expected
-    await time_out_assert(
-        30,
-        get_cat_wallet_and_check_balance,
-        taker_cat_funds_maker,
-        cat_wallet_taker.get_asset_id(),
-        wsm_maker,
+    xch_coins = int(XCH_REQUESTED / 1_750_000_000_000) + 2
+    fee_coins = int(FEE / 1_750_000_000_000) + 1 if FEE > 1_750_000_000_000 else 1
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -FEE,
+                        "<=#max_send_amount": -FEE,
+                        "pending_coin_removal_count": fee_coins,
+                    },
+                    "cat_maker": {
+                        "<=#spendable_balance": -CAT_REQUESTED - taker_cat_royalties_expected,
+                        "<=#max_send_amount": -CAT_REQUESTED - taker_cat_royalties_expected,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft1": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": XCH_REQUESTED + maker_xch_royalties_expected - FEE,
+                        "confirmed_wallet_balance": XCH_REQUESTED + maker_xch_royalties_expected - FEE,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "pending_coin_removal_count": -fee_coins,
+                        # Parametrizations make unspent_coin_count too complicated
+                        "set_remainder": True,
+                    },
+                    "cat_maker": {
+                        "unconfirmed_wallet_balance": -CAT_REQUESTED - taker_cat_royalties_expected,
+                        "confirmed_wallet_balance": -CAT_REQUESTED - taker_cat_royalties_expected,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat_taker": {
+                        "init": True,
+                        "unconfirmed_wallet_balance": CAT_REQUESTED + maker_cat_royalties_expected,
+                        "confirmed_wallet_balance": CAT_REQUESTED + maker_cat_royalties_expected,
+                        "spendable_balance": CAT_REQUESTED + maker_cat_royalties_expected,
+                        "max_send_amount": CAT_REQUESTED + maker_cat_royalties_expected,
+                        # Parametrizations make unspent_coin_count too complicated
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": -1,
+                    },
+                    "nft0": {
+                        "unspent_coin_count": 2,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
+                        "<=#spendable_balance": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
+                        "<=#max_send_amount": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": xch_coins + fee_coins,
+                    },
+                    "cat_taker": {
+                        "unconfirmed_wallet_balance": -CAT_REQUESTED - maker_cat_royalties_expected,
+                        "<=#spendable_balance": -CAT_REQUESTED - maker_cat_royalties_expected,
+                        "<=#max_send_amount": -CAT_REQUESTED - maker_cat_royalties_expected,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    # Royalties don't factor into unconfirmed balance calculations
+                    "cat_maker": {
+                        "init": True,
+                        "unconfirmed_wallet_balance": CAT_REQUESTED,
+                    },
+                    "nft1": {
+                        "pending_coin_removal_count": 2,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -fee_coins - xch_coins,
+                        # Parametrizations make unspent_coin_count too complicated
+                        "set_remainder": True,
+                    },
+                    "cat_taker": {
+                        "confirmed_wallet_balance": -CAT_REQUESTED - maker_cat_royalties_expected,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat_maker": {
+                        "confirmed_wallet_balance": CAT_REQUESTED + taker_cat_royalties_expected,
+                        "unconfirmed_wallet_balance": taker_cat_royalties_expected,
+                        "spendable_balance": CAT_REQUESTED + taker_cat_royalties_expected,
+                        "max_send_amount": CAT_REQUESTED + taker_cat_royalties_expected,
+                        # Parametrizations make unspent_coin_count too complicated
+                        "set_remainder": True,
+                    },
+                    "nft1": {
+                        "unspent_coin_count": -2,
+                        "pending_coin_removal_count": -2,
+                    },
+                    "nft0": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
     )
-    await time_out_assert(
-        30,
-        get_cat_wallet_and_check_balance,
-        maker_cat_funds_taker,
-        cat_wallet_maker.get_asset_id(),
-        wsm_taker,
-    )
+
     maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
     taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
     assert len(maker_nfts) == 2
@@ -1436,15 +2217,18 @@ async def test_complex_nft_offer(
     assert nft_to_offer_asset_id_taker_2 in [nft.nft_id for nft in maker_nfts]
 
     # Try another permutation
+    HALF_XCH_REQUESTED = int(XCH_REQUESTED / 2)
     complex_nft_offer = {
         cat_wallet_maker.id(): CAT_REQUESTED * -1,
-        1: int(XCH_REQUESTED / 2),
+        1: HALF_XCH_REQUESTED,
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): CAT_REQUESTED,
         nft_to_offer_asset_id_maker: 1,
     }
 
+    maker_nft_info = match_puzzle(uncurry_puzzle(taker_nfts[0].full_puzzle))
+    assert maker_nft_info is not None
     driver_dict = {
-        nft_to_offer_asset_id_maker: match_puzzle(uncurry_puzzle(taker_nfts[0].full_puzzle)),
+        nft_to_offer_asset_id_maker: maker_nft_info,
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
             {
                 "type": "CAT",
@@ -1453,7 +2237,9 @@ async def test_complex_nft_offer(
         ),
     }
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             complex_nft_offer, action_scope, driver_dict=driver_dict, fee=uint64(0)
         )
@@ -1461,46 +2247,115 @@ async def test_complex_nft_offer(
     assert success
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
-    )
+    [maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(trade_make.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
-            wallet_node_taker.get_full_node_peer(),
+            env_taker.node.get_full_node_peer(),
             action_scope,
             fee=uint64(0),
         )
     assert trade_take is not None
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "cat_maker": {
+                        "<=#spendable_balance": -CAT_REQUESTED,
+                        "<=#max_send_amount": -CAT_REQUESTED,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": HALF_XCH_REQUESTED,
+                        "unconfirmed_wallet_balance": HALF_XCH_REQUESTED,
+                        "spendable_balance": HALF_XCH_REQUESTED,
+                        "max_send_amount": HALF_XCH_REQUESTED,
+                        # parametrization makes unspent_coin_count difficult
+                        "set_remainder": True,
+                    },
+                    "cat_maker": {
+                        "confirmed_wallet_balance": -CAT_REQUESTED,
+                        "unconfirmed_wallet_balance": -CAT_REQUESTED,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "pending_coin_removal_count": -1,
+                        # parametrization makes unspent_coin_count difficult
+                        "set_remainder": True,
+                    },
+                    "cat_taker": {
+                        "confirmed_wallet_balance": CAT_REQUESTED,
+                        "unconfirmed_wallet_balance": CAT_REQUESTED,
+                        "spendable_balance": CAT_REQUESTED,
+                        "max_send_amount": CAT_REQUESTED,
+                        # parametrization makes unspent_coin_count difficult
+                        "set_remainder": True,
+                    },
+                    "nft0": {
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -HALF_XCH_REQUESTED,
+                        "<=#spendable_balance": -HALF_XCH_REQUESTED,
+                        "<=#max_send_amount": -HALF_XCH_REQUESTED,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat_maker": {
+                        "unconfirmed_wallet_balance": CAT_REQUESTED,
+                    },
+                    "cat_taker": {
+                        "unconfirmed_wallet_balance": -CAT_REQUESTED,
+                        "<=#spendable_balance": -CAT_REQUESTED,
+                        "<=#max_send_amount": -CAT_REQUESTED,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft0": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -HALF_XCH_REQUESTED,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat_maker": {
+                        "confirmed_wallet_balance": CAT_REQUESTED,
+                        "spendable_balance": CAT_REQUESTED,
+                        "max_send_amount": CAT_REQUESTED,
+                        # parametrization makes unspent_coin_count difficult
+                        "set_remainder": True,
+                    },
+                    "cat_taker": {
+                        "confirmed_wallet_balance": -CAT_REQUESTED,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft0": {
+                        "unspent_coin_count": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+        ]
+    )
 
     # Now let's make sure the final wallet state is correct
-    funds_maker = int(funds_maker + XCH_REQUESTED / 2)
-    funds_taker = int(funds_taker - XCH_REQUESTED / 2)
-
-    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
-
-    await time_out_assert(
-        30,
-        get_cat_wallet_and_check_balance,
-        taker_cat_funds_maker + CAT_REQUESTED,
-        cat_wallet_taker.get_asset_id(),
-        wsm_maker,
-    )
-    await time_out_assert(
-        30,
-        get_cat_wallet_and_check_balance,
-        maker_cat_funds_taker + CAT_REQUESTED,
-        cat_wallet_maker.get_asset_id(),
-        wsm_taker,
-    )
     await time_out_assert(20, get_nft_count, 3, basic_nft_wallet_maker)
     await time_out_assert(20, get_nft_count, 0, basic_nft_wallet_taker)
     assert await basic_nft_wallet_maker.nft_store.get_nft_by_id(nft_to_offer_asset_id_maker) is not None

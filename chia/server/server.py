@@ -142,7 +142,7 @@ class ChiaServer:
     connection_close_task: Optional[asyncio.Task[None]] = None
     received_message_callback: Optional[ConnectionCallback] = None
     banned_peers: dict[str, float] = field(default_factory=dict)
-    invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
+    invalid_protocol_ban_seconds: int = INVALID_PROTOCOL_BAN_SECONDS
 
     @classmethod
     def create(
