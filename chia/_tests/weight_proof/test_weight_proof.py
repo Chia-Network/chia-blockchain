@@ -4,6 +4,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.blockchain_mock import BlockchainMock
@@ -14,7 +15,6 @@ from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, verify_and_get_quality_string
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock

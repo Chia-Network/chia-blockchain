@@ -11,6 +11,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
@@ -24,7 +25,6 @@ from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
@@ -141,9 +141,12 @@ async def get_any_service_client(
 
             if tb is not None:
                 print(f"Traceback:\n{tb}")
+        except (click.ClickException, click.Abort):
+            # this includes CliRpcConnectionError which is a subclass of click.ClickException
+            # raising here allows click to do it's normal click error handling
+            raise
         except Exception as e:  # this is only here to make the errors more user-friendly.
-            if not consume_errors or isinstance(e, (CliRpcConnectionError, click.Abort)):
-                # CliRpcConnectionError will be handled by click.
+            if not consume_errors:
                 raise
             print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 

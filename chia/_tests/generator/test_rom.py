@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
+from chia_rs import SpendConditions
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 from clvm.CLVMObject import CLVMStorage
 from clvm_tools import binutils
@@ -11,9 +13,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle_conditions import SpendConditions
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 

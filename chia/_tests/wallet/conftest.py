@@ -16,6 +16,7 @@ from chia_rs import (
     run_block_generator,
     run_block_generator2,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
@@ -24,7 +25,6 @@ from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -152,7 +152,7 @@ def new_action_scope_wrapper(func: Any) -> Any:
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         ph_indexes: dict[uint32, int] = {}
         for wallet_id in self.wallets:
-            ph_indexes[wallet_id] = await self.puzzle_store.get_unused_count(wallet_id)
+            ph_indexes[wallet_id] = await self.puzzle_store.get_used_count(wallet_id)
 
         async with func(self, *args, **kwargs) as action_scope:
             yield action_scope
@@ -160,7 +160,7 @@ def new_action_scope_wrapper(func: Any) -> Any:
         # Finally, check that the number of puzzle hashes did or did not increase by the specified amount
         if action_scope.config.tx_config.reuse_puzhash:
             for wallet_id, ph_index in zip(self.wallets, ph_indexes):
-                if not ph_indexes[wallet_id] == (await self.puzzle_store.get_unused_count(wallet_id)):
+                if not ph_indexes[wallet_id] == (await self.puzzle_store.get_used_count(wallet_id)):
                     raise NewPuzzleHashError(
                         f"wallet ID {wallet_id} generated new puzzle hashes while reuse_puzhash was False"
                     )

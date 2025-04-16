@@ -9,10 +9,10 @@ from chia_puzzles_py.programs import (
     GENESIS_BY_COIN_ID_OR_SINGLETON,
     GENESIS_BY_PUZZLE_HASH,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.cat_wallet.cat_utils import (
@@ -94,9 +94,7 @@ class GenesisById(LimitationsProgram):
         origin = coins.copy().pop()
         origin_id = origin.name()
 
-        cat_inner: Program = await wallet.standard_wallet.get_puzzle(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
+        cat_inner: Program = await action_scope.get_puzzle(wallet.wallet_state_manager)
         tail: Program = cls.construct([Program.to(origin_id)])
 
         wallet.lineage_store = await CATLineageStore.create(

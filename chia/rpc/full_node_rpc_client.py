@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Optional, cast
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -259,6 +259,10 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_mempool_items_by_coin_name(self, coin_name: bytes32) -> dict[str, Any]:
         response = await self.fetch("get_mempool_items_by_coin_name", {"coin_name": coin_name.hex()})
+        return response
+
+    async def create_block_generator(self) -> Optional[dict[str, Any]]:
+        response = await self.fetch("create_block_generator", {})
         return response
 
     async def get_recent_signage_point_or_eos(

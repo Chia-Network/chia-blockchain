@@ -20,6 +20,7 @@ from aiohttp import (
     client_exceptions,
     web,
 )
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -34,7 +35,6 @@ from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
@@ -142,7 +142,7 @@ class ChiaServer:
     connection_close_task: Optional[asyncio.Task[None]] = None
     received_message_callback: Optional[ConnectionCallback] = None
     banned_peers: dict[str, float] = field(default_factory=dict)
-    invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
+    invalid_protocol_ban_seconds: int = INVALID_PROTOCOL_BAN_SECONDS
 
     @classmethod
     def create(

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 
@@ -24,7 +25,6 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.full_block import FullBlock
@@ -802,7 +802,7 @@ class UnspentLineageInfoCase:
             ),
         ],
         parent_with_diff_amount=True,
-        expected_success=True,
+        expected_success=False,
     ),
     UnspentLineageInfoCase(
         id="Unspent with parent that has same puzzlehash and amount but is also unspent",
@@ -884,13 +884,11 @@ async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfo
         if case.expected_success:
             assert result == UnspentLineageInfo(
                 coin_id=bytes32(TEST_COIN_ID),
-                coin_amount=TEST_AMOUNT,
                 parent_id=(
                     bytes32(TEST_PARENT_ID_DIFFERENT_AMOUNT)
                     if case.parent_with_diff_amount
                     else bytes32(TEST_PARENT_ID)
                 ),
-                parent_amount=TEST_PARENT_DIFFERENT_AMOUNT if case.parent_with_diff_amount else TEST_AMOUNT,
                 parent_parent_id=bytes32(TEST_PARENT_PARENT_ID),
             )
         else:

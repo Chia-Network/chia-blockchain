@@ -65,6 +65,13 @@ class IntroducerAPI:
             if len(peers) >= max_peers:
                 break
 
+        if len(peers) < max_peers:
+            peers_needed = max_peers - len(peers)
+            self.introducer.log.info(f"Querying dns servers for {peers_needed} peers")
+            extra_peers = await self.introducer.get_peers_from_dns(peers_needed)
+            self.introducer.log.info(f"Received {len(extra_peers)} peers from dns server")
+            peers.extend(extra_peers)
+
         self.introducer.log.info(f"Sending vetted {peers}")
 
         msg = make_msg(ProtocolMessageTypes.respond_peers_introducer, RespondPeersIntroducer(peers))

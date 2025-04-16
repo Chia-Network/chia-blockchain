@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.streamable import VersionedBlob
 from chia.wallet.conditions import CreateCoin

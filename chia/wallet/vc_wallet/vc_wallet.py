@@ -6,6 +6,7 @@ import traceback
 from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from clvm.casts import int_to_bytes
 from typing_extensions import Unpack
@@ -15,7 +16,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable
@@ -187,9 +187,7 @@ class VCWallet:
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
         if inner_puzzle_hash is None:  # pragma: no cover
-            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
+            inner_puzzle_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         dpuzs, coin_spends, vc = VerifiedCredential.launch(
             coins,
             provider_did,
@@ -395,7 +393,7 @@ class VCWallet:
         else:
             await self.generate_signed_transaction(
                 [uint64(1)],
-                [await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
+                [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                 action_scope,
                 fee,
                 vc_id=vc.launcher_id,
@@ -564,11 +562,7 @@ class VCWallet:
             for launcher_id, vc in vcs.items():
                 await self.generate_signed_transaction(
                     [uint64(1)],
-                    [
-                        await self.standard_wallet.get_puzzle_hash(
-                            new=not inner_action_scope.config.tx_config.reuse_puzhash
-                        )
-                    ],
+                    [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
                     vc_id=launcher_id,
                     extra_conditions=(

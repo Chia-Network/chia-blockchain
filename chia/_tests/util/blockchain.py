@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint64
 
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
@@ -73,6 +74,7 @@ def persistent_blocks(
                 blocks.append(FullBlock.from_bytes_unchecked(block_bytes))
             if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
+
                 return blocks
         except EOFError:
             print("\n error reading db file")
@@ -126,6 +128,7 @@ def new_test_db(
         normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
         dummy_block_references=dummy_block_references,
         include_transactions=include_transactions,
+        genesis_timestamp=uint64(1234567890),
     )
     block_bytes_list: list[bytes] = []
     for block in blocks:

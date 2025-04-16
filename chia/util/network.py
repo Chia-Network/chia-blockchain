@@ -12,10 +12,10 @@ from typing import Any, Literal, Optional, Union
 
 from aiohttp import web
 from aiohttp.log import web_logger
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 from typing_extensions import final
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ip_address import IPAddress
 from chia.util.task_referencer import create_referenced_task
 

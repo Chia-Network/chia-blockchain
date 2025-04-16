@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, ClassVar, cast
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint32
 from packaging.version import Version
 
@@ -24,7 +25,6 @@ from chia.server.start_full_node import create_full_node_service
 from chia.server.start_wallet import create_wallet_service
 from chia.server.ws_connection import WSChiaConnection, error_response_version
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, Err
 
