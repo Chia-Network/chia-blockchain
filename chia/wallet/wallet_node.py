@@ -14,11 +14,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast, overload
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from packaging.version import Version
 
 from chia.consensus.blockchain import AddBlockResult
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
@@ -41,7 +42,6 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.weight_proof import WeightProof
@@ -50,11 +50,11 @@ from chia.util.config import lock_and_load_config, process_config_start_method, 
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
@@ -426,12 +426,10 @@ class WalletNode:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
+                create_referenced_task(profile_task(self.root_path, "wallet", self.log), known_unreferenced=True)
 
         if self.config.get("enable_memory_profiler", False):
-            # TODO: stop dropping tasks on the floor
-            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
+            create_referenced_task(mem_profile_task(self.root_path, "wallet", self.log), known_unreferenced=True)
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -457,8 +455,8 @@ class WalletNode:
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
-        self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
-        self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
+        self._process_new_subscriptions_task = create_referenced_task(self._process_new_subscriptions())
+        self._retry_failed_states_task = create_referenced_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
         self.log_in(fingerprint)
@@ -472,7 +470,8 @@ class WalletNode:
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
             if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
-                await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                result = await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+                await result.commit(self.wallet_state_manager)
 
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
@@ -519,8 +518,7 @@ class WalletNode:
     def _pending_tx_handler(self) -> None:
         if self._wallet_state_manager is None:
             return None
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(self._resend_queue())  # noqa: RUF006
+        create_referenced_task(self._resend_queue(), known_unreferenced=True)
 
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
@@ -711,18 +709,18 @@ class WalletNode:
         testing = self.config.get("testing", False)
         if self.wallet_peers is None and connect_to_unknown_peers and not testing:
             self.wallet_peers = WalletPeers(
-                self.server,
-                self.config["target_peer_count"],
-                self.root_path / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
-                self.config["introducer_peer"],
-                self.config.get("dns_servers", ["dns-introducer.chia.net"]),
-                self.config["peer_connect_interval"],
-                network_name,
-                default_port,
-                self.log,
+                server=self.server,
+                target_outbound_count=self.config["target_peer_count"],
+                peers_file_path=self.root_path
+                / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
+                introducer_info=self.config["introducer_peer"],
+                dns_servers=self.config.get("dns_servers", ["dns-introducer.chia.net"]),
+                peer_connect_interval=self.config["peer_connect_interval"],
+                selected_network=network_name,
+                default_port=default_port,
+                log=self.log,
             )
-            # TODO: stop dropping tasks on the floor
-            asyncio.create_task(self.wallet_peers.start())  # noqa: RUF006
+            create_referenced_task(self.wallet_peers.start())
 
     async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
@@ -832,7 +830,8 @@ class WalletNode:
         min_height_for_subscriptions = fork_height if use_delta_sync else 0
         already_checked_ph: set[bytes32] = set()
         while not self._shut_down:
-            await self.wallet_state_manager.create_more_puzzle_hashes()
+            result = await self.wallet_state_manager.create_more_puzzle_hashes()
+            await result.commit(self.wallet_state_manager)
             all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
             not_checked_puzzle_hashes = set(all_puzzle_hashes) - already_checked_ph
             if not_checked_puzzle_hashes == set():
@@ -1003,7 +1002,7 @@ class WalletNode:
                             self.log.info("Terminating receipt and validation due to shut down request")
                             await asyncio.gather(*all_tasks)
                             return False
-                    all_tasks.append(asyncio.create_task(validate_and_add(batch.entries, idx)))
+                    all_tasks.append(create_referenced_task(validate_and_add(batch.entries, idx)))
             idx += len(batch.entries)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
@@ -1242,7 +1241,7 @@ class WalletNode:
         self.log.info("Secondary peer syncing")
         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
         # that no recent transactions are being hidden.
-        self._secondary_peer_sync_task = asyncio.create_task(
+        self._secondary_peer_sync_task = create_referenced_task(
             self.long_sync(new_peak_hb.height, peer, 0, rollback=False)
         )
 
@@ -1686,7 +1685,7 @@ class WalletNode:
         self, coin_names: list[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> list[CoinState]:
         msg = RegisterForCoinUpdates(coin_names, uint32(0))
-        coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_interest_in_coin, msg)
+        coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_for_coin_updates, msg)
         if coin_state is None or not isinstance(coin_state, RespondToCoinUpdates):
             raise PeerRequestException(f"Was not able to get states for {coin_names}")
 

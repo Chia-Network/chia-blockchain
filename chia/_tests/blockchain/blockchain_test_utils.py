@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 from chia_rs import SpendBundleConditions
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -12,7 +13,6 @@ from chia.types.full_block import FullBlock
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 
 async def check_block_store_invariant(bc: Blockchain):
@@ -77,7 +77,7 @@ async def _validate_and_add_block(
             conds = None
         else:
             # fake the signature validation. Just say True here.
-            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True)
+            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0)
         results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
         future = await pre_validate_block(

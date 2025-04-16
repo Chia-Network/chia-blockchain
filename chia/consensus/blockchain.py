@@ -10,12 +10,18 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import (
+    ConsensusConstants,
+    SubEpochChallengeSegment,
+    additions_and_removals,
+    get_flags_for_height_and_constants,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -26,7 +32,6 @@ from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
@@ -37,13 +42,11 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
-from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.priority_mutex import PriorityMutex
 
 log = logging.getLogger(__name__)
@@ -127,6 +130,7 @@ class Blockchain:
         *,
         single_threaded: bool = False,
         log_coins: bool = False,
+        selected_network: Optional[str] = None,
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -146,6 +150,7 @@ class Blockchain:
             num_workers = max(cpu_count - reserved_cores, 1)
             self.pool = ThreadPoolExecutor(
                 max_workers=num_workers,
+                thread_name_prefix="block-validation-",
             )
             log.info(f"Started {num_workers} processes for block validation")
 
@@ -153,7 +158,7 @@ class Blockchain:
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
-        await self._load_chain_from_store(blockchain_dir)
+        await self._load_chain_from_store(blockchain_dir, selected_network)
         self._seen_compact_proofs = set()
         return self
 
@@ -161,11 +166,11 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, blockchain_dir: Path) -> None:
+    async def _load_chain_from_store(self, blockchain_dir: Path, selected_network: Optional[str] = None) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper)
+        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper, selected_network)
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
@@ -287,6 +292,7 @@ class Blockchain:
         sub_slot_iters: uint64,
         fork_info: ForkInfo,
         prev_ses_block: Optional[BlockRecord] = None,
+        block_record: Optional[BlockRecord] = None,
     ) -> tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
@@ -355,14 +361,16 @@ class Blockchain:
         if extending_main_chain:
             fork_info.reset(block.height - 1, block.prev_header_hash)
 
-        block_rec = await self.get_block_record_from_db(header_hash)
-        if block_rec is not None:
+        # we dont consider block_record passed in here since it might be from
+        # a current sync process and not yet fully validated and committed to the DB
+        block_rec_from_db = await self.get_block_record_from_db(header_hash)
+        if block_rec_from_db is not None:
             # We have already validated the block, but if it's not part of the
             # main chain, we still need to re-run it to update the additions and
             # removals in fork_info.
             await self.advance_fork_info(block, fork_info)
             fork_info.include_spends(pre_validation_result.conds, block, header_hash)
-            self.add_block_record(block_rec)
+            self.add_block_record(block_rec_from_db)
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if fork_info.peak_hash != block.prev_header_hash:
@@ -398,14 +406,15 @@ class Blockchain:
         if not genesis and prev_block is not None:
             self.add_block_record(prev_block)
 
-        block_record = block_to_block_record(
-            self.constants,
-            self,
-            required_iters,
-            block,
-            sub_slot_iters=sub_slot_iters,
-            prev_ses_block=prev_ses_block,
-        )
+        if block_record is None:
+            block_record = block_to_block_record(
+                self.constants,
+                self,
+                required_iters,
+                block,
+                sub_slot_iters=sub_slot_iters,
+                prev_ses_block=prev_ses_block,
+            )
 
         # in case we fail and need to restore the blockchain state, remember the
         # peak height
@@ -605,16 +614,16 @@ class Blockchain:
         )
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        assert self.contains_block(header_hash)
-        curr = self.block_record(header_hash)
+        curr = self.try_block_record(header_hash)
+        assert curr is not None
         if curr.height <= 2:
             return self.constants.DIFFICULTY_STARTING
 
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[1]
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        assert self.contains_block(header_hash)
-        curr = self.block_record(header_hash)
+        curr = self.try_block_record(header_hash)
+        assert curr is not None
         if curr.height <= 2:
             return self.constants.SUB_SLOT_ITERS_STARTING
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
@@ -700,7 +709,7 @@ class Blockchain:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         if (
-            not self.contains_block(block.prev_header_hash)
+            self.try_block_record(block.prev_header_hash) is None
             and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
         ):
             return None, Err.INVALID_PREV_BLOCK_HASH
@@ -784,12 +793,11 @@ class Blockchain:
 
         return PreValidationResult(None, required_iters, conds, uint32(0))
 
-    def contains_block(self, header_hash: bytes32) -> bool:
-        """
-        True if we have already added this block to the chain. This may return false for orphan blocks
-        that we have added but no longer keep in memory.
-        """
-        return header_hash in self.__block_records
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
+        block_hash_from_hh = self.height_to_hash(height)
+        if block_hash_from_hh is None or block_hash_from_hh != header_hash:
+            return False
+        return True
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__block_records[header_hash]
@@ -897,19 +905,23 @@ class Blockchain:
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
             if tx_filter is False:
-                header = get_block_header(block, [], [])
-            elif block.transactions_generator is None:
-                # There is no point in getting additions and removals for
-                # blocks that do not have transactions.
-                header = get_block_header(block, [], [])
-            else:
+                header = get_block_header(block)
+            elif block.transactions_generator is not None:
                 added_coins_records, removed_coins_records = await asyncio.gather(
                     self.coin_store.get_coins_added_at_height(block.height),
                     self.coin_store.get_coins_removed_at_height(block.height),
                 )
                 tx_additions = [cr.coin for cr in added_coins_records if not cr.coinbase]
                 removed = [cr.coin.name() for cr in removed_coins_records]
-                header = get_block_header(block, tx_additions, removed)
+                header = get_block_header(block, (removed, tx_additions))
+            elif block.is_transaction_block():
+                # This is a transaction block with just reward coins.
+                # We're sending empty additions and removals to signal that we
+                # want the transactions filter to be computed.
+                header = get_block_header(block, ([], []))
+            else:
+                # Non transaction block.
+                header = get_block_header(block)
             header_blocks[header.header_hash] = header
 
         return header_blocks
@@ -947,7 +959,7 @@ class Blockchain:
         return records
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if self.contains_block(header_hash):
+        if header_hash in self.__block_records:
             return self.block_record(header_hash)
         return None
 

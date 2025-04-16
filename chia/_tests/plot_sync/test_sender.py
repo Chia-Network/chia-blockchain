@@ -3,6 +3,8 @@ from __future__ import annotations
 import random
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint64
 
 from chia._tests.plot_sync.util import get_dummy_connection, plot_sync_identifier
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -13,8 +15,6 @@ from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncRespon
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint64
 
 
 def test_default_values(bt: BlockTools) -> None:

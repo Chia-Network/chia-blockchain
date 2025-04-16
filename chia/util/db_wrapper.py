@@ -54,6 +54,13 @@ class InternalError(DBWrapperError):
     pass
 
 
+class PurposefulAbort(DBWrapperError):
+    obj: object
+
+    def __init__(self, obj: object) -> None:
+        self.obj = obj
+
+
 def generate_in_memory_db_uri() -> str:
     # We need to use shared cache as our DB wrapper uses different types of connections
     return f"file:db_{secrets.token_hex(16)}?mode=memory&cache=shared"
@@ -74,7 +81,8 @@ async def _create_connection(
     log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
 ) -> aiosqlite.Connection:
-    connection = await aiosqlite.connect(database=database, uri=uri)
+    # To avoid https://github.com/python/cpython/issues/118172
+    connection = await aiosqlite.connect(database=database, uri=uri, cached_statements=0)
 
     if log_file is not None:
         await connection.set_trace_callback(functools.partial(sql_trace_callback, file=log_file, name=name))

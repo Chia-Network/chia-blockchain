@@ -9,6 +9,8 @@ from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.connection_utils import add_dummy_connection
 from chia.full_node.coin_store import CoinStore
@@ -24,12 +26,10 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()

@@ -6,16 +6,16 @@ import traceback
 from typing import TYPE_CHECKING, Any, Optional
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, construct_cat_puzzle
@@ -24,6 +24,7 @@ from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     UnknownCondition,
@@ -31,7 +32,6 @@ from chia.wallet.conditions import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -397,7 +397,7 @@ class CRCATWallet(CATWallet):
 
     async def _generate_unsigned_spendbundle(
         self,
-        payments: list[Payment],
+        payments: list[CreateCoin],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
@@ -438,7 +438,7 @@ class CRCATWallet(CATWallet):
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries: list[Payment] = []
+        primaries: list[CreateCoin] = []
         for payment in payments:
             primaries.append(payment)
 
@@ -449,20 +449,19 @@ class CRCATWallet(CATWallet):
             if origin_crcat_record is None:
                 raise RuntimeError("A CR-CAT coin was selected that we don't have a record for")  # pragma: no cover
             origin_crcat = self.coin_record_to_crcat(origin_crcat_record)
-            if action_scope.config.tx_config.override(
-                reuse_puzhash=(
-                    True if not add_authorizations_to_cr_cats else action_scope.config.tx_config.reuse_puzhash
-                )
-            ).reuse_puzhash:
-                change_puzhash = origin_crcat.inner_puzzle_hash
-                for payment in payments:
-                    if change_puzhash == payment.puzzle_hash and change == payment.amount:
-                        # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-                        break
+
+            if add_authorizations_to_cr_cats:
+                change_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
             else:
-                change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+                change_puzhash = origin_crcat.inner_puzzle_hash
+            for payment in payments:
+                if change_puzhash == payment.puzzle_hash and change == payment.amount:
+                    # We cannot create two coins has same id, create a new puzhash for the change
+                    change_puzhash = await action_scope.get_puzzle_hash(
+                        self.wallet_state_manager, override_reuse_puzhash_with=False
+                    )
+                    break
+            primaries.append(CreateCoin(change_puzhash, uint64(change), [change_puzhash]))
 
         # Find the VC Wallet
         vc_wallet: VCWallet
@@ -585,8 +584,10 @@ class CRCATWallet(CATWallet):
         )
         if add_authorizations_to_cr_cats:
             await vc_wallet.generate_signed_transaction(
-                vc.launcher_id,
+                [uint64(1)],
+                [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                 action_scope,
+                vc_id=vc.launcher_id,
                 extra_conditions=(
                     *expected_announcements,
                     announcement,
@@ -622,7 +623,7 @@ class CRCATWallet(CATWallet):
             memos_with_hint.extend(memo_list)
             # Force wrap the outgoing coins in the pending state if not going to us
             payments.append(
-                Payment(
+                CreateCoin(
                     (
                         construct_pending_approval_state(puzhash, amount).get_tree_hash()
                         if puzhash != Offer.ph()
@@ -667,7 +668,7 @@ class CRCATWallet(CATWallet):
                     sent_to=[],
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
-                    name=spend_bundle.name() if i == 0 else payment.as_condition().get_tree_hash(),
+                    name=spend_bundle.name() if i == 0 else payment.to_program().get_tree_hash(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
@@ -766,8 +767,10 @@ class CRCATWallet(CATWallet):
 
         # Make the VC TX
         await vc_wallet.generate_signed_transaction(
-            vc.launcher_id,
+            [uint64(1)],
+            [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
             action_scope,
+            vc_id=vc.launcher_id,
             extra_conditions=(
                 *extra_conditions,
                 *expected_announcements,
@@ -776,6 +779,7 @@ class CRCATWallet(CATWallet):
             ),
         )
 
+        to_puzzle_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         async with action_scope.use() as interface:
             other_additions: set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.additions}
             other_removals: set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.removals}
@@ -783,7 +787,7 @@ class CRCATWallet(CATWallet):
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=await self.wallet_state_manager.main_wallet.get_puzzle_hash(False),
+                    to_puzzle_hash=to_puzzle_hash,
                     amount=uint64(sum(c.amount for c in coins)),
                     fee_amount=fee,
                     confirmed=False,

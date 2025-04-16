@@ -6,17 +6,21 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any, Optional
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+
 from chia.cmds.cmds_util import get_any_service_client
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint64
+from chia.util.default_root import resolve_root_path
 
 
 @contextlib.asynccontextmanager
 async def get_client(
     rpc_port: Optional[int], fingerprint: Optional[int] = None, root_path: Optional[Path] = None
 ) -> AsyncIterator[tuple[DataLayerRpcClient, dict[str, Any]]]:
+    root_path = resolve_root_path(override=root_path)
+
     async with get_any_service_client(
         client_type=DataLayerRpcClient,
         rpc_port=rpc_port,
@@ -345,6 +349,7 @@ async def clear_pending_roots(
     root_path: Optional[Path] = None,
     fingerprint: Optional[int] = None,
 ) -> dict[str, Any]:
+    result = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         result = await client.clear_pending_roots(store_id=store_id)
         print(json.dumps(result, indent=2, sort_keys=True))

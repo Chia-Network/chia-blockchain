@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from io import StringIO
-from typing import Optional, Union, cast
+from typing import Optional, cast
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from pytest_mock import MockerFixture
@@ -14,9 +16,15 @@ from pytest_mock import MockerFixture
 from chia._tests.cmds.cmd_test_utils import TestWalletRpcClient
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
+from chia._tests.pools.test_pool_rpc import (
+    LOCK_HEIGHT,
+    create_new_plotnft,
+    manage_temporary_pool_plot,
+    verify_pool_state,
+)
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
-from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
+from chia.cmds.cmd_classes import ChiaCliContext
+from chia.cmds.cmd_helpers import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
     ChangePayoutInstructionsPlotNFTCMD,
@@ -32,19 +40,16 @@ from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_po
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.setup_services import setup_farmer
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint32, uint64
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 # limit to plain consensus mode for all tests
 pytestmark = [pytest.mark.limit_consensus_modes(reason="irrelevant")]
-
-LOCK_HEIGHT = uint32(5)
 
 
 @dataclass
@@ -54,90 +59,6 @@ class StateUrlCase:
     pool_url: Optional[str]
     expected_error: Optional[str] = None
     marks: Marks = ()
-
-
-async def verify_pool_state(wallet_rpc: WalletRpcClient, w_id: int, expected_state: PoolSingletonState) -> bool:
-    pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(w_id))[0]
-    return pw_status.current.state == expected_state.value
-
-
-async def process_plotnft_create(
-    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState, second_nft: bool = False
-) -> int:
-    wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
-
-    pre_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
-        1: {
-            "confirmed_wallet_balance": 0,
-            "unconfirmed_wallet_balance": -1,
-            "<=#spendable_balance": 1,
-            "<=#max_send_amount": 1,
-            ">=#pending_change": 1,  # any amount increase
-            "pending_coin_removal_count": 1,
-        }
-    }
-
-    post_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
-        1: {
-            "confirmed_wallet_balance": -1,
-            "unconfirmed_wallet_balance": 0,
-            ">=#spendable_balance": 1,
-            ">=#max_send_amount": 1,
-            "<=#pending_change": 1,  # any amount decrease
-            "<=#pending_coin_removal_count": 1,
-        },
-    }
-
-    if second_nft:
-        post_block = post_block_balance_updates | {
-            2: {
-                "set_remainder": True,  # TODO: sometimes this fails with pending_coin_removal_count
-            },
-            3: {"init": True, "unspent_coin_count": 1},
-        }
-    else:
-        post_block = post_block_balance_updates | {2: {"init": True, "unspent_coin_count": 1}}
-
-    await wallet_test_framework.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates=pre_block_balance_updates,
-                post_block_balance_updates=post_block,
-            )
-        ]
-    )
-
-    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == 2 if second_nft else 1
-    wallet_id: int = summaries_response[-1]["id"]
-
-    await verify_pool_state(wallet_rpc, wallet_id, expected_state=expected_state)
-    return wallet_id
-
-
-async def create_new_plotnft(
-    wallet_test_framework: WalletTestFramework, self_pool: bool = False, second_nft: bool = False
-) -> int:
-    wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
-    wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
-
-    our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
-
-    await wallet_rpc.create_new_pool_wallet(
-        target_puzzlehash=our_ph,
-        backup_host="",
-        mode="new",
-        relative_lock_height=uint32(0) if self_pool else LOCK_HEIGHT,
-        state="SELF_POOLING" if self_pool else "FARMING_TO_POOL",
-        pool_url="" if self_pool else "http://pool.example.com",
-        fee=uint64(0),
-    )
-
-    return await process_plotnft_create(
-        wallet_test_framework=wallet_test_framework,
-        expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
-        second_nft=second_nft,
-    )
 
 
 @pytest.mark.parametrize(
@@ -297,7 +218,8 @@ async def test_plotnft_cli_show(
     )
 
     await ShowPlotNFTCMD(
-        context={"root_path": root_path},  # we need this for the farmer rpc client which is used in the commend
+        # we need this for the farmer rpc client which is used in the comment
+        context=ChiaCliContext(root_path=root_path),
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
@@ -308,7 +230,7 @@ async def test_plotnft_cli_show(
 
     with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
         await ShowPlotNFTCMD(
-            context={"root_path": root_path},
+            context=ChiaCliContext(root_path=root_path),
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
             ),
@@ -319,7 +241,7 @@ async def test_plotnft_cli_show(
 
     # need to capture the output and verify
     await ShowPlotNFTCMD(
-        context={"root_path": root_path},
+        context=ChiaCliContext(root_path=root_path),
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
@@ -334,7 +256,7 @@ async def test_plotnft_cli_show(
     # Passing in None when there are multiple pool wallets
     # Should show the state of all pool wallets
     await ShowPlotNFTCMD(
-        context={"root_path": root_path},
+        context=ChiaCliContext(root_path=root_path),
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
@@ -390,7 +312,7 @@ async def test_plotnft_cli_show_with_farmer(
             save_config(root_path, "config.yaml", config)
 
         await ShowPlotNFTCMD(
-            context={"root_path": root_path},
+            context=ChiaCliContext(root_path=root_path),
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
             ),
@@ -404,7 +326,7 @@ async def test_plotnft_cli_show_with_farmer(
         pw_info, _ = await wallet_rpc.pw_status(wallet_id)
 
         await ShowPlotNFTCMD(
-            context={"root_path": root_path},
+            context=ChiaCliContext(root_path=root_path),
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
             ),
@@ -757,7 +679,8 @@ async def test_plotnft_cli_claim(
     wallet_id = await create_new_plotnft(wallet_environments, self_pool=True)
 
     status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
-    our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
     bt = wallet_environments.full_node.bt
 
     async with manage_temporary_pool_plot(bt, status.p2_singleton_puzzle_hash) as pool_plot:
@@ -887,7 +810,7 @@ async def test_plotnft_cli_inspect(
 
     assert (
         json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+        == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
     )
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.FARMING_TO_POOL.value
 
@@ -912,7 +835,7 @@ async def test_plotnft_cli_inspect(
 
     assert (
         json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0x893474c97d04a0283483ba1af9e070768dff9e9a83d9ae2cf00a34be96ca29aec387dfb7474f2548d777000e5463f602"
+        == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
     )
 
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.SELF_POOLING.value
@@ -958,7 +881,7 @@ async def test_plotnft_cli_change_payout(
     # This tests what happens when using None for root_path
     mocker.patch("chia.cmds.plotnft_funcs.DEFAULT_ROOT_PATH", root_path)
     await ChangePayoutInstructionsPlotNFTCMD(
-        context=dict(),
+        context=ChiaCliContext(root_path=wallet_environments.environments[0].node.root_path),
         launcher_id=bytes32(32 * b"0"),
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
     ).run()
@@ -981,7 +904,7 @@ async def test_plotnft_cli_change_payout(
     assert wanted_config.payout_instructions == zero_address
 
     await ChangePayoutInstructionsPlotNFTCMD(
-        context={"root_path": root_path},
+        context=ChiaCliContext(root_path=root_path),
         launcher_id=pw_info.launcher_id,
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
     ).run()
@@ -1033,7 +956,7 @@ async def test_plotnft_cli_get_login_link(
             save_config(root_path, "config.yaml", config)
         with pytest.raises(CliRpcConnectionError, match="Was not able to get login link"):
             await GetLoginLinkCMD(
-                context={"root_path": root_path},
+                context=ChiaCliContext(root_path=root_path),
                 launcher_id=bytes32(32 * b"0"),
             ).run()
 

@@ -3,23 +3,25 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Optional, Union
 
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT, SETTLEMENT_PAYMENT_HASH
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint64
 from chia.util.streamable import parse_rust
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     parse_conditions_non_consensus,
     parse_timelock_info,
 )
@@ -31,9 +33,7 @@ from chia.wallet.outer_puzzles import (
     match_puzzle,
     solve_puzzle,
 )
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
@@ -43,8 +43,10 @@ from chia.wallet.util.puzzle_compression import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
-OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
+OfferSummary = dict[Union[int, bytes32], int]
+
+OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
+OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
 
 
 def detect_dependent_coin(
@@ -61,15 +63,17 @@ def detect_dependent_coin(
 
 
 @dataclass(frozen=True)
-class NotarizedPayment(Payment):
+class NotarizedPayment(CreateCoin):
     nonce: bytes32 = bytes32.zeros
 
     @classmethod
     def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
-        p = Payment.from_condition(with_opcode)
-        puzzle_hash, amount, memos = tuple(p.as_condition_args())
-        return cls(puzzle_hash, amount, memos, nonce)
+        p = CreateCoin.from_program(with_opcode)
+        return cls(p.puzzle_hash, p.amount, p.memos, nonce)
+
+    def name(self) -> bytes32:
+        return self.to_program().get_tree_hash()
 
 
 @dataclass(frozen=True, eq=False)
@@ -94,7 +98,7 @@ class Offer:
 
     @staticmethod
     def notarize_payments(
-        requested_payments: dict[Optional[bytes32], list[Payment]],  # `None` means you are requesting XCH
+        requested_payments: dict[Optional[bytes32], list[CreateCoin]],  # `None` means you are requesting XCH
         coins: list[Coin],
     ) -> dict[Optional[bytes32], list[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
@@ -106,8 +110,7 @@ class Offer:
         for asset_id, payments in requested_payments.items():
             notarized_payments[asset_id] = []
             for p in payments:
-                puzzle_hash, amount, memos = tuple(p.as_condition_args())
-                notarized_payments[asset_id].append(NotarizedPayment(puzzle_hash, amount, memos, nonce))
+                notarized_payments[asset_id].append(NotarizedPayment(p.puzzle_hash, p.amount, p.memos, nonce))
 
         return notarized_payments
 

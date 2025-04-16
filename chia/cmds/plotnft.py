@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Any, Optional
+from typing import Optional
 
 import click
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
-from chia.cmds.cmd_classes import NeedsWalletRPC, chia_command, option
+from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
+from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.cmds.param_types import (
     AddressParamType,
     Bytes32ParamType,
     CliAddress,
     TransactionFeeParamType,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint64
 
 
 @click.group("plotnft", help="Manage your plot NFTs")
@@ -24,14 +25,14 @@ def plotnft_cmd(ctx: click.Context) -> None:
 
 
 @chia_command(
-    plotnft_cmd,
-    "show",
-    "Show plotnft information",
+    group=plotnft_cmd,
+    name="show",
+    short_help="Show plotnft information",
     help="Show plotnft information",
 )
 class ShowPlotNFTCMD:
-    context: dict[str, Any]
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     id: Optional[int] = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
@@ -42,19 +43,19 @@ class ShowPlotNFTCMD:
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await show(
                 wallet_info=wallet_info,
-                root_path=self.context.get("root_path"),
+                root_path=self.context.root_path,
                 wallet_id_passed_in=self.id,
             )
 
 
 @chia_command(
-    plotnft_cmd,
-    "get_login_link",
+    group=plotnft_cmd,
+    name="get_login_link",
     short_help="Create a login link for a pool",
     help="Create a login link for a pool. The farmer must be running. Use 'plotnft show' to get the launcher id.",
 )
 class GetLoginLinkCMD:
-    context: dict[str, Any] = field(default_factory=dict)
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     launcher_id: bytes32 = option(
         "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
     )
@@ -62,15 +63,15 @@ class GetLoginLinkCMD:
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import get_login_link
 
-        await get_login_link(self.launcher_id, root_path=self.context.get("root_path"))
+        await get_login_link(self.launcher_id, root_path=self.context.root_path)
 
 
 # Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support
 # They will therefore not work with observer-only functionality
 # NOTE: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @chia_command(
-    plotnft_cmd,
-    "create",
+    group=plotnft_cmd,
+    name="create",
     short_help="Create a plot NFT",
     help="Create a plot NFT.",
 )
@@ -116,8 +117,8 @@ class CreatePlotNFTCMD:
 
 # NOTE: tx_endpoint
 @chia_command(
-    plotnft_cmd,
-    "join",
+    group=plotnft_cmd,
+    name="join",
     short_help="Join a plot NFT to a Pool",
     help="Join a plot NFT to a Pool.",
 )
@@ -153,8 +154,8 @@ class JoinPlotNFTCMD:
 
 # NOTE: tx_endpoint
 @chia_command(
-    plotnft_cmd,
-    "leave",
+    group=plotnft_cmd,
+    name="leave",
     short_help="Leave a pool and return to self-farming",
     help="Leave a pool and return to self-farming.",
 )
@@ -187,8 +188,8 @@ class LeavePlotNFTCMD:
 
 
 @chia_command(
-    plotnft_cmd,
-    "inspect",
+    group=plotnft_cmd,
+    name="inspect",
     short_help="Get Detailed plotnft information as JSON",
     help="Get Detailed plotnft information as JSON",
 )
@@ -207,8 +208,8 @@ class InspectPlotNFTCMD:
 
 # NOTE: tx_endpoint
 @chia_command(
-    plotnft_cmd,
-    "claim",
+    group=plotnft_cmd,
+    name="claim",
     short_help="Claim rewards from a plot NFT",
     help="Claim rewards from a plot NFT",
 )
@@ -239,13 +240,13 @@ class ClaimPlotNFTCMD:
 
 
 @chia_command(
-    plotnft_cmd,
-    "change_payout_instructions",
+    group=plotnft_cmd,
+    name="change_payout_instructions",
     short_help="Change the payout instructions for a pool.",
     help="Change the payout instructions for a pool. Use 'plotnft show' to get the launcher id.",
 )
 class ChangePayoutInstructionsPlotNFTCMD:
-    context: dict[str, Any] = field(default_factory=dict)
+    context: ChiaCliContext = field(default_factory=ChiaCliContext)
     launcher_id: bytes32 = option(
         "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
     )
@@ -256,4 +257,4 @@ class ChangePayoutInstructionsPlotNFTCMD:
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import change_payout_instructions
 
-        await change_payout_instructions(self.launcher_id, self.address, root_path=self.context.get("root_path"))
+        await change_payout_instructions(self.launcher_id, self.address, root_path=self.context.root_path)

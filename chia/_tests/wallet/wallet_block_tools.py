@@ -3,23 +3,32 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from chia_rs import G1Element, G2Element, compute_merkle_set_root
+from chia_rs import (
+    ConsensusConstants,
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    G1Element,
+    G2Element,
+    PoolTarget,
+    RewardChainBlock,
+    RewardChainBlockUnfinished,
+    TransactionsInfo,
+    compute_merkle_set_root,
+)
+from chia_rs.sized_bytes import bytes32, bytes100
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
@@ -27,7 +36,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
     bytes32.zeros,

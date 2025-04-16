@@ -394,7 +394,7 @@ bother_waterfowl(fowl=Goose(), aggressiveness=3)
 
 When hinting based on a Protocol there can often be unexpected complexities.
 Consider passing in an instance of a class with an attribute hinted `str` while the protocol hints it as `Union[str, int]`.
-It is common to expect that `str` satisfies `Union[str, int]` and to be throughly confused by mypy's complaint that it does not.
+It is common to expect that `str` satisfies `Union[str, int]` and to be thoroughly confused by mypy's complaint that it does not.
 The hazard here is that since the function receiving the object thinks the attribute can be either a `str` or an `int` it may decide to assign an `int` to it.
 The protocol says this is ok.
 A good solution for many cases is to hint that attribute as being read only on the protocol.
@@ -612,8 +612,10 @@ class SomeWallet:
 
 ## Tests
 
-- Do not import `test_*` modules. Instead locate shared tooling in non-test files within the `tests/` directory or subdirectories.
-- Do not import fixtures. Fixtures are shared by locating them in `conftest.py` files at whatever directory layer you want them to be recursively available from.
+- Do not import `test_*` modules.
+  Instead locate shared tooling in non-test files within the `tests/` directory or subdirectories.
+- Do not import fixtures.
+  Fixtures are shared by locating them in `conftest.py` files at whatever directory layer you want them to be recursively available from.
 - Do not use test classes.
   `unittest` requires that tests be held in a class.
   pytest does not.

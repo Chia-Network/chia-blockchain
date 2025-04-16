@@ -9,6 +9,8 @@ from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -21,13 +23,11 @@ from chia.server.outbound_message import Message, make_msg
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -635,7 +635,7 @@ async def test_transaction_send_cache(
     with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
         # Generate the transaction
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(uint64(0), bytes32.zeros, action_scope)
+            await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
         [tx] = action_scope.side_effects.transactions
 
         # Make sure it is sent to the peer
@@ -688,11 +688,11 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
     ) -> Optional[Message]:
         return make_msg(
-            ProtocolMessageTypes.respond_to_coin_update,
+            ProtocolMessageTypes.respond_to_coin_updates,
             wallet_protocol.RespondToCoinUpdates(
                 [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
             ),
@@ -704,7 +704,7 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     assert full_node_api.full_node._server is not None
     with patch_request_handler(
-        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_interest_in_coin
+        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_for_coin_updates
     ):
         monkeypatch.setattr(
             wallet_node,

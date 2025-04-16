@@ -5,7 +5,13 @@ import json
 from collections.abc import AsyncIterator
 
 import aiohttp
+import dns.rdataclass
+import dns.rdatatype
+import dns.rdtypes.IN.A
+import dns.rdtypes.IN.AAAA
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.setup_nodes import FullSystem, OldSimulatorsAndWallets
@@ -23,9 +29,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
@@ -62,6 +66,17 @@ async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimul
             db_version=2,
         ) as service:
             yield service._api
+
+
+class FakeDNSResolver:
+    async def resolve(self, qname, rdtype, lifetime):
+        if rdtype == "A":
+            record = dns.rdtypes.IN.A.A(dns.rdataclass.IN, dns.rdatatype.A, "1.2.3.4")
+            return [record]
+        elif rdtype == "AAAA":
+            record = dns.rdtypes.IN.AAAA.AAAA(dns.rdataclass.IN, dns.rdatatype.AAAA, "::1")
+            return [record]
+        return []
 
 
 class TestSimulation:
@@ -196,7 +211,9 @@ class TestSimulation:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, _server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         wallet_node.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
@@ -212,10 +229,12 @@ class TestSimulation:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+        async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph_2 = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(10),
-                await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                [uint64(10)],
+                [ph_2],
                 action_scope,
                 uint64(0),
             )
@@ -390,8 +409,8 @@ class TestSimulation:
         for coin in coins:
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
-                    amount=uint64(tx_amount),
-                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    amounts=[uint64(tx_amount)],
+                    puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
                     action_scope=action_scope,
                     coins={coin},
                 )
@@ -439,8 +458,8 @@ class TestSimulation:
             ) as action_scope:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
-                        amount=uint64(tx_amount),
-                        puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                        amounts=[uint64(tx_amount)],
+                        puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
                         action_scope=action_scope,
                         coins={coin},
                     )
@@ -499,3 +518,16 @@ class TestSimulation:
 
         with pytest.raises(Exception, match="Coins must have a positive value"):
             await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
+
+    @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
+    @pytest.mark.anyio
+    async def test_introducer_fallback_to_dns(self, simulation):
+        full_system: FullSystem
+        full_system, _ = simulation
+        introducer = full_system.introducer
+        introducer.introducer.dns_servers = ["127.0.0.1"]
+        introducer.introducer.resolver = FakeDNSResolver()
+        peers = await introducer.introducer.get_peers_from_dns(num_peers=10)
+        assert len(peers) == 2
+        assert any(peer.host == "1.2.3.4" for peer in peers)
+        assert any(peer.host == "::1" for peer in peers)

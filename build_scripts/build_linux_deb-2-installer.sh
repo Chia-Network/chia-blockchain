@@ -58,7 +58,7 @@ format_deb_version_string() {
   # - replace '.dev' with '-dev'
   echo "$version_str" | sed -E 's/([0-9])(rc|beta)/\1-\2/g; s/\.dev/-dev/g'
 }
-pip install j2cli
+pip install jinjanator
 CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
@@ -97,12 +97,12 @@ if [ "$PLATFORM" = "arm64" ]; then
   # @TODO Once ruby 3.0 can be installed on `apt install ruby`, installing dotenv below should be removed.
   sudo gem install dotenv -v 2.8.1
   sudo gem install fpm
-  echo USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
+  echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
-  USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
+  USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain" \

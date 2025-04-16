@@ -9,18 +9,18 @@ from typing import Any, Optional
 
 from aiohttp import ClientConnectorError
 from chia_rs import PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.start_funcs import async_start
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, save_config, set_peer_info
 from chia.util.errors import KeychainFingerprintExists
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -407,7 +407,7 @@ async def print_status(
     from chia.cmds.show_funcs import print_blockchain_state
     from chia.cmds.units import units
 
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         # Display keychain info
         if show_key:
             if fingerprint is None:
@@ -451,7 +451,7 @@ async def revert_block_height(
     """
     This function allows users to easily revert the chain to a previous state or perform a reorg.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, _):
         if use_revert_blocks:
             if num_new_blocks != 1:
                 print(f"Ignoring num_new_blocks: {num_new_blocks}, because we are not performing a reorg.")
@@ -479,7 +479,7 @@ async def farm_blocks(
     """
     This function is used to generate new blocks.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         if target_address == "":
             target_address = config["simulator"]["farming_address"]
         if target_address is None:
@@ -500,7 +500,7 @@ async def set_auto_farm(rpc_port: Optional[int], root_path: Path, set_autofarm: 
     """
     This function can be used to enable or disable Auto Farming.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, _):
         current = await node_client.get_auto_farming()
         if current == set_autofarm:
             print(f"Auto farming is already {'on' if set_autofarm else 'off'}")

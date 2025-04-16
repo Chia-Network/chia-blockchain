@@ -21,6 +21,7 @@ from types import FrameType
 from typing import Any, Optional, TextIO
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
@@ -38,7 +39,6 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
-from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
@@ -47,6 +47,7 @@ from chia.util.network import WebServer
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
@@ -212,7 +213,7 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        self.state_changed_task = asyncio.create_task(self._process_state_changed_queue())
+        self.state_changed_task = create_referenced_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
             port=self.daemon_port,
@@ -249,7 +250,7 @@ class WebSocketServer:
         cancel_task_safe(self.state_changed_task, self.log)
         service_names = list(self.services.keys())
         stop_service_jobs = [
-            asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+            create_referenced_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
         ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
@@ -1056,7 +1057,7 @@ class WebSocketServer:
                 break
 
         if next_plot_id is not None:
-            loop.create_task(self._start_plotting(next_plot_id, loop, queue))
+            create_referenced_task(self._start_plotting(next_plot_id, loop, queue))
 
     def _post_process_plotting_job(self, job: dict[str, Any]):
         id: str = job["id"]
@@ -1131,7 +1132,10 @@ class WebSocketServer:
 
         finally:
             if current_process is not None:
-                self.services[service_name].remove(current_process)
+                try:
+                    self.services[service_name].remove(current_process)
+                except KeyError:
+                    pass
                 current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
@@ -1192,7 +1196,7 @@ class WebSocketServer:
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
                 # TODO: stop dropping tasks on the floor
-                loop.create_task(self._start_plotting(id, loop, queue))  # noqa: RUF006
+                create_referenced_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1354,7 +1358,7 @@ class WebSocketServer:
             }
         else:
             if self.ping_job is None:
-                self.ping_job = asyncio.create_task(self.ping_task())
+                self.ping_job = create_referenced_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response

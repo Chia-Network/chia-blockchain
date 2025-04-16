@@ -12,6 +12,8 @@ from typing import Optional, final
 
 from typing_extensions import Protocol
 
+from chia.util.task_referencer import create_referenced_task
+
 
 class Handler(Protocol):
     def __call__(
@@ -59,7 +61,7 @@ class SignalHandlers:
     ) -> None:
         self.remove_done_handlers()
 
-        task = asyncio.create_task(
+        task = create_referenced_task(
             handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
         )
         self.tasks.append(task)

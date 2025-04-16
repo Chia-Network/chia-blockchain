@@ -20,6 +20,8 @@ from typing import Any, Optional, cast
 
 import anyio
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -60,16 +62,16 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.aliases import DataLayerService, WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 
@@ -159,7 +161,8 @@ async def init_wallet_and_node(
     wallet_node = wallet_service._node
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
@@ -729,7 +732,8 @@ async def test_get_owned_stores(
     wallet_rpc_port = wallet_service.rpc_server.listen_port
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = sum(
@@ -2191,7 +2195,7 @@ async def test_issue_15955_deadlock(
         while time.monotonic() < end:
             with anyio.fail_after(adjusted_timeout(timeout)):
                 await asyncio.gather(
-                    *(asyncio.create_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
+                    *(create_referenced_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
                 )
 
 

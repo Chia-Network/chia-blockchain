@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 from chia_rs import AugSchemeMPL
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8
 from clvm.casts import int_to_bytes
 
 from chia import __version__
@@ -22,14 +24,12 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
-from chia.util.ints import uint8
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 

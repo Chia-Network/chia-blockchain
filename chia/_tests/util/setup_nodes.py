@@ -10,10 +10,12 @@ from pathlib import Path
 from typing import Optional, Union
 
 import anyio
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.environments.full_node import FullNodeEnvironment
 from chia._tests.environments.wallet import WalletEnvironment
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
 from chia.farmer.farmer import Farmer
 from chia.full_node.full_node_api import FullNodeAPI
@@ -39,10 +41,8 @@ from chia.simulator.setup_services import (
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
@@ -390,6 +390,7 @@ async def setup_full_system_inner(
         introducer_service = await async_exit_stack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
         introducer = introducer_service._api
         introducer_server = introducer_service._node.server
+        introducer.introducer.dns_servers = []
 
         # Then start the full node so we can use the port for the farmer and timelord
         node_1 = await async_exit_stack.enter_async_context(

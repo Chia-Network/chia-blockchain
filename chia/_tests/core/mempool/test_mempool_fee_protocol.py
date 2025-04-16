@@ -4,6 +4,7 @@ import datetime
 from typing import Union
 
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.time_out_assert import time_out_assert
@@ -14,7 +15,6 @@ from chia.protocols.wallet_protocol import RespondFeeEstimates
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.util.ints import uint64
 from chia.wallet.wallet import Wallet
 
 

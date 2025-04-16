@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 from chiabip158 import PyBIP158
 
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+
 
 @pytest.mark.anyio
 async def test_basic_filter_test(simulator_and_wallet):
@@ -11,7 +13,8 @@ async def test_basic_filter_test(simulator_and_wallet):
     wallet = wallet_node.wallet_state_manager.main_wallet
 
     num_blocks = 2
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     blocks = bt.get_consecutive_blocks(
         10,
         guarantee_transaction_block=True,

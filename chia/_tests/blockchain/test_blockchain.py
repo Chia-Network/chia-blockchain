@@ -10,7 +10,16 @@ from dataclasses import replace
 from typing import Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, MerkleSet
+from chia_rs import (
+    AugSchemeMPL,
+    ConsensusConstants,
+    G2Element,
+    InfusedChallengeChainSubSlot,
+    MerkleSet,
+    TransactionsInfo,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
@@ -29,7 +38,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_generator import get_block_generator
@@ -40,10 +48,7 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -57,7 +62,6 @@ from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
@@ -168,9 +172,9 @@ class TestBlockHeaderValidation:
                     uint64(10_000_000),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]]
                 )
-                header_block_bad = get_block_header(block_bad, [], [])
+                header_block_bad = get_block_header(block_bad)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -192,10 +196,10 @@ class TestBlockHeaderValidation:
                     uint64(10_000_000),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_2] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [new_finished_ss_2, *block.finished_sub_slots[1:]]
                 )
 
-                header_block_bad_2 = get_block_header(block_bad_2, [], [])
+                header_block_bad_2 = get_block_header(block_bad_2)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -225,7 +229,7 @@ class TestBlockHeaderValidation:
                 log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
                 block_bad_3 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_3])
 
-                header_block_bad_3 = get_block_header(block_bad_3, [], [])
+                header_block_bad_3 = get_block_header(block_bad_3)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -254,7 +258,7 @@ class TestBlockHeaderValidation:
                 )
                 block_bad_4 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_4])
 
-                header_block_bad_4 = get_block_header(block_bad_4, [], [])
+                header_block_bad_4 = get_block_header(block_bad_4)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -271,8 +275,7 @@ class TestBlockHeaderValidation:
                 )
             await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
             log.info(
-                f"Added block {block.height} total iters {block.total_iters} "
-                f"new slot? {len(block.finished_sub_slots)}"
+                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
         peak = empty_blockchain.get_peak()
         assert peak is not None
@@ -507,10 +510,10 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+            blocks[0], "finished_sub_slots", [new_finished_ss, *blocks[0].finished_sub_slots[1:]]
         )
 
-        header_block_bad = get_block_header(block_0_bad, [], [])
+        header_block_bad = get_block_header(block_0_bad)
         expected_vs = ValidationState(
             empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
         )
@@ -535,11 +538,11 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", [new_finished_ss] + blocks[1].finished_sub_slots[1:]
+            blocks[1], "finished_sub_slots", [new_finished_ss, *blocks[1].finished_sub_slots[1:]]
         )
 
         await _validate_and_add_block(empty_blockchain, blocks[0])
-        header_block_bad = get_block_header(block_1_bad, [], [])
+        header_block_bad = get_block_header(block_1_bad)
         # TODO: Inspect these block values as they are currently None
         expected_difficulty = blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -562,11 +565,11 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", blocks[1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[1], "finished_sub_slots", [*blocks[1].finished_sub_slots[:-1], new_finished_ss]
         )
         await _validate_and_add_block(empty_blockchain, blocks[0])
 
-        header_block_bad = get_block_header(block_1_bad, [], [])
+        header_block_bad = get_block_header(block_1_bad)
         # TODO: Inspect these block values as they are currently None
         expected_difficulty = blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -594,7 +597,7 @@ class TestBlockHeaderValidation:
             ),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+            blocks[0], "finished_sub_slots", [new_finished_ss, *blocks[0].finished_sub_slots[1:]]
         )
         await _validate_and_add_block(empty_blockchain, block_0_bad, expected_error=Err.SHOULD_NOT_HAVE_ICC)
 
@@ -628,7 +631,7 @@ class TestBlockHeaderValidation:
                         ),
                     )
                     block_bad = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                     )
                     await _validate_and_add_block(bc1, block_bad, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -646,7 +649,7 @@ class TestBlockHeaderValidation:
                     )
                     log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
                     block_bad_2 = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
                     )
                     await _validate_and_add_block(bc1, block_bad_2, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -663,7 +666,7 @@ class TestBlockHeaderValidation:
                         ),
                     )
                     block_bad_3 = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
                     )
                     await _validate_and_add_block(bc1, block_bad_3, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -674,7 +677,7 @@ class TestBlockHeaderValidation:
                         VDFProof(uint8(0), b"1239819023890", False),
                     )
                     block_bad_5 = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
                     )
                     await _validate_and_add_block(bc1, block_bad_5, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -718,10 +721,10 @@ class TestBlockHeaderValidation:
                         ),
                     )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                 )
 
-                header_block_bad = get_block_header(block_bad, [], [])
+                header_block_bad = get_block_header(block_bad)
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
@@ -740,7 +743,7 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[-1].reward_chain.replace(infused_challenge_chain_sub_slot_hash=None),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc]
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_RC)
             elif len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is None:
@@ -754,7 +757,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_cc]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_cc]
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_CC)
 
@@ -768,7 +771,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc]
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_RC)
 
@@ -789,10 +792,10 @@ class TestBlockHeaderValidation:
             blocks[-1].finished_sub_slots[-1].challenge_chain.replace(subepoch_summary_hash=std_hash(b"0")),
         )
         block_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
         )
 
-        header_block_bad = get_block_header(block_bad, [], [])
+        header_block_bad = get_block_header(block_bad)
         expected_vs = ValidationState(
             empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
         )
@@ -838,7 +841,7 @@ class TestBlockHeaderValidation:
             blocks[-1].finished_sub_slots[-1].reward_chain.replace(challenge_chain_sub_slot_hash=bytes32([3] * 32)),
         )
         block_1_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
         )
 
         await _validate_and_add_block(blockchain, block_1_bad, expected_error=Err.INVALID_CHALLENGE_SLOT_HASH_RC)
@@ -876,7 +879,7 @@ class TestBlockHeaderValidation:
                 )
                 log.warning(f"Num slots: {len(block.finished_sub_slots)}")
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                 )
                 log.warning(f"Signage point index: {block_bad.reward_chain_block.signage_point_index}")
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_EOS_VDF)
@@ -898,7 +901,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss_2.challenge_chain.get_hash(),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_2, expected_error=Err.INVALID_CC_EOS_VDF)
 
@@ -919,7 +922,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
                 )
 
                 await _validate_and_add_block_multi_error(
@@ -935,7 +938,7 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_5, expected_error=Err.INVALID_CC_EOS_VDF)
 
@@ -967,7 +970,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -982,7 +985,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_2, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -997,7 +1000,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_3, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -1008,7 +1011,7 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_5, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -1027,7 +1030,7 @@ class TestBlockHeaderValidation:
                 bt.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1,
             ),
         )
-        block_bad = recursive_replace(block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss])
+        block_bad = recursive_replace(block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss])
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_DEFICIT)
 
     @pytest.mark.anyio
@@ -1056,7 +1059,7 @@ class TestBlockHeaderValidation:
                     case_2 = True
 
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+                    blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
                 )
                 await _validate_and_add_block_multi_error(
                     empty_blockchain, block_bad, [Err.INVALID_DEFICIT, Err.INVALID_ICC_HASH_CC]
@@ -1085,7 +1088,7 @@ class TestBlockHeaderValidation:
                 challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
             ),
         )
-        block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:])
+        block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]])
         with pytest.raises(AssertionError):
             # Fails pre validation
             await _validate_and_add_block(
@@ -1121,7 +1124,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", [new_finished_ss] + blocks[-1].finished_sub_slots[1:]
+                    blocks[-1], "finished_sub_slots", [new_finished_ss, *blocks[-1].finished_sub_slots[1:]]
                 )
                 await _validate_and_add_block_multi_error(
                     empty_blockchain,
@@ -3479,11 +3482,7 @@ class TestReorgs:
             if (block.height % 128) == 0:
                 peak = b.get_peak()
                 assert peak is not None
-                print(
-                    f"original chain: {block.height:4} "
-                    f"weight: {block.weight:7} "
-                    f"peak: {str(peak.header_hash)[:6]}"
-                )
+                print(f"original chain: {block.height:4} weight: {block.weight:7} peak: {str(peak.header_hash)[:6]}")
             if block.height <= chain_1_height:
                 expect = AddBlockResult.ALREADY_HAVE_BLOCK
             elif block.weight < chain_2_weight:
@@ -4184,3 +4183,19 @@ async def get_fork_info(blockchain: Blockchain, block: FullBlock, peak: BlockRec
     )
 
     return fork_info
+
+
+@pytest.mark.anyio
+async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    """
+    Covers the case of calling `get_header_blocks_in_range`, requesting
+    transactions filter, on a non transaction block.
+    """
+    b = empty_blockchain
+    blocks = bt.get_consecutive_blocks(2)
+    for block in blocks:
+        await _validate_and_add_block(b, block)
+    non_tx_block = next(block for block in blocks if not block.is_transaction_block())
+    blocks_with_filter = await b.get_header_blocks_in_range(0, 42, tx_filter=True)
+    empty_tx_filter = b"\x00"
+    assert blocks_with_filter[non_tx_block.header_hash].transactions_filter == empty_tx_filter

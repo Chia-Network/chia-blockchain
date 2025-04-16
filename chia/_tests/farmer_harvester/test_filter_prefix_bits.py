@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
@@ -17,9 +19,7 @@ from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.types.aliases import HarvesterService
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 
 

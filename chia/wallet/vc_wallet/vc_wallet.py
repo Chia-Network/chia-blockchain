@@ -6,6 +6,8 @@ import traceback
 from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from chia_rs import G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
 from clvm.casts import int_to_bytes
 from typing_extensions import Unpack
 
@@ -14,21 +16,19 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
+    CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     UnknownCondition,
     parse_timelock_info,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.trading.offer import Offer
@@ -187,9 +187,7 @@ class VCWallet:
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
         if inner_puzzle_hash is None:  # pragma: no cover
-            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
+            inner_puzzle_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         dpuzs, coin_spends, vc = VerifiedCredential.launch(
             coins,
             provider_did,
@@ -234,18 +232,21 @@ class VCWallet:
 
     async def generate_signed_transaction(
         self,
-        vc_id: bytes32,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        new_inner_puzhash: Optional[bytes32] = None,
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         new_proof_hash: Optional[bytes32] = kwargs.get(
             "new_proof_hash", None
-        )  # Requires that this key posesses the DID to update the specified VC
+        )  # Requires that this key possesses the DID to update the specified VC
         provider_inner_puzhash: Optional[bytes32] = kwargs.get("provider_inner_puzhash", None)
         self_revoke: Optional[bool] = kwargs.get("self_revoke", False)
+        potential_vc_id: Optional[bytes32] = kwargs.get("vc_id", None)
         """
         Entry point for two standard actions:
          - Cycle the singleton and make an announcement authorizing something
@@ -254,18 +255,39 @@ class VCWallet:
         Returns a 1 - 3 TransactionRecord objects depending on whether or not there's a fee and whether or not there's
         a DID announcement involved.
         """
+        if len(amounts) > 1 or amounts[0] != 1:
+            raise ValueError("VCWallet.generate_signed_transaction only accepts `amounts=[uint64(1)]`")
+        if len(puzzle_hashes) != 1:
+            raise ValueError("Can only send a single VC to a single new puzzle hash")
+        if memos is not None:
+            raise ValueError("Memos not currently supported for VC wallets")
+        if coins is not None and len(list(coins)) != 1:
+            raise ValueError("Can only spend a single VC at a time")
         # Find verified credential
-        vc_record = await self.get_vc_record_for_launcher_id(vc_id)
+        if coins is not None:
+            coin_id = next(iter(coins)).name()
+            potential_vc_record = await self.store.get_vc_record_by_coin_id(coin_id)
+            if potential_vc_record is None:
+                raise ValueError(f"Could not find a VC record for coin ID: {coin_id}")
+            vc_record: VCRecord = potential_vc_record
+            lookup_info = ("coin ID", coin_id)
+        elif potential_vc_id is not None:
+            vc_record = await self.get_vc_record_for_launcher_id(potential_vc_id)
+            lookup_info = ("launcher ID", potential_vc_id)
+        else:
+            raise ValueError("Must specify either a vc_id or a specific VC coin")
+
         if vc_record.confirmed_at_height == 0:
             raise ValueError(
-                f"Verified credential {vc_id.hex()} is not confirmed, please try again later."
+                f"Verified credential with {lookup_info[0]} {lookup_info[1].hex()}"
+                "is not confirmed, please try again later."
             )  # pragma: no cover
         inner_puzhash: bytes32 = vc_record.vc.inner_puzzle_hash
         inner_puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(inner_puzhash)
-        if new_inner_puzhash is None:
-            new_inner_puzhash = inner_puzhash
 
-        primaries: list[Payment] = [Payment(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])]
+        primaries: list[CreateCoin] = [
+            CreateCoin(puzzle_hashes[0], uint64(vc_record.vc.coin.amount), [puzzle_hashes[0]])
+        ]
 
         if fee > 0:
             coin_name = vc_record.vc.coin.name()
@@ -309,7 +331,7 @@ class VCWallet:
                 if wallet.type() == WalletType.DECENTRALIZED_ID:
                     assert isinstance(wallet, DIDWallet)
                     if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
-                        self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
+                        self.log.debug("Creating announcement from DID for vc: %s", vc_record.vc.launcher_id.hex())
                         await wallet.create_message_spend(action_scope, extra_conditions=(did_announcement,))
                         break
             else:
@@ -325,7 +347,7 @@ class VCWallet:
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
-                    to_puzzle_hash=new_inner_puzhash,
+                    to_puzzle_hash=puzzle_hashes[0],
                     amount=uint64(1),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -370,9 +392,11 @@ class VCWallet:
                     break
         else:
             await self.generate_signed_transaction(
-                vc.launcher_id,
+                [uint64(1)],
+                [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                 action_scope,
                 fee,
+                vc_id=vc.launcher_id,
                 self_revoke=True,
             )
             return
@@ -537,8 +561,10 @@ class VCWallet:
         ) as inner_action_scope:
             for launcher_id, vc in vcs.items():
                 await self.generate_signed_transaction(
-                    launcher_id,
+                    [uint64(1)],
+                    [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
+                    vc_id=launcher_id,
                     extra_conditions=(
                         *announcements_to_assert[launcher_id],
                         *announcements_to_make[launcher_id],

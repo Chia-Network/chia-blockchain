@@ -20,6 +20,8 @@ from aiohttp import (
     client_exceptions,
     web,
 )
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -33,13 +35,12 @@ from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 from chia.util.streamable import Streamable
+from chia.util.task_referencer import create_referenced_task
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 
@@ -141,7 +142,7 @@ class ChiaServer:
     connection_close_task: Optional[asyncio.Task[None]] = None
     received_message_callback: Optional[ConnectionCallback] = None
     banned_peers: dict[str, float] = field(default_factory=dict)
-    invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
+    invalid_protocol_ban_seconds: int = INVALID_PROTOCOL_BAN_SECONDS
 
     @classmethod
     def create(
@@ -285,7 +286,7 @@ class ChiaServer:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
         if self.gc_task is None:
-            self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
+            self.gc_task = create_referenced_task(self.garbage_collect_connections_task())
 
         if self._port is not None:
             self.on_connect = on_connect
@@ -502,8 +503,7 @@ class ChiaServer:
                 self.log.info(f"Connected with {connection_type_str} {target_node}")
             else:
                 self.log.debug(f"Successful feeler connection with {connection_type_str} {target_node}")
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(connection.close())  # noqa: RUF006
+                create_referenced_task(connection.close(), known_unreferenced=True)
             return True
         except client_exceptions.ClientConnectorError as e:
             if is_feeler:
@@ -652,7 +652,7 @@ class ChiaServer:
                 self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self) -> None:
-        self.connection_close_task = asyncio.create_task(self.close_all_connections())
+        self.connection_close_task = create_referenced_task(self.close_all_connections())
         if self.webserver is not None:
             self.webserver.close()
 

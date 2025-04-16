@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
-from chia.cmds.cmd_classes import NeedsWalletRPC
+from chia.cmds.cmd_classes import ChiaCliContext
+from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
     ChangePayoutInstructionsPlotNFTCMD,
@@ -13,16 +17,14 @@ from chia.cmds.plotnft import (
     LeavePlotNFTCMD,
     ShowPlotNFTCMD,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 
 
 def test_plotnft_command_default_parsing() -> None:
     launcher_id = bytes32([1] * 32)
     check_click_parsing(
-        GetLoginLinkCMD(context=dict(), launcher_id=launcher_id),
+        GetLoginLinkCMD(launcher_id=launcher_id),
         "--launcher_id",
         launcher_id.hex(),
     )
@@ -37,7 +39,8 @@ def test_plotnft_command_default_parsing() -> None:
         launcher_id.hex(),
         "--address",
         burn_address,
-        obj={"expected_prefix": "xch"},  # Needed for AddressParamType to work correctly without config
+        # Needed for AddressParamType to work correctly without config
+        context=ChiaCliContext(expected_prefix="xch"),
     )
 
     check_click_parsing(
@@ -120,9 +123,7 @@ def test_plotnft_command_default_parsing() -> None:
     )
 
     check_click_parsing(
-        ShowPlotNFTCMD(
-            context=dict(), rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5
-        ),
+        ShowPlotNFTCMD(rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5),
         "--id",
         "5",
     )

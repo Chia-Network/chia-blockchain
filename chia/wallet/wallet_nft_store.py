@@ -5,11 +5,12 @@ import logging
 from sqlite3 import Row
 from typing import Optional, TypeVar, Union
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint32
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
 
@@ -218,8 +219,7 @@ class WalletNftStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await execute_fetchone(
                 conn,
-                "SELECT EXISTS(SELECT nft_id"
-                " from users_nfts WHERE removed_height is NULL and nft_coin_id=? LIMIT 1)",
+                "SELECT EXISTS(SELECT nft_id from users_nfts WHERE removed_height is NULL and nft_coin_id=? LIMIT 1)",
                 (coin_id.hex(),),
             )
             return True if rows and rows[0] == 1 else False

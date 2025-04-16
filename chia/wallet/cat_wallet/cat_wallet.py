@@ -7,23 +7,25 @@ import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions_with_cost
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
+    CAT_MOD_HASH_HASH,
+    QUOTED_CAT_MOD_HASH,
     SpendableCAT,
     construct_cat_puzzle,
     match_cat_puzzle,
@@ -35,6 +37,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     UnknownCondition,
     parse_timelock_info,
@@ -42,13 +45,12 @@ from chia.wallet.conditions import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
@@ -61,12 +63,6 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
-
-# This should probably not live in this file but it's for experimental right now
-
-CAT_MOD_HASH = CAT_MOD.get_tree_hash()
-CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
-QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
 def not_ephemeral_additions(sp: WalletSpendBundle) -> list[Coin]:
@@ -433,7 +429,9 @@ class CATWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle_hash = self.standard_wallet.puzzle_hash_for_pk(pubkey)
         limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
-        return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
+        return curry_and_treehash(
+            QUOTED_CAT_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash
+        )
 
     async def get_cat_puzzle_hash(self, new: bool) -> bytes32:
         if new:
@@ -567,8 +565,8 @@ class CATWallet:
                 )
                 origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
-                    uint64(0),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                    [],
+                    [],
                     inner_action_scope,
                     fee=uint64(fee - amount_to_claim),
                     coins=chia_coins,
@@ -584,8 +582,8 @@ class CATWallet:
                 origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
-                    uint64(selected_amount + amount_to_claim - fee),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                    [uint64(selected_amount + amount_to_claim - fee)],
+                    [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
                     coins=chia_coins,
                     negative_change_allowed=True,
@@ -613,7 +611,7 @@ class CATWallet:
 
     async def generate_unsigned_spendbundle(
         self,
-        payments: list[Payment],
+        payments: list[CreateCoin],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
@@ -659,11 +657,13 @@ class CATWallet:
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
                         # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
+                        change_puzhash = await action_scope.get_puzzle_hash(
+                            self.wallet_state_manager, override_reuse_puzhash_with=False
+                        )
                         break
             else:
-                change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
-            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+                change_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
+            primaries.append(CreateCoin(change_puzhash, uint64(change), [change_puzhash]))
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
@@ -763,7 +763,7 @@ class CATWallet:
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
             memos_with_hint: list[bytes] = [puzhash]
             memos_with_hint.extend(memo_list)
-            payments.append(Payment(puzhash, amount, memos_with_hint))
+            payments.append(CreateCoin(puzhash, amount, memos_with_hint))
 
         payment_sum = sum(p.amount for p in payments)
         spend_bundle = await self.generate_unsigned_spendbundle(

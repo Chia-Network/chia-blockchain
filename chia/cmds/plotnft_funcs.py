@@ -11,8 +11,10 @@ from pprint import pprint
 from typing import Any, Callable, Optional
 
 import aiohttp
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
-from chia.cmds.cmd_classes import WalletClientInfo
+from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import (
     cli_confirm,
     get_any_service_client,
@@ -28,11 +30,9 @@ from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
@@ -203,7 +203,7 @@ async def pprint_all_pool_wallet_state(
 
 async def show(
     wallet_info: WalletClientInfo,
-    root_path: Optional[Path],
+    root_path: Path,
     wallet_id_passed_in: Optional[int],
 ) -> None:
     summaries_response = await wallet_info.client.get_wallets()
@@ -239,7 +239,7 @@ async def show(
         await pprint_all_pool_wallet_state(wallet_info.client, summaries_response, address_prefix, pool_state_dict)
 
 
-async def get_login_link(launcher_id: bytes32, root_path: Optional[Path]) -> None:
+async def get_login_link(launcher_id: bytes32, root_path: Path) -> None:
     async with get_any_service_client(FarmerRpcClient, root_path=root_path) as (farmer_client, _):
         login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
         if login_link is None:

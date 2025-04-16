@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 import traceback
+from collections.abc import Collection
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
@@ -11,12 +12,18 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 import anyio
 from chia_rs import (
     AugSchemeMPL,
+    FoliageBlockData,
+    FoliageTransactionBlock,
     G1Element,
     G2Element,
     MerkleSet,
+    PoolTarget,
+    RewardChainBlockUnfinished,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -24,7 +31,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -34,6 +40,7 @@ from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     CoinState,
@@ -50,16 +57,12 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
@@ -67,11 +70,11 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.full_block_utils import header_block_from_block
+from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
+from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
@@ -93,7 +96,7 @@ class FullNodeAPI:
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
-        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="node-api-")
 
     @property
     def server(self) -> ChiaServer:
@@ -228,7 +231,7 @@ class FullNodeAPI:
                         full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
             task_id: bytes32 = bytes32.secret()
-            fetch_task = asyncio.create_task(
+            fetch_task = create_referenced_task(
                 tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
             )
             self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
@@ -282,7 +285,7 @@ class FullNodeAPI:
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
-        if not self.full_node.blockchain.contains_block(request.tip):
+        if self.full_node.blockchain.try_block_record(request.tip) is None:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         if request.tip in self.full_node.pow_creation:
@@ -402,17 +405,32 @@ class FullNodeAPI:
 
         return msg
 
-    @metadata.request()
-    async def reject_block(self, request: full_node_protocol.RejectBlock) -> None:
-        self.log.debug(f"reject_block {request.height}")
+    @metadata.request(peer_required=True)
+    async def reject_block(
+        self,
+        request: full_node_protocol.RejectBlock,
+        peer: WSChiaConnection,
+    ) -> None:
+        self.log.warning(f"unsolicited reject_block {request.height}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
-    @metadata.request()
-    async def reject_blocks(self, request: full_node_protocol.RejectBlocks) -> None:
-        self.log.debug(f"reject_blocks {request.start_height} {request.end_height}")
+    @metadata.request(peer_required=True)
+    async def reject_blocks(
+        self,
+        request: full_node_protocol.RejectBlocks,
+        peer: WSChiaConnection,
+    ) -> None:
+        self.log.warning(f"reject_blocks {request.start_height} {request.end_height}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
-    @metadata.request()
-    async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
+    @metadata.request(peer_required=True)
+    async def respond_blocks(
+        self,
+        request: full_node_protocol.RespondBlocks,
+        peer: WSChiaConnection,
+    ) -> None:
         self.log.warning("Received unsolicited/late blocks")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
     @metadata.request(peer_required=True)
     async def respond_block(
@@ -420,11 +438,8 @@ class FullNodeAPI:
         respond_block: full_node_protocol.RespondBlock,
         peer: WSChiaConnection,
     ) -> Optional[Message]:
-        """
-        Receive a full block from a peer full node (or ourselves).
-        """
-
         self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_logging()}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
         return None
 
     @metadata.request()
@@ -459,8 +474,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(eventually_clear())  # noqa: RUF006
+        create_referenced_task(eventually_clear(), known_unreferenced=True)
 
         return msg
 
@@ -528,8 +542,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
 
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(eventually_clear())  # noqa: RUF006
+        create_referenced_task(eventually_clear(), known_unreferenced=True)
 
         return msg
 
@@ -822,10 +835,7 @@ class FullNodeAPI:
             # 3. In a future sub-slot that we already know of
 
             # Grab best transactions from Mempool for given tip target
-            aggregate_signature: G2Element = G2Element()
-            block_generator: Optional[BlockGenerator] = None
-            additions: Optional[list[Coin]] = []
-            removals: Optional[list[Coin]] = []
+            new_block_gen: Optional[NewBlockGenerator]
             async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
 
@@ -850,25 +860,21 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                            curr_l_tb.header_hash, self.full_node.coin_store.get_unspent_lineage_info_for_puzzle_hash
-                        )
+                        # TODO: once we're confident in the new block creation,
+                        # switch to it by default
+                        if self.full_node.config.get("original_block_creation", True):
+                            create_block = self.full_node.mempool_manager.create_block_generator
+                        else:
+                            create_block = self.full_node.mempool_manager.create_block_generator2
+
+                        new_block_gen = await create_block(curr_l_tb.header_hash)
+
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
-                        mempool_bundle = None
-                    if mempool_bundle is not None:
-                        spend_bundle, additions = mempool_bundle
-                        removals = spend_bundle.removals()
-                        self.full_node.log.info(f"Add rem: {len(additions)} {len(removals)}")
-                        aggregate_signature = spend_bundle.aggregated_signature
-                        # when the hard fork activates, block generators are
-                        # allowed to be serialized with the improved CLVM
-                        # serialization format, supporting back-references
-                        if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
-                            block_generator = simple_solution_generator_backrefs(spend_bundle)
-                        else:
-                            block_generator = simple_solution_generator(spend_bundle)
+                        new_block_gen = None
+                else:
+                    new_block_gen = None
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1005,10 +1011,7 @@ class FullNodeAPI:
                 timestamp,
                 self.full_node.blockchain,
                 b"",
-                block_generator,
-                aggregate_signature,
-                additions,
-                removals,
+                new_block_gen,
                 prev_b,
                 finished_sub_slots,
             )
@@ -1064,9 +1067,6 @@ class FullNodeAPI:
                     timestamp,
                     self.full_node.blockchain,
                     b"",
-                    None,
-                    G2Element(),
-                    None,
                     None,
                     prev_b,
                     finished_sub_slots,
@@ -1197,8 +1197,7 @@ class FullNodeAPI:
         if block is None:
             return None
 
-        tx_removals: list[bytes32] = []
-        tx_additions: list[Coin] = []
+        removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None
 
         if block.transactions_generator is not None:
             block_generator: Optional[BlockGenerator] = await get_block_generator(
@@ -1221,10 +1220,12 @@ class FullNodeAPI:
             )
             # strip the hint from additions, and compute the puzzle hash for
             # removals
-            tx_additions = [add[0] for add in additions]
-            tx_removals = [rem.name() for rem in removals]
+            removals_and_additions = ([r.name() for r in removals], [a[0] for a in additions])
+        elif block.is_transaction_block():
+            # This is a transaction block with just reward coins.
+            removals_and_additions = ([], [])
 
-        header_block = get_block_header(block, tx_additions, tx_removals)
+        header_block = get_block_header(block, removals_and_additions)
         msg = make_msg(
             ProtocolMessageTypes.respond_block_header,
             wallet_protocol.RespondBlockHeader(header_block),
@@ -1376,7 +1377,7 @@ class FullNodeAPI:
             if status == MempoolInclusionStatus.SUCCESS:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
             else:
-                # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+                # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
                 if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
                     response = wallet_protocol.TransactionAck(
                         spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None
@@ -1455,7 +1456,24 @@ class FullNodeAPI:
         if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         return_filter = request.return_filter
-        header_blocks_bytes: list[bytes] = [header_block_from_block(memoryview(b), return_filter) for b in blocks_bytes]
+        header_blocks_bytes: list[bytes] = []
+        for b in blocks_bytes:
+            b_mem_view = memoryview(b)
+            height, is_tx_block = get_height_and_tx_status_from_block(b_mem_view)
+            if not is_tx_block:
+                tx_addition_coins = []
+                removal_names = []
+            else:
+                added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(height)
+                removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(height)
+                added_coins_records, removed_coins_records = await asyncio.gather(
+                    added_coins_records_coroutine, removed_coins_records_coroutine
+                )
+                tx_addition_coins = [record.coin for record in added_coins_records if not record.coinbase]
+                removal_names = [record.coin.name() for record in removed_coins_records]
+            header_blocks_bytes.append(
+                header_block_from_block(b_mem_view, return_filter, tx_addition_coins, removal_names)
+            )
 
         # we're building the RespondHeaderBlocks manually to avoid cost of
         # dynamic serialization
@@ -1499,7 +1517,7 @@ class FullNodeAPI:
             )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
-            header_block = get_block_header(block, added_coins, removal_names)
+            header_block = get_block_header(block, (removal_names, added_coins))
             header_blocks.append(header_block)
 
         msg = make_msg(
@@ -1576,7 +1594,7 @@ class FullNodeAPI:
         return None
 
     @metadata.request(peer_required=True)
-    async def register_interest_in_puzzle_hash(
+    async def register_for_ph_updates(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
         trusted = self.is_trusted(peer)
@@ -1635,11 +1653,11 @@ class FullNodeAPI:
             )
 
         response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
-        msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
+        msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 
     @metadata.request(peer_required=True)
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
         max_items = self.max_subscribe_response_items(peer)
@@ -1655,7 +1673,7 @@ class FullNodeAPI:
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
-        msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
+        msg = make_msg(ProtocolMessageTypes.respond_to_coin_updates, response)
         return msg
 
     @metadata.request()
@@ -1932,7 +1950,7 @@ class FullNodeAPI:
                 hints_db: tuple[bytes, ...] = tuple(batch.entries)
                 cursor = await conn.execute(
                     f"SELECT coin_id from hints INDEXED BY hint_index "
-                    f'WHERE hint IN ({"?," * (len(batch.entries) - 1)}?)',
+                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?)",
                     hints_db,
                 )
                 for row in await cursor.fetchall():

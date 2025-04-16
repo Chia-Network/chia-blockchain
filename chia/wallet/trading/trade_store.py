@@ -5,12 +5,12 @@ from time import perf_counter
 from typing import Optional
 
 import aiosqlite
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord, TradeRecordOld
 from chia.wallet.trading.offer import Offer
@@ -412,8 +412,7 @@ class TradeStore:
         # Create an ORDER BY clause according to the desired sort type
         if sort_key is None or sort_key == "CONFIRMED_AT_HEIGHT":
             order_by_clause = (
-                f"ORDER BY confirmed_at_index {'ASC' if reverse else 'DESC'}, "
-                f"trade_id {'DESC' if reverse else 'ASC'} "
+                f"ORDER BY confirmed_at_index {'ASC' if reverse else 'DESC'}, trade_id {'DESC' if reverse else 'ASC'} "
             )
         elif sort_key == "RELEVANCE":
             # Custom sort order for statuses to separate out pending/completed offers

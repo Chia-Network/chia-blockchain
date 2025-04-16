@@ -4,7 +4,7 @@ name = "chia-blockchain"
 version = "0.0.0"
 description = "Chia blockchain full node, farmer, timelord, and wallet."
 authors = ["Mariano Sorgente <mariano@chia.net>"]
-license = "Apache License"
+license = "Apache-2.0"
 readme = "README.md"
 keywords= ["chia", "blockchain", "node"]
 homepage = "https://chia.net/"
@@ -37,19 +37,20 @@ priority = "supplemental"
 "Changelog" = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9, <3.13"
+python = ">=3.9, <4"
 aiofiles = ">=24.1.0"  # Async IO for files
 aiohttp = ">=3.10.4"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
 anyio = ">=4.6.2.post1"
 bitstring = ">=4.1.4"  # Binary data management library
 boto3 = ">=1.35.43"  # AWS S3 for Data Layer S3 plugin
-chiabip158 = ">=1.5.1"  # bip158-style wallet filters
-chiapos = ">=2.0.7"  # proof of space
-chia_rs = ">=0.16.0"
-chiavdf = ">=1.1.8"  # timelord and vdf verification
+chiabip158 = ">=1.5.2"  # bip158-style wallet filters
+chiapos = ">=2.0.10"  # proof of space
+chia-puzzles-py = ">=0.20.1"
+chia_rs = ">=0.21.2"
+chiavdf = ">=1.1.10"  # timelord and vdf verification
 click = ">=8.1.7"  # For the CLI
-clvm = ">=0.9.11"
+clvm = ">=0.9.12"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
 clvm_tools_rs = ">=0.1.45"  # Rust implementation of clvm_tools' compiler
 colorama = ">=0.4.6"  # Colorizes terminal output
@@ -84,7 +85,7 @@ diff-cover = { version = ">=9.2.0", optional = true }
 mypy = { version = ">=1.11.1", optional = true }
 pre-commit = { version = ">=3.7.1", optional = true }
 py3createtorrent = { version = ">=1.2.1", optional = true }
-pyinstaller = { version = ">=6.9.0", optional = true }
+pyinstaller = { version = ">=6.9.0", python = "<3.13", optional = true }
 pytest = { version = ">=8.3.3", optional = true }
 pytest-cov = { version = ">=5.0.0", optional = true }
 pytest-mock = { version = ">=3.14.0", optional = true }
@@ -101,7 +102,6 @@ miniupnpc = { version = ">=2.2.2", source = "chia", optional = true }
 # 	{version="<=1.24.4", python = "<3.9", optional = true},
 # 	{version=">=1.26.4", python = ">=3.9", optional = true}]
 ruff = { version = ">=0.8.1", optional = true }
-
 
 [tool.poetry.extras]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "lxml"]
@@ -145,4 +145,4 @@ build-backend = "poetry_dynamic_versioning.backend"
 # duplicating until poetry v2, then revisit https://github.com/Chia-Network/chia-blockchain/pull/18797
 name = "chia-blockchain"
 # This has to match the poetry python entry above
-requires-python = ">=3.9, <3.13"
+requires-python = ">=3.9, <4"

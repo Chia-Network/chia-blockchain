@@ -14,6 +14,7 @@ from typing import Optional, final, overload
 from chia._tests.util.misc import create_logger
 from chia.server.chia_policy import ChiaPolicy
 from chia.server.start_service import async_run
+from chia.util.task_referencer import create_referenced_task
 
 if sys.platform == "win32":
     import _winapi
@@ -86,7 +87,7 @@ async def async_main(
 
                 thread_end_event.set()
 
-            file_task = asyncio.create_task(dun())
+            file_task = create_referenced_task(dun())
 
         loop = asyncio.get_event_loop()
         server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)

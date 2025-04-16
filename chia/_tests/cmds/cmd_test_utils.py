@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any, Optional, Union, cast
 
 from chia_rs import Coin, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
@@ -23,12 +25,10 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -381,8 +381,8 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     @asynccontextmanager
     async def test_get_any_service_client(
         client_type: type[_T_RpcClient],
+        root_path: Path,
         rpc_port: Optional[int] = None,
-        root_path: Optional[Path] = None,
         consume_errors: bool = True,
         use_ssl: bool = True,
     ) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
@@ -409,11 +409,11 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
 
     @asynccontextmanager
     async def test_get_wallet_client(
+        root_path: Path = default_root,
         wallet_rpc_port: Optional[int] = None,
         fingerprint: Optional[int] = None,
-        root_path: Path = default_root,
     ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
-        async with test_get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
+        async with test_get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore
             assert fingerprint is not None
             yield wallet_client, fingerprint, config
