@@ -2687,7 +2687,7 @@ async def test_long_reorg_nodes(
         p2 = full_node_1.full_node.blockchain.get_peak()
         return p1 == p2
 
-    await time_out_assert(100, check_nodes_in_sync)
+    await time_out_assert(300, check_nodes_in_sync)
     peak = full_node_2.full_node.blockchain.get_peak()
     assert peak is not None
     print(f"peak: {str(peak.header_hash)[:6]}")
