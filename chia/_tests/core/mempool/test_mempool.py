@@ -8,13 +8,11 @@ from typing import Callable, Optional
 import pytest
 from chia_rs import (
     ELIGIBLE_FOR_FF,
-    ENABLE_KECCAK,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
     G1Element,
     G2Element,
     SpendBundleConditions,
-    get_flags_for_height_and_constants,
     run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
@@ -3311,22 +3309,10 @@ async def test_create_block_generator(old: bool) -> None:
     invariant_check_mempool(mempool)
 
 
-def test_flags_for_height() -> None:
-    # the keccak operator is supposed to be enabled at soft-fork 6 height
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) != 0
-
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT - 1, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) == 0
-
-
 def test_keccak() -> None:
     # the keccak operator is 62. The assemble() function doesn't support it
     # (yet)
 
-    # keccak256 is available when the softfork has activated
     keccak_prg = Program.to(
         assemble(
             "(softfork (q . 1134) (q . 1) (q a (i "
@@ -3337,11 +3323,6 @@ def test_keccak() -> None:
         )
     )
 
-    cost, ret = keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
-    assert cost == 1215
-    assert ret.atom == b""
-
-    # keccak is ignored when the softfork has not activated
     cost, ret = keccak_prg.run_with_flags(1215, 0, [])
     assert cost == 1215
     assert ret.atom == b""
@@ -3356,12 +3337,7 @@ def test_keccak() -> None:
         )
     )
     with pytest.raises(ValueError, match="clvm raise"):
-        keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
-
-    # keccak is ignored when the softfork has not activated
-    cost, ret = keccak_prg.run_with_flags(1215, 0, [])
-    assert cost == 1215
-    assert ret.atom == b""
+        keccak_prg.run_with_flags(1215, 0, [])
 
     # === HARD FORK ===
     # new operators *outside* the softfork guard
@@ -3375,7 +3351,7 @@ def test_keccak() -> None:
         )
     )
 
-    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK | ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
+    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
     assert cost == 994
     assert ret.atom == b""
 
