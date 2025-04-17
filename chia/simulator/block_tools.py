@@ -146,7 +146,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
-    SOFT_FORK6_HEIGHT=uint32(2),
 )
 
 
