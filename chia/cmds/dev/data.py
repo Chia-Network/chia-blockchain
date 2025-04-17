@@ -75,6 +75,7 @@ class SyncTimeCommand:
     store_id: bytes32 = option("--store-id", required=True)
     profile_tasks: bool = option("--profile-tasks/--no-profile-tasks")
     restart_all: bool = option("--restart-all/--no-restart-all")
+    working_path: Optional[Path] = option("--working-path", default=None)
 
     async def run(self) -> None:
         config = load_config(self.context.root_path, "config.yaml", "data_layer", fill_missing_services=True)
@@ -94,8 +95,15 @@ class SyncTimeCommand:
 
         try:
             async with contextlib.AsyncExitStack() as exit_stack:
-                temp_dir = exit_stack.enter_context(tempfile.TemporaryDirectory())
-                database_path = Path(temp_dir).joinpath("datalayer.sqlite")
+                working_path: Path
+                if self.working_path is None:
+                    working_path = Path(exit_stack.enter_context(tempfile.TemporaryDirectory()))
+                else:
+                    working_path = self.working_path
+                    working_path.mkdir(parents=True, exist_ok=True)
+
+                database_path = working_path.joinpath("datalayer.sqlite")
+                print_date(f"working with database at: {database_path}")
 
                 data_store = await exit_stack.enter_async_context(DataStore.managed(database=database_path))
 
