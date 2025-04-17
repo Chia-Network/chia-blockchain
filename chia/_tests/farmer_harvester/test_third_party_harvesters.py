@@ -10,7 +10,7 @@ from os.path import dirname
 from typing import Optional, Union, cast
 
 import pytest
-from chia_rs import FoliageBlockData, FoliageTransactionBlock, G1Element
+from chia_rs import ChallengeChainSubSlot, FoliageBlockData, FoliageTransactionBlock, G1Element, RewardChainSubSlot
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -37,7 +37,6 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState

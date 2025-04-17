@@ -196,12 +196,11 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK_6 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_6],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
 )
 def consensus_mode(request):
     return request.param
@@ -216,10 +215,6 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             PLOT_FILTER_128_HEIGHT=uint32(10),
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
-        )
-    if consensus_mode >= ConsensusMode.SOFT_FORK_6:
-        ret = ret.replace(
-            SOFT_FORK6_HEIGHT=uint32(2),
         )
     return ret
 
@@ -466,6 +461,11 @@ def default_10000_blocks_compact(bt, consensus_mode):
         normalized_to_identity_cc_sp=True,
         seed=b"1000_compact",
     )
+
+
+# If you add another test chain, don't forget to also add a "build_test_chains"
+# generator to chia/_tests/blockchain/test_build_chains.py as well as a test in
+# the same file.
 
 
 @pytest.fixture(scope="function")

@@ -44,6 +44,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -678,7 +679,8 @@ async def test_plotnft_cli_claim(
     wallet_id = await create_new_plotnft(wallet_environments, self_pool=True)
 
     status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
-    our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
     bt = wallet_environments.full_node.bt
 
     async with manage_temporary_pool_plot(bt, status.p2_singleton_puzzle_hash) as pool_plot:
@@ -808,7 +810,7 @@ async def test_plotnft_cli_inspect(
 
     assert (
         json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+        == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
     )
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.FARMING_TO_POOL.value
 
@@ -833,7 +835,7 @@ async def test_plotnft_cli_inspect(
 
     assert (
         json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0x893474c97d04a0283483ba1af9e070768dff9e9a83d9ae2cf00a34be96ca29aec387dfb7474f2548d777000e5463f602"
+        == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
     )
 
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.SELF_POOLING.value

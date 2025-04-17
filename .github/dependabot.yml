@@ -14,7 +14,7 @@ updates:
       - dependencies
       - go
       - "Changed"
-    reviewers: ["cmmarslender", "starttoaster"]
+    reviewers: ["cmmarslender", "Starttoaster"]
     groups:
       global:
         patterns:
@@ -70,3 +70,11 @@ updates:
       - dependencies
       - rust
       - "Changed"
+
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 10
+    rebase-strategy: auto

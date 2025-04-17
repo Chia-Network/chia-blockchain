@@ -369,7 +369,8 @@ class FullNodeSimulator(FullNodeAPI):
             if count == 0:
                 return 0
 
-            target_puzzlehash = await wallet.get_new_puzzlehash()
+            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                target_puzzlehash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
             rewards = 0
 
             block_reward_coins = set()
@@ -687,7 +688,10 @@ class FullNodeSimulator(FullNodeAPI):
             for amount in amounts:
                 # We need unique puzzle hash amount combos so we'll only generate a new puzzle hash when we've already
                 # seen that amount sent to that puzzle hash
-                puzzle_hash = await wallet.get_puzzle_hash(new=amount in amounts_seen)
+                async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                    puzzle_hash = await action_scope.get_puzzle_hash(
+                        wallet.wallet_state_manager, override_reuse_puzhash_with=amount not in amounts_seen
+                    )
                 outputs.append(CreateCoin(puzzle_hash, amount))
                 amounts_seen.add(amount)
 

@@ -71,6 +71,7 @@ from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 
@@ -160,7 +161,8 @@ async def init_wallet_and_node(
     wallet_node = wallet_service._node
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
@@ -730,7 +732,8 @@ async def test_get_owned_stores(
     wallet_rpc_port = wallet_service.rpc_server.listen_port
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = sum(

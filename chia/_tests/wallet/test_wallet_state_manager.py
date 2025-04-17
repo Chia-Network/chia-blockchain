@@ -13,6 +13,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_request_types import PushTransactions
+from chia.rpc.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -222,7 +223,7 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         await env_1.xch_wallet.generate_signed_transaction(
             [uint64(1)],
-            [await env_1.xch_wallet.get_puzzle_hash(new=False)],
+            [await action_scope.get_puzzle_hash(env_1.wallet_state_manager)],
             action_scope,
         )
 
@@ -405,4 +406,41 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
     expected_state = PuzzleHashState(
         expected_state.highest_index + wsm.initial_num_public_keys, expected_state.highest_index
     )
+    assert await get_puzzle_hash_state() == expected_state
+
+    # `extend_derivation_index`
+    # Check malformed request
+    rpc_client = wallet_environments.environments[0].rpc_client
+    with pytest.raises(ValueError):
+        await rpc_client.fetch("extend_derivation_index", {})
+
+    # Test no existing derivation paths
+    async with wsm.puzzle_store.db_wrapper.writer() as conn:
+        await conn.execute(
+            "DELETE FROM derivation_paths WHERE derivation_index=?",
+            (0,),
+        )
+    with pytest.raises(ValueError):
+        await rpc_client.extend_derivation_index(0)
+
+    # Reset to a normal state
+    await wsm.puzzle_store.delete_wallet(wsm.main_wallet.id())
+    result = await wsm.create_more_puzzle_hashes()
+    await result.commit(wsm)
+    expected_state = PuzzleHashState(wsm.initial_num_public_keys, -1)
+    assert await get_puzzle_hash_state() == expected_state
+
+    # Test an index already created
+    with pytest.raises(ValueError):
+        await rpc_client.extend_derivation_index(0)
+
+    # Test an index too far in the future
+    with pytest.raises(ValueError):
+        await rpc_client.extend_derivation_index(MAX_DERIVATION_INDEX_DELTA + expected_state.highest_index + 1)
+
+    # Test the actual functionality
+    assert await rpc_client.extend_derivation_index(expected_state.highest_index + 5) == str(
+        expected_state.highest_index + 5
+    )
+    expected_state = PuzzleHashState(expected_state.highest_index + 5, expected_state.used_up_to_index)
     assert await get_puzzle_hash_state() == expected_state

@@ -6,13 +6,17 @@ from typing import Optional
 
 import pytest
 from chia_rs import (
+    ChallengeChainSubSlot,
     Foliage,
     FoliageBlockData,
     FoliageTransactionBlock,
     G1Element,
     G2Element,
+    InfusedChallengeChainSubSlot,
     PoolTarget,
     RewardChainBlock,
+    RewardChainSubSlot,
+    SubSlotProofs,
     TransactionsInfo,
 )
 from chia_rs.sized_bytes import bytes32
@@ -21,12 +25,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chia._tests.util.benchmarks import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.slots import (
-    ChallengeChainSubSlot,
-    InfusedChallengeChainSubSlot,
-    RewardChainSubSlot,
-    SubSlotProofs,
-)
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Union
+from typing import Any
 
 import pytest
 from chia_rs import G2Element
@@ -28,7 +28,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -37,8 +37,6 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-OfferSummary = dict[Union[int, bytes32], int]
 
 
 async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) -> TradeStatus:
@@ -237,26 +235,36 @@ async def test_cat_trades(
         )
 
         # Mint some VCs that can spend the CR-CATs
-        vc_record_maker = (
-            await client_maker.vc_mint(
-                VCMint(
-                    did_id=encode_puzzle_hash(did_id_maker, "did"),
-                    target_address=encode_puzzle_hash(await wallet_maker.get_new_puzzlehash(), "txch"),
-                    push=True,
-                ),
-                wallet_environments.tx_config,
-            )
-        ).vc_record
-        vc_record_taker = (
-            await client_taker.vc_mint(
-                VCMint(
-                    did_id=encode_puzzle_hash(did_id_taker, "did"),
-                    target_address=encode_puzzle_hash(await wallet_taker.get_new_puzzlehash(), "txch"),
-                    push=True,
-                ),
-                wallet_environments.tx_config,
-            )
-        ).vc_record
+        async with env_maker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            vc_record_maker = (
+                await client_maker.vc_mint(
+                    VCMint(
+                        did_id=encode_puzzle_hash(did_id_maker, "did"),
+                        target_address=encode_puzzle_hash(
+                            await action_scope.get_puzzle_hash(env_maker.wallet_state_manager), "txch"
+                        ),
+                        push=True,
+                    ),
+                    wallet_environments.tx_config,
+                )
+            ).vc_record
+        async with env_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            vc_record_taker = (
+                await client_taker.vc_mint(
+                    VCMint(
+                        did_id=encode_puzzle_hash(did_id_taker, "did"),
+                        target_address=encode_puzzle_hash(
+                            await action_scope.get_puzzle_hash(env_taker.wallet_state_manager), "txch"
+                        ),
+                        push=True,
+                    ),
+                    wallet_environments.tx_config,
+                )
+            ).vc_record
         await wallet_environments.process_pending_states(
             [
                 # Balance checking for this scenario is covered in tests/wallet/vc_wallet/test_vc_lifecycle

@@ -43,6 +43,8 @@ from chia.wallet.util.puzzle_compression import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
+OfferSummary = dict[Union[int, bytes32], int]
+
 OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
 OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
 
