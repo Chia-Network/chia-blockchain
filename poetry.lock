@@ -812,7 +812,7 @@ pytest = ">=8.3.3,<9.0.0"
 
 [[package]]
 name = "chia_rs"
-version = "0.21.2"
+version = "0.22.0"
 description = "Code useful for implementing chia consensus."
 optional = false
 python-versions = "*"
@@ -827,7 +827,7 @@ typing-extensions = "*"
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
 reference = "long_lived/initial_datalayer"
-resolved_reference = "55dfdfba049492e7f9d870318035314c8cf02a7f"
+resolved_reference = "343909726bca9a5574e1bb5cab377fe1d19cf37e"
 subdirectory = "wheel/"
 
 [[package]]
