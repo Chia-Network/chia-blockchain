@@ -161,9 +161,11 @@ class SyncTimeCommand:
                                 delta_time = now - last_time
                                 per_generation = delta_time / delta_generation
 
+                                duration_so_far = round((now - start) / 60)
+
                                 print_date(
                                     f"synced: {last_generation} -> {generation} at {per_generation:.1f}s / gen"
-                                    + f" ({humanize_bytes(database_path.stat().st_size)})",
+                                    + f" ({humanize_bytes(database_path.stat().st_size)}, {duration_so_far}m)",
                                     flush=True,
                                 )
 
