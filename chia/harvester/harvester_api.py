@@ -237,6 +237,17 @@ class HarvesterAPI:
         awaitables = []
         passed = 0
         total = 0
+        num_outstanding_lookups = len(asyncio.all_tasks(loop=loop)) - 1
+        # if there are already 4x the number of outstanding tasks that haven't finished yet
+        # it is unlikely that any new lookups will complete in time.
+        # this is a somewhat arbitrary heuristic. The current asyncio implementation makes it complicated
+        # to get the number of tasks that are actually stuck waiting for IO and for how long
+        if num_outstanding_lookups > self.harvester.harvester_threads * 4:
+            self.harvester.log.error(
+                f"Skipping SP {new_challenge.sp_hash}. Already waiting for {num_outstanding_lookups} lookups."
+            )
+            return None
+
         with self.harvester.plot_manager:
             self.harvester.log.debug("new_signage_point_harvester lock acquired")
             for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
@@ -256,8 +267,8 @@ class HarvesterAPI:
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         time_taken = time.time() - start
         total_proofs_found = 0
-        for filename_sublist_awaitable in asyncio.as_completed(awaitables, timeout=45):
-            try:
+        try:
+            for filename_sublist_awaitable in asyncio.as_completed(awaitables, timeout=45):
                 filename, sublist = await filename_sublist_awaitable
                 time_taken = time.time() - start
                 if time_taken > 8:
@@ -272,12 +283,10 @@ class HarvesterAPI:
                     total_proofs_found += 1
                     msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
                     await peer.send_message(msg)
-            except asyncio.TimeoutError:
-                self.harvester.log.error(
-                    f"Timed out 45 seconds looking up qualities on {filename}. Please check disks."
-                )
-            except Exception:
-                self.harvester.log.exception(f"Unexpected error looking up qualities on {filename}")
+        except asyncio.TimeoutError:
+            # In the current implmentation of as_completed there is no way to determine which task timed out
+            # as the returned iterator is a new co-routine and not the original one
+            self.harvester.log.error("Timed out 45 seconds looking up proofs. Please check disks.")
 
         now = uint64(int(time.time()))
 

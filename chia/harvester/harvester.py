@@ -56,6 +56,7 @@ class Harvester:
     root_path: Path
     _shut_down: bool
     executor: ThreadPoolExecutor
+    harvester_threads: int
     state_changed_callback: Optional[StateChangedProtocol] = None
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
@@ -94,8 +95,9 @@ class Harvester:
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
         )
         self._shut_down = False
+        self.harvester_threads = config.get("num_threads", 30)
         self.executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=config["num_threads"], thread_name_prefix="harvester-"
+            max_workers=self.harvester_threads, thread_name_prefix="harvester-"
         )
         self._server = None
         self.constants = constants
