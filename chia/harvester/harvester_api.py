@@ -242,7 +242,7 @@ class HarvesterAPI:
         # it is unlikely that any new lookups will complete in time.
         # this is a somewhat arbitrary heuristic. The current asyncio implementation makes it complicated
         # to get the number of tasks that are actually stuck waiting for IO and for how long
-        if num_outstanding_lookups > self.harvester.harvester_threads * 4:
+        if self.harvester.possible_stuck_lookups and num_outstanding_lookups > self.harvester.harvester_threads * 4:
             self.harvester.log.error(
                 f"Skipping SP {new_challenge.sp_hash}. Already waiting for {num_outstanding_lookups} lookups."
             )
@@ -283,10 +283,12 @@ class HarvesterAPI:
                     total_proofs_found += 1
                     msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
                     await peer.send_message(msg)
+            self.harvester.possible_stuck_lookups = False
         except asyncio.TimeoutError:
             # In the current implmentation of as_completed there is no way to determine which task timed out
             # as the returned iterator is a new co-routine and not the original one
             self.harvester.log.error("Timed out 45 seconds looking up proofs. Please check disks.")
+            self.harvester.possible_stuck_lookups = True
 
         now = uint64(int(time.time()))
 

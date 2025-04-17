@@ -63,6 +63,7 @@ class Harvester:
     event_loop: asyncio.events.AbstractEventLoop
     _server: Optional[ChiaServer]
     _mode: HarvestingMode
+    possible_stuck_lookups: bool
 
     @property
     def server(self) -> ChiaServer:
@@ -76,6 +77,7 @@ class Harvester:
     def __init__(self, root_path: Path, config: dict[str, Any], constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
+        self.possible_stuck_lookups = False
         # TODO, remove checks below later after some versions / time
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
         if "plot_loading_frequency_seconds" in config:
