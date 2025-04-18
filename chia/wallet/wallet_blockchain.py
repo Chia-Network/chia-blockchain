@@ -3,12 +3,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import ConsensusConstants, HeaderBlock
+from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record

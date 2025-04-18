@@ -11,6 +11,7 @@ from multiprocessing.context import BaseContext
 from typing import IO, Optional
 
 from chia_rs import (
+    BlockRecord,
     ChallengeChainSubSlot,
     ConsensusConstants,
     EndOfSubSlotBundle,
@@ -26,7 +27,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record

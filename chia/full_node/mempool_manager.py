@@ -13,6 +13,7 @@ from chia_rs import (
     ELIGIBLE_FOR_FF,
     BLSCache,
     ConsensusConstants,
+    SpendBundle,
     SpendBundleConditions,
     supports_fast_forward,
     validate_clvm_and_signature,
@@ -37,7 +38,6 @@ from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
-from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor

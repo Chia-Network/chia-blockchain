@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -15,7 +16,6 @@ from chia._tests.environments.wallet import (
     WalletTestFramework,
 )
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_request_types import GetTransactionMemo, PushTX
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list

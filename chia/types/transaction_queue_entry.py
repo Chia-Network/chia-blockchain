@@ -5,11 +5,11 @@ import dataclasses
 from dataclasses import dataclass, field
 from typing import ClassVar, Generic, Optional, TypeVar, Union
 
+from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 
 T = TypeVar("T")

@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -21,7 +21,6 @@ from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     calculate_pos_challenge,
     generate_plot_public_key,
     passes_plot_filter,

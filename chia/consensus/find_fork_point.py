@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Union
 
-from chia_rs import ConsensusConstants, HeaderBlock
+from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 
 
