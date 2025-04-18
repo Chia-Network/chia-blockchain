@@ -6,7 +6,10 @@ import random
 from typing import Any, Optional, Union
 
 from chia_rs import (
+    CoinSpend,
+    CoinState,
     HeaderBlock,
+    RespondToPhUpdates,
     compute_merkle_set_root,
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
@@ -17,7 +20,6 @@ from chia_rs.sized_ints import uint32
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
-    CoinState,
     RegisterForCoinUpdates,
     RegisterForPhUpdates,
     RejectAdditionsRequest,
@@ -35,11 +37,10 @@ from chia.protocols.wallet_protocol import (
     RespondPuzzleSolution,
     RespondRemovals,
     RespondToCoinUpdates,
-    RespondToPhUpdates,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 

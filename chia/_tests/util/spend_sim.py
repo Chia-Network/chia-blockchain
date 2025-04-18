@@ -12,8 +12,10 @@ from typing import Any, Optional, TypeVar
 import anyio
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    CoinSpend,
     ConsensusConstants,
     G2Element,
+    SpendBundle,
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
@@ -32,11 +34,10 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle, T_SpendBundle
+from chia.types.spend_bundle import T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash

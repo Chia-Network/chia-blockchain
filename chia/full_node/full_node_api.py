@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 import anyio
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
+    CoinState,
     EndOfSubSlotBundle,
     FoliageBlockData,
     FoliageTransactionBlock,
@@ -20,7 +22,9 @@ from chia_rs import (
     G2Element,
     MerkleSet,
     PoolTarget,
+    RespondToPhUpdates,
     RewardChainBlockUnfinished,
+    SpendBundle,
     SubEpochSummary,
     UnfinishedBlock,
     additions_and_removals,
@@ -31,7 +35,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
@@ -47,7 +50,6 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
-    CoinState,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
@@ -66,7 +68,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
@@ -1652,7 +1653,7 @@ class FullNodeAPI:
                 end_time - start_time,
             )
 
-        response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
+        response = RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 

@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from chia_rs import ConsensusConstants
+from chia_rs import BlockRecord, ConsensusConstants
 from chia_rs.sized_ints import uint8, uint32
-
-from chia.consensus.block_record import BlockRecord
 
 
 def calculate_deficit(

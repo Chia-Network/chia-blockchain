@@ -123,8 +123,8 @@ async def ignore_block_validation(
     monkeypatch.setattr(
         "chia.consensus.multiprocess_validation.verify_and_get_quality_string", lambda *_, **__: bytes32.zeros
     )
-    monkeypatch.setattr("chia.consensus.block_record.BlockRecord.sp_total_iters", lambda *_: uint128(0))
-    monkeypatch.setattr("chia.consensus.block_record.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))
+    monkeypatch.setattr("chia_rs.BlockRecord.sp_total_iters", lambda *_: uint128(0))
+    monkeypatch.setattr("chia_rs.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))
     monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_sp_iters", lambda *_: uint64(0))
     monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_ip_iters", lambda *_: uint64(0))
     monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_sub_slot_iters", lambda *_: uint64(1))
@@ -132,7 +132,7 @@ async def ignore_block_validation(
     monkeypatch.setattr("chia.full_node.full_node_store.calculate_sp_interval_iters", lambda *_: uint64(1))
     monkeypatch.setattr("chia.consensus.pot_iterations.calculate_sp_interval_iters", lambda *_: uint64(1))
     monkeypatch.setattr("chia.consensus.pot_iterations.calculate_ip_iters", lambda *_: uint64(1))
-    monkeypatch.setattr("chia.consensus.block_record.BlockRecord.sp_sub_slot_total_iters", lambda *_: uint64(1))
+    monkeypatch.setattr("chia_rs.BlockRecord.sp_sub_slot_total_iters", lambda *_: uint64(1))
 
 
 @pytest.fixture(scope="function", params=[True, False])

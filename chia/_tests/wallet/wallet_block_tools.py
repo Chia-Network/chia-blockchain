@@ -4,6 +4,7 @@ import time
 from typing import Any, Optional
 
 from chia_rs import (
+    BlockRecord,
     ConsensusConstants,
     Foliage,
     FoliageBlockData,
@@ -12,8 +13,10 @@ from chia_rs import (
     G1Element,
     G2Element,
     PoolTarget,
+    ProofOfSpace,
     RewardChainBlock,
     RewardChainBlockUnfinished,
+    SpendBundle,
     TransactionsInfo,
     UnfinishedBlock,
     compute_merkle_set_root,
@@ -22,7 +25,6 @@ from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -30,10 +32,8 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle import SpendBundle
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 

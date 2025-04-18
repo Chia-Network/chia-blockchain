@@ -5,22 +5,20 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import G1Element, G2Element
+from chia_rs import BlockRecord, CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
-from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
 from chia.data_layer.singleton_record import SingletonRecord
-from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import (
     AssertAnnouncement,

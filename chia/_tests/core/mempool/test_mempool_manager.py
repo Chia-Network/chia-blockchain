@@ -11,8 +11,10 @@ from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
     AugSchemeMPL,
+    CoinSpend,
     ConsensusConstants,
     G2Element,
+    SpendBundle,
     SpendBundleConditions,
     SpendConditions,
     get_conditions_from_spendbundle,
@@ -52,7 +54,7 @@ from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, P
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.eligible_coin_spends import (
@@ -66,7 +68,6 @@ from chia.types.eligible_coin_spends import (
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
 from chia.wallet.conditions import AssertCoinAnnouncement

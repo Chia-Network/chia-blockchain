@@ -15,12 +15,13 @@ from chia_puzzles_py.programs import (
 from chia_puzzles_py.programs import (
     SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES,
 )
+from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.wallet.lineage_proof import LineageProof

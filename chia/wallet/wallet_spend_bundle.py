@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from chia_rs import AugSchemeMPL, G2Element
+from chia_rs import AugSchemeMPL, CoinSpend, G2Element, SpendBundle
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle, T_SpendBundle
+from chia.types.spend_bundle import T_SpendBundle
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 

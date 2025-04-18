@@ -9,6 +9,7 @@ from chia_rs import (
     FoliageTransactionBlock,
     G2Element,
     PoolTarget,
+    ProofOfSpace,
     RewardChainBlockUnfinished,
     RewardChainSubSlot,
 )
@@ -16,7 +17,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.util.streamable import Streamable, streamable
 
 """

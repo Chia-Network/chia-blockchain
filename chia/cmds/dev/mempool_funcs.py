@@ -5,8 +5,9 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
+from chia_rs import SpendBundle
+
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.spend_bundle import SpendBundle
 
 
 async def import_mempool_async(

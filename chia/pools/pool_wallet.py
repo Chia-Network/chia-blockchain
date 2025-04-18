@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import G1Element, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack, final
@@ -41,7 +41,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import compute_additions
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord

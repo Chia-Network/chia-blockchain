@@ -8,11 +8,13 @@ from pathlib import Path
 from time import monotonic
 
 from chia_rs import (
+    BlockRecord,
     Foliage,
     FoliageBlockData,
     FoliageTransactionBlock,
     FullBlock,
     PoolTarget,
+    ProofOfSpace,
     RewardChainBlock,
     SubEpochSummary,
     TransactionsInfo,
@@ -32,9 +34,7 @@ from chia._tests.util.benchmarks import (
     rand_vdf_proof,
     rewards,
 )
-from chia.consensus.block_record import BlockRecord
 from chia.full_node.block_store import BlockStore
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 
 # to run this benchmark:

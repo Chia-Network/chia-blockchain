@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import AugSchemeMPL, FullBlock, UnfinishedBlock
+from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
 from clvm.casts import int_to_bytes
@@ -11,7 +11,6 @@ from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol

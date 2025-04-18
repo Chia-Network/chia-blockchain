@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pytest
-from chia_rs import FullBlock, G1Element, PrivateKey
+from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -17,7 +17,6 @@ from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import CoinState
 from chia.server.api_protocol import Self
 from chia.server.outbound_message import Message, make_msg
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches

@@ -10,9 +10,11 @@ from chia_rs import (
     ELIGIBLE_FOR_FF,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
+    CoinSpend,
     FullBlock,
     G1Element,
     G2Element,
+    SpendBundle,
     SpendBundleConditions,
     run_block_generator2,
 )
@@ -63,7 +65,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.eligible_coin_spends import UnspentLineageInfo, run_for_cost
@@ -71,7 +73,7 @@ from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace

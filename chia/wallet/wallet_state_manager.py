@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, cast
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
@@ -27,7 +27,6 @@ from chia.pools.pool_puzzles import (
     solution_to_pool_state,
 )
 from chia.pools.pool_wallet import PoolWallet
-from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -35,7 +34,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import compute_additions
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict

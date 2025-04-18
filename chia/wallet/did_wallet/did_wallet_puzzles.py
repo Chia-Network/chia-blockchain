@@ -4,13 +4,13 @@ from collections.abc import Iterator
 from typing import Optional, Union
 
 from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH, NFT_INTERMEDIATE_LAUNCHER
-from chia_rs import G1Element
+from chia_rs import CoinSpend, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,

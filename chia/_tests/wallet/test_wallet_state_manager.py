@@ -5,13 +5,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import CoinState, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
-from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_request_types import PushTransactions
 from chia.rpc.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.server.outbound_message import NodeType

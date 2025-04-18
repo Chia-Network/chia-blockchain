@@ -16,6 +16,7 @@ from chia_rs import (
     FoliageTransactionBlock,
     FullBlock,
     G1Element,
+    ProofOfSpace,
     RewardChainSubSlot,
 )
 from chia_rs.sized_bytes import bytes32
@@ -43,7 +44,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
