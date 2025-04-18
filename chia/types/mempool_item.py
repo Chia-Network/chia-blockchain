@@ -13,7 +13,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.streamable import recurse_jsonify
 
 
-@dataclass
+@dataclass(frozen=True)
 class BundleCoinSpend:
     coin_spend: CoinSpend
     eligible_for_dedup: bool
