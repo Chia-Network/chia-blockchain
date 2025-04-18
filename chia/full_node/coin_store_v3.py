@@ -5,14 +5,14 @@ import logging
 import sqlite3
 import time
 from collections.abc import Collection
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Iterator, Optional
 
 import typing_extensions
 from aiosqlite import Cursor
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from rocks_pyo3 import DB
+from rocks_pyo3 import DB, WriteBatch
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -24,12 +24,39 @@ from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 log = logging.getLogger(__name__)
 
 
-def index_to_blob(index: int) -> bytes:
+def u16_to_blob(index: int) -> bytes:
+    return index.to_bytes(2, "big")
+
+
+def u32_to_blob(index: int) -> bytes:
+    return index.to_bytes(4, "big")
+
+
+def u64_to_blob(index: int) -> bytes:
     return index.to_bytes(8, "big")
 
 
-def blob_to_index(blob: bytes) -> int:
+def blob_to_int(blob: bytes) -> int:
     return int.from_bytes(blob, "big")
+
+
+def list_bytes32_to_blob(bs: list[bytes32]) -> bytes:
+    size_blob = u16_to_blob(len(bs))
+    return size_blob + b"".join(_ for _ in bs)
+
+
+@dataclasses.dataclass
+class BlockInfo:
+    timestamp: uint64
+    created_coins: list[bytes32]
+    spent_coins: list[bytes32]
+
+    def __bytes__(self) -> bytes:
+        return (
+            u64_to_blob(self.timestamp)
+            + list_bytes32_to_blob(self.created_coins)
+            + list_bytes32_to_blob(self.spent_coins)
+        )
 
 
 @typing_extensions.final
@@ -39,38 +66,17 @@ class CoinStore:
     This object handles CoinRecords in DB.
     """
 
-    db_wrapper: DBWrapper2
     rocks_db: DB
+    # schema:
+    # c(32 bytes hash) => coin record
+    # b(8 byte index) => block info
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
-        if db_wrapper.db_version != 2:
-            raise RuntimeError(f"CoinStore does not support database schema v{db_wrapper.db_version}")
-        self = CoinStore(db_wrapper, db_wrapper.rocks_db())
-
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            log.info("DB: Creating coin store tables and indexes.")
-            # the coin_name is unique in this table because the CoinStore always
-            # only represent a single peak
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS coin_record("
-                " confirmed_index bigint,"
-                " spent_index bigint,"  # if this is zero, it means the coin has not been spent
-                " coinbase int,"
-                " puzzle_hash blob,"
-                " coin_parent blob,"
-                " amount blob,"  # we use a blob of 8 bytes to store uint64
-                " timestamp bigint)"
-            )
-
-        return self
+    async def create(cls, rocks_db: DB) -> CoinStore:
+        return CoinStore(rocks_db)
 
     async def any_coins_unspent(self) -> bool:
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT * FROM coin_record WHERE spent_index=0") as cursor:
-                _row = await cursor.fetchone()
-                return True
-        return False
+        raise NotImplemented()
 
     async def new_block(
         self,
@@ -87,35 +93,62 @@ class CoinStore:
 
         start = time.monotonic()
 
-        additions = []
+        new_coin_records = {}
+        new_coin_names = []
+        for coin_list, is_coinbase in [(included_reward_coins, True), (tx_additions, False)]:
+            for coin in coin_list:
+                coin_name = coin.name()
+                new_coin_names.append(coin_name)
+                record: CoinRecord = CoinRecord(
+                    coin,
+                    height,
+                    uint32(0),
+                    is_coinbase,
+                    timestamp,
+                )
+                new_coin_records[coin_name] = record
 
-        for coin in tx_additions:
-            record: CoinRecord = CoinRecord(
-                coin,
-                height,
-                uint32(0),
-                False,
-                timestamp,
-            )
-            additions.append(record)
+        block_info = BlockInfo(timestamp, new_coin_names, tx_removals)
 
         if height == 0:
             assert len(included_reward_coins) == 0
         else:
             assert len(included_reward_coins) >= 2
 
-        for coin in included_reward_coins:
-            reward_coin_r: CoinRecord = CoinRecord(
-                coin,
-                height,
-                uint32(0),
-                True,
-                timestamp,
-            )
-            additions.append(reward_coin_r)
+        batch = WriteBatch()
+        height_blob = u32_to_blob(height)
+        block_key = b"b" + height_blob
+        block_info_blob = bytes(block_info)
+        batch.put(block_key, block_info_blob)
 
-        await self._add_coin_records(additions)
-        await self._set_spent(tx_removals, height)
+        new_spent_coin_records = []
+        spent_coin_records = await self.get_coin_records(tx_removals)
+        for cr, name in zip(spent_coin_records, tx_removals):
+            if cr is None:
+                cr = new_coin_records[name]
+                if cr is None:
+                    raise ValueError(f"can't find coin for {name.hex()}")
+                cr = dataclasses.replace(cr, spent_block_index=height)
+                new_coin_records[name] = cr
+            else:
+                cr = dataclasses.replace(cr, spent_block_index=height)
+                new_spent_coin_records.append((name, cr))
+
+        updated_coin_records = []
+
+        for name, cr in new_coin_records.items():
+            coin_record_blob = bytes(cr)
+            index = b"c" + name
+            batch.put(index, coin_record_blob)
+            updated_coin_records.append(cr)
+
+        for name, cr in new_spent_coin_records:
+            coin_record_blob = bytes(cr)
+            index = b"c" + name
+            batch.put(index, coin_record_blob)
+            updated_coin_records.append(cr)
+
+        self.rocks_db.write(batch)
 
         end = time.monotonic()
         log.log(
@@ -125,7 +158,7 @@ class CoinStore:
             + "blockchain database is on a fast drive",
         )
 
-        return additions
+        return updated_coin_records
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
@@ -138,32 +171,23 @@ class CoinStore:
         if len(names) == 0:
             return []
 
-        index_list = await self.coin_indices_for_names(names)
+        def index_for_coin_name(name: bytes32) -> bytes:
+            return b"c" + name
 
-        return await self.coin_records_for_indices(index_list)
+        indices = [index_for_coin_name(_) for _ in (names)]
+        blobs = self.rocks_db.multi_get(indices)
+        coin_records = [CoinRecord.from_bytes(_) if _ is not None else None for _ in blobs]
+        return coin_records
 
-    async def coin_records_for_indices(self, indices: Collection[uint32]) -> list[CoinRecord]:
-        coins = []
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursors: list[Cursor] = []
-            for batch in to_batches(indices, SQLITE_MAX_VARIABLE_NUMBER):
-                names_db: tuple[Any, ...] = tuple(batch.entries)
-                cursors.append(
-                    await conn.execute(
-                        f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                        f"coin_parent, amount, timestamp FROM coin_record "
-                        f"WHERE rowid in ({','.join(['?'] * len(names_db))}) ",
-                        names_db,
-                    )
-                )
+    async def block_infos_for_heights(self, heights: list[int]) -> list[Optional[BlockInfo]]:
+        def index_for_height(h: uint64) -> bytes:
+            return b"b" + h.to_bytes(8, "big")
 
-            for cursor in cursors:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, row[0], row[1], row[2], row[6])
-                    coins.append(record)
-
-        return coins
+        indices = [index_for_height(_) for _ in heights]
+        blobs = self.rocksdb.multi_get(indices)
+        size_of_block_info = 32
+        block_records = [BlockInfo.from_bytes(_) for _ in blobs[0::size_of_block_info]]
+        return block_records
 
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
         # TODO:
@@ -475,48 +499,64 @@ class CoinStore:
 
         return coin_states, next_height
 
+    async def _coin_activity_after_height(self, block_index: int) -> AsyncGenerator[tuple[uint64, BlockInfo]]:
+        """
+        Yield tuples of (additions, removals) after the given block index in
+        reverse chronological order (so largest block index first).
+        """
+        last_block_index = bytes.fromhex("62ffffffffffffffff")
+        iterator = self.rocks_db.iterate_from(last_block_index, "reverse")
+        for k, v in iterator:
+            index = blob_to_int(k[1:])
+            bi = BlockInfo.from_bytes(v)
+            yield index, bi
+
     async def rollback_to_block(self, block_index: int) -> list[CoinRecord]:
         """
         Note that block_index can be negative, in which case everything is rolled back
         Returns the list of coin records that have been modified
         """
-        # TODO: get list of coins that were added and spent at this height
-        # - get list of all blocks with index >= block_index
-        # - get list of all coins with confirmed_index >= block_index
-        raise NotImplementedError("rollback_to_block is not implemented")
-        coin_delete_index_list = self.coin_indices_created_at_height(uint32(block_index))
-        coin_spent_index_list = self.coin_indices_spent_at_height(uint32(block_index))
+        coin_changes = {}
+        async for index, block_info in self._coin_activity_after_height(block_index):
+            if index <= block_index:
+                break
+            additions = block_info.created_coins
+            removals = block_info.spent_coins
+            names = set(additions + removals)
+            coin_records = self.get_coin_records_by_names(True, names)
 
-        coin_changes: dict[bytes32, CoinRecord] = {}
-        # Add coins that are confirmed in the reverted blocks to the list of updated coins.
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            async with conn.execute(
-                "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE confirmed_index>?",
-                (block_index,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, uint32(0), row[1], row[2], uint64(0))
-                    coin_changes[record.name] = record
+            cr_by_name = {_.name(): _ for _ in coin_records}
+            batch = WriteBatch()
+            for coin_name in removals:
+                coin_record = cr_by_name.get(coin_name)
+                coin_record = dataclasses.replace(coin_record, spent_block_index=0)
+                coin_record_blob = bytes(coin_record)
+                index = b"c" + coin_name
+                batch.put(index, coin_record_blob)
+                coin_changes[coin_name] = coin_record
+            for coin_name in additions:
+                coin_record = cr_by_name.get(coin_name)
+                coin_record = dataclasses.replace(coin_record, confirmed_block_index=0)
+                coin_record_blob = bytes(coin_record)
+                index = b"c" + coin_name
+                batch.put(index, coin_record_blob)
+                coin_changes[coin_name] = coin_record
+            self.rocks_db.write(batch)
 
-            # Delete reverted blocks from storage
-            await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
-
-            # Add coins that are confirmed in the reverted blocks to the list of changed coins.
-            async with conn.execute(
-                "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index>?",
-                (block_index,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, row[0], uint32(0), row[2], row[6])
-                    if record.name not in coin_changes:
-                        coin_changes[record.name] = record
-
-            await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
         return list(coin_changes.values())
+
+    async def _add_block_summary(
+        self, height: uint32, timestamp: uint64, additions: list[Coin], removals: list[bytes32]
+    ) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            # Convert additions and removals to blobs
+            additions_blob = b"".join([coin.name for coin in additions])
+            removals_blob = b"".join(removals)
+
+            await conn.execute(
+                "INSERT OR REPLACE INTO block_summary VALUES(?, ?, ?, ?)",
+                (height, timestamp, additions_blob, removals_blob),
+            )
 
     # Store CoinRecord in DB
     async def _add_coin_records(self, records: list[CoinRecord]) -> None:
@@ -550,24 +590,23 @@ class CoinStore:
         if len(coin_names) == 0:
             return None
 
-        index_list = await self.coin_indices_for_names(coin_names)
+        new_spent_coin_records = []
+        spent_coin_records = await self.get_coin_records(coin_names)
+        for cr, name in zip(spent_coin_records, coin_names):
+            if cr is None:
+                raise ValueError(f"can't find coin for {name.hex()}")
+            if cr.spent_block_index != 0:
+                raise ValueError(f"Invalid operation to set spent")
+            cr = dataclasses.replace(cr, spent_block_index=index)
+            new_spent_coin_records.append((name, cr))
 
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            rows_updated: int = 0
-            for batch in to_batches(index_list, SQLITE_MAX_VARIABLE_NUMBER):
-                name_params = ",".join(["?"] * len(batch.entries))
-                ret: Cursor = await conn.execute(
-                    f"UPDATE coin_record "
-                    f"SET spent_index={index} "
-                    f"WHERE spent_index=0 "
-                    f"AND rowid IN ({name_params})",
-                    batch.entries,
-                )
-                rows_updated += ret.rowcount
-            if rows_updated != len(coin_names):
-                raise ValueError(
-                    f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}"
-                )
+        batch = WriteBatch()
+        for name, cr in new_spent_coin_records:
+            coin_record_blob = bytes(cr)
+            index = b"c" + name
+            batch.put(index, coin_record_blob)
+
+        self.rocks_db.write(batch)
 
     # Lookup the most recent unspent lineage that matches a puzzle hash
     async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
