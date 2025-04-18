@@ -70,7 +70,11 @@ class DataStore:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
+        cls,
+        database: Union[str, Path],
+        uri: bool = False,
+        sql_log_path: Optional[Path] = None,
+        cache_capacity: int = 1,
     ) -> AsyncIterator[DataStore]:
         async with DBWrapper2.managed(
             database=database,
@@ -85,7 +89,7 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=128)
+            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
             self = cls(db_wrapper=db_wrapper, recent_merkle_blobs=recent_merkle_blobs)
 
             async with db_wrapper.writer() as writer:
@@ -436,6 +440,8 @@ class DataStore:
     ) -> MerkleBlob:
         if root_hash is None:
             return MerkleBlob(blob=b"")
+        if self.recent_merkle_blobs.get_capacity() == 0:
+            update_cache = False
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
@@ -471,6 +477,8 @@ class DataStore:
     ) -> Root:
         if not merkle_blob.empty():
             merkle_blob.calculate_lazy_hashes()
+        if self.recent_merkle_blobs.get_capacity() == 0:
+            update_cache = False
 
         root_hash = merkle_blob.get_root_hash()
         if old_root is not None and old_root.node_hash == root_hash:
