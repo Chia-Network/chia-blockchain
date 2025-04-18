@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator, Optional
 from tempfile import TemporaryDirectory
-from contextlib import asynccontextmanager
-from rocks_pyo3 import DB
+from typing import Optional
 
 import pytest
+from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
+from rocks_pyo3 import DB
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection
@@ -30,7 +32,6 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
@@ -235,7 +236,7 @@ async def ztest_num_unspent(bt: BlockTools, db_version: int) -> None:
     test_excercised = False
 
     async with temp_rocks_db() as rocks_db:
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
 
         for block in blocks:
             if not block.is_transaction_block():
@@ -353,7 +354,7 @@ async def ztest_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> N
         initial_block_count = 30
         reorg_length = 15
         blocks = bt.get_consecutive_blocks(initial_block_count)
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
         store = await BlockStore.create(db_wrapper)
         b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
         try:
@@ -419,7 +420,7 @@ async def ztest_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) 
             pool_reward_puzzle_hash=pool_ph,
             guarantee_transaction_block=True,
         )
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
         store = await BlockStore.create(db_wrapper)
         b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
         for block in blocks:
@@ -460,7 +461,7 @@ async def ztest_get_coin_states(db_version: int) -> None:
             )
             for i in range(1, 301)
         ]
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
         await coin_store._add_coin_records(crs)
 
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
@@ -586,7 +587,7 @@ async def ztest_coin_state_batches(
 ) -> None:
     async with temp_rocks_db() as rocks_db:
         # Initialize coin and hint stores.
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
         hint_store = await HintStore.create(db_wrapper)
 
         await coin_store._add_coin_records(random_coin_records.items)
@@ -680,7 +681,7 @@ async def ztest_batch_many_coin_states(db_version: int, cut_off_middle: bool) ->
             )
 
         # Initialize coin and hint stores.
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
         await HintStore.create(db_wrapper)
 
         await coin_store._add_coin_records(coin_records)
@@ -721,7 +722,7 @@ async def ztest_batch_many_coin_states(db_version: int, cut_off_middle: bool) ->
 async def ztest_batch_no_puzzle_hashes(db_version: int) -> None:
     async with temp_rocks_db() as rocks_db:
         # Initialize coin and hint stores.
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
         await HintStore.create(db_wrapper)
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([])
@@ -733,7 +734,7 @@ async def ztest_batch_no_puzzle_hashes(db_version: int) -> None:
 async def ztest_duplicate_by_hint(db_version: int) -> None:
     async with temp_rocks_db() as rocks_db:
         # Initialize coin and hint stores.
-        coin_store = await CoinStore.create(db_wrapper)
+        coin_store = await CoinStore.create(rocks_db)
         hint_store = await HintStore.create(db_wrapper)
 
         cr = CoinRecord(

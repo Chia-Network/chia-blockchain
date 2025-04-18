@@ -4,14 +4,12 @@ import dataclasses
 import logging
 import sqlite3
 import time
-from collections.abc import Collection
-from typing import Any, AsyncGenerator, Iterator, Optional
+from collections.abc import AsyncGenerator, Collection
+from typing import Any, Optional
 
 import typing_extensions
-from aiosqlite import Cursor
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-
 from rocks_pyo3 import DB, WriteBatch
 
 from chia.protocols.wallet_protocol import CoinState
@@ -19,7 +17,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.util.batches import to_batches
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +74,7 @@ class CoinStore:
         return CoinStore(rocks_db)
 
     async def any_coins_unspent(self) -> bool:
-        raise NotImplemented()
+        raise NotImplementedError()
 
     async def new_block(
         self,
@@ -596,7 +594,7 @@ class CoinStore:
             if cr is None:
                 raise ValueError(f"can't find coin for {name.hex()}")
             if cr.spent_block_index != 0:
-                raise ValueError(f"Invalid operation to set spent")
+                raise ValueError("Invalid operation to set spent")
             cr = dataclasses.replace(cr, spent_block_index=index)
             new_spent_coin_records.append((name, cr))
 
