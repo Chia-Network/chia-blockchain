@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
-from chia_rs import CoinState, HeaderBlock, SpendBundle
+import chia_rs
+from chia_rs import HeaderBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -17,6 +18,11 @@ from chia.util.streamable import Streamable, streamable
 Protocol between wallet (SPV node) and full node.
 Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
+
+
+# NOTE: using this assignment to retain automatic testing of these messages
+CoinState = chia_rs.CoinState
+RespondToPhUpdates = chia_rs.RespondToPhUpdates
 
 
 @streamable
