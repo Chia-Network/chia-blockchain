@@ -38,7 +38,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # Default used for tests is std_hash(b'')
     GENESIS_CHALLENGE=bytes32.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
     # Forks of chia should change the AGG_SIG_*_ADDITIONAL_DATA values to provide
-    # replay attack protection. This is set to mainnet genesis challange
+    # replay attack protection. This is set to mainnet genesis challenge
     AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
     AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
     AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
@@ -72,7 +72,6 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
-    SOFT_FORK6_HEIGHT=uint32(6800000),
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
     # June 2027
@@ -86,5 +85,4 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
     if network_id == "testnet11":
-        if "SOFT_FORK6_HEIGHT" not in overrides:
-            overrides["SOFT_FORK6_HEIGHT"] = 2000000
+        pass

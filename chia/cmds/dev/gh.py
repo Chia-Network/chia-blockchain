@@ -110,7 +110,7 @@ def gh_group() -> None:
 )
 class TestCMD:
     workflow_id: ClassVar[str] = "test.yml"
-    owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
+    owner: str = option("-w", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
     repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
     ref: Optional[str] = option(
         "-f",

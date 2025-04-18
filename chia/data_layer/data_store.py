@@ -666,8 +666,9 @@ class DataStore:
             log.info(f"inserting merkle blob: {len(merkle_blob)} bytes {root_hash.hex()}")
             blob_path = self.get_blob_path(merkle_blob.get_root_hash())
             if not blob_path.exists():
+                blob_path.parent.mkdir(parents=True, exist_ok=True)
                 path = blob_path.as_posix()
-                # print("writing to:", path, root_hash.hex())
+                # print("writing to:", blob_path, root_hash.hex())
                 merkle_blob.to_path(path)
 
             async with self.db_wrapper.writer() as writer:
@@ -709,7 +710,7 @@ class DataStore:
     async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT blob FROM ids WHERE kv_id = ? AND store_id = ?",
+                "SELECT hash FROM ids WHERE kv_id = ? AND store_id = ?",
                 (
                     kv_id,
                     store_id,

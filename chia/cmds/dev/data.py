@@ -6,8 +6,8 @@ import dataclasses
 import datetime
 import logging
 import os
-import shutil
 import sysconfig
+import tempfile
 import time
 from dataclasses import field
 from pathlib import Path
@@ -75,7 +75,7 @@ class SyncTimeCommand:
     store_id: bytes32 = option("--store-id", required=True)
     profile_tasks: bool = option("--profile-tasks/--no-profile-tasks")
     restart_all: bool = option("--restart-all/--no-restart-all")
-    seed_db: Optional[Path] = option("--seed-db", type=click.Path(exists=True), help="Path to the seed database")
+    working_path: Optional[Path] = option("--working-path", default=None)
 
     async def run(self) -> None:
         config = load_config(self.context.root_path, "config.yaml", "data_layer", fill_missing_services=True)
@@ -95,19 +95,28 @@ class SyncTimeCommand:
 
         try:
             async with contextlib.AsyncExitStack() as exit_stack:
-                # temp_dir = exit_stack.enter_context(tempfile.TemporaryDirectory())
-                temp_dir = "/farm/roots/dlst"
-                database_path = Path(temp_dir).joinpath("datalayer.sqlite")
-                database_path.parent.mkdir(parents=True, exist_ok=True)
+                working_path: Path
+                if self.working_path is None:
+                    working_path = Path(exit_stack.enter_context(tempfile.TemporaryDirectory()))
+                else:
+                    working_path = self.working_path
+                    working_path.mkdir(parents=True, exist_ok=True)
 
-                if self.seed_db is not None:
-                    shutil.copy(self.seed_db, database_path)
+                print_date(f"working in: {working_path}")
+
+                database_path = working_path.joinpath("datalayer.sqlite")
+
+                root_blob_path = working_path.joinpath("rbps")
+                root_blob_path.mkdir(parents=True, exist_ok=True)
+
+                kv_blob_path = working_path.joinpath("kvs")
+                kv_blob_path.mkdir(parents=True, exist_ok=True)
 
                 data_store = await exit_stack.enter_async_context(
                     DataStore.managed(
                         database=database_path,
-                        root_blob_path=Path("/farm/roots/dlst/rbps"),
-                        kv_blob_path=Path("/farm/roots/dlst/kvs"),
+                        root_blob_path=root_blob_path,
+                        kv_blob_path=kv_blob_path,
                     )
                 )
 
@@ -173,9 +182,11 @@ class SyncTimeCommand:
                                 delta_time = now - last_time
                                 per_generation = delta_time / delta_generation
 
+                                duration_so_far = round((now - start) / 60)
+
                                 print_date(
                                     f"synced: {last_generation} -> {generation} at {per_generation:.1f}s / gen"
-                                    + f" ({humanize_bytes(database_path.stat().st_size)}, {round((now - start) / 60)}m)",
+                                    + f" ({humanize_bytes(database_path.stat().st_size)}, {duration_so_far}m)",
                                     flush=True,
                                 )
 
