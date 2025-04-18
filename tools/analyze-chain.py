@@ -118,11 +118,10 @@ def main(
 
         ref_lookup_time = time() - start_time
 
-        flags: int
+        flags = 0
+
         if mempool_mode:
-            flags = MEMPOOL_MODE
-        else:
-            flags = 0
+            flags |= MEMPOOL_MODE
 
         call_f(block, hh, height, generator_blobs, ref_lookup_time, flags)
 

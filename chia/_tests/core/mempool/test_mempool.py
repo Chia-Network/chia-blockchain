@@ -8,12 +8,11 @@ from typing import Callable, Optional
 import pytest
 from chia_rs import (
     ELIGIBLE_FOR_FF,
-    ENABLE_KECCAK,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
     G1Element,
     G2Element,
-    get_flags_for_height_and_constants,
+    SpendBundleConditions,
     run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
@@ -73,7 +72,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle, estimate_fees
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
@@ -2864,7 +2862,7 @@ class TestMaliciousGenerators:
         c = cs.coin
         coin_0 = Coin(c.parent_coin_info, bytes32([1] * 32), c.amount)
         coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
-        new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
+        new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
         res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
@@ -3311,22 +3309,10 @@ async def test_create_block_generator(old: bool) -> None:
     invariant_check_mempool(mempool)
 
 
-def test_flags_for_height() -> None:
-    # the keccak operator is supposed to be enabled at soft-fork 6 height
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) != 0
-
-    flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.SOFT_FORK6_HEIGHT - 1, DEFAULT_CONSTANTS)
-    print(f"{flags:x}")
-    assert (flags & ENABLE_KECCAK) == 0
-
-
 def test_keccak() -> None:
     # the keccak operator is 62. The assemble() function doesn't support it
     # (yet)
 
-    # keccak256 is available when the softfork has activated
     keccak_prg = Program.to(
         assemble(
             "(softfork (q . 1134) (q . 1) (q a (i "
@@ -3337,11 +3323,6 @@ def test_keccak() -> None:
         )
     )
 
-    cost, ret = keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
-    assert cost == 1215
-    assert ret.atom == b""
-
-    # keccak is ignored when the softfork has not activated
     cost, ret = keccak_prg.run_with_flags(1215, 0, [])
     assert cost == 1215
     assert ret.atom == b""
@@ -3356,12 +3337,7 @@ def test_keccak() -> None:
         )
     )
     with pytest.raises(ValueError, match="clvm raise"):
-        keccak_prg.run_with_flags(1215, ENABLE_KECCAK, [])
-
-    # keccak is ignored when the softfork has not activated
-    cost, ret = keccak_prg.run_with_flags(1215, 0, [])
-    assert cost == 1215
-    assert ret.atom == b""
+        keccak_prg.run_with_flags(1215, 0, [])
 
     # === HARD FORK ===
     # new operators *outside* the softfork guard
@@ -3375,7 +3351,7 @@ def test_keccak() -> None:
         )
     )
 
-    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK | ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
+    cost, ret = keccak_prg.run_with_flags(994, ENABLE_KECCAK_OPS_OUTSIDE_GUARD, [])
     assert cost == 994
     assert ret.atom == b""
 
