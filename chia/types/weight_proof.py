@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from chia_rs import RewardChainBlock, SubEpochChallengeSegment, SubEpochData
+from chia_rs import EndOfSubSlotBundle, HeaderBlock, RewardChainBlock, SubEpochChallengeSegment, SubEpochData
 
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.header_block import HeaderBlock
 from chia.util.streamable import Streamable, streamable
 
 # number of challenge blocks

@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from chia_rs import (
     ChallengeChainSubSlot,
+    EndOfSubSlotBundle,
     Foliage,
     FoliageBlockData,
     FoliageTransactionBlock,
+    FullBlock,
     G1Element,
     G2Element,
+    HeaderBlock,
     InfusedChallengeChainSubSlot,
     PoolTarget,
     RewardChainBlock,
@@ -14,9 +17,11 @@ from chia_rs import (
     RewardChainSubSlot,
     SubEpochChallengeSegment,
     SubEpochData,
+    SubEpochSummary,
     SubSlotData,
     SubSlotProofs,
     TransactionsInfo,
+    UnfinishedBlock,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64, uint128
@@ -35,15 +40,10 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.coin_spend import CoinSpend
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import RecentChainData, WeightProof
 from chia.util.errors import Err
 

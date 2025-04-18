@@ -10,6 +10,7 @@ from chia_rs import (
     Foliage,
     FoliageBlockData,
     FoliageTransactionBlock,
+    FullBlock,
     G1Element,
     G2Element,
     PoolTarget,
@@ -25,7 +26,6 @@ from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.full_block import FullBlock
 
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)

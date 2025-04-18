@@ -7,14 +7,13 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Optional
 
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint64
 
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
-from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
 

@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
-from chia_rs import Coin, ConsensusConstants, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_ints import uint64
 
 from chia.simulator.block_tools import BlockTools
-from chia.types.full_block import FullBlock
 
 # These test targets are used to trigger a build of the test chains.
 # On CI we clone the test-cache repository to load the chains from, so they

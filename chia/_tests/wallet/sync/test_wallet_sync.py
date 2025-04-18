@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
-from chia_rs import ConsensusConstants, G2Element, confirm_not_included_already_hashed
+from chia_rs import ConsensusConstants, FullBlock, G2Element, confirm_not_included_already_hashed
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from chiabip158 import PyBIP158
@@ -51,7 +51,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState

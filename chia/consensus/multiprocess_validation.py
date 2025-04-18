@@ -12,7 +12,9 @@ from typing import Optional
 
 from chia_rs import (
     ConsensusConstants,
+    FullBlock,
     SpendBundleConditions,
+    SubEpochSummary,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
@@ -29,8 +31,6 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain

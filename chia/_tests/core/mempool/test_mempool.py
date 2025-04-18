@@ -10,6 +10,7 @@ from chia_rs import (
     ELIGIBLE_FOR_FF,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
+    FullBlock,
     G1Element,
     G2Element,
     SpendBundleConditions,
@@ -67,7 +68,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.eligible_coin_spends import UnspentLineageInfo, run_for_cost
 from chia.types.fee_rate import FeeRate
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
