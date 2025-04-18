@@ -102,10 +102,23 @@ class SyncTimeCommand:
                     working_path = self.working_path
                     working_path.mkdir(parents=True, exist_ok=True)
 
-                database_path = working_path.joinpath("datalayer.sqlite")
-                print_date(f"working with database at: {database_path}")
+                print_date(f"working in: {working_path}")
 
-                data_store = await exit_stack.enter_async_context(DataStore.managed(database=database_path))
+                database_path = working_path.joinpath("datalayer.sqlite")
+
+                root_blob_path = working_path.joinpath("rbps")
+                root_blob_path.mkdir(parents=True, exist_ok=True)
+
+                kv_blob_path = working_path.joinpath("kvs")
+                kv_blob_path.mkdir(parents=True, exist_ok=True)
+
+                data_store = await exit_stack.enter_async_context(
+                    DataStore.managed(
+                        database=database_path,
+                        root_blob_path=root_blob_path,
+                        kv_blob_path=kv_blob_path,
+                    )
+                )
 
                 await data_store.subscribe(subscription=Subscription(store_id=self.store_id, servers_info=[]))
 
