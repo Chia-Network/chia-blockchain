@@ -279,20 +279,20 @@ async def run_add_block_benchmark(version: int) -> None:
         print(f"{total_time:0.4f}s, get_block_info")
         all_test_time += total_time
 
-        # === get_generator() ===
+        # === get_generators() ===
         total_time = 0.0
         if verbose:
-            print("profiling get_generator")
+            print("profiling get_generators")
 
         random.shuffle(header_hashes)
         start = monotonic()
         for h in header_hashes:
-            await block_store.get_generator(h)
+            await block_store.get_generators([h])
 
         stop = monotonic()
         total_time += stop - start
 
-        print(f"{total_time:0.4f}s, get_generator")
+        print(f"{total_time:0.4f}s, get_generators")
         all_test_time += total_time
 
         # === get_full_block() ===
