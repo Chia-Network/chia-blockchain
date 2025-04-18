@@ -542,7 +542,7 @@ class TestPeerManager:
         if peers_dat_filename.exists():
             peers_dat_filename.unlink()
         # Write out the serialized peer data
-        await AddressManagerStore.serialize(addrman, peers_dat_filename)
+        await AddressManagerStore.serialize_bytes(addrman, peers_dat_filename)
         # Read in the serialized peer data
         addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
 
