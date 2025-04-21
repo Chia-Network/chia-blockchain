@@ -560,7 +560,7 @@ class TestPeerManager:
         addrman = AddressManagerTest()
         now = int(math.floor(time.time()))
         t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
-        t_peer2 = TimestampedPeerInfo("250.7.2.2", uint16(9999), uint64(now - 20000))
+        t_peer2 = TimestampedPeerInfo("1050:0000:0000:0000:0005:0600:300c:326b", uint16(9999), uint64(now - 20000))
         t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))
         source = PeerInfo("252.5.1.1", uint16(8333))
         await addrman.add_to_new_table([t_peer1, t_peer2, t_peer3], source)
@@ -580,6 +580,14 @@ class TestPeerManager:
         ]
         assert await self.check_retrieved_peers(wanted_peers, addrman2)
         peers_dat_filename.unlink()
+
+    @pytest.mark.anyio
+    async def test_load_missing_file(self, tmp_path: Path):
+        peers_dat_filename = tmp_path / "peers.dat"
+        if peers_dat_filename.exists():
+            peers_dat_filename.unlink()
+        addrman = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        assert isinstance(addrman, AddressManager)
 
     @pytest.mark.anyio
     async def test_cleanup(self):
@@ -658,7 +666,7 @@ class TestPeerManager:
         addrman = AddressManagerTest()
         now = int(math.floor(time.time()))
         t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
-        t_peer2 = TimestampedPeerInfo("250.7.2.2", uint16(9999), uint64(now - 20000))
+        t_peer2 = TimestampedPeerInfo("1050:0000:0000:0000:0005:0600:300c:326b", uint16(9999), uint64(now - 20000))
         t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))
         source = PeerInfo("252.5.1.1", uint16(8333))
         await addrman.add_to_new_table([t_peer1, t_peer2, t_peer3], source)
