@@ -1925,6 +1925,12 @@ async def test_new_signage_point_caching(
         fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
     )
     assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is None
+    assert (
+        full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+            sp.cc_vdf.output.get_hash(), sp.cc_vdf.challenge, uint8(4)
+        )
+        is None
+    )
     assert len(full_node_1.full_node.full_node_store.future_sp_cache[sp.rc_vdf.challenge]) == 1
 
     # Add block
@@ -1932,6 +1938,12 @@ async def test_new_signage_point_caching(
 
     # Now signage point should be added
     assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
+    assert (
+        full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+            sp.cc_vdf.output.get_hash(), sp.cc_vdf.challenge, uint8(4)
+        )
+        is not None
+    )
 
 
 @pytest.mark.anyio

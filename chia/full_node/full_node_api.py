@@ -717,8 +717,10 @@ class FullNodeAPI:
                 request.reward_chain_vdf.challenge,
             ):
                 return None
-            existing_sp = self.full_node.full_node_store.get_signage_point(
-                request.challenge_chain_vdf.output.get_hash()
+            existing_sp = self.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+                request.challenge_chain_vdf.output.get_hash(),
+                request.challenge_chain_vdf.challenge,
+                request.index_from_challenge,
             )
             if existing_sp is not None and existing_sp.rc_vdf == request.reward_chain_vdf:
                 return None
@@ -795,8 +797,8 @@ class FullNodeAPI:
             return None
 
         async with self.full_node.timelord_lock:
-            sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point(
-                request.challenge_chain_sp
+            sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+                request.challenge_chain_sp, request.challenge_hash, request.signage_point_index
             )
 
             if sp_vdfs is None:
