@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Union
 
-import chia_rs
+from chia_rs import CoinSpend
 from chia_rs.sized_ints import uint64
 
 from chia.consensus.condition_costs import ConditionCost
@@ -15,8 +15,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import Err, ValidationError
 from chia.util.streamable import Streamable, streamable
-
-CoinSpend = chia_rs.CoinSpend
 
 
 def make_spend(

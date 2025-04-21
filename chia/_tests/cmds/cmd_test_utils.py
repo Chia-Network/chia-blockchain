@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Union, cast
 
-from chia_rs import Coin, G2Element
+from chia_rs import BlockRecord, Coin, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -16,7 +16,6 @@ from chia._tests.cmds.testing_classes import create_test_block_record
 from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient

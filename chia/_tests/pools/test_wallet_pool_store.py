@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import pytest
+from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
@@ -13,7 +14,7 @@ from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
+from chia.types.coin_spend import compute_additions, make_spend
 from chia.wallet.wallet_pool_store import WalletPoolStore
 
 

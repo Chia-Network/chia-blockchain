@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import aiosqlite
 import pytest
-from chia_rs import G1Element, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
@@ -80,7 +80,7 @@ from chia.types.aliases import WalletService
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash

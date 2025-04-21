@@ -3,11 +3,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import HeaderBlock, SubEpochChallengeSegment, SubEpochSegments, SubEpochSummary
+from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSegments, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.vdf import VDFInfo
 
 

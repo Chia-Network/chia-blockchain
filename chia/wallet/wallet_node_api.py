@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, ClassVar, cast
 
+from chia_rs import RespondToPhUpdates
+
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import NodeType
@@ -187,7 +189,7 @@ class WalletNodeAPI:
     #       subclass, as you might expect it wouldn't be.  Maybe we can get the
     #       protocol working right back at the api.request definition.
     @metadata.request()  # type: ignore[type-var]
-    async def respond_to_ph_updates(self, request: wallet_protocol.RespondToPhUpdates):
+    async def respond_to_ph_updates(self, request: RespondToPhUpdates):
         pass
 
     @metadata.request()

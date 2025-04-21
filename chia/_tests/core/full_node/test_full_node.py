@@ -17,7 +17,9 @@ from chia_rs import (
     FullBlock,
     G2Element,
     PrivateKey,
+    ProofOfSpace,
     RewardChainBlockUnfinished,
+    SpendBundle,
     SpendBundleConditions,
     TransactionsInfo,
     UnfinishedBlock,
@@ -76,7 +78,6 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     calculate_plot_id_ph,
     calculate_plot_id_pk,
     calculate_pos_challenge,
@@ -90,7 +91,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err

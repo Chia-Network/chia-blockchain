@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
+from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia._tests.util.benchmarks import rand_hash
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.find_fork_point import find_fork_point_in_chain, lookup_fork_chain
 from chia.simulator.block_tools import test_constants

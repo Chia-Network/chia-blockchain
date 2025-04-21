@@ -17,6 +17,7 @@ from chia_rs import (
     HeaderBlock,
     InfusedChallengeChainSubSlot,
     PoolTarget,
+    ProofOfSpace,
     RewardChainBlock,
     RewardChainSubSlot,
     SubSlotProofs,
@@ -26,7 +27,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.util.benchmarks import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.util.full_block_utils import (
