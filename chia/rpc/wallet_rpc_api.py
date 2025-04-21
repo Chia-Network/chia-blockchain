@@ -3821,6 +3821,9 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
 
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         if (
             pool_wallet_info.current.state == FARMING_TO_POOL.value
@@ -3830,9 +3833,6 @@ class WalletRpcApi:
 
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         target_puzzlehash = None
-
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
 
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32.from_hexstr(request["target_puzzlehash"])

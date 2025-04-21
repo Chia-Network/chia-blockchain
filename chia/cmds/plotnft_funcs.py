@@ -312,6 +312,10 @@ async def join_pool(
 ) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
 
+    sync_status = await wallet_info.client.get_sync_status()
+    if not sync_status.synced:
+        raise click.ClickException("Wallet must be synced before joining a pool.")
+
     pool_wallet_info, _ = await wallet_info.client.pw_status(selected_wallet_id)
     if (
         pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value

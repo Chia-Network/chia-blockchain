@@ -1001,3 +1001,27 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             fee=uint64(0),
             prompt=False,
         )
+
+
+@pytest.mark.anyio
+async def test_plotnft_unsynced_joining(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
+    from chia.cmds.plotnft_funcs import join_pool
+    from chia.rpc.wallet_request_types import GetSyncStatusResponse
+
+    test_rpc_client = TestWalletRpcClient()
+
+    mock = mocker.patch.object(test_rpc_client, "get_sync_status")
+    mock.return_value = GetSyncStatusResponse(synced=False, syncing=True)
+
+    with pytest.raises(click.ClickException, match="Wallet must be synced before joining a pool"):
+        await join_pool(
+            wallet_info=WalletClientInfo(
+                client=cast(WalletRpcClient, test_rpc_client),
+                fingerprint=0,
+                config={"selected_network": "mainnet"},
+            ),
+            pool_url="http://pool.example.com",
+            fee=uint64(0),
+            prompt=False,
+            wallet_id=None,
+        )
