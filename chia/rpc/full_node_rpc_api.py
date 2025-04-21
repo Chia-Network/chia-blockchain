@@ -880,7 +880,7 @@ class FullNodeRpcApi:
                     run_block_generator2,
                     bytes(gen.program),
                     gen.generator_refs,
-                    min(self.service.constants.MAX_BLOCK_COST_CLVM, gen.cost),
+                    self.service.constants.MAX_BLOCK_COST_CLVM,
                     MEMPOOL_MODE,
                     gen.signature,
                     None,
@@ -891,7 +891,11 @@ class FullNodeRpcApi:
                 else:
                     assert conds is not None
                     if conds.cost != gen.cost:
-                        self.service.log.error(f"invalid cost of generated block: {conds.cost} expected {gen.cost}")
+                        self.service.log.error(
+                            f"invalid cost of generated block: {conds.cost} expected {gen.cost}"
+                            f" exe-cost: {conds.execution_cost}"
+                            f" cond-cost: {conds.condition_cost}"
+                        )
                     # TODO: maybe validate additions and removals too
 
         return {
