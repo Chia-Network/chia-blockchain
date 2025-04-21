@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import BlockRecord, CoinSpend, FullBlock, SpendBundle, SpendBundleConditions
+from chia_rs import (
+    MEMPOOL_MODE,
+    BlockRecord,
+    CoinSpend,
+    FullBlock,
+    SpendBundle,
+    SpendBundleConditions,
+    run_block_generator2,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
@@ -868,6 +877,31 @@ class FullNodeRpcApi:
             except Exception:
                 self.service.log.exception(f"Error creating block generator, peak: {peak}")
             self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time:0.2f} seconds")
+
+            if maybe_gen is not None:
+                # this also validates the signature
+                err, conds = await asyncio.get_running_loop().run_in_executor(
+                    self.service.blockchain.pool,
+                    run_block_generator2,
+                    bytes(gen.program),
+                    gen.generator_refs,
+                    self.service.constants.MAX_BLOCK_COST_CLVM,
+                    MEMPOOL_MODE,
+                    gen.signature,
+                    None,
+                    self.service.constants,
+                )
+                if err is not None:
+                    self.service.log.error(f"failed to validate block: {err}")
+                else:
+                    assert conds is not None
+                    if conds.cost != gen.cost:
+                        self.service.log.error(
+                            f"invalid cost of generated block: {conds.cost} expected {gen.cost}"
+                            f" exe-cost: {conds.execution_cost}"
+                            f" cond-cost: {conds.condition_cost}"
+                        )
+                    # TODO: maybe validate additions and removals too
 
         return {
             "generator": gen.program,
