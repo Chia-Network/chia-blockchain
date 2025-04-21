@@ -869,6 +869,11 @@ class FullNodeAPI:
 
                         new_block_gen = await create_block(curr_l_tb.header_hash)
 
+                        if (
+                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
+                        ):  # pragma: no cover
+                            self.log.error("Cannot farm blocks pre-hard fork")
+
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
