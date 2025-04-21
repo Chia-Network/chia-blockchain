@@ -17,6 +17,7 @@ from _pytest.fixtures import SubRequest
 from chia_rs import ConsensusConstants, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from pytest_mock import MockerFixture
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
@@ -1155,6 +1156,48 @@ class TestPoolWalletRpc:
 
         # Test joining the same pool via the RPC client
         with pytest.raises(ResponseFailureError, match="Already farming to pool"):
+            await wallet_rpc.pw_join_pool(
+                wallet_id=wallet_id,
+                target_puzzlehash=bytes32.zeros,
+                pool_url="http://pool.example.com",
+                relative_lock_height=uint32(10),
+                fee=uint64(0),
+            )
+
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [
+            {
+                "num_environments": 1,
+                "blocks_needed": [10],
+                "trusted": True,
+                "reuse_puzhash": False,
+            }
+        ],
+        indirect=True,
+    )
+    @pytest.mark.anyio
+    async def test_join_pool_unsynced(
+        self,
+        fee: uint64,
+        wallet_environments: WalletTestFramework,
+        mocker: MockerFixture,
+    ) -> None:
+        wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+        wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+
+        wallet_state_manager.config["reuse_public_key_for_change"][
+            str(wallet_state_manager.root_pubkey.get_fingerprint())
+        ] = wallet_environments.tx_config.reuse_puzhash
+
+        # Create a farming plotnft to url http://pool.example.com
+        wallet_id = await create_new_plotnft(wallet_environments)
+
+        mock = mocker.patch.object(wallet_state_manager, "synced")
+        mock.return_value = False
+
+        # Test joining the same pool via the RPC client
+        with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced."):
             await wallet_rpc.pw_join_pool(
                 wallet_id=wallet_id,
                 target_puzzlehash=bytes32.zeros,
