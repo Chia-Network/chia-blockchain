@@ -1030,7 +1030,7 @@ async def test_basic_store(
                 assert sp_to_check.cc_vdf is not None
                 fetched = store.get_signage_point(sp_to_check.cc_vdf.output.get_hash())
                 fetched_new = store.get_signage_point_by_index_and_cc_output(
-                    sp_to_check.cc_vdf.output.get_hash(), sp_to_check.cc_vdf.challenge, sp_index
+                    sp_to_check.cc_vdf.output.get_hash(), sp_to_check.cc_vdf.challenge, uint8(sp_index)
                 )
                 assert fetched_new == fetched
                 assert (fetched is None) == is_none
