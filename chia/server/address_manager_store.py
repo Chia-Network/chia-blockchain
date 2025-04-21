@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from timeit import default_timer as timer
-from typing import Any, Optional
+from typing import Optional
 
 import aiofiles
 from chia_rs.sized_ints import uint32, uint64
@@ -60,12 +60,13 @@ class AddressManagerStore:
         if peers_file_path.exists():
             try:
                 log.info(f"Loading peers from {peers_file_path}")
-                address_manager = await cls.deserialize_bytes(peers_file_path)
+                address_manager = await cls._deserialize(peers_file_path)
+
             except Exception:
                 try:
                     # backup and try using the old method
                     # the address manager will migrate itself to the new format naturally
-                    address_manager = await cls._deserialize(peers_file_path)
+                    address_manager = await cls.deserialize_bytes(peers_file_path)
                 except Exception:
                     log.exception(f"Unable to create address_manager from {peers_file_path}")
 
@@ -197,10 +198,8 @@ class AddressManagerStore:
         peer_data: Optional[PeerDataSerialization] = None
         address_manager = AddressManager()
         start_time = timer()
-        try:
-            peer_data = await cls._read_peers(peers_file_path)
-        except Exception:
-            log.exception(f"Unable to deserialize peers from {peers_file_path}")
+        # if this fails, we can catch the exception above and try the other type of deserializing
+        peer_data = await cls._read_peers(peers_file_path)
 
         if peer_data is not None:
             metadata: dict[str, str] = {key: value for key, value in peer_data.metadata}
@@ -214,7 +213,6 @@ class AddressManagerStore:
             address_manager.new_count = int(metadata["new_count"])
             # address_manager.tried_count = int(metadata["tried_count"])
             address_manager.tried_count = 0
-
             new_table_nodes = [(node_id, info) for node_id, info in nodes if node_id < address_manager.new_count]
             for n, info in new_table_nodes:
                 address_manager.map_addr[info.peer_info.host] = n
@@ -260,6 +258,7 @@ class AddressManagerStore:
 
         return address_manager
 
+    # this is a deprecated function, only kept around for migration to the new format
     @classmethod
     async def _read_peers(cls, peers_file_path: Path) -> PeerDataSerialization:
         """
@@ -267,17 +266,3 @@ class AddressManagerStore:
         """
         async with aiofiles.open(peers_file_path, "rb") as f:
             return PeerDataSerialization.from_bytes(await f.read())
-
-    @classmethod
-    async def _write_peers(
-        cls,
-        peers_file_path: Path,
-        metadata: list[tuple[str, Any]],
-        nodes: list[tuple[uint64, str]],
-        new_table: list[tuple[uint64, uint64]],
-    ) -> None:
-        """
-        Serializes the given peer data and writes it to the peers file.
-        """
-        serialized_bytes: bytes = bytes(PeerDataSerialization(metadata, nodes, new_table))
-        await write_file_async(peers_file_path, serialized_bytes, file_mode=0o644)
