@@ -869,7 +869,9 @@ class FullNodeAPI:
 
                         new_block_gen = await create_block(curr_l_tb.header_hash)
 
-                        if new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT:
+                        if (
+                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
+                        ):  # pragma: no cover
                             self.log.error("Cannot farm blocks pre-hard fork")
 
                     except Exception as e:
