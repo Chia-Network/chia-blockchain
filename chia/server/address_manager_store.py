@@ -61,7 +61,6 @@ class AddressManagerStore:
             try:
                 log.info(f"Loading peers from {peers_file_path}")
                 address_manager = await cls._deserialize(peers_file_path)
-
             except Exception:
                 try:
                     # backup and try using the old method
