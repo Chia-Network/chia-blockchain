@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Awaitable
-from typing import Callable, Optional
+from typing import Optional
 
 from chia_rs import CoinSpend, ConsensusConstants, SpendBundle, fast_forward_singleton, get_conditions_from_spendbundle
 from chia_rs.sized_bytes import bytes32
@@ -12,7 +11,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.internal_mempool_item import InternalMempoolItem
-from chia.types.mempool_item import BundleCoinSpend
+from chia.types.mempool_item import BundleCoinSpend, UnspentLineageInfo
 from chia.util.errors import Err
 
 
@@ -39,13 +38,6 @@ def run_for_cost(
 class DedupCoinSpend:
     solution: SerializedProgram
     cost: Optional[uint64]
-
-
-@dataclasses.dataclass(frozen=True)
-class UnspentLineageInfo:
-    coin_id: bytes32
-    parent_id: bytes32
-    parent_parent_id: bytes32
 
 
 def set_next_singleton_version(
@@ -230,13 +222,8 @@ class IdenticalSpendDedup:
 class SingletonFastForward:
     fast_forward_spends: dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
 
-    async def process_fast_forward_spends(
-        self,
-        *,
-        mempool_item: InternalMempoolItem,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
-        height: uint32,
-        constants: ConsensusConstants,
+    def process_fast_forward_spends(
+        self, *, mempool_item: InternalMempoolItem, height: uint32, constants: ConsensusConstants
     ) -> dict[bytes32, BundleCoinSpend]:
         """
         Provides the caller with a `bundle_coin_spends` map that has a proper
@@ -245,8 +232,6 @@ class SingletonFastForward:
 
         Args:
             mempool_item: The internal mempool item to process
-            get_unspent_lineage_info_for_puzzle_hash: to lookup the most recent
-                version of the singleton from the coin store
             constants: needed in order to refresh the mempool item if needed
             height: needed in order to refresh the mempool item if needed
 
@@ -275,12 +260,10 @@ class SingletonFastForward:
             # See if we added a fast forward spend with this puzzle hash before
             unspent_lineage_info = self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash)
             if unspent_lineage_info is None:
-                # We didn't, so let's lookup the most recent version from the DB
-                unspent_lineage_info = await get_unspent_lineage_info_for_puzzle_hash(
-                    spend_data.coin_spend.coin.puzzle_hash
-                )
-                if unspent_lineage_info is None:
+                # We didn't, so let's check the item's latest lineage info
+                if spend_data.latest_singleton_lineage is None:
                     raise ValueError("Cannot proceed with singleton spend fast forward.")
+                unspent_lineage_info = spend_data.latest_singleton_lineage
                 # See if we're the most recent version
                 if unspent_lineage_info.coin_id == coin_id:
                     # We are, so we don't need to fast forward, we just need to

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from collections.abc import Awaitable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from time import monotonic
-from typing import Callable, Optional
+from typing import Optional
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
@@ -35,7 +35,6 @@ from chia.types.eligible_coin_spends import (
     IdenticalSpendDedup,
     SingletonFastForward,
     SkipDedup,
-    UnspentLineageInfo,
 )
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
@@ -475,8 +474,8 @@ class Mempool:
             for coin_id, bcs in item.bundle_coin_spends.items():
                 # any FF spend should be indexed by its latest singleton coin
                 # ID, this way we'll find it when the singleton is spent
-                if bcs.latest_singleton_coin is not None:
-                    all_coin_spends.append((bcs.latest_singleton_coin, item_name))
+                if bcs.latest_singleton_lineage is not None:
+                    all_coin_spends.append((bcs.latest_singleton_lineage.coin_id, item_name))
                 else:
                     all_coin_spends.append((coin_id, item_name))
             conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
@@ -503,9 +502,8 @@ class Mempool:
 
         return self._total_cost + cost > self.mempool_info.max_size_in_cost
 
-    async def create_block_generator(
+    def create_block_generator(
         self,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
         timeout: float,
@@ -515,12 +513,7 @@ class Mempool:
         re-run its puzzle.
         """
 
-        mempool_bundle = await self.create_bundle_from_mempool_items(
-            get_unspent_lineage_info_for_puzzle_hash,
-            constants,
-            height,
-            timeout,
-        )
+        mempool_bundle = self.create_bundle_from_mempool_items(constants, height, timeout)
         if mempool_bundle is None:
             return None
 
@@ -567,12 +560,8 @@ class Mempool:
             uint64(conds.cost),
         )
 
-    async def create_bundle_from_mempool_items(
-        self,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
-        constants: ConsensusConstants,
-        height: uint32,
-        timeout: float = 1.0,
+    def create_bundle_from_mempool_items(
+        self, constants: ConsensusConstants, height: uint32, timeout: float = 1.0
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -625,11 +614,8 @@ class Mempool:
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
                 else:
-                    bundle_coin_spends = await singleton_ff.process_fast_forward_spends(
-                        mempool_item=item,
-                        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
-                        height=height,
-                        constants=constants,
+                    bundle_coin_spends = singleton_ff.process_fast_forward_spends(
+                        mempool_item=item, height=height, constants=constants
                     )
                     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
                         bundle_coin_spends=bundle_coin_spends, max_cost=cost
@@ -691,12 +677,8 @@ class Mempool:
         )
         return agg, additions
 
-    async def create_block_generator2(
-        self,
-        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
-        constants: ConsensusConstants,
-        height: uint32,
-        timeout: float,
+    def create_block_generator2(
+        self, constants: ConsensusConstants, height: uint32, timeout: float
     ) -> Optional[NewBlockGenerator]:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []
@@ -731,11 +713,8 @@ class Mempool:
             try:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
-                bundle_coin_spends = await singleton_ff.process_fast_forward_spends(
-                    mempool_item=item,
-                    get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
-                    height=height,
-                    constants=constants,
+                bundle_coin_spends = singleton_ff.process_fast_forward_spends(
+                    mempool_item=item, height=height, constants=constants
                 )
                 unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
                     bundle_coin_spends=bundle_coin_spends, max_cost=cost

@@ -11,6 +11,13 @@ from chia.types.blockchain_format.coin import Coin
 from chia.util.streamable import recurse_jsonify
 
 
+@dataclass(frozen=True)
+class UnspentLineageInfo:
+    coin_id: bytes32
+    parent_id: bytes32
+    parent_parent_id: bytes32
+
+
 @dataclass
 class BundleCoinSpend:
     coin_spend: CoinSpend
@@ -21,10 +28,10 @@ class BundleCoinSpend:
     cost: Optional[uint64] = None
 
     # if this spend is eligible for fast forward, this may be set to the
-    # current unspent coin belonging to this singleton, that we would rebase
-    # this spen on top of if we were to make a block now
-    # When finding MempoolItems by coin ID, we use this Coin ID if it's set
-    latest_singleton_coin: Optional[bytes32] = None
+    # current unspent lineage belonging to this singleton, that we would rebase
+    # this spend on top of if we were to make a block now
+    # When finding MempoolItems by coin ID, we use Coin ID from it if it's set
+    latest_singleton_lineage: Optional[UnspentLineageInfo] = None
 
 
 @dataclass(frozen=True)
