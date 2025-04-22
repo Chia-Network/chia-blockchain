@@ -149,15 +149,6 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS merkleblob(
-                        hash BLOB,
-                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
-                        PRIMARY KEY(store_id, hash)
-                    )
-                    """
-                )
-                await writer.execute(
-                    """
                     CREATE TABLE IF NOT EXISTS ids(
                         kv_id INTEGER PRIMARY KEY,
                         blob BLOB,
@@ -475,14 +466,13 @@ class DataStore:
     def get_bytes_path(self, bytes_: bytes) -> Path:
         raw = bytes_.hex()
         segment_sizes = [2, 2]
-        segment_sizes.append(len(raw) - sum(segment_sizes))
         start = 0
         segments = []
         for size in segment_sizes:
             segments.append(raw[start : start + size])
             start += size
 
-        return Path(*segments)
+        return Path(*segments, raw)
 
     def get_blob_path(self, hash: bytes32) -> Path:
         return self.merkle_blobs_path.joinpath(self.get_bytes_path(bytes_=hash))
@@ -512,14 +502,6 @@ class DataStore:
                 blob_path.parent.mkdir(parents=True, exist_ok=True)
                 merkle_blob.to_path(blob_path)
 
-            async with self.db_wrapper.writer() as writer:
-                await writer.execute(
-                    """
-                    INSERT OR REPLACE INTO merkleblob (hash, store_id)
-                    VALUES (?, ?)
-                    """,
-                    (root_hash, store_id),
-                )
             if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
@@ -1667,10 +1649,11 @@ class DataStore:
                 "DELETE FROM subscriptions WHERE tree_id == :tree_id",
                 {"tree_id": store_id},
             )
-            await writer.execute(
-                "DELETE FROM merkleblob WHERE store_id == :store_id",
-                {"store_id": store_id},
-            )
+            # TODO: delete relevant files from disk
+            # if self.merkle_blobs_path.exists():
+            #     shutil.rmtree(self.merkle_blobs_path)
+            # if self.key_value_blobs_path.exists():
+            #     shutil.rmtree(self.key_value_blobs_path)
             await writer.execute(
                 "DELETE FROM ids WHERE store_id == :store_id",
                 {"store_id": store_id},

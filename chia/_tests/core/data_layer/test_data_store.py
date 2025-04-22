@@ -59,7 +59,6 @@ table_columns: dict[str, list[str]] = {
     "root": ["tree_id", "generation", "node_hash", "status"],
     "subscriptions": ["tree_id", "url", "ignore_till", "num_consecutive_failures", "from_wallet"],
     "schema": ["version_id", "applied_at"],
-    "merkleblob": ["hash", "store_id"],
     "ids": ["kv_id", "blob", "store_id"],
     "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
@@ -1125,7 +1124,7 @@ async def test_unsubscribe_clears_databases(data_store: DataStore, store_id: byt
         )
     await data_store.add_node_hashes(store_id)
 
-    tables = ["merkleblob", "ids", "nodes"]
+    tables = ["ids", "nodes"]
     for table in tables:
         async with data_store.db_wrapper.reader() as reader:
             async with reader.execute(f"SELECT COUNT(*) FROM {table}") as cursor:
@@ -1738,8 +1737,8 @@ async def test_insert_from_delta_file(
         assert len(filenames) == num_files
     kv_before = await data_store.get_keys_values(store_id=store_id)
     await data_store.rollback_to_generation(store_id, 0)
-    async with data_store.db_wrapper.writer() as writer:
-        await writer.execute("DELETE FROM merkleblob")
+    if data_store.merkle_blobs_path.exists():
+        shutil.rmtree(data_store.merkle_blobs_path)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
@@ -1900,8 +1899,8 @@ async def test_insert_from_delta_file_correct_file_exists(
     await data_store.rollback_to_generation(store_id, 0)
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
-    async with data_store.db_wrapper.writer() as writer:
-        await writer.execute("DELETE FROM merkleblob")
+    if data_store.merkle_blobs_path.exists():
+        shutil.rmtree(data_store.merkle_blobs_path)
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     success = await insert_from_delta_file(
