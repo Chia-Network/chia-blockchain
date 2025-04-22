@@ -74,8 +74,8 @@ class DataStore:
 
     db_wrapper: DBWrapper2
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
-    root_blob_path: Path
-    root_kv_path: Path
+    merkle_blobs_path: Path
+    key_value_blobs_path: Path
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -104,8 +104,8 @@ class DataStore:
             self = cls(
                 db_wrapper=db_wrapper,
                 recent_merkle_blobs=recent_merkle_blobs,
-                root_blob_path=merkle_blobs_path,
-                root_kv_path=key_value_blobs_path,
+                merkle_blobs_path=merkle_blobs_path,
+                key_value_blobs_path=key_value_blobs_path,
             )
 
             async with db_wrapper.writer() as writer:
@@ -485,10 +485,10 @@ class DataStore:
         return Path(*segments)
 
     def get_blob_path(self, hash: bytes32) -> Path:
-        return self.root_blob_path.joinpath(self.get_bytes_path(bytes_=hash))
+        return self.merkle_blobs_path.joinpath(self.get_bytes_path(bytes_=hash))
 
     def get_kv_path(self, hash: bytes) -> Path:
-        return self.root_kv_path.joinpath(self.get_bytes_path(bytes_=hash))
+        return self.key_value_blobs_path.joinpath(self.get_bytes_path(bytes_=hash))
 
     async def insert_root_from_merkle_blob(
         self,

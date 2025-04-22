@@ -6,6 +6,7 @@ import logging
 import os
 import random
 import re
+import shutil
 import statistics
 import time
 from collections.abc import Awaitable
@@ -1887,13 +1888,13 @@ async def test_insert_from_delta_file_correct_file_exists(
         root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
-        filenames = {entry.name for entry in entries}
+        filenames = {entry.name for entry in entries if entry.name.endswith(".dat")}
         assert len(filenames) == 2 * (num_files + 1)
     for filename in filenames:
         if "full" in filename:
             store_path.joinpath(filename).unlink()
     with os.scandir(store_path) as entries:
-        filenames = {entry.name for entry in entries}
+        filenames = {entry.name for entry in entries if entry.name.endswith(".dat")}
         assert len(filenames) == num_files + 1
     kv_before = await data_store.get_keys_values(store_id=store_id)
     await data_store.rollback_to_generation(store_id, 0)
@@ -1922,7 +1923,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
     with os.scandir(store_path) as entries:
-        filenames = {entry.name for entry in entries}
+        filenames = {entry.name for entry in entries if entry.name.endswith(".dat")}
         assert len(filenames) == num_files + 2  # 1 full and 6 deltas
     kv = await data_store.get_keys_values(store_id=store_id)
     # order agnostic comparison of the list
@@ -1955,7 +1956,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
     incorrect_root_hash = bytes32([0] * 31 + [1])
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
-        filenames = [entry.name for entry in entries]
+        filenames = [entry.name for entry in entries if entry.name.endswith(".dat")]
         assert len(filenames) == 2
         os.rename(
             store_path.joinpath(filenames[0]),
@@ -1987,7 +1988,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 1
     with os.scandir(store_path) as entries:
-        filenames = [entry.name for entry in entries]
+        filenames = [entry.name for entry in entries if entry.name.endswith(".dat")]
         assert len(filenames) == 0
 
 
@@ -2137,6 +2138,11 @@ async def test_migration(
         tables = [table for table in table_columns.keys() if table != "root"]
         for table in tables:
             await writer.execute(f"DELETE FROM {table}")
+
+    if data_store.merkle_blobs_path.exists():
+        shutil.rmtree(data_store.merkle_blobs_path)
+    if data_store.key_value_blobs_path.exists():
+        shutil.rmtree(data_store.key_value_blobs_path)
 
     data_store.recent_merkle_blobs = LRUCache(capacity=128)
     assert await data_store.get_keys_values(store_id=store_id) == []
