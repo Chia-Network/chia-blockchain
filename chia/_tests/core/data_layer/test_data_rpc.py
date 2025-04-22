@@ -3782,7 +3782,11 @@ async def test_unsubmitted_batch_db_migration(
             await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False})
 
     # Artificially remove the first migration.
-    async with DataStore.managed(database=tmp_path.joinpath("db.sqlite")) as data_store:
+    async with DataStore.managed(
+        database=tmp_path.joinpath("db.sqlite"),
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as data_store:
         async with data_store.db_wrapper.writer() as writer:
             await writer.execute("DELETE FROM schema")
 

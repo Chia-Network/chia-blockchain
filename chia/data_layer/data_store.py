@@ -9,13 +9,21 @@ from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 import chia_rs.datalayer
 import zstd
-from chia_rs.datalayer import KeyAlreadyPresentError, KeyId, MerkleBlob, ProofOfInclusion, TreeIndex, ValueId
+from chia_rs.datalayer import (
+    KeyAlreadyPresentError,
+    KeyId,
+    MerkleBlob,
+    ProofOfInclusion,
+    TreeIndex,
+    ValueId,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int64
 
@@ -66,11 +74,18 @@ class DataStore:
 
     db_wrapper: DBWrapper2
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
+    root_blob_path: Path
+    root_kv_path: Path
 
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
+        cls,
+        database: Union[str, Path],
+        merkle_blobs_path: Path,
+        key_value_blobs_path: Path,
+        uri: bool = False,
+        sql_log_path: Optional[Path] = None,
     ) -> AsyncIterator[DataStore]:
         async with DBWrapper2.managed(
             database=database,
@@ -86,7 +101,12 @@ class DataStore:
             log_path=sql_log_path,
         ) as db_wrapper:
             recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=128)
-            self = cls(db_wrapper=db_wrapper, recent_merkle_blobs=recent_merkle_blobs)
+            self = cls(
+                db_wrapper=db_wrapper,
+                recent_merkle_blobs=recent_merkle_blobs,
+                root_blob_path=merkle_blobs_path,
+                root_kv_path=key_value_blobs_path,
+            )
 
             async with db_wrapper.writer() as writer:
                 await writer.execute(
@@ -131,7 +151,6 @@ class DataStore:
                     """
                     CREATE TABLE IF NOT EXISTS merkleblob(
                         hash BLOB,
-                        blob BLOB,
                         store_id BLOB NOT NULL CHECK(length(store_id) == 32),
                         PRIMARY KEY(store_id, hash)
                     )
@@ -441,25 +460,35 @@ class DataStore:
         if existing_blob is not None:
             return existing_blob if read_only else copy.deepcopy(existing_blob)
 
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                "SELECT blob FROM merkleblob WHERE hash == :root_hash",
-                {
-                    "root_hash": root_hash,
-                },
-            )
+        try:
+            path = self.get_blob_path(root_hash)
+            merkle_blob = MerkleBlob.from_path(path)
+        except Exception as e:
+            # TODO: review possible errors here
+            raise MerkleBlobNotFoundError(root_hash=root_hash) from e
 
-            row = await cursor.fetchone()
+        if update_cache:
+            self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
-            if row is None:
-                raise MerkleBlobNotFoundError(root_hash=root_hash)
+        return merkle_blob
 
-            merkle_blob = MerkleBlob(blob=zstd.decompress(row["blob"]))
+    def get_bytes_path(self, bytes_: bytes) -> Path:
+        raw = bytes_.hex()
+        segment_sizes = [2, 2]
+        segment_sizes.append(len(raw) - sum(segment_sizes))
+        start = 0
+        segments = []
+        for size in segment_sizes:
+            segments.append(raw[start : start + size])
+            start += size
 
-            if update_cache:
-                self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+        return Path(*segments)
 
-            return merkle_blob
+    def get_blob_path(self, hash: bytes32) -> Path:
+        return self.root_blob_path.joinpath(self.get_bytes_path(bytes_=hash))
+
+    def get_kv_path(self, hash: bytes) -> Path:
+        return self.root_kv_path.joinpath(self.get_bytes_path(bytes_=hash))
 
     async def insert_root_from_merkle_blob(
         self,
@@ -477,25 +506,39 @@ class DataStore:
             raise ValueError("Changelist resulted in no change to tree data")
 
         if root_hash is not None:
+            log.info(f"inserting merkle blob: {len(merkle_blob)} bytes {root_hash.hex()}")
+            blob_path = self.get_blob_path(merkle_blob.get_root_hash())
+            if not blob_path.exists():
+                blob_path.parent.mkdir(parents=True, exist_ok=True)
+                merkle_blob.to_path(blob_path)
+
             async with self.db_wrapper.writer() as writer:
                 await writer.execute(
                     """
-                    INSERT OR REPLACE INTO merkleblob (hash, blob, store_id)
-                    VALUES (?, ?, ?)
+                    INSERT OR REPLACE INTO merkleblob (hash, store_id)
+                    VALUES (?, ?)
                     """,
-                    (root_hash, zstd.compress(merkle_blob.blob), store_id),
+                    (root_hash, store_id),
                 )
             if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
 
+    def _kvid_blob_is_file(self, blob: bytes) -> bool:
+        return len(blob) >= 32
+
     async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
+        if self._kvid_blob_is_file(blob):
+            table_blob = sha256(blob).digest()
+        else:
+            table_blob = blob
+
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT kv_id FROM ids WHERE blob = ? AND store_id = ?",
                 (
-                    blob,
+                    table_blob,
                     store_id,
                 ),
             )
@@ -520,7 +563,12 @@ class DataStore:
             if row is None:
                 return None
 
-            return bytes(row[0])
+        table_blob = bytes(row[0])
+        if not self._kvid_blob_is_file(table_blob):
+            return table_blob
+
+        # TOOD: seems that zstd needs hinting
+        return zstd.decompress(self.get_kv_path(table_blob).read_bytes())  # type: ignore[no-any-return]
 
     async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid.raw, store_id)
@@ -531,11 +579,16 @@ class DataStore:
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
     async def add_kvid(self, blob: bytes, store_id: bytes32, writer: aiosqlite.Connection) -> KeyOrValueId:
+        is_file = self._kvid_blob_is_file(blob)
+        if is_file:
+            table_blob = sha256(blob).digest()
+        else:
+            table_blob = blob
         try:
             row = await writer.execute_insert(
                 "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
                 (
-                    blob,
+                    table_blob,
                     store_id,
                 ),
             )
@@ -551,6 +604,10 @@ class DataStore:
         if row is None:
             raise Exception("Internal error")
         kv_id = KeyOrValueId(row[0])
+        if is_file:
+            path = self.get_kv_path(table_blob)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(zstd.compress(blob))
         return kv_id
 
     async def add_key_value(

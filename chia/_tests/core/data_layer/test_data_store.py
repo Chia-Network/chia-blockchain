@@ -72,7 +72,12 @@ async def test_migrate_from_old_format(store_id: bytes32, tmp_path: Path) -> Non
     files_resources = old_format_resources.joinpath("files")
 
     with importlib_resources.as_file(files_resources) as files_path:
-        async with DataStore.managed(database=db_uri, uri=True) as data_store:
+        async with DataStore.managed(
+            database=db_uri,
+            uri=True,
+            merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+            key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+        ) as data_store:
             await data_store.migrate_db(files_path)
             root = await data_store.get_tree_root(store_id=store_id)
             expected = Root(
@@ -89,7 +94,10 @@ async def test_migrate_from_old_format(store_id: bytes32, tmp_path: Path) -> Non
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
-    database_uri: str, table_name: str, expected_columns: list[str]
+    database_uri: str,
+    table_name: str,
+    expected_columns: list[str],
+    tmp_path: Path,
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
@@ -101,7 +109,12 @@ async def test_create_creates_tables_and_columns(
             columns = await cursor.fetchall()
             assert columns == []
 
-        async with DataStore.managed(database=database_uri, uri=True):
+        async with DataStore.managed(
+            database=database_uri,
+            uri=True,
+            merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+            key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+        ):
             async with db_wrapper.reader() as reader:
                 cursor = await reader.execute(query)
                 columns = await cursor.fetchall()
@@ -354,7 +367,12 @@ async def test_batch_update_against_single_operations(
     saved_batches: list[list[dict[str, Any]]] = []
     saved_kv: list[list[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
-    async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
+    async with DataStore.managed(
+        database=db_uri,
+        uri=True,
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as single_op_data_store:
         await single_op_data_store.create_tree(store_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -1316,7 +1334,12 @@ async def test_data_server_files(
     num_ops_per_batch = 100
 
     db_uri = generate_in_memory_db_uri()
-    async with DataStore.managed(database=db_uri, uri=True) as data_store_server:
+    async with DataStore.managed(
+        database=db_uri,
+        uri=True,
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as data_store_server:
         await data_store_server.create_tree(store_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
