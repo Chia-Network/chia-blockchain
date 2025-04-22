@@ -229,7 +229,7 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def ztest_num_unspent(bt: BlockTools, db_version: int) -> None:
+async def test_num_unspent(bt: BlockTools) -> None:
     blocks = bt.get_consecutive_blocks(37, [])
 
     expect_unspent = 0

@@ -76,6 +76,18 @@ class CoinStore:
     async def any_coins_unspent(self) -> bool:
         raise NotImplementedError()
 
+    async def num_unspent(self) -> int:
+        # this seems useless and should probably be removed
+        count = 0
+        for key, value in self.rocks_db.iterate_from(b"c", "forward"):
+            if key[:1] != b"c":
+                break
+            coin_record_blob = value
+            coin_record = CoinRecord.from_bytes(coin_record_blob)
+            if coin_record.confirmed_block_index > 0 and coin_record.spent_block_index == 0:
+                count += 1
+        return count
+
     async def new_block(
         self,
         height: uint32,
