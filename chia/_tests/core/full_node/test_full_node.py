@@ -83,7 +83,7 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof, validate_vdf
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -2908,31 +2908,46 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 @pytest.mark.anyio
-async def test_declare_proof_of_space_no_overflow(
-    wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
-    ],
-    self_hostname: str,
-    bt: BlockTools,
-) -> None:
-    full_node_api, _, server_1, _, _, _, _ = wallet_nodes
+async def test_vdf_output_collision(bt: BlockTools,
+) -> None:    
     wallet = WalletTool(test_constants)
     coinbase_puzzlehash = wallet.get_new_puzzlehash()
-    blocks = get_blocks_for_test(10, bt, coinbase=coinbase_puzzlehash, force_overflow=False)
-    await add_blocks_in_batches(blocks, full_node_api.full_node)
-    _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
-    dummy_peer = server_1.all_connections[dummy_node_id]
-    assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
-    for i in range(10, 100):
-        sb = await add_tx_to_mempool(
-            full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
-        )
-        blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, False, spend_bundle=sb)
-        block = blocks[-1]
-        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
-        compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
-        await full_node_api.full_node.add_block(block)
-        assert full_node_api.full_node.blockchain.get_peak_height() == block.height
+    blocks = get_blocks_for_test(10, bt, coinbase=coinbase_puzzlehash, force_overflow=False)            
+    for i in range(10, 14):        
+        blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, False, spend_bundle=None)                
+    block13 = blocks[-1]
+    blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, False, spend_bundle=None)
+    block14 = blocks[-1]    
+    blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, False, spend_bundle=None)
+    block15 = blocks[-1]
+    assert block14.challenge_chain_sp_proof is not None
+    assert block14.reward_chain_block.challenge_chain_sp_vdf is not None
+    assert block15.challenge_chain_sp_proof is not None
+    assert block15.reward_chain_block.challenge_chain_sp_vdf is not None
+    assert  block14.challenge_chain_sp_proof.get_hash() ==  block15.challenge_chain_sp_proof.get_hash()
+    assert  block14.reward_chain_block.challenge_chain_sp_vdf.output ==  block15.reward_chain_block.challenge_chain_sp_vdf.output
+    assert block14.reward_chain_block.signage_point_index != block15.reward_chain_block.signage_point_index    
+    vdfinfo1 = block14.reward_chain_block.challenge_chain_sp_vdf.replace(number_of_iterations = uint64(62))
+    vdfinfo2 =  block15.reward_chain_block.challenge_chain_sp_vdf.replace(number_of_iterations = uint64(52))
+    assert vdfinfo1.challenge == vdfinfo2.challenge
+    assert vdfinfo1.output == vdfinfo2.output
+    logging.info(f"block14 sp proof: {block14.challenge_chain_sp_proof} block15 sp proof: {block15.challenge_chain_sp_proof}")
+    logging.info(f"block14 sp output: {block14.reward_chain_block.challenge_chain_sp_vdf.output} block15 sp output: {block15.reward_chain_block.challenge_chain_sp_vdf.output}")
+    logging.info(f"block14 sp index: {block14.reward_chain_block.signage_point_index} block15 sp index: {block15.reward_chain_block.signage_point_index}")
+    logging.info(f"block14 sp input: {block13.reward_chain_block.challenge_chain_ip_vdf.output} block15 sp input: {block14.reward_chain_block.challenge_chain_ip_vdf.output}")
+    logging.info(f"block14 iterations: {vdfinfo1.number_of_iterations} block15 iterations: {vdfinfo2.number_of_iterations}")
+    logging.info(f"block14 challenge: {vdfinfo1.challenge} block15 challenge: {vdfinfo2.challenge}")
+    assert block15.reward_chain_block.challenge_chain_ip_vdf.output == vdfinfo2.output
+    assert block14.reward_chain_block.challenge_chain_ip_vdf.output == vdfinfo2.output    
+    res1 = validate_vdf(
+                block14.challenge_chain_sp_proof, bt.constants, block13.reward_chain_block.challenge_chain_ip_vdf.output, vdfinfo1
+            )
+    
+    res2 = validate_vdf(
+                block15.challenge_chain_sp_proof, bt.constants, vdfinfo2.output, vdfinfo2
+            )    
+    assert res1 == True
+    assert res2 == True
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
@@ -2973,16 +2988,16 @@ def get_blocks_for_test(
     spend_bundle: Optional[SpendBundle] = None,
 ) -> list[FullBlock]:
     collisions = 0
-    cc_sub_slot_sps: dict[bytes32, None] = {}
-    rc_sub_slot_sps: dict[bytes32, None] = {}
+    cc_sub_slot_sps: dict[bytes32, FullBlock] = {}
+    rc_sub_slot_sps: dict[bytes32, FullBlock] = {}
     transaction_block = False if coinbase is None else True
     slots = 0
     for i in range(len(blocks) - 1, -1, -1):
         curr = blocks[i]
         if curr.reward_chain_block.challenge_chain_sp_vdf is not None:
-            cc_sub_slot_sps[curr.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()] = None
+            cc_sub_slot_sps[curr.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()] = curr
             assert curr.reward_chain_block.reward_chain_sp_vdf is not None
-            rc_sub_slot_sps[curr.reward_chain_block.reward_chain_sp_vdf.output.get_hash()] = None
+            rc_sub_slot_sps[curr.reward_chain_block.reward_chain_sp_vdf.output.get_hash()] = curr
         if curr.finished_sub_slots and (slots := slots + 1) == 2:
             break
 
@@ -2996,54 +3011,8 @@ def get_blocks_for_test(
             guarantee_transaction_block=transaction_block,
             transaction_data=spend_bundle,
         )[-1]
-        if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
-            cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
-            rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
-            min_signage_point = -1
-            number_of_slots = len(new_block.finished_sub_slots)
-            while cc_sp_hash in cc_sub_slot_sps or rc_sp_hash in rc_sub_slot_sps:
-                collisions += 1
-                skip_slots = False
-                if (
-                    new_block.reward_chain_block.signage_point_index > bt.constants.NUM_SPS_SUB_SLOT - 2
-                    or len(new_block.finished_sub_slots) > number_of_slots
-                    or min_signage_point == new_block.reward_chain_block.signage_point_index + 1
-                ):
-                    skip_slots = True
-                    min_signage_point = -1
-                else:
-                    min_signage_point = new_block.reward_chain_block.signage_point_index + 1
-
-                number_of_slots = len(new_block.finished_sub_slots)
-                new_block = bt.get_consecutive_blocks(
-                    block_list_input=blocks,
-                    min_signage_point=min_signage_point,
-                    num_blocks=1,
-                    skip_slots=number_of_slots + 1 if skip_slots else 0,
-                    force_overflow=(i % 10 == 0) and force_overflow,
-                    skip_overflow=not force_overflow,
-                    farmer_reward_puzzle_hash=coinbase,
-                    guarantee_transaction_block=transaction_block,
-                    transaction_data=spend_bundle,
-                )[-1]
-                if new_block.reward_chain_block.challenge_chain_sp_vdf is None:
-                    break
-                else:
-                    cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-                    flag_one, flag_two = False, False
-                    if cc_sp_hash not in cc_sub_slot_sps:
-                        cc_sub_slot_sps[cc_sp_hash] = None
-                        flag_one = True
-                    assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
-                    rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
-                    if rc_sp_hash not in rc_sub_slot_sps:
-                        rc_sub_slot_sps[rc_sp_hash] = None
-                        flag_two = True
-                    if flag_one and flag_two:
-                        break
         blocks.append(new_block)
-    logging.debug(f"Collisions: {collisions} height {blocks[-1].height}")
+    logging.info(f"Collisions: {collisions} height {blocks[-1].height}")
     return blocks
 
 
