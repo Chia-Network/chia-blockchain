@@ -19,20 +19,21 @@ from chia.server.address_manager_store import AddressManagerStore
 from chia.types.peer_info import TimestampedPeerInfo
 
 
-def generate_random_ip() -> str:
-    return str(IPv4Address(random.getrandbits(32)))
+def generate_random_ip(rand: random.Random) -> str:
+    return str(IPv4Address(rand.getrandbits(32)))
 
 
 def populate_address_manager(num_new: int = 500000, num_tried: int = 200000) -> AddressManager:
-    random.seed(1337)
+    rand = random.Random()
+    rand.seed(1337)
     am = AddressManager()
     current_time = int(datetime.now().timestamp())
     total = num_new + num_tried
 
     for i in range(total):
-        host = generate_random_ip()
-        port = random.randint(1024, 65535)
-        timestamp = current_time - random.randint(0, 100000)
+        host = generate_random_ip(rand)
+        port = rand.randint(1024, 65535)
+        timestamp = current_time - rand.randint(0, 100000)
 
         # Construct TimestampedPeerInfo
         tpi = TimestampedPeerInfo(host=host, port=uint16(port), timestamp=uint64(timestamp))
@@ -55,7 +56,7 @@ def populate_address_manager(num_new: int = 500000, num_tried: int = 200000) -> 
             # make a tried_table entry
             epi.is_tried = True
             epi.last_success = timestamp
-            epi.last_try = timestamp - random.randint(0, 1000)
+            epi.last_try = timestamp - rand.randint(0, 1000)
             bucket = epi.get_tried_bucket(am.key)
             pos = epi.get_bucket_position(am.key, False, bucket)
             if am.tried_matrix[bucket][pos] == -1:
@@ -63,7 +64,7 @@ def populate_address_manager(num_new: int = 500000, num_tried: int = 200000) -> 
                 am.tried_count += 1
         else:
             # make a new_table entry
-            ref_count = random.randint(1, NEW_BUCKETS_PER_ADDRESS)
+            ref_count = rand.randint(1, NEW_BUCKETS_PER_ADDRESS)
             epi.ref_count = ref_count
             assigned = False
             for _ in range(ref_count):
