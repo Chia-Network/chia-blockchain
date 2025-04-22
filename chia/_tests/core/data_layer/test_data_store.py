@@ -58,7 +58,7 @@ table_columns: dict[str, list[str]] = {
     "root": ["tree_id", "generation", "node_hash", "status"],
     "subscriptions": ["tree_id", "url", "ignore_till", "num_consecutive_failures", "from_wallet"],
     "schema": ["version_id", "applied_at"],
-    "merkleblob": ["hash", "blob", "store_id"],
+    "merkleblob": ["hash", "store_id"],
     "ids": ["kv_id", "blob", "store_id"],
     "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
