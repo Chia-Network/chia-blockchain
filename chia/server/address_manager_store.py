@@ -89,10 +89,10 @@ class AddressManagerStore:
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
-                nodes.extend(info.to_bytes())
+                info.to_bytes(nodes)
                 count_ids += 1
             if info.is_tried:
-                trieds.extend(info.to_bytes())
+                info.to_bytes(nodes)
 
         out.extend(address_manager.key.to_bytes(32, byteorder="big"))
         out.extend(uint64(count_ids).stream_to_bytes())
@@ -198,7 +198,7 @@ class AddressManagerStore:
         peer_data: Optional[PeerDataSerialization] = None
         address_manager = AddressManager()
         start_time = timer()
-        # if this fails, we can catch the exception above and try the other type of deserializing
+        # if this fails, we pass the exception up to the function that called us and try the other type of deserializing
         peer_data = await cls._read_peers(peers_file_path)
 
         if peer_data is not None:
