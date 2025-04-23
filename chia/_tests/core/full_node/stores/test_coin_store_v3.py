@@ -263,89 +263,90 @@ async def test_num_unspent(bt: BlockTools) -> None:
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def ztest_rollback(bt: BlockTools) -> None:
+async def test_rollback(bt: BlockTools) -> None:
+    # this test is pretty terrible
+    # we have three blocks with coins in them
+    # the first block spends both reward coins
+    # the second block spends just the second reward coin
+    # the third block spends all three unspent coins (the one from the second and its own rewards)
+
     blocks = bt.get_consecutive_blocks(20)
+    all_coin_names: list[bytes32] = []
+
+    tx_blocks = []
+    for block in blocks:
+        if block.is_transaction_block() and len(block.get_included_reward_coins()) > 0:
+            tx_blocks.append(block)
+            if len(tx_blocks) >= 3:
+                break
+
+    reward_coin_count = 0
 
     async with temp_rocks_db() as rocks_db:
         coin_store = await CoinStore.create(rocks_db)
 
-        selected_coin: Optional[CoinRecord] = None
-        all_coins: list[Coin] = []
+        selected_coin_name: Optional[bytes32] = None
 
-        for block in blocks:
-            all_coins += list(block.get_included_reward_coins())
-            if block.is_transaction_block():
-                removals: list[bytes32] = []
-                additions: list[Coin] = []
-                assert block.foliage_transaction_block is not None
-                await coin_store.new_block(
-                    block.height,
-                    block.foliage_transaction_block.timestamp,
-                    block.get_included_reward_coins(),
-                    additions,
-                    removals,
-                )
-                coins = block.get_included_reward_coins()
-                records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+        for index, block in enumerate(tx_blocks):
+            reward_coins = block.get_included_reward_coins()
+            reward_coin_count += len(reward_coins)
+            all_coin_names.extend([_.name() for _ in reward_coins])
+            removals: list[bytes32] = [_.name() for _ in reward_coins]
+            if index == 1:
+                selected_coin_name = removals[0]
+                removals = removals[1:]
+            if index == 2:
+                assert selected_coin_name is not None
+                removals.append(selected_coin_name)
+            additions: list[Coin] = []
+            assert block.foliage_transaction_block is not None
+            await coin_store.new_block(
+                block.height,
+                block.foliage_transaction_block.timestamp,
+                reward_coins,
+                additions,
+                removals,
+            )
 
-                spend_selected_coin = selected_coin is not None
-                if block.height != 0 and selected_coin is None:
-                    # Select the first CoinRecord which will be spent at the next transaction block.
-                    selected_coin = records[0]
-                    await coin_store._set_spent([r.name for r in records[1:] if r is not None], block.height)
-                else:
-                    await coin_store._set_spent([r.name for r in records if r is not None], block.height)
-
-                if spend_selected_coin:
-                    assert selected_coin is not None
-                    await coin_store._set_spent([selected_coin.name], block.height)
-
-                records = [await coin_store.get_coin_record(coin.name()) for coin in coins]  # update coin records
-                for record in records:
-                    assert record is not None
-                    if (
-                        selected_coin is not None
-                        and selected_coin.name == record.name
-                        and not selected_coin.confirmed_block_index < block.height
-                    ):
-                        assert not record.spent
-                    else:
-                        assert record.spent
-                        assert record.spent_block_index == block.height
-
-                if spend_selected_coin:
-                    break
-
+        assert selected_coin_name is not None
+        selected_coin = await coin_store.get_coin_record(selected_coin_name)
         assert selected_coin is not None
         reorg_index = selected_coin.confirmed_block_index
 
         # Get all CoinRecords.
-        all_records = [await coin_store.get_coin_record(coin.name()) for coin in all_coins]
+        all_records = [await coin_store.get_coin_record(name) for name in all_coin_names]
 
         # The reorg will revert the creation and spend of many coins. It will also revert the spend (but not the
         # creation) of the selected coin.
+        assert len(all_records) == reward_coin_count
+
         changed_records = await coin_store.rollback_to_block(reorg_index)
-        changed_coin_records = [cr.coin for cr in changed_records]
-        assert selected_coin in changed_records
+        assert changed_records is not None
+        last_block_reward_coin_count = len(blocks[-1].get_included_reward_coins())
+        assert len(changed_records) == 1 + last_block_reward_coin_count  # the reward coins and the selected coin
+
+        changed_coin_names = [cr.name for cr in changed_records]
+        assert selected_coin.name in changed_coin_names
+
         for coin_record in all_records:
             assert coin_record is not None
             if coin_record.confirmed_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.name in changed_coin_names
             if coin_record.spent_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.name in changed_coin_names
 
         for block in blocks:
-            if block.is_transaction_block():
-                coins = block.get_included_reward_coins()
-                records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+            coins = block.get_included_reward_coins()
+            records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                if block.height <= reorg_index:
-                    for record in records:
-                        assert record is not None
-                        assert record.spent == (record.name != selected_coin.name)
-                else:
-                    for record in records:
-                        assert record is None
+            if block.height <= reorg_index:
+                for record in records:
+                    assert record is not None
+                    assert record.spent == (record.name != selected_coin.name)
+            else:
+                # ensure created coin records are "uncreated" when rolled back
+                for record in records:
+                    assert record is None
 
 
 @pytest.mark.anyio

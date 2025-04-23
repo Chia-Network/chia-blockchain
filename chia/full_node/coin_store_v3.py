@@ -56,6 +56,24 @@ class BlockInfo:
             + list_bytes32_to_blob(self.spent_coins)
         )
 
+    @classmethod
+    def from_bytes(cls, blob: bytes) -> BlockInfo:
+        timestamp = uint64.from_bytes(blob[:8])
+        size = blob_to_int(blob[8:10])
+        offset = 10
+        created_coins = []
+        for _ in range(size):
+            created_coins.append(bytes32(blob[offset : offset + 32]))
+            offset += 32
+        size = blob_to_int(blob[offset : offset + 2])
+        offset += 2
+        spent_coins = []
+        for _ in range(size):
+            spent_coins.append(bytes32(blob[offset : offset + 32]))
+            offset += 32
+        assert offset == len(blob)
+        return BlockInfo(timestamp, created_coins, spent_coins)
+
 
 @typing_extensions.final
 @dataclasses.dataclass
@@ -271,13 +289,17 @@ class CoinStore:
         start_height: uint32 = uint32(0),
         end_height: uint32 = uint32((2**32) - 1),
     ) -> list[CoinRecord]:
-        if len(names) == 0:
-            return []
-
-        index_list = await self.coin_indices_for_names(names)
-        coins = await self.get_coin_records_by_indices(index_list)
-        coins = [coin for coin in coins if start_height <= coin.confirmed_block_index < end_height]
-        return coins
+        keys = [b"c" + name for name in names]
+        values = self.rocks_db.multi_get(keys)
+        coin_records = []
+        for name, value in zip(names, values):
+            if value is None:
+                raise ValueError(f"coin {name.hex()} not found in DB")
+            coin_record = CoinRecord.from_bytes(value)
+            # not sure what to do with heights
+            if include_spent_coins or coin_record.spent_block_index == 0:
+                coin_records.append(coin_record)
+        return coin_records
 
     def row_to_coin(self, row: sqlite3.Row) -> Coin:
         return Coin(bytes32(row[4]), bytes32(row[3]), uint64.from_bytes(row[5]))
@@ -509,7 +531,7 @@ class CoinStore:
 
         return coin_states, next_height
 
-    async def _coin_activity_after_height(self, block_index: int) -> AsyncGenerator[tuple[uint64, BlockInfo]]:
+    async def _coin_activity_after_height(self, block_index: int) -> AsyncGenerator[tuple[int, BlockInfo]]:
         """
         Yield tuples of (additions, removals) after the given block index in
         reverse chronological order (so largest block index first).
@@ -533,24 +555,21 @@ class CoinStore:
             additions = block_info.created_coins
             removals = block_info.spent_coins
             names = set(additions + removals)
-            coin_records = self.get_coin_records_by_names(True, names)
+            coin_records = await self.get_coin_records_by_names(True, list(names))
 
-            cr_by_name = {_.name(): _ for _ in coin_records}
+            cr_by_name = {_.name: _ for _ in coin_records}
             batch = WriteBatch()
             for coin_name in removals:
                 coin_record = cr_by_name.get(coin_name)
+                assert coin_record is not None
                 coin_record = dataclasses.replace(coin_record, spent_block_index=0)
                 coin_record_blob = bytes(coin_record)
-                index = b"c" + coin_name
-                batch.put(index, coin_record_blob)
+                key = b"c" + coin_name
+                batch.put(key, coin_record_blob)
                 coin_changes[coin_name] = coin_record
             for coin_name in additions:
-                coin_record = cr_by_name.get(coin_name)
-                coin_record = dataclasses.replace(coin_record, confirmed_block_index=0)
-                coin_record_blob = bytes(coin_record)
-                index = b"c" + coin_name
-                batch.put(index, coin_record_blob)
-                coin_changes[coin_name] = coin_record
+                key = b"c" + coin_name
+                batch.delete(key)
             self.rocks_db.write(batch)
 
         return list(coin_changes.values())
