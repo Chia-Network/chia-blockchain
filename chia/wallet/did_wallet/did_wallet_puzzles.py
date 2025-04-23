@@ -70,7 +70,7 @@ def get_inner_puzhash_by_p2(
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
     recovery_list: Optional[list[bytes32]] = None,
-    recovery_list_hash: Optional[bytes32] = None,
+    recovery_list_hash: Optional[Program] = None,
 ) -> bytes32:
     """
     Calculate DID inner puzzle hash based on a P2 puzzle hash
@@ -84,14 +84,14 @@ def get_inner_puzhash_by_p2(
 
     if recovery_list is None and recovery_list_hash is None:
         raise ValueError("Cannot construct DID inner puzzle without information about recovery list")
-    if recovery_list is not None and recovery_list_hash is not None:
-        raise ValueError("Must only specify recovery information a single way to construct DID inner puzzle")
 
-    if recovery_list is not None:
+    # Allow both recovery_list and recovery_list_hash to be provided but
+    # in that case the list is ignored and the hash is used
+    # this matches the behaviour of create_innerpuz
+    if recovery_list_hash is not None:
+        backup_ids_hash = recovery_list_hash.as_atom()
+    elif recovery_list is not None:
         backup_ids_hash = shatree_atom_list(recovery_list)
-    else:
-        assert recovery_list_hash is not None
-        backup_ids_hash = recovery_list_hash
 
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     singleton_struct = shatree_pair(

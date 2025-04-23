@@ -32,7 +32,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import NIL, Program
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import compute_additions
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -866,7 +866,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.as_atom()),
+                bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -1257,10 +1257,22 @@ class WalletStateManager:
                 parent_data.singleton_struct,
                 parent_data.metadata,
             )
+            alt_did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle,
+                NIL,
+                uint64(0),
+                parent_data.singleton_struct,
+                parent_data.metadata,
+            )
+
             full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launch_id)
+            alt_full_puzzle_empty_recovery = create_singleton_puzzle(alt_did_puzzle_empty_recovery, launch_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
+                    self.log.info("DID recovery list was reset by the previous owner.")
+                elif alt_full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = alt_did_puzzle_empty_recovery
                     self.log.info("DID recovery list was reset by the previous owner.")
                 else:
                     self.log.error("DID puzzle hash doesn't match, please check curried parameters.")

@@ -110,7 +110,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -2598,7 +2598,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.as_atom()),
+            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,
@@ -2727,7 +2727,7 @@ class WalletRpcApi:
                     inner_solution: Program = full_solution.rest().rest().first()
                     recovery_list: list[bytes32] = []
                     backup_required: int = num_verification.as_int()
-                    if recovery_list_hash != NIL_TREEHASH:
+                    if not did_recovery_is_nil(recovery_list_hash):
                         try:
                             for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                                 recovery_list.append(did[0])
