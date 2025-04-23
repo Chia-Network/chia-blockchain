@@ -525,7 +525,7 @@ async def test_insert_batch_reference_and_side(
     )
     assert new_root_hash is not None, "batch insert failed or failed to update root"
 
-    merkle_blob = await data_store.get_merkle_blob(new_root_hash)
+    merkle_blob = await data_store.get_merkle_blob(store_id=store_id, root_hash=new_root_hash)
     nodes_with_indexes = merkle_blob.get_nodes_with_indexes()
     nodes = [pair[1] for pair in nodes_with_indexes]
     assert len(nodes) == 3
@@ -1290,7 +1290,7 @@ async def write_tree_to_file_old_format(
         return
 
     if merkle_blob is None:
-        merkle_blob = await data_store.get_merkle_blob(root.node_hash)
+        merkle_blob = await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
     if hash_to_index is None:
         hash_to_index = merkle_blob.get_hashes_indexes()
 
@@ -2166,7 +2166,7 @@ async def test_get_existing_hashes(
     await data_store.add_node_hashes(store_id)
 
     root = await data_store.get_tree_root(store_id=store_id)
-    merkle_blob = await data_store.get_merkle_blob(root_hash=root.node_hash)
+    merkle_blob = await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
     hash_to_index = merkle_blob.get_hashes_indexes()
     existing_hashes = list(hash_to_index.keys())
     not_existing_hashes = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_keys)]
