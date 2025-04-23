@@ -479,11 +479,19 @@ class DataStore:
 
         return Path(*segments, raw)
 
-    def get_merkle_path(self, store_id: bytes32, root_hash: bytes32) -> Path:
-        return self.merkle_blobs_path.joinpath(store_id.hex(), self.get_bytes_path(bytes_=root_hash))
+    def get_merkle_path(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Path:
+        store_root = self.merkle_blobs_path.joinpath(store_id.hex())
+        if root_hash is None:
+            return store_root
 
-    def get_key_value_path(self, store_id: bytes32, blob_hash: bytes) -> Path:
-        return self.key_value_blobs_path.joinpath(store_id.hex(), self.get_bytes_path(bytes_=blob_hash))
+        return store_root.joinpath(self.get_bytes_path(bytes_=root_hash))
+
+    def get_key_value_path(self, store_id: bytes32, blob_hash: Optional[bytes32]) -> Path:
+        store_root = self.key_value_blobs_path.joinpath(store_id.hex())
+        if blob_hash is None:
+            return store_root
+
+        return store_root.joinpath(self.get_bytes_path(bytes_=blob_hash))
 
     async def insert_root_from_merkle_blob(
         self,
@@ -554,8 +562,9 @@ class DataStore:
         if not self._kvid_blob_is_file(table_blob):
             return table_blob
 
+        blob_hash = bytes32(table_blob)
         # TODO: seems that zstd needs hinting
-        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=table_blob).read_bytes())  # type: ignore[no-any-return]
+        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
 
     async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid.raw, store_id)
@@ -592,7 +601,8 @@ class DataStore:
             raise Exception("Internal error")
         kv_id = KeyOrValueId(row[0])
         if is_file:
-            path = self.get_key_value_path(store_id=store_id, blob_hash=table_blob)
+            blob_hash = bytes32(table_blob)
+            path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(zstd.compress(blob))
         return kv_id
@@ -1666,10 +1676,10 @@ class DataStore:
             )
 
             with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.merkle_blobs_path.joinpath(store_id.hex()))
+                shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
 
             with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.key_value_blobs_path.joinpath(store_id.hex()))
+                shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:
