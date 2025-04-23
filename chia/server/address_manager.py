@@ -73,21 +73,21 @@ class ExtendedPeerInfo:
         )
         return out
 
-    def to_bytes(self, out: bytearray) -> None:
+    def encode_ip_type(self, ip: IPAddress) -> bytes:
+        if isinstance(ip._inner, IPv4Address):
+            return b"\x00"
+        elif isinstance(ip._inner, IPv6Address):
+            return b"\x01"
+        raise TypeError("Unsupported IPAddress type.")
+
+    def append_bytes(self, out: bytearray) -> None:
         assert self.src is not None
 
-        def encode_ip(ip: IPAddress) -> bytes:
-            if isinstance(ip._inner, IPv4Address):
-                return b"\x00"
-            elif isinstance(ip._inner, IPv6Address):
-                return b"\x01"
-            raise TypeError("Unsupported IPAddress type.")
-
-        out.extend(encode_ip(self.peer_info._ip))
+        out.extend(self.encode_ip_type(self.peer_info._ip))
         out.extend(self.peer_info._ip._inner.packed)
         out.extend(self.peer_info.port.stream_to_bytes())
         out.extend(uint64(self.timestamp).stream_to_bytes())
-        out.extend(encode_ip(self.src._ip))
+        out.extend(self.encode_ip_type(self.src._ip))
         out.extend(self.src._ip._inner.packed)
         out.extend(self.src.port.stream_to_bytes())
 

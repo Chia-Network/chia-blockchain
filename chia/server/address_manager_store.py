@@ -88,10 +88,10 @@ class AddressManagerStore:
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
-                info.to_bytes(nodes)
+                info.append_bytes(nodes)
                 count_ids += 1
             if info.is_tried:
-                info.to_bytes(nodes)
+                info.append_bytes(nodes)
 
         out.extend(address_manager.key.to_bytes(32, byteorder="big"))
         out.extend(uint64(count_ids).stream_to_bytes())
