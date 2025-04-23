@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.resources as importlib_resources
 import itertools
 import logging
@@ -1737,7 +1738,7 @@ async def test_insert_from_delta_file(
         assert len(filenames) == num_files
     kv_before = await data_store.get_keys_values(store_id=store_id)
     await data_store.rollback_to_generation(store_id, 0)
-    if data_store.merkle_blobs_path.exists():
+    with contextlib.suppress(FileNotFoundError):
         shutil.rmtree(data_store.merkle_blobs_path)
 
     root = await data_store.get_tree_root(store_id=store_id)
@@ -1899,7 +1900,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     await data_store.rollback_to_generation(store_id, 0)
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
-    if data_store.merkle_blobs_path.exists():
+    with contextlib.suppress(FileNotFoundError):
         shutil.rmtree(data_store.merkle_blobs_path)
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
@@ -2138,9 +2139,9 @@ async def test_migration(
         for table in tables:
             await writer.execute(f"DELETE FROM {table}")
 
-    if data_store.merkle_blobs_path.exists():
+    with contextlib.suppress(FileNotFoundError):
         shutil.rmtree(data_store.merkle_blobs_path)
-    if data_store.key_value_blobs_path.exists():
+    with contextlib.suppress(FileNotFoundError):
         shutil.rmtree(data_store.key_value_blobs_path)
 
     data_store.recent_merkle_blobs = LRUCache(capacity=128)
