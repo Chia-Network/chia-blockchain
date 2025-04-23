@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import time
 from collections.abc import Awaitable, Collection
@@ -795,7 +796,7 @@ class MempoolManager:
                 # there may be multiple matching spends in the mempool
                 # item, for the same singleton
                 found_matches = 0
-                for bcs in item.bundle_coin_spends.values():
+                for coin_id, bcs in item.bundle_coin_spends.items():
                     if bcs.latest_singleton_coin != spend:
                         continue
                     found_matches += 1
@@ -812,7 +813,9 @@ class MempoolManager:
                         break
 
                     spends_to_update.append((lineage_info.coin_id, spend, item_name))
-                    bcs.latest_singleton_coin = lineage_info.coin_id
+                    item.bundle_coin_spends[coin_id] = dataclasses.replace(
+                        bcs, latest_singleton_coin=lineage_info.coin_id
+                    )
 
                 if found_matches == 0:  # pragma: no cover
                     # We are not expected to get here. this is all
