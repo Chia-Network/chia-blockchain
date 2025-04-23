@@ -458,6 +458,7 @@ class DataStore:
 
         try:
             path = self.get_merkle_path(store_id=store_id, root_hash=root_hash)
+            # TODO: consider file-system based locking of either the file or the store directory
             merkle_blob = MerkleBlob.from_path(path)
         except Exception as e:
             # TODO: review possible errors here
@@ -513,6 +514,7 @@ class DataStore:
             blob_path = self.get_merkle_path(store_id=store_id, root_hash=merkle_blob.get_root_hash())
             if not blob_path.exists():
                 blob_path.parent.mkdir(parents=True, exist_ok=True)
+                # TODO: consider file-system based locking of either the file or the store directory
                 merkle_blob.to_path(blob_path)
 
             if update_cache:
@@ -564,6 +566,7 @@ class DataStore:
 
         blob_hash = bytes32(table_blob)
         # TODO: seems that zstd needs hinting
+        # TODO: consider file-system based locking of either the file or the store directory
         return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
 
     async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
@@ -604,6 +607,7 @@ class DataStore:
             blob_hash = bytes32(table_blob)
             path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
             path.parent.mkdir(parents=True, exist_ok=True)
+            # TODO: consider file-system based locking of either the file or the store directory
             path.write_bytes(zstd.compress(blob))
         return kv_id
 
