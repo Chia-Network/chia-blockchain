@@ -475,7 +475,7 @@ class DataStore:
 
     def get_bytes_path(self, bytes_: bytes) -> Path:
         raw = bytes_.hex()
-        segment_sizes = [2, 2]
+        segment_sizes = [2, 2, 2]
         start = 0
         segments = []
         for size in segment_sizes:
