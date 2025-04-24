@@ -829,6 +829,25 @@ class FullNodeStore:
                         return sp
         return None
 
+    def get_signage_point_by_index_and_cc_output(
+        self, cc_signage_point: bytes32, challenge: bytes32, index: uint8
+    ) -> Optional[SignagePoint]:
+        assert len(self.finished_sub_slots) >= 1
+        if cc_signage_point == self.constants.GENESIS_CHALLENGE:
+            return SignagePoint(None, None, None, None)
+        for sub_slot, sps, _ in self.finished_sub_slots:
+            if sub_slot is not None and sub_slot.challenge_chain.get_hash() == challenge:
+                if index == 0:
+                    # first SP in the sub slot
+                    return SignagePoint(None, None, None, None)
+                sp: Optional[SignagePoint] = sps[index]
+                if sp is None:
+                    return None
+                assert sp.cc_vdf is not None
+                if sp.cc_vdf.output.get_hash() == cc_signage_point:
+                    return sp
+        return None
+
     def get_signage_point_by_index(
         self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32
     ) -> Optional[SignagePoint]:

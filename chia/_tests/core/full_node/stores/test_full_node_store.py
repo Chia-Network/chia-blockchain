@@ -673,6 +673,8 @@ async def test_basic_store(
             )
             assert sp.cc_vdf is not None
             saved_sp_hash = sp.cc_vdf.output.get_hash()
+            saved_index = uint8(i)
+            saved_challenge = sp.cc_vdf.challenge
             assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
     # Test adding future signage point (bad)
@@ -726,7 +728,10 @@ async def test_basic_store(
     # Get signage point by hash
     assert saved_sp_hash is not None
     assert store.get_signage_point(saved_sp_hash) is not None
+    assert store.get_signage_point_by_index_and_cc_output(saved_sp_hash, saved_challenge, saved_index) is not None
+
     assert store.get_signage_point(std_hash(b"2")) is None
+    assert store.get_signage_point_by_index_and_cc_output(std_hash(b"2"), saved_challenge, saved_index) is None
 
     # Test adding signage points before genesis
     store.initialize_genesis_sub_slot()
@@ -1024,6 +1029,10 @@ async def test_basic_store(
                 assert sp_to_check is not None
                 assert sp_to_check.cc_vdf is not None
                 fetched = store.get_signage_point(sp_to_check.cc_vdf.output.get_hash())
+                fetched_new = store.get_signage_point_by_index_and_cc_output(
+                    sp_to_check.cc_vdf.output.get_hash(), sp_to_check.cc_vdf.challenge, uint8(sp_index)
+                )
+                assert fetched_new == fetched
                 assert (fetched is None) == is_none
                 if fetched is not None:
                     assert fetched == sp_to_check

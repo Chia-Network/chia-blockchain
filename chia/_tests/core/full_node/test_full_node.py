@@ -1926,6 +1926,12 @@ async def test_new_signage_point_caching(
         fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
     )
     assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is None
+    assert (
+        full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+            sp.cc_vdf.output.get_hash(), sp.cc_vdf.challenge, uint8(4)
+        )
+        is None
+    )
     assert len(full_node_1.full_node.full_node_store.future_sp_cache[sp.rc_vdf.challenge]) == 1
 
     # Add block
@@ -1933,6 +1939,16 @@ async def test_new_signage_point_caching(
 
     # Now signage point should be added
     assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
+    assert (
+        full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+            sp.cc_vdf.output.get_hash(), sp.cc_vdf.challenge, uint8(4)
+        )
+        is not None
+    )
+
+    assert full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+        full_node_1.full_node.constants.GENESIS_CHALLENGE, bytes32.zeros, uint8(0)
+    ) == SignagePoint(None, None, None, None)
 
 
 @pytest.mark.anyio
@@ -2907,7 +2923,13 @@ async def test_declare_proof_of_space_no_overflow(
     full_node_api, _, server_1, _, _, _, _ = wallet_nodes
     wallet = WalletTool(test_constants)
     coinbase_puzzlehash = wallet.get_new_puzzlehash()
-    blocks = get_blocks_for_test(10, bt, coinbase=coinbase_puzzlehash, force_overflow=False)
+    blocks = bt.get_consecutive_blocks(
+        num_blocks=10,
+        skip_overflow=True,
+        force_overflow=False,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        guarantee_transaction_block=True,
+    )
     await add_blocks_in_batches(blocks, full_node_api.full_node)
     _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     dummy_peer = server_1.all_connections[dummy_node_id]
@@ -2916,7 +2938,13 @@ async def test_declare_proof_of_space_no_overflow(
         sb = await add_tx_to_mempool(
             full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
         )
-        blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, False, spend_bundle=sb)
+        blocks = bt.get_consecutive_blocks(
+            block_list_input=blocks,
+            num_blocks=1,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_transaction_block=True,
+            transaction_data=sb,
+        )
         block = blocks[-1]
         unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
         compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
@@ -2936,7 +2964,11 @@ async def test_declare_proof_of_space_overflow(
     full_node_api, _, server_1, _, _, _, _ = wallet_nodes
     wallet = WalletTool(test_constants)
     coinbase_puzzlehash = wallet.get_new_puzzlehash()
-    blocks = get_blocks_for_test(10, bt, coinbase=coinbase_puzzlehash, force_overflow=True)
+    blocks = bt.get_consecutive_blocks(
+        num_blocks=10,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        guarantee_transaction_block=True,
+    )
     await add_blocks_in_batches(blocks, full_node_api.full_node)
     _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     dummy_peer = server_1.all_connections[dummy_node_id]
@@ -2945,95 +2977,22 @@ async def test_declare_proof_of_space_overflow(
         sb = await add_tx_to_mempool(
             full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
         )
-        blocks = get_blocks_for_test(1, bt, blocks, coinbase_puzzlehash, force_overflow=True, spend_bundle=sb)
+
+        blocks = bt.get_consecutive_blocks(
+            block_list_input=blocks,
+            num_blocks=1,
+            skip_overflow=False,
+            force_overflow=(i % 10 == 0),
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_transaction_block=True,
+            transaction_data=sb,
+        )
+
         block = blocks[-1]
         unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
         compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
         await full_node_api.full_node.add_block(block)
         assert full_node_api.full_node.blockchain.get_peak_height() == block.height
-
-
-def get_blocks_for_test(
-    num_of_blocks: int,
-    bt: BlockTools,
-    blocks: list[FullBlock] = [],
-    coinbase: Optional[bytes32] = None,
-    force_overflow: bool = False,
-    spend_bundle: Optional[SpendBundle] = None,
-) -> list[FullBlock]:
-    collisions = 0
-    cc_sub_slot_sps: dict[bytes32, None] = {}
-    rc_sub_slot_sps: dict[bytes32, None] = {}
-    transaction_block = False if coinbase is None else True
-    slots = 0
-    for i in range(len(blocks) - 1, -1, -1):
-        curr = blocks[i]
-        if curr.reward_chain_block.challenge_chain_sp_vdf is not None:
-            cc_sub_slot_sps[curr.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()] = None
-            assert curr.reward_chain_block.reward_chain_sp_vdf is not None
-            rc_sub_slot_sps[curr.reward_chain_block.reward_chain_sp_vdf.output.get_hash()] = None
-        if curr.finished_sub_slots and (slots := slots + 1) == 2:
-            break
-
-    for i in range(0, num_of_blocks):
-        new_block = bt.get_consecutive_blocks(
-            block_list_input=blocks,
-            num_blocks=1,
-            skip_overflow=not force_overflow,
-            force_overflow=(i % 10 == 0) and force_overflow,
-            farmer_reward_puzzle_hash=coinbase,
-            guarantee_transaction_block=transaction_block,
-            transaction_data=spend_bundle,
-        )[-1]
-        if new_block.reward_chain_block.challenge_chain_sp_vdf is not None:
-            cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
-            rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
-            min_signage_point = -1
-            number_of_slots = len(new_block.finished_sub_slots)
-            while cc_sp_hash in cc_sub_slot_sps or rc_sp_hash in rc_sub_slot_sps:
-                collisions += 1
-                skip_slots = False
-                if (
-                    new_block.reward_chain_block.signage_point_index > bt.constants.NUM_SPS_SUB_SLOT - 2
-                    or len(new_block.finished_sub_slots) > number_of_slots
-                    or min_signage_point == new_block.reward_chain_block.signage_point_index + 1
-                ):
-                    skip_slots = True
-                    min_signage_point = -1
-                else:
-                    min_signage_point = new_block.reward_chain_block.signage_point_index + 1
-
-                number_of_slots = len(new_block.finished_sub_slots)
-                new_block = bt.get_consecutive_blocks(
-                    block_list_input=blocks,
-                    min_signage_point=min_signage_point,
-                    num_blocks=1,
-                    skip_slots=number_of_slots + 1 if skip_slots else 0,
-                    force_overflow=(i % 10 == 0) and force_overflow,
-                    skip_overflow=not force_overflow,
-                    farmer_reward_puzzle_hash=coinbase,
-                    guarantee_transaction_block=transaction_block,
-                    transaction_data=spend_bundle,
-                )[-1]
-                if new_block.reward_chain_block.challenge_chain_sp_vdf is None:
-                    break
-                else:
-                    cc_sp_hash = new_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-                    flag_one, flag_two = False, False
-                    if cc_sp_hash not in cc_sub_slot_sps:
-                        cc_sub_slot_sps[cc_sp_hash] = None
-                        flag_one = True
-                    assert new_block.reward_chain_block.reward_chain_sp_vdf is not None
-                    rc_sp_hash = new_block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
-                    if rc_sp_hash not in rc_sub_slot_sps:
-                        rc_sub_slot_sps[rc_sp_hash] = None
-                        flag_two = True
-                    if flag_one and flag_two:
-                        break
-        blocks.append(new_block)
-    logging.debug(f"Collisions: {collisions} height {blocks[-1].height}")
-    return blocks
 
 
 def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
