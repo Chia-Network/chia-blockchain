@@ -839,12 +839,13 @@ class FullNodeStore:
         for sub_slot, sps, _ in self.finished_sub_slots:
             if sub_slot is not None and sub_slot.challenge_chain.get_hash() == challenge:
                 if index == 0:
+                    # first SP in the sub slot
                     return SignagePoint(None, None, None, None)
                 sp: Optional[SignagePoint] = sps[index]
                 if sp is None:
                     return None
                 assert sp.cc_vdf is not None
-                if sp is not None and sp.cc_vdf.output.get_hash() == cc_signage_point:
+                if sp.cc_vdf.output.get_hash() == cc_signage_point:
                     return sp
         return None
 
