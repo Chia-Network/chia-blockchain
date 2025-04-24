@@ -58,6 +58,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.log_exceptions import log_exceptions
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -460,11 +461,11 @@ class DataStore:
             return existing_blob if read_only else copy.deepcopy(existing_blob)
 
         try:
-            path = self.get_merkle_path(store_id=store_id, root_hash=root_hash)
-            # TODO: consider file-system based locking of either the file or the store directory
-            merkle_blob = MerkleBlob.from_path(path)
+            with log_exceptions(log=log, message="Error while getting merkle blob"):
+                path = self.get_merkle_path(store_id=store_id, root_hash=root_hash)
+                # TODO: consider file-system based locking of either the file or the store directory
+                merkle_blob = MerkleBlob.from_path(path)
         except Exception as e:
-            # TODO: review possible errors here
             raise MerkleBlobNotFoundError(root_hash=root_hash) from e
 
         if update_cache:
