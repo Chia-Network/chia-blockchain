@@ -213,12 +213,14 @@ class DataLayer:
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
+        cache_capacity = self.config.get("merkle_blobs_cache_size", 1)
 
         async with DataStore.managed(
             database=self.db_path,
             merkle_blobs_path=self.merkle_blobs_path,
             key_value_blobs_path=self.key_value_blobs_path,
             sql_log_path=sql_log_path,
+            cache_capacity=cache_capacity,
         ) as self._data_store:
             self._wallet_rpc = await self.wallet_rpc_init
 

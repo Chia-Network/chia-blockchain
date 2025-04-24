@@ -663,6 +663,9 @@ data_layer:
   # Enable to store all .DAT files grouped by store id
   group_files_by_store: False
 
+  # Increasing this number may help sync old clients faster, at the expense of using more RAM memory
+  merkle_blobs_cache_size: 1
+
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True
