@@ -3664,10 +3664,16 @@ class WalletRpcApi:
         fee_amount = 0
         blocks_won = 0
         last_height_farmed = uint32(0)
+
+        include_pool_rewards = request.get("include_pool_rewards", False)
+
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
             if record.type == TransactionType.COINBASE_REWARD.value:
+                if not include_pool_rewards and self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET:
+                    # Don't add pool rewards for pool wallets unless explicitly requested
+                    continue
                 pool_reward_amount += record.amount
             height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
             # .get_farming_rewards() above queries for only confirmed records.  This
