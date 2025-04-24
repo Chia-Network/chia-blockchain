@@ -7,7 +7,9 @@ import time
 from datetime import datetime
 from ipaddress import IPv4Address
 from pathlib import Path
+from typing import Optional
 
+import aiofiles
 from chia_rs.sized_ints import uint16, uint64
 
 from chia.server.address_manager import (
@@ -106,8 +108,12 @@ async def benchmark_serialize_deserialize(iterations: int = 5) -> None:
             print(f"Serialize time: {serialize_duration:.6f} seconds")
 
             # Benchmark deserialize
+            data: Optional[bytes] = None
+            async with aiofiles.open(peers_file_path, "rb") as f:
+                data = await f.read()
+            assert data is not None
             start_deserialize = time.perf_counter()
-            _ = await AddressManagerStore.deserialize_bytes(peers_file_path)
+            _ = await AddressManagerStore.deserialize_bytes(data)
             end_deserialize = time.perf_counter()
             deserialize_duration = end_deserialize - start_deserialize
             total_deserialize_time += deserialize_duration

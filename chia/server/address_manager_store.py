@@ -60,12 +60,16 @@ class AddressManagerStore:
         if peers_file_path.exists():
             try:
                 log.info(f"Loading peers from {peers_file_path}")
+                # try using the old method
                 address_manager = await cls._deserialize(peers_file_path)
             except Exception:
                 try:
-                    # backup and try using the old method
-                    # the address manager will migrate itself to the new format naturally
-                    address_manager = await cls.deserialize_bytes(peers_file_path)
+                    # try using the new method
+                    data: Optional[bytes] = None
+                    async with aiofiles.open(peers_file_path, "rb") as f:
+                        data = await f.read()
+                    assert data is not None
+                    address_manager = await cls.deserialize_bytes(data)
                 except Exception:
                     log.exception(f"Unable to create address_manager from {peers_file_path}")
 
@@ -113,13 +117,9 @@ class AddressManagerStore:
         await write_file_async(peers_file_path, bytes(out), file_mode=0o644)
 
     @classmethod
-    async def deserialize_bytes(cls, peers_file_path: Path) -> AddressManager:
-        data: Optional[bytes] = None
+    async def deserialize_bytes(cls, data: bytes) -> AddressManager:
         address_manager = AddressManager()
         offset = 0
-        async with aiofiles.open(peers_file_path, "rb") as f:
-            data = await f.read()
-        assert data is not None
 
         def decode_uint64(offset: int, data: bytes) -> tuple[uint64, int]:
             value = uint64.from_bytes(data[offset : offset + 8])
