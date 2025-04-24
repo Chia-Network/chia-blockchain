@@ -49,9 +49,13 @@ async def get_average_block_time(rpc_port: Optional[int], root_path: Path) -> fl
         return (curr.timestamp - past_curr.timestamp) / (curr.height - past_curr.height)
 
 
-async def get_wallets_stats(wallet_rpc_port: Optional[int], root_path: Path) -> Optional[dict[str, Any]]:
+async def get_wallets_stats(
+    wallet_rpc_port: Optional[int],
+    root_path: Path,
+    include_pool_rewards: bool,
+) -> Optional[dict[str, Any]]:
     async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, _):
-        return await wallet_client.get_farmed_amount()
+        return await wallet_client.get_farmed_amount(include_pool_rewards)
 
 
 async def get_challenges(root_path: Path, farmer_rpc_port: Optional[int]) -> Optional[list[dict[str, Any]]]:
@@ -80,6 +84,7 @@ async def summary(
     wallet_rpc_port: Optional[int],
     harvester_rpc_port: Optional[int],
     farmer_rpc_port: Optional[int],
+    include_pool_rewards: bool,
     root_path: Path,
 ) -> None:
     harvesters_summary = await get_harvesters_summary(farmer_rpc_port, root_path)
@@ -97,7 +102,7 @@ async def summary(
     wallet_not_ready: bool = False
     amounts = None
     try:
-        amounts = await get_wallets_stats(wallet_rpc_port, root_path)
+        amounts = await get_wallets_stats(wallet_rpc_port, root_path, include_pool_rewards)
     except CliRpcConnectionError:
         wallet_not_ready = True
     except Exception:
