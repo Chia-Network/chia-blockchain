@@ -529,7 +529,7 @@ class DataStore:
         return await self._insert_root(store_id, root_hash, status)
 
     def _kvid_blob_is_file(self, blob: bytes) -> bool:
-        return len(blob) >= 32
+        return len(blob) >= len(bytes32.zeros)
 
     async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
         if self._kvid_blob_is_file(blob):
