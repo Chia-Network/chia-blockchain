@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import random
 import tempfile
 import time
@@ -108,9 +109,9 @@ async def benchmark_serialize_deserialize(iterations: int = 5) -> None:
             print(f"Serialize time: {serialize_duration:.6f} seconds")
 
             # Benchmark deserialize
-            data: Optional[bytes] = None
+            data: Optional[io.BytesIO] = None
             async with aiofiles.open(peers_file_path, "rb") as f:
-                data = await f.read()
+                data = io.BytesIO(await f.read())
             assert data is not None
             start_deserialize = time.perf_counter()
             _ = await AddressManagerStore.deserialize_bytes(data)

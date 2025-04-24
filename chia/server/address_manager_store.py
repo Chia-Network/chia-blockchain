@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -65,11 +66,8 @@ class AddressManagerStore:
             except Exception:
                 try:
                     # try using the new method
-                    data: Optional[bytes] = None
                     async with aiofiles.open(peers_file_path, "rb") as f:
-                        data = await f.read()
-                    assert data is not None
-                    address_manager = await cls.deserialize_bytes(data)
+                        address_manager = await cls.deserialize_bytes(io.BytesIO(await f.read()))
                 except Exception:
                     log.exception(f"Unable to create address_manager from {peers_file_path}")
 
@@ -81,10 +79,10 @@ class AddressManagerStore:
 
     @classmethod
     async def serialize_bytes(cls, address_manager: AddressManager, peers_file_path: Path) -> None:
-        out = bytearray()
-        nodes = bytearray()
-        trieds = bytearray()
-        new_table = bytearray()
+        out = io.BytesIO()
+        nodes = io.BytesIO()
+        trieds = io.BytesIO()
+        new_table = io.BytesIO()
         unique_ids: dict[int, int] = {}
         count_ids: int = 0
 
@@ -92,61 +90,51 @@ class AddressManagerStore:
             unique_ids[node_id] = count_ids
             if info.ref_count > 0:
                 assert count_ids != address_manager.new_count
-                info.append_bytes(nodes)
+                info.stream(nodes)
                 count_ids += 1
             if info.is_tried:
-                info.append_bytes(nodes)
+                info.stream(nodes)
 
-        out.extend(address_manager.key.to_bytes(32, byteorder="big"))
-        out.extend(uint64(count_ids).stream_to_bytes())
+        out.write(address_manager.key.to_bytes(32, byteorder="big"))
+        uint64(count_ids).stream(out)
 
         count = 0
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
                 if address_manager.new_matrix[bucket][i] != -1:
                     count += 1
-                    new_table.extend(uint64(unique_ids[address_manager.new_matrix[bucket][i]]).stream_to_bytes())
-                    new_table.extend(uint64(bucket).stream_to_bytes())
+                    uint64(unique_ids[address_manager.new_matrix[bucket][i]]).stream(new_table)
+                    uint64(bucket).stream(new_table)
 
         # give ourselves a clue how long the new_table is
-        out.extend(uint32(count).stream_to_bytes())
-        out.extend(new_table)
+        uint32(count).stream(out)
+        out.write(new_table.getvalue())
 
-        out.extend(nodes)
-        out.extend(trieds)
-        await write_file_async(peers_file_path, bytes(out), file_mode=0o644)
+        out.write(nodes.getvalue())
+        out.write(trieds.getvalue())
+        await write_file_async(peers_file_path, out.getvalue(), file_mode=0o644)
 
     @classmethod
-    async def deserialize_bytes(cls, data: bytes) -> AddressManager:
+    async def deserialize_bytes(cls, data: io.BytesIO) -> AddressManager:
         address_manager = AddressManager()
-        offset = 0
 
-        def decode_uint64(offset: int, data: bytes) -> tuple[uint64, int]:
-            value = uint64.from_bytes(data[offset : offset + 8])
-            return value, offset + 8
+        address_manager.key = int.from_bytes(data.read(32), byteorder="big")
 
-        def decode_uint32(offset: int, data: bytes) -> tuple[uint32, int]:
-            value = uint32.from_bytes(data[offset : offset + 4])
-            return value, offset + 4
-
-        address_manager.key = int.from_bytes(data[offset : offset + 32], byteorder="big")
-        offset += 32
-        address_manager.new_count, offset = decode_uint64(offset, data)
-
+        address_manager.new_count = uint64.parse(data)
         # deserialize new_table
-        new_table_count, offset = decode_uint32(offset, data)
+        new_table_count = uint32.parse(data)
         new_table_nodes: list[tuple[uint64, uint64]] = []
         for i in range(0, new_table_count):
-            node_id = uint64(uint64.from_bytes(data[offset : offset + 8]))
-            offset += 8
-            bucket = uint64(uint64.from_bytes(data[offset : offset + 8]))
-            offset += 8
+            node_id = uint64.parse(data)
+            bucket = uint64.parse(data)
             new_table_nodes.append((node_id, bucket))
 
         # deserialize node info
         address_manager.id_count = 0
-        while offset < len(data):
-            info, offset = ExtendedPeerInfo.from_bytes(data, offset)
+        length = len(data.getvalue())
+        while data.tell() < length:
+            # breakpoint()
+            info = ExtendedPeerInfo.parse(data)
             # check if we're a new node
             if address_manager.id_count < address_manager.new_count:
                 address_manager.map_addr[info.peer_info.host] = address_manager.id_count
