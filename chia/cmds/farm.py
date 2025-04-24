@@ -50,6 +50,7 @@ def farm_cmd() -> None:
     show_default=True,
 )
 @click.option(
+    "-i",
     "--include-pool-rewards",
     help="Include pool farming rewards in the total farmed amount",
     is_flag=True,
