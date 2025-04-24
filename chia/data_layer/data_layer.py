@@ -175,10 +175,12 @@ class DataLayer:
         server_files_replaced = server_files_path_from_config(config, root_path)
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        merkle_blobs_path_replaced: str = config["merkle_blobs_path"].replace("CHALLENGE", config["selected_network"])
-        key_value_blobs_path_replaced: str = config["key_value_blobs_path"].replace(
-            "CHALLENGE", config["selected_network"]
-        )
+        merkle_blobs_path_replaced: str = config.get(
+            "merkle_blobs_path", "data_layer/db/merkle_blobs_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
+        key_value_blobs_path_replaced: str = config.get(
+            "key_value_blobs_path", "data_layer/db/key_value_blobs_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
 
         self = cls(
             config=config,
