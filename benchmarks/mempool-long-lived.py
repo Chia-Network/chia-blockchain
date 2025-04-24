@@ -17,7 +17,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.eligible_coin_spends import UnspentLineageInfo
+from chia.types.mempool_item import UnspentLineageInfo
 
 # this is one week worth of blocks
 NUM_ITERS = 32256

@@ -30,27 +30,21 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.eligible_coin_spends import (
     SingletonFastForward,
-    UnspentLineageInfo,
     perform_the_fast_forward,
 )
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import BundleCoinSpend
+from chia.types.mempool_item import BundleCoinSpend, UnspentLineageInfo
 from chia.util.errors import Err
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
 from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
 
 
-@pytest.mark.anyio
-async def test_process_fast_forward_spends_nothing_to_do() -> None:
+def test_process_fast_forward_spends_nothing_to_do() -> None:
     """
     This tests the case when we don't have an eligible coin, so there is
     nothing to fast forward and the item remains unchanged
     """
-
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
     sk = AugSchemeMPL.key_gen(b"b" * 32)
     g1 = sk.get_g1()
     sig = AugSchemeMPL.sign(sk, b"foobar", g1)
@@ -62,49 +56,36 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
-    bundle_coin_spends = await singleton_ff.process_fast_forward_spends(
-        mempool_item=internal_mempool_item,
-        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
-        height=TEST_HEIGHT,
-        constants=DEFAULT_CONSTANTS,
+    bundle_coin_spends = singleton_ff.process_fast_forward_spends(
+        mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
     )
     assert singleton_ff == SingletonFastForward()
     assert bundle_coin_spends == original_version.bundle_coin_spends
 
 
-@pytest.mark.anyio
-async def test_process_fast_forward_spends_unknown_ff() -> None:
+def test_process_fast_forward_spends_unknown_ff() -> None:
     """
     This tests the case when we process for the first time but we are unable
-    to lookup the latest version from the DB
+    to lookup the latest version from the item's latest singleton lineage
     """
-
-    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
-        if puzzle_hash == IDENTITY_PUZZLE_HASH:
-            return None
-        assert False  # pragma: no cover
-
     test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
     # The coin is eligible for fast forward
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
+    item.bundle_coin_spends[test_coin.name()].latest_singleton_lineage = None
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     singleton_ff = SingletonFastForward()
     # We have no fast forward records yet, so we'll process this coin for the
-    # first time here, but the DB lookup will return None
+    # first time here, but the item's latest singleton lineage returns None
     with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward."):
-        await singleton_ff.process_fast_forward_spends(
-            mempool_item=internal_mempool_item,
-            get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
-            height=TEST_HEIGHT,
-            constants=DEFAULT_CONSTANTS,
+        singleton_ff.process_fast_forward_spends(
+            mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
         )
 
 
-@pytest.mark.anyio
-async def test_process_fast_forward_spends_latest_unspent() -> None:
+def test_process_fast_forward_spends_latest_unspent() -> None:
     """
     This tests the case when we are the latest singleton version already, so
     we don't need to fast forward, we just need to set the next version from
@@ -116,11 +97,6 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
         coin_id=test_coin.name(), parent_id=test_coin.parent_coin_info, parent_parent_id=TEST_COIN_ID
     )
 
-    async def get_unspent_lineage_info_for_puzzle_hash(puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
-        if puzzle_hash == IDENTITY_PUZZLE_HASH:
-            return test_unspent_lineage_info
-        assert False  # pragma: no cover
-
     # At this point, spends are considered *potentially* eligible for singleton
     # fast forward mainly when their amount is odd and they don't have conditions
     # that disqualify them
@@ -128,14 +104,12 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
+    item.bundle_coin_spends[test_coin.name()].latest_singleton_lineage = test_unspent_lineage_info
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
-    bundle_coin_spends = await singleton_ff.process_fast_forward_spends(
-        mempool_item=internal_mempool_item,
-        get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
-        height=TEST_HEIGHT,
-        constants=DEFAULT_CONSTANTS,
+    bundle_coin_spends = singleton_ff.process_fast_forward_spends(
+        mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
     )
     child_coin = item.bundle_coin_spends[test_coin.name()].additions[0]
     expected_fast_forward_spends = {
@@ -628,9 +602,7 @@ async def test_mempool_items_immutability_on_ff() -> None:
         original_item = copy.copy(sim_client.service.mempool_manager.get_mempool_item(sb_name))
         original_filter = sim_client.service.mempool_manager.get_filter()
         # Let's trigger the fast forward by creating a mempool bundle
-        result = await sim.mempool_manager.create_bundle_from_mempool(
-            sim_client.service.block_records[-1].header_hash,
-        )
+        result = sim.mempool_manager.create_bundle_from_mempool(sim_client.service.block_records[-1].header_hash)
         assert result is not None
         bundle, _ = result
         # Make sure the mempool bundle we created contains the result of our

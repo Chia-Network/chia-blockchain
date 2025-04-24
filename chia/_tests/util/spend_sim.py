@@ -271,7 +271,7 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = await self.mempool_manager.create_bundle_from_mempool(last_tb_header_hash=peak.header_hash)
+                result = self.mempool_manager.create_bundle_from_mempool(last_tb_header_hash=peak.header_hash)
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
