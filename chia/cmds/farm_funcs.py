@@ -127,6 +127,10 @@ async def summary(
         print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
+        if blockchain_state is not None and blockchain_state["peak"] is not None:
+            peak_height = blockchain_state["peak"].height
+            blocks_since_last_farm = peak_height - amounts['last_height_farmed']
+            print(f"Blocks since last farmed: {blocks_since_last_farm}")
 
     class PlotStats:
         total_plot_size = 0
