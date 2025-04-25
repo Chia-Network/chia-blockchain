@@ -708,6 +708,7 @@ class MempoolManager:
         assert new_peak.timestamp is not None
         self.fee_estimator.new_block_height(new_peak.height)
         included_items: list[MempoolItemInfo] = []
+        new_peak_start = time.monotonic()
 
         expired = self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
         mempool_item_removals: list[MempoolRemoveInfo] = [expired]
@@ -874,6 +875,8 @@ class MempoolManager:
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
+        duration = time.monotonic() - new_peak_start
+        log.log(logging.WARNING if duration > 1 else logging.INFO, f"new_peak() took {duration:0.2f} seconds")
         return NewPeakInfo(txs_added, mempool_item_removals)
 
     def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[SpendBundle]:

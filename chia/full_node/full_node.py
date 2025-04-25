@@ -2183,7 +2183,7 @@ class FullNode:
                     self.log.info(
                         f"Received orphan block of height {block.height} rh {block.reward_chain_block.get_hash()}"
                     )
-                    post_process_time = 0
+                    post_process_time = 0.0
                 else:
                     # Should never reach here, all the cases are covered
                     raise RuntimeError(f"Invalid result from add_block {added}")
@@ -2199,7 +2199,11 @@ class FullNode:
 
         if ppp_result is not None:
             assert state_change_summary is not None
+            post_process_time2 = time.monotonic()
             await self.peak_post_processing_2(block, peer, state_change_summary, ppp_result)
+            post_process_time2 = time.monotonic() - post_process_time2
+        else:
+            post_process_time2 = 0.0
 
         percent_full_str = (
             (
@@ -2216,6 +2220,7 @@ class FullNode:
             f"pre_validation: {pre_validation_time:0.2f}s, "
             f"CLVM: {pre_validation_result.timing / 1000.0:0.2f}s, "
             f"post-process: {post_process_time:0.2f}s, "
+            f"post-process2: {post_process_time2:0.2f}s, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",
         )
