@@ -43,7 +43,7 @@ from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
-from chia.full_node.tx_processing_queue import TransactionQueueFull
+from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -68,7 +68,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block

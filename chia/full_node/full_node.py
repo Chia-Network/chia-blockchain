@@ -57,7 +57,7 @@ from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
-from chia.full_node.tx_processing_queue import TransactionQueue
+from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
@@ -76,7 +76,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
-from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.augmented_chain import AugmentedBlockchain
