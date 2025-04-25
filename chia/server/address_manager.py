@@ -76,12 +76,26 @@ class ExtendedPeerInfo:
         )
         return out
 
-    def encode_ip_type(self, ip: IPAddress) -> bytes:
+    @classmethod
+    def encode_ip_type(cls, ip: IPAddress) -> bytes:
         if isinstance(ip._inner, IPv4Address):
             return b"\x00"
         elif isinstance(ip._inner, IPv6Address):
             return b"\x01"
         raise TypeError("Unsupported IPAddress type.")
+
+    @classmethod
+    def decode_ip(cls, data: io.BytesIO) -> str:
+        ip_type = data.read(1)
+        if ip_type == b"\x00":
+            ip_len = 4
+        elif ip_type == b"\x01":
+            ip_len = 16
+        else:
+            raise TypeError("Unknown IPAddress type byte.")
+        ip_bytes = data.read(ip_len)
+        ip = str(ip_address(ip_bytes))
+        return ip
 
     def stream(self, out: io.BytesIO) -> None:
         out.write(self.encode_ip_type(self.peer_info._ip))
@@ -94,25 +108,13 @@ class ExtendedPeerInfo:
 
     @classmethod
     def parse(cls, data: io.BytesIO) -> ExtendedPeerInfo:
-        def decode_ip() -> str:
-            ip_type = data.read(1)
-            if ip_type == b"\x00":
-                ip_len = 4
-            elif ip_type == b"\x01":
-                ip_len = 16
-            else:
-                raise TypeError("Unknown IPAddress type byte.")
-            ip_bytes = data.read(ip_len)
-            ip = str(ip_address(ip_bytes))
-            return ip
-
         # Decode peer_info
-        peer_ip = decode_ip()
+        peer_ip = cls.decode_ip(data)
         peer_port = uint16.parse(data)
         timestamp = uint64.parse(data)
 
         # Decode src
-        src_ip = decode_ip()
+        src_ip = cls.decode_ip(data)
         src_port = uint16.parse(data)
 
         peer_info = TimestampedPeerInfo(peer_ip, uint16(peer_port), uint64(timestamp))
