@@ -48,8 +48,10 @@ class ExtendedPeerInfo:
             addr.port,
         )
         self.timestamp: int = addr.timestamp
-        self.src: Optional[PeerInfo] = src_peer
-        if src_peer is None:
+        self.src: PeerInfo
+        if src_peer is not None:
+            self.src = src_peer
+        else:
             self.src = self.peer_info
         self.random_pos: Optional[int] = None
         self.is_tried: bool = False
@@ -82,8 +84,6 @@ class ExtendedPeerInfo:
         raise TypeError("Unsupported IPAddress type.")
 
     def stream(self, out: io.BytesIO) -> None:
-        assert self.src is not None
-
         out.write(self.encode_ip_type(self.peer_info._ip))
         out.write(self.peer_info._ip._inner.packed)
         self.peer_info.port.stream(out)
