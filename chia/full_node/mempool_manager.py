@@ -876,7 +876,7 @@ class MempoolManager:
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         duration = time.monotonic() - new_peak_start
-        log.log(logging.WARNING if duration > 1 else logging.INFO, "new_peak() took {duration:0.2f} seconds")
+        log.log(logging.WARNING if duration > 1 else logging.INFO, f"new_peak() took {duration:0.2f} seconds")
         return NewPeakInfo(txs_added, mempool_item_removals)
 
     def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[SpendBundle]:
