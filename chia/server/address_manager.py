@@ -94,7 +94,7 @@ class ExtendedPeerInfo:
 
     @classmethod
     def parse(cls, data: io.BytesIO) -> ExtendedPeerInfo:
-        def decode_ip() -> str:
+        def decode_ip_type() -> str:
             ip_type = data.read(1)
             if ip_type == b"\x00":
                 ip_len = 4
@@ -107,12 +107,12 @@ class ExtendedPeerInfo:
             return ip
 
         # Decode peer_info
-        peer_ip = decode_ip()
+        peer_ip = decode_ip_type()
         peer_port = uint16.parse(data)
         timestamp = uint64.parse(data)
 
         # Decode src
-        src_ip = decode_ip()
+        src_ip = decode_ip_type()
         src_port = uint16.parse(data)
 
         peer_info = TimestampedPeerInfo(peer_ip, uint16(peer_port), uint64(timestamp))
