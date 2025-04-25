@@ -4,6 +4,7 @@ import contextlib
 import copy
 import itertools
 import logging
+import shutil
 import sqlite3
 import time
 from collections import defaultdict
@@ -60,6 +61,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.log_exceptions import log_exceptions
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -77,18 +79,19 @@ class DataStore:
 
     db_wrapper: DBWrapper2
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
-    root_blob_path: Path
-    root_kv_path: Path
+    merkle_blobs_path: Path
+    key_value_blobs_path: Path
 
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
         cls,
         database: Union[str, Path],
-        root_blob_path: Path,
-        kv_blob_path: Path,
+        merkle_blobs_path: Path,
+        key_value_blobs_path: Path,
         uri: bool = False,
         sql_log_path: Optional[Path] = None,
+        cache_capacity: int = 1,
     ) -> AsyncIterator[DataStore]:
         async with DBWrapper2.managed(
             database=database,
@@ -103,12 +106,12 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=128)
+            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
             self = cls(
                 db_wrapper=db_wrapper,
                 recent_merkle_blobs=recent_merkle_blobs,
-                root_blob_path=root_blob_path,
-                root_kv_path=kv_blob_path,
+                merkle_blobs_path=merkle_blobs_path,
+                key_value_blobs_path=key_value_blobs_path,
             )
 
             async with db_wrapper.writer() as writer:
@@ -148,15 +151,6 @@ class DataStore:
                 await writer.execute(
                     """
                     CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
-                    """
-                )
-                await writer.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS merkleblob(
-                        hash BLOB,
-                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
-                        PRIMARY KEY(store_id, hash)
-                    )
                     """
                 )
                 await writer.execute(
@@ -242,7 +236,7 @@ class DataStore:
         if len(missing_hashes) > 0:
             # TODO: consider adding transactions around this code
             # root = await self.get_tree_root(store_id=store_id)
-            # latest_blob = await self.get_merkle_blob(root.node_hash, read_only=True)
+            # latest_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash, read_only=True)
             # known_hashes: dict[bytes32, TreeIndex] = {}
             # if not latest_blob.empty():
             #     nodes = latest_blob.get_nodes_with_indexes()
@@ -288,7 +282,8 @@ class DataStore:
         #     internal_nodes,
         #     terminal_nodes,
         # )
-        # more_internal_nodes, more_terminal_nodes = await self.process_merkle_blob_queries(merkle_blob_queries, existing_generation)
+        # more_internal_nodes, more_terminal_nodes = await self.process_merkle_blob_queries(store_id=store_id, queries=merkle_blob_queries
+        # , existing_generation)
         # internal_nodes.update(more_internal_nodes)
         # terminal_nodes.update(more_terminal_nodes)
         now = time.monotonic()
@@ -323,6 +318,7 @@ class DataStore:
 
     async def process_merkle_blob_queries(
         self,
+        store_id: bytes32,
         queries: Mapping[bytes32, tuple[int, list[TreeIndex]]],
         existing_generation: int,
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
@@ -333,7 +329,7 @@ class DataStore:
             now = time.monotonic()
             ref_time = now
             # TODO: load only the reference index
-            merkle_blob = await self.get_merkle_blob(root_hash_blob, read_only=True)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root_hash_blob, read_only=True)
             now = time.monotonic()
             get_blob_time = now - ref_time
             ref_time = now
@@ -387,11 +383,13 @@ class DataStore:
         # missing_hashes = new_missing_hashes
 
         if missing_hashes:
-            clock = time.monotonic
-            this_start = clock()
+            # clock = time.monotonic
+            # this_start = clock()
             async with self.db_wrapper.reader() as reader:
                 cursor = await reader.execute(
-                    # "SELECT MAX(generation) FROM nodes WHERE store_id = ?",
+                    # TODO: the INDEXED BY seems like it shouldn't be needed, figure out why it is
+                    #       https://sqlite.org/lang_indexedby.html: admonished to omit all use of INDEXED BY
+                    #       https://sqlite.org/queryplanner-ng.html#howtofix
                     "SELECT MAX(generation) FROM nodes INDEXED BY nodes_generation_index WHERE store_id = ?",
                     (store_id,),
                 )
@@ -400,8 +398,8 @@ class DataStore:
                     current_generation = 0
                 else:
                     current_generation = row[0]
-            this_end = clock()
-            this_delta = this_end - this_start
+            # this_end = clock()
+            # this_delta = this_end - this_start
             # print(f"get max generation took {this_delta:.2f}s")
 
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
@@ -593,36 +591,27 @@ class DataStore:
 
     async def get_merkle_blob(
         self,
+        store_id: bytes32,
         root_hash: Optional[bytes32],
         read_only: bool = False,
         update_cache: bool = True,
     ) -> MerkleBlob:
         if root_hash is None:
             return MerkleBlob(blob=b"")
+        if self.recent_merkle_blobs.get_capacity() == 0:
+            update_cache = False
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
             return existing_blob if read_only else copy.deepcopy(existing_blob)
 
-        # async with self.db_wrapper.reader() as reader:
-        #     cursor = await reader.execute(
-        #         "SELECT blob FROM merkleblob WHERE hash == :root_hash",
-        #         {
-        #             "root_hash": root_hash,
-        #         },
-        #     )
-        #
-        #     row = await cursor.fetchone()
-        #
-        #     if row is None:
-        #         raise MerkleBlobNotFoundError(root_hash=root_hash)
-
         try:
-            path = self.get_blob_path(root_hash).as_posix()
-            # print("reading from:", path, root_hash.hex())
-            merkle_blob = MerkleBlob.from_path(path)
-        except Exception:
-            raise MerkleBlobNotFoundError(root_hash=root_hash)
+            with log_exceptions(log=log, message="Error while getting merkle blob"):
+                path = self.get_merkle_path(store_id=store_id, root_hash=root_hash)
+                # TODO: consider file-system based locking of either the file or the store directory
+                merkle_blob = MerkleBlob.from_path(path)
+        except Exception as e:
+            raise MerkleBlobNotFoundError(root_hash=root_hash) from e
 
         if update_cache:
             self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
@@ -631,21 +620,28 @@ class DataStore:
 
     def get_bytes_path(self, bytes_: bytes) -> Path:
         raw = bytes_.hex()
-        segment_sizes = [2, 2]
-        segment_sizes.append(len(raw) - sum(segment_sizes))
+        segment_sizes = [2, 2, 2]
         start = 0
         segments = []
         for size in segment_sizes:
             segments.append(raw[start : start + size])
             start += size
 
-        return Path(*segments)
+        return Path(*segments, raw)
 
-    def get_blob_path(self, hash: bytes32) -> Path:
-        return self.root_blob_path.joinpath(self.get_bytes_path(bytes_=hash))
+    def get_merkle_path(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Path:
+        store_root = self.merkle_blobs_path.joinpath(store_id.hex())
+        if root_hash is None:
+            return store_root
 
-    def get_kv_path(self, hash: bytes) -> Path:
-        return self.root_kv_path.joinpath(self.get_bytes_path(bytes_=hash))
+        return store_root.joinpath(self.get_bytes_path(bytes_=root_hash))
+
+    def get_key_value_path(self, store_id: bytes32, blob_hash: Optional[bytes32]) -> Path:
+        store_root = self.key_value_blobs_path.joinpath(store_id.hex())
+        if blob_hash is None:
+            return store_root
+
+        return store_root.joinpath(self.get_bytes_path(bytes_=blob_hash))
 
     async def insert_root_from_merkle_blob(
         self,
@@ -657,6 +653,8 @@ class DataStore:
     ) -> Root:
         if not merkle_blob.empty():
             merkle_blob.calculate_lazy_hashes()
+        if self.recent_merkle_blobs.get_capacity() == 0:
+            update_cache = False
 
         root_hash = merkle_blob.get_root_hash()
         if old_root is not None and old_root.node_hash == root_hash:
@@ -664,39 +662,31 @@ class DataStore:
 
         if root_hash is not None:
             log.info(f"inserting merkle blob: {len(merkle_blob)} bytes {root_hash.hex()}")
-            blob_path = self.get_blob_path(merkle_blob.get_root_hash())
+            blob_path = self.get_merkle_path(store_id=store_id, root_hash=merkle_blob.get_root_hash())
             if not blob_path.exists():
                 blob_path.parent.mkdir(parents=True, exist_ok=True)
-                path = blob_path.as_posix()
-                # print("writing to:", blob_path, root_hash.hex())
-                merkle_blob.to_path(path)
-
-            async with self.db_wrapper.writer() as writer:
-                await writer.execute(
-                    """
-                    INSERT OR REPLACE INTO merkleblob (hash, store_id)
-                    VALUES (?, ?)
-                    """,
-                    (root_hash, store_id),
-                )
+                # TODO: consider file-system based locking of either the file or the store directory
+                merkle_blob.to_path(blob_path)
 
             if update_cache:
                 self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
 
+    def _kvid_blob_is_file(self, blob: bytes) -> bool:
+        return len(blob) >= len(bytes32.zeros)
+
     async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
-        as_file = len(blob) >= 32
-        if as_file:
-            hash = sha256(blob).digest()
+        if self._kvid_blob_is_file(blob):
+            table_blob = sha256(blob).digest()
         else:
-            hash = blob
+            table_blob = blob
 
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT kv_id FROM ids WHERE hash = ? AND store_id = ?",
                 (
-                    hash,
+                    table_blob,
                     store_id,
                 ),
             )
@@ -721,11 +711,14 @@ class DataStore:
             if row is None:
                 return None
 
-        hash = bytes(row[0])
-        if len(hash) < 32:
-            return hash
+        table_blob = bytes(row[0])
+        if not self._kvid_blob_is_file(table_blob):
+            return table_blob
 
-        return zstd.decompress(self.get_kv_path(hash).read_bytes())
+        blob_hash = bytes32(table_blob)
+        # TODO: seems that zstd needs hinting
+        # TODO: consider file-system based locking of either the file or the store directory
+        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
 
     async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid.raw, store_id)
@@ -736,16 +729,16 @@ class DataStore:
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
     async def add_kvid(self, blob: bytes, store_id: bytes32, writer: aiosqlite.Connection) -> KeyOrValueId:
-        as_file = len(blob) >= 32
-        if as_file:
-            hash = sha256(blob).digest()
+        is_file = self._kvid_blob_is_file(blob)
+        if is_file:
+            table_blob = sha256(blob).digest()
         else:
-            hash = blob
+            table_blob = blob
         try:
             row = await writer.execute_insert(
                 "INSERT INTO ids (hash, store_id) VALUES (?, ?)",
                 (
-                    hash,
+                    table_blob,
                     store_id,
                 ),
             )
@@ -761,9 +754,11 @@ class DataStore:
         if row is None:
             raise Exception("Internal error")
         kv_id = KeyOrValueId(row[0])
-        if as_file:
-            path = self.get_kv_path(sha256(blob).digest())
+        if is_file:
+            blob_hash = bytes32(table_blob)
+            path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
             path.parent.mkdir(parents=True, exist_ok=True)
+            # TODO: consider file-system based locking of either the file or the store directory
             path.write_bytes(zstd.compress(blob))
         return kv_id
 
@@ -788,7 +783,7 @@ class DataStore:
         else:
             resolved_root_hash = root_hash
 
-        merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
+        merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
         kid, vid = merkle_blob.get_node_by_hash(node_hash)
         return await self.get_terminal_node(kid, vid, store_id)
 
@@ -832,7 +827,9 @@ class DataStore:
         if root.node_hash is None:
             return
         ref_time = time.monotonic()
-        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash, read_only=True, update_cache=False)
+        merkle_blob = await self.get_merkle_blob(
+            store_id=store_id, root_hash=root.node_hash, read_only=True, update_cache=False
+        )
         hash_to_index = merkle_blob.get_hashes_indexes()
         # existing_hashes = await self.get_existing_hashes(hash_to_index.keys(), store_id)
         now = time.monotonic()
@@ -1097,7 +1094,7 @@ class DataStore:
             if root_hash is None:
                 raise Exception(f"Root hash is unspecified for store ID: {store_id.hex()}")
 
-            merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root_hash)
             reference_kid, _ = merkle_blob.get_node_by_hash(node_hash)
 
         reference_index = merkle_blob.get_key_index(reference_kid)
@@ -1157,7 +1154,7 @@ class DataStore:
                 resolved_root_hash = root_hash
 
             try:
-                merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
+                merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
             except MerkleBlobNotFoundError:
                 return []
 
@@ -1188,7 +1185,7 @@ class DataStore:
             leaf_hash_to_length: dict[bytes32, int] = {}
             if resolved_root_hash is not None:
                 try:
-                    merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
+                    merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
                 except MerkleBlobNotFoundError:
                     return KeysValuesCompressed({}, {}, {}, resolved_root_hash)
 
@@ -1346,7 +1343,7 @@ class DataStore:
                 resolved_root_hash = root_hash
 
             try:
-                merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
+                merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
             except MerkleBlobNotFoundError:
                 return []
 
@@ -1378,7 +1375,7 @@ class DataStore:
         if root is None or root.node_hash is None:
             return None
 
-        merkle_blob = await self.get_merkle_blob(root.node_hash)
+        merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
         assert not merkle_blob.empty()
         kid, _ = self.get_reference_kid_side(merkle_blob, seed)
         return await self.get_terminal_node_from_kid(merkle_blob, kid, store_id)
@@ -1396,7 +1393,7 @@ class DataStore:
         async with self.db_wrapper.writer() as writer:
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
-            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
 
             kid, vid = await self.add_key_value(key, value, store_id, writer=writer)
             hash = leaf_hash(key, value)
@@ -1427,7 +1424,7 @@ class DataStore:
         async with self.db_wrapper.writer():
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
-            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
 
             kid = await self.get_kvid(key, store_id)
             if kid is not None:
@@ -1448,7 +1445,7 @@ class DataStore:
         async with self.db_wrapper.writer() as writer:
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
-            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
 
             kid, vid = await self.add_key_value(key, new_value, store_id, writer=writer)
             hash = leaf_hash(key, new_value)
@@ -1477,7 +1474,7 @@ class DataStore:
                 else:
                     raise Exception("Internal error")
 
-            merkle_blob = await self.get_merkle_blob(root_hash=old_root.node_hash)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=old_root.node_hash)
 
             key_hash_frequency: dict[bytes32, int] = {}
             first_action: dict[bytes32, str] = {}
@@ -1616,7 +1613,7 @@ class DataStore:
                 resolved_root_hash = root_hash
 
             try:
-                merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
+                merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
             except MerkleBlobNotFoundError:
                 raise KeyNotFoundError(key=key)
 
@@ -1643,7 +1640,7 @@ class DataStore:
             # TODO: consider actual proper behavior
             assert root.node_hash is not None
 
-            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
 
             nodes = merkle_blob.get_nodes_with_indexes()
             hash_to_node: dict[bytes32, Node] = {}
@@ -1673,7 +1670,7 @@ class DataStore:
         if root_hash is None:
             root = await self.get_tree_root(store_id=store_id)
             root_hash = root.node_hash
-        merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
+        merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root_hash)
         kid, _ = merkle_blob.get_node_by_hash(node_hash)
         return merkle_blob.get_proof_of_inclusion(kid)
 
@@ -1683,7 +1680,7 @@ class DataStore:
         store_id: bytes32,
     ) -> ProofOfInclusion:
         root = await self.get_tree_root(store_id=store_id)
-        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+        merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
         kvid = await self.get_kvid(key, store_id)
         if kvid is None:
             raise Exception(f"Cannot find key: {key.hex()}")
@@ -1705,7 +1702,7 @@ class DataStore:
             return
 
         if merkle_blob is None:
-            merkle_blob = await self.get_merkle_blob(root.node_hash)
+            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
         if hash_to_index is None:
             hash_to_index = merkle_blob.get_hashes_indexes()
         if existing_hashes is None:
@@ -1713,7 +1710,7 @@ class DataStore:
                 existing_hashes = set()
             else:
                 previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
-                previous_merkle_blob = await self.get_merkle_blob(previous_root.node_hash)
+                previous_merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=previous_root.node_hash)
                 previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
                 existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
 
@@ -1834,10 +1831,6 @@ class DataStore:
                 {"tree_id": store_id},
             )
             await writer.execute(
-                "DELETE FROM merkleblob WHERE store_id == :store_id",
-                {"store_id": store_id},
-            )
-            await writer.execute(
                 "DELETE FROM ids WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
@@ -1845,6 +1838,12 @@ class DataStore:
                 "DELETE FROM nodes WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
+
+            with contextlib.suppress(FileNotFoundError):
+                shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+
+            with contextlib.suppress(FileNotFoundError):
+                shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:

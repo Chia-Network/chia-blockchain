@@ -106,17 +106,17 @@ class SyncTimeCommand:
 
                 database_path = working_path.joinpath("datalayer.sqlite")
 
-                root_blob_path = working_path.joinpath("rbps")
-                root_blob_path.mkdir(parents=True, exist_ok=True)
+                merkle_blob_path = working_path.joinpath("merkle-blobs")
+                merkle_blob_path.mkdir(parents=True, exist_ok=True)
 
-                kv_blob_path = working_path.joinpath("kvs")
-                kv_blob_path.mkdir(parents=True, exist_ok=True)
+                key_value_blob_path = working_path.joinpath("key-value-blobs")
+                key_value_blob_path.mkdir(parents=True, exist_ok=True)
 
                 data_store = await exit_stack.enter_async_context(
                     DataStore.managed(
                         database=database_path,
-                        root_blob_path=root_blob_path,
-                        kv_blob_path=kv_blob_path,
+                        merkle_blobs_path=merkle_blob_path,
+                        key_value_blobs_path=key_value_blob_path,
                     )
                 )
 
