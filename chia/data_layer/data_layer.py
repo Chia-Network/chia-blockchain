@@ -104,6 +104,8 @@ class DataLayer:
         _protocol_check: ClassVar[RpcServiceProtocol] = cast("DataLayer", None)
 
     db_path: Path
+    merkle_blobs_path: Path
+    key_value_blobs_path: Path
     config: dict[str, Any]
     root_path: Path
     log: logging.Logger
@@ -173,6 +175,12 @@ class DataLayer:
         server_files_replaced = server_files_path_from_config(config, root_path)
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        merkle_blobs_path_replaced: str = config.get(
+            "merkle_blobs_path", "data_layer/db/merkle_blobs_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
+        key_value_blobs_path_replaced: str = config.get(
+            "key_value_blobs_path", "data_layer/db/key_value_blobs_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
 
         self = cls(
             config=config,
@@ -180,6 +188,8 @@ class DataLayer:
             wallet_rpc_init=wallet_rpc_init,
             log=logging.getLogger(name if name is None else __name__),
             db_path=path_from_root(root_path, db_path_replaced),
+            merkle_blobs_path=path_from_root(root_path, merkle_blobs_path_replaced),
+            key_value_blobs_path=path_from_root(root_path, key_value_blobs_path_replaced),
             server_files_location=server_files_replaced,
             downloaders=downloaders,
             uploaders=uploaders,
@@ -193,6 +203,8 @@ class DataLayer:
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.merkle_blobs_path.mkdir(parents=True, exist_ok=True)
+        self.key_value_blobs_path.mkdir(parents=True, exist_ok=True)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
 
         return self
@@ -206,7 +218,11 @@ class DataLayer:
         cache_capacity = self.config.get("merkle_blobs_cache_size", 1)
 
         async with DataStore.managed(
-            database=self.db_path, sql_log_path=sql_log_path, cache_capacity=cache_capacity
+            database=self.db_path,
+            merkle_blobs_path=self.merkle_blobs_path,
+            key_value_blobs_path=self.key_value_blobs_path,
+            sql_log_path=sql_log_path,
+            cache_capacity=cache_capacity,
         ) as self._data_store:
             self._wallet_rpc = await self.wallet_rpc_init
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.resources as importlib_resources
 import itertools
 import logging
 import os
 import random
 import re
+import shutil
 import statistics
 import time
 from collections.abc import Awaitable
@@ -58,7 +60,6 @@ table_columns: dict[str, list[str]] = {
     "root": ["tree_id", "generation", "node_hash", "status"],
     "subscriptions": ["tree_id", "url", "ignore_till", "num_consecutive_failures", "from_wallet"],
     "schema": ["version_id", "applied_at"],
-    "merkleblob": ["hash", "blob", "store_id"],
     "ids": ["kv_id", "blob", "store_id"],
     "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
@@ -72,7 +73,12 @@ async def test_migrate_from_old_format(store_id: bytes32, tmp_path: Path) -> Non
     files_resources = old_format_resources.joinpath("files")
 
     with importlib_resources.as_file(files_resources) as files_path:
-        async with DataStore.managed(database=db_uri, uri=True) as data_store:
+        async with DataStore.managed(
+            database=db_uri,
+            uri=True,
+            merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+            key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+        ) as data_store:
             await data_store.migrate_db(files_path)
             root = await data_store.get_tree_root(store_id=store_id)
             expected = Root(
@@ -89,7 +95,10 @@ async def test_migrate_from_old_format(store_id: bytes32, tmp_path: Path) -> Non
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
-    database_uri: str, table_name: str, expected_columns: list[str]
+    database_uri: str,
+    table_name: str,
+    expected_columns: list[str],
+    tmp_path: Path,
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
@@ -101,7 +110,12 @@ async def test_create_creates_tables_and_columns(
             columns = await cursor.fetchall()
             assert columns == []
 
-        async with DataStore.managed(database=database_uri, uri=True):
+        async with DataStore.managed(
+            database=database_uri,
+            uri=True,
+            merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+            key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+        ):
             async with db_wrapper.reader() as reader:
                 cursor = await reader.execute(query)
                 columns = await cursor.fetchall()
@@ -354,7 +368,12 @@ async def test_batch_update_against_single_operations(
     saved_batches: list[list[dict[str, Any]]] = []
     saved_kv: list[list[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
-    async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
+    async with DataStore.managed(
+        database=db_uri,
+        uri=True,
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as single_op_data_store:
         await single_op_data_store.create_tree(store_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -507,7 +526,7 @@ async def test_insert_batch_reference_and_side(
     )
     assert new_root_hash is not None, "batch insert failed or failed to update root"
 
-    merkle_blob = await data_store.get_merkle_blob(new_root_hash)
+    merkle_blob = await data_store.get_merkle_blob(store_id=store_id, root_hash=new_root_hash)
     nodes_with_indexes = merkle_blob.get_nodes_with_indexes()
     nodes = [pair[1] for pair in nodes_with_indexes]
     assert len(nodes) == 3
@@ -1106,7 +1125,7 @@ async def test_unsubscribe_clears_databases(data_store: DataStore, store_id: byt
         )
     await data_store.add_node_hashes(store_id)
 
-    tables = ["merkleblob", "ids", "nodes"]
+    tables = ["ids", "nodes"]
     for table in tables:
         async with data_store.db_wrapper.reader() as reader:
             async with reader.execute(f"SELECT COUNT(*) FROM {table}") as cursor:
@@ -1272,7 +1291,7 @@ async def write_tree_to_file_old_format(
         return
 
     if merkle_blob is None:
-        merkle_blob = await data_store.get_merkle_blob(root.node_hash)
+        merkle_blob = await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
     if hash_to_index is None:
         hash_to_index = merkle_blob.get_hashes_indexes()
 
@@ -1316,7 +1335,12 @@ async def test_data_server_files(
     num_ops_per_batch = 100
 
     db_uri = generate_in_memory_db_uri()
-    async with DataStore.managed(database=db_uri, uri=True) as data_store_server:
+    async with DataStore.managed(
+        database=db_uri,
+        uri=True,
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as data_store_server:
         await data_store_server.create_tree(store_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
@@ -1714,8 +1738,8 @@ async def test_insert_from_delta_file(
         assert len(filenames) == num_files
     kv_before = await data_store.get_keys_values(store_id=store_id)
     await data_store.rollback_to_generation(store_id, 0)
-    async with data_store.db_wrapper.writer() as writer:
-        await writer.execute("DELETE FROM merkleblob")
+    with contextlib.suppress(FileNotFoundError):
+        shutil.rmtree(data_store.merkle_blobs_path)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
@@ -1864,20 +1888,20 @@ async def test_insert_from_delta_file_correct_file_exists(
         root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
-        filenames = {entry.name for entry in entries}
+        filenames = {entry.name for entry in entries if entry.name.endswith(".dat")}
         assert len(filenames) == 2 * (num_files + 1)
     for filename in filenames:
         if "full" in filename:
             store_path.joinpath(filename).unlink()
     with os.scandir(store_path) as entries:
-        filenames = {entry.name for entry in entries}
+        filenames = {entry.name for entry in entries if entry.name.endswith(".dat")}
         assert len(filenames) == num_files + 1
     kv_before = await data_store.get_keys_values(store_id=store_id)
     await data_store.rollback_to_generation(store_id, 0)
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
-    async with data_store.db_wrapper.writer() as writer:
-        await writer.execute("DELETE FROM merkleblob")
+    with contextlib.suppress(FileNotFoundError):
+        shutil.rmtree(data_store.merkle_blobs_path)
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     success = await insert_from_delta_file(
@@ -1899,7 +1923,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
     with os.scandir(store_path) as entries:
-        filenames = {entry.name for entry in entries}
+        filenames = {entry.name for entry in entries if entry.name.endswith(".dat")}
         assert len(filenames) == num_files + 2  # 1 full and 6 deltas
     kv = await data_store.get_keys_values(store_id=store_id)
     # order agnostic comparison of the list
@@ -1932,7 +1956,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
     incorrect_root_hash = bytes32([0] * 31 + [1])
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
-        filenames = [entry.name for entry in entries]
+        filenames = [entry.name for entry in entries if entry.name.endswith(".dat")]
         assert len(filenames) == 2
         os.rename(
             store_path.joinpath(filenames[0]),
@@ -1964,7 +1988,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 1
     with os.scandir(store_path) as entries:
-        filenames = [entry.name for entry in entries]
+        filenames = [entry.name for entry in entries if entry.name.endswith(".dat")]
         assert len(filenames) == 0
 
 
@@ -2115,6 +2139,11 @@ async def test_migration(
         for table in tables:
             await writer.execute(f"DELETE FROM {table}")
 
+    with contextlib.suppress(FileNotFoundError):
+        shutil.rmtree(data_store.merkle_blobs_path)
+    with contextlib.suppress(FileNotFoundError):
+        shutil.rmtree(data_store.key_value_blobs_path)
+
     data_store.recent_merkle_blobs = LRUCache(capacity=128)
     assert await data_store.get_keys_values(store_id=store_id) == []
     await data_store.migrate_db(tmp_path)
@@ -2138,7 +2167,7 @@ async def test_get_existing_hashes(
     await data_store.add_node_hashes(store_id)
 
     root = await data_store.get_tree_root(store_id=store_id)
-    merkle_blob = await data_store.get_merkle_blob(root_hash=root.node_hash)
+    merkle_blob = await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
     hash_to_index = merkle_blob.get_hashes_indexes()
     existing_hashes = list(hash_to_index.keys())
     not_existing_hashes = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_keys)]
