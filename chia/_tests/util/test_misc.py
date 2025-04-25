@@ -13,8 +13,8 @@ from chia._tests.util.misc import RecordingWebServer
 from chia._tests.util.split_managers import SplitAsyncManager, SplitManager, split_async_manager, split_manager
 from chia._tests.wallet.test_singleton_lifecycle_fast import satisfies_hint
 from chia.cmds.cmds_util import format_bytes, format_minutes, validate_directory_writable
+from chia.full_node.tx_processing_queue import ValuedEvent
 from chia.types.blockchain_format.program import Program
-from chia.types.transaction_queue_entry import ValuedEvent
 from chia.util.batches import to_batches
 from chia.util.errors import InvalidPathError
 from chia.util.timing import adjusted_timeout, backoff_times

@@ -9,8 +9,7 @@ from typing import Optional, cast
 import pytest
 from chia_rs.sized_bytes import bytes32
 
-from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueFull
-from chia.types.transaction_queue_entry import TransactionQueueEntry
+from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry, TransactionQueueFull
 from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
