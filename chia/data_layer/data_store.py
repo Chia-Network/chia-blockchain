@@ -270,7 +270,10 @@ class DataStore:
         if missing_hashes:
             async with self.db_wrapper.reader() as reader:
                 cursor = await reader.execute(
-                    "SELECT MAX(generation) FROM nodes WHERE store_id = ?",
+                    # TODO: the INDEXED BY seems like it shouldn't be needed, figure out why it is
+                    #       https://sqlite.org/lang_indexedby.html: admonished to omit all use of INDEXED BY
+                    #       https://sqlite.org/queryplanner-ng.html#howtofix
+                    "SELECT MAX(generation) FROM nodes INDEXED BY nodes_generation_index WHERE store_id = ?",
                     (store_id,),
                 )
                 row = await cursor.fetchone()
