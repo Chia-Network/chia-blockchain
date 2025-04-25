@@ -54,8 +54,6 @@ from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.seeder.dns_server import DNSServer
-
-# Set spawn after stdlib imports, but before other imports
 from chia.server.aliases import (
     CrawlerService,
     FarmerService,
@@ -85,6 +83,8 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 
+# TODO: review how this is now after other imports and before some stdlib imports...  :[
+# Set spawn after stdlib imports, but before other imports
 multiprocessing.set_start_method("spawn")
 
 from dataclasses import replace
