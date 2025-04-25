@@ -14,11 +14,11 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.protocols import timelord_protocol
+from chia.server.aliases import FullNodeService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.timelord.timelord_api import TimelordAPI
-from chia.types.aliases import FullNodeService
 
 
 class TestNewPeak:

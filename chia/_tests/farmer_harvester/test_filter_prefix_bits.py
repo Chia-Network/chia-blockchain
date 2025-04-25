@@ -17,8 +17,8 @@ from chia.farmer.farmer_api import FarmerAPI
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
+from chia.server.aliases import HarvesterService
 from chia.simulator.block_tools import create_block_tools_async, test_constants
-from chia.types.aliases import HarvesterService
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
 from chia.util.keychain import Keychain
 
