@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import io
 import math
 import time
 from pathlib import Path
 
 import pytest
-from chia_rs.sized_ints import uint16, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.server.address_manager import (
     BUCKET_SIZE,
@@ -580,6 +581,64 @@ class TestPeerManager:
         ]
         assert await self.check_retrieved_peers(wanted_peers, addrman2)
         peers_dat_filename.unlink()
+
+    @pytest.mark.anyio
+    async def test_bad_ip_encoding(self, tmp_path: Path):
+        addrman = AddressManagerTest()
+        now = int(math.floor(time.time()))
+        t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
+        t_peer2 = TimestampedPeerInfo("1050:0000:0000:0000:0005:0600:300c:326b", uint16(9999), uint64(now - 20000))
+        t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))
+        source = PeerInfo("252.5.1.1", uint16(8333))
+        await addrman.add_to_new_table([t_peer1, t_peer2, t_peer3], source)
+        await addrman.mark_good(PeerInfo("250.7.1.1", uint16(8333)))
+
+        peers_dat_filename = tmp_path / "peers.dat"
+        if peers_dat_filename.exists():
+            peers_dat_filename.unlink()
+        # Write out the serialized peer data but use a bad IP type
+        out = io.BytesIO()
+        nodes = io.BytesIO()
+        trieds = io.BytesIO()
+        new_table = io.BytesIO()
+        unique_ids: dict[int, int] = {}
+        count_ids: int = 0
+
+        for node_id, info in addrman.map_info.items():
+            unique_ids[node_id] = count_ids
+            if info.ref_count > 0:
+                assert count_ids != addrman.new_count
+                nodes.write(b"\x02")  # this is the bad byte
+                nodes.write(info.peer_info._ip._inner.packed)
+                info.peer_info.port.stream(nodes)
+                uint64(info.timestamp).stream(nodes)
+                nodes.write(info.encode_ip_type(info.src._ip))
+                nodes.write(info.src._ip._inner.packed)
+                info.src.port.stream(nodes)
+                count_ids += 1
+            if info.is_tried:
+                info.stream(nodes)
+
+        out.write(addrman.key.to_bytes(32, byteorder="big"))
+        uint64(count_ids).stream(out)
+
+        count = 0
+        for bucket in range(NEW_BUCKET_COUNT):
+            for i in range(BUCKET_SIZE):
+                if addrman.new_matrix[bucket][i] != -1:
+                    count += 1
+                    uint64(unique_ids[addrman.new_matrix[bucket][i]]).stream(new_table)
+                    uint64(bucket).stream(new_table)
+
+        # give ourselves a clue how long the new_table is
+        uint32(count).stream(out)
+        out.write(new_table.getvalue())
+
+        out.write(nodes.getvalue())
+        out.write(trieds.getvalue())
+        await write_file_async(peers_dat_filename, out.getvalue(), file_mode=0o644)
+        addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        assert len(addrman2.map_info) == 0
 
     @pytest.mark.anyio
     async def test_load_missing_file(self, tmp_path: Path):
