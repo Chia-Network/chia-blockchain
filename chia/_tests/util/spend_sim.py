@@ -37,7 +37,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
@@ -53,6 +52,9 @@ BlockRecord objects for trimmed down versions.
 There is also a provided NodeClient object which implements many of the methods from chia.rpc.full_node_rpc_client
 and is designed so that you could test with it and then swap in a real rpc client that uses the same code you tested.
 """
+
+
+T_SpendBundle = TypeVar("T_SpendBundle", bound="SpendBundle")
 
 
 @asynccontextmanager
