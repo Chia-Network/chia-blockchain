@@ -2266,7 +2266,9 @@ class TestCoins:
 
 
 # creates a CoinSpend of a made up
-def make_singleton_spend(launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32)) -> CoinSpend:
+def make_singleton_spend(
+    launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32), child_amount: int = 1
+) -> CoinSpend:
     from chia_rs import supports_fast_forward
 
     from chia.wallet.lineage_proof import LineageProof
@@ -2279,7 +2281,7 @@ def make_singleton_spend(launcher_id: bytes32, parent_parent_id: bytes32 = bytes
 
     lineage_proof = LineageProof(parent_parent_id, IDENTITY_PUZZLE_HASH, uint64(1))
 
-    inner_solution = Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(1)]])
+    inner_solution = Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(child_amount)]])
     singleton_solution = SerializedProgram.from_program(
         solution_for_singleton(lineage_proof, uint64(1), inner_solution)
     )
@@ -2798,3 +2800,45 @@ async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bu
 
     assert removals == set(new_block_gen.removals)
     assert additions == set(new_block_gen.additions)
+
+
+@pytest.mark.anyio
+async def test_spending_singleton_to_invalidate_existing_ff_spends() -> None:
+    """
+    This test covers the scenario where we attempt to add a transaction to the
+    mempool that contains a singleton that is spent in a way that tries to
+    invalidate existing fast forward spends from existing items in the mempool.
+    """
+    LAUNCHER_ID = bytes32([1] * 32)
+    PARENT_PARENT = bytes32([2] * 32)
+    singleton_spend1 = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT)
+    # This differs in the child amount
+    singleton_spend2 = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT, child_amount=3)
+    coins = TestCoins(
+        coins=[singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2],
+        lineage={singleton_spend2.coin.puzzle_hash: singleton_spend2.coin},
+    )
+    mempool_manager = await setup_mempool(coins)
+    coin_spend1 = make_spend(
+        TEST_COIN, IDENTITY_PUZZLE, Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42]])
+    )
+    sb1 = SpendBundle([singleton_spend1, coin_spend1], G2Element())
+    sb1_conds = make_test_conds(spend_ids=[(singleton_spend1.coin, ELIGIBLE_FOR_FF), (TEST_COIN, 0)], cost=100_000_000)
+    bundle_add_info1 = await mempool_manager.add_spend_bundle(sb1, sb1_conds, sb1.name(), uint32(1))
+    assert bundle_add_info1.status == MempoolInclusionStatus.SUCCESS
+    invariant_check_mempool(mempool_manager.mempool)
+    # Trying to spend the same singleton with a different child amount should
+    # trigger a conflict on any replace by fee attempt.
+    coin_spend2 = make_spend(
+        TEST_COIN2, IDENTITY_PUZZLE, Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42]])
+    )
+    sb2 = SpendBundle([singleton_spend2, coin_spend1, coin_spend2], G2Element())
+    # This singleton spend is not eligible for fast forward as its next
+    # iteration has a different amount.
+    sb2_conds = make_test_conds(spend_ids=[(singleton_spend2.coin, 0), (TEST_COIN, 0), (TEST_COIN2, 0)], cost=1337)
+    # This transaction conflicts with the previous one no matter what fee you
+    # pay, because we're changing the fast forward eligibility flag for the
+    # singleton spend.
+    bundle_add_info2 = await mempool_manager.add_spend_bundle(sb2, sb2_conds, sb2.name(), uint32(1))
+    assert bundle_add_info2.error == Err.MEMPOOL_CONFLICT
+    assert bundle_add_info2.status == MempoolInclusionStatus.PENDING
