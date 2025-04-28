@@ -18,6 +18,7 @@ import aiosqlite
 import chia_rs.datalayer
 import zstd
 from chia_rs.datalayer import (
+    DeltaReader,
     KeyAlreadyPresentError,
     KeyId,
     MerkleBlob,
@@ -195,34 +196,31 @@ class DataStore:
         root_hash: Optional[bytes32],
         filename: Path,
     ) -> None:
-        internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+        if root_hash is None:
+            merkle_blob = MerkleBlob(b"")
+        else:
+            internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
 
-        missing_hashes: list[bytes32] = []
+            delta_reader = DeltaReader(internal_nodes=internal_nodes, leaf_nodes=terminal_nodes)
+            root = await self.get_tree_root(store_id=store_id)
+            if root.node_hash is not None:
+                delta_reader.collect_from_merkle_blob(
+                    self.get_merkle_path(store_id=store_id, root_hash=root.node_hash), indexes=[TreeIndex(0)]
+                )
+            missing_hashes = delta_reader.get_missing_hashes()
 
-        for _, (left, right) in internal_nodes.items():
-            for node_hash in (left, right):
-                if node_hash not in internal_nodes and node_hash not in terminal_nodes:
-                    missing_hashes.append(node_hash)
+            if len(missing_hashes) > 0:
+                # TODO: consider adding transactions around this code
+                merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes({}, (), root, store_id)
 
-        # TODO: consider adding transactions around this code
-        root = await self.get_tree_root(store_id=store_id)
-        latest_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash, read_only=True)
-        known_hashes: dict[bytes32, TreeIndex] = {}
-        if not latest_blob.empty():
-            nodes = latest_blob.get_nodes_with_indexes()
-            known_hashes = {node.hash: index for index, node in nodes}
+                # TODO: consider parallel collection
+                for old_root_hash, indexes in merkle_blob_queries.items():
+                    delta_reader.collect_from_merkle_blob(
+                        self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes=indexes
+                    )
 
-        merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
-            known_hashes, missing_hashes, root, store_id
-        )
+            merkle_blob, _ = delta_reader.create_merkle_blob(root_hash, set())
 
-        more_internal_nodes, more_terminal_nodes = await self.process_merkle_blob_queries(
-            store_id=store_id, queries=merkle_blob_queries
-        )
-        internal_nodes.update(more_internal_nodes)
-        terminal_nodes.update(more_terminal_nodes)
-
-        merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
 
