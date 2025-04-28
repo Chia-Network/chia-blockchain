@@ -15,7 +15,7 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
-from chia.server.address_manager_store import AddressManagerStore, PeerDataSerialization, serialize_bytes
+from chia.server.address_manager_store import PeerDataSerialization
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.files import write_file_async
 
@@ -572,10 +572,10 @@ class TestPeerManager:
         if peers_dat_filename.exists():
             peers_dat_filename.unlink()
         # Write out the serialized peer data
-        serialised_bytes = serialize_bytes(addrman)
+        serialised_bytes = addrman.serialize_bytes()
         await write_file_async(peers_dat_filename, serialised_bytes, file_mode=0o644)
         # Read in the serialized peer data
-        addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        addrman2 = await AddressManager.create_address_manager(peers_dat_filename)
         wanted_peers = [
             ExtendedPeerInfo(t_peer1, source),
             ExtendedPeerInfo(t_peer2, source),
@@ -639,7 +639,7 @@ class TestPeerManager:
         out.write(nodes.getvalue())
         out.write(trieds.getvalue())
         await write_file_async(peers_dat_filename, out.getvalue(), file_mode=0o644)
-        addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        addrman2 = await AddressManager.create_address_manager(peers_dat_filename)
         assert len(addrman2.map_info) == 0
 
     @pytest.mark.anyio
@@ -647,7 +647,7 @@ class TestPeerManager:
         peers_dat_filename = tmp_path / "peers.dat"
         with contextlib.suppress(FileNotFoundError):
             peers_dat_filename.unlink()
-        addrman = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        addrman = await AddressManager.create_address_manager(peers_dat_filename)
         assert isinstance(addrman, AddressManager)
 
     @pytest.mark.anyio
@@ -740,7 +740,7 @@ class TestPeerManager:
         await old_serialize(addrman, peers_dat_filename)
 
         # Load the old serialization
-        addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        addrman2 = await AddressManager.create_address_manager(peers_dat_filename)
         wanted_peers = [
             ExtendedPeerInfo(t_peer1, source),
             ExtendedPeerInfo(t_peer2, source),
@@ -754,8 +754,8 @@ class TestPeerManager:
             peers_dat_filename.unlink()
 
         # Create the new serialization (this would happen automatically through scheduled task)
-        serialised_bytes = serialize_bytes(addrman)
+        serialised_bytes = addrman.serialize_bytes()
         await write_file_async(peers_dat_filename, serialised_bytes, file_mode=0o644)
         # Load and check the new serialization
-        addrman3 = await AddressManagerStore.create_address_manager(peers_dat_filename)
+        addrman3 = await AddressManager.create_address_manager(peers_dat_filename)
         assert await self.check_retrieved_peers(wanted_peers, addrman3)
