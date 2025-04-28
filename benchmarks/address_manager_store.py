@@ -104,7 +104,7 @@ async def benchmark_serialize_deserialize(iterations: int = 5) -> None:
             start_serialize = time.perf_counter()
 
             serialised_bytes = AddressManagerStore.serialize_bytes(address_manager)
-            await write_file_async(peers_file_path, serialised_bytes.getvalue(), file_mode=0o644)
+            await write_file_async(peers_file_path, serialised_bytes, file_mode=0o644)
             end_serialize = time.perf_counter()
             serialize_duration = end_serialize - start_serialize
             total_serialize_time += serialize_duration
