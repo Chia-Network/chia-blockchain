@@ -643,7 +643,7 @@ class TestPeerManager:
     @pytest.mark.anyio
     async def test_load_missing_file(self, tmp_path: Path):
         peers_dat_filename = tmp_path / "peers.dat"
-        if peers_dat_filename.exists():
+        with contextlib.suppress(FileNotFoundError):
             peers_dat_filename.unlink()
         addrman = await AddressManagerStore.create_address_manager(peers_dat_filename)
         assert isinstance(addrman, AddressManager)
