@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Collection, Mapping
+from collections.abc import AsyncIterator, Awaitable, Collection
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -200,6 +200,7 @@ class DataStore:
             merkle_blob = MerkleBlob(b"")
         else:
             internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+            maybe_new_hashes = {*internal_nodes.keys(), *terminal_nodes.keys()}
 
             delta_reader = DeltaReader(internal_nodes=internal_nodes, leaf_nodes=terminal_nodes)
             root = await self.get_tree_root(store_id=store_id)
@@ -221,7 +222,16 @@ class DataStore:
                         self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes=indexes
                     )
 
-            merkle_blob, _ = delta_reader.create_merkle_blob(root_hash, set())
+            merkle_blob, hashes_and_indexes = delta_reader.create_merkle_blob(root_hash, maybe_new_hashes)
+
+            async with self.db_wrapper.writer() as writer:
+                await writer.executemany(
+                    """
+                    INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    ((store_id, hash, root_hash, root.generation + 1, index.raw) for hash, index in hashes_and_indexes),
+                )
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
@@ -229,7 +239,7 @@ class DataStore:
     async def process_merkle_blob_queries(
         self,
         store_id: bytes32,
-        queries: Mapping[bytes32, list[TreeIndex]],
+        queries: dict[bytes32, list[TreeIndex]],
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
