@@ -109,10 +109,8 @@ async def benchmark_serialize_deserialize(iterations: int = 5) -> None:
             print(f"Serialize time: {serialize_duration:.6f} seconds")
 
             # Benchmark deserialize
-            data: Optional[io.BytesIO] = None
             async with aiofiles.open(peers_file_path, "rb") as f:
                 data = io.BytesIO(await f.read())
-            assert data is not None
             start_deserialize = time.perf_counter()
             _ = await AddressManagerStore.deserialize_bytes(data)
             end_deserialize = time.perf_counter()
