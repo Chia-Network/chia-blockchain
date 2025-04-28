@@ -17,7 +17,6 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
-from chia.util.files import write_file_async
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -78,7 +77,7 @@ class AddressManagerStore:
         return address_manager
 
     @classmethod
-    async def serialize_bytes(cls, address_manager: AddressManager, peers_file_path: Path) -> None:
+    def serialize_bytes(cls, address_manager: AddressManager) -> bytes:
         out = io.BytesIO()
         nodes = io.BytesIO()
         trieds = io.BytesIO()
@@ -112,7 +111,7 @@ class AddressManagerStore:
 
         out.write(nodes.getvalue())
         out.write(trieds.getvalue())
-        await write_file_async(peers_file_path, out.getvalue(), file_mode=0o644)
+        return out.getvalue()
 
     @classmethod
     async def deserialize_bytes(cls, data: io.BytesIO) -> AddressManager:

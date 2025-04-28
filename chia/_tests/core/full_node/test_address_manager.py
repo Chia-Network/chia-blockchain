@@ -572,7 +572,8 @@ class TestPeerManager:
         if peers_dat_filename.exists():
             peers_dat_filename.unlink()
         # Write out the serialized peer data
-        await AddressManagerStore.serialize_bytes(addrman, peers_dat_filename)
+        serialised_bytes = AddressManagerStore.serialize_bytes(addrman)
+        await write_file_async(peers_dat_filename, serialised_bytes, file_mode=0o644)
         # Read in the serialized peer data
         addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
         wanted_peers = [
@@ -753,7 +754,8 @@ class TestPeerManager:
             peers_dat_filename.unlink()
 
         # Create the new serialization (this would happen automatically through scheduled task)
-        await AddressManagerStore.serialize_bytes(addrman, peers_dat_filename)
+        serialised_bytes = AddressManagerStore.serialize_bytes(addrman)
+        await write_file_async(peers_dat_filename, serialised_bytes, file_mode=0o644)
         # Load and check the new serialization
         addrman3 = await AddressManagerStore.create_address_manager(peers_dat_filename)
         assert await self.check_retrieved_peers(wanted_peers, addrman3)
