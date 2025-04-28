@@ -34,6 +34,102 @@ class PeerDataSerialization(Streamable):
     new_table: list[tuple[uint64, uint64]]
 
 
+def serialize_bytes(address_manager: AddressManager) -> bytes:
+    out = io.BytesIO()
+    nodes = io.BytesIO()
+    trieds = io.BytesIO()
+    new_table = io.BytesIO()
+    unique_ids: dict[int, int] = {}
+    count_ids: int = 0
+
+    for node_id, info in address_manager.map_info.items():
+        unique_ids[node_id] = count_ids
+        if info.ref_count > 0:
+            assert count_ids != address_manager.new_count
+            info.stream(nodes)
+            count_ids += 1
+        if info.is_tried:
+            info.stream(nodes)
+
+    out.write(address_manager.key.to_bytes(32, byteorder="big"))
+    uint64(count_ids).stream(out)
+
+    count = 0
+    for bucket in range(NEW_BUCKET_COUNT):
+        for i in range(BUCKET_SIZE):
+            if address_manager.new_matrix[bucket][i] != -1:
+                count += 1
+                uint64(unique_ids[address_manager.new_matrix[bucket][i]]).stream(new_table)
+                uint64(bucket).stream(new_table)
+
+    # give ourselves a clue how long the new_table is
+    uint32(count).stream(out)
+    out.write(new_table.getvalue())
+
+    out.write(nodes.getvalue())
+    out.write(trieds.getvalue())
+    return out.getvalue()
+
+
+def deserialize_bytes(data: io.BytesIO) -> AddressManager:
+    address_manager = AddressManager()
+
+    address_manager.key = int.from_bytes(data.read(32), byteorder="big")
+
+    address_manager.new_count = uint64.parse(data)
+    # deserialize new_table
+    new_table_count = uint32.parse(data)
+    new_table_nodes: list[tuple[uint64, uint64]] = []
+    for i in range(0, new_table_count):
+        node_id = uint64.parse(data)
+        bucket = uint64.parse(data)
+        new_table_nodes.append((node_id, bucket))
+
+    # deserialize node info
+    address_manager.id_count = 0
+    length = len(data.getvalue())
+    while data.tell() < length:
+        # breakpoint()
+        info = ExtendedPeerInfo.parse(data)
+        # check if we're a new node
+        if address_manager.id_count < address_manager.new_count:
+            address_manager.map_addr[info.peer_info.host] = address_manager.id_count
+            address_manager.map_info[address_manager.id_count] = info
+            info.random_pos = len(address_manager.random_pos)
+            address_manager.random_pos.append(address_manager.id_count)
+            address_manager.id_count += 1
+        else:
+            # we're a tried node
+            tried_bucket = info.get_tried_bucket(address_manager.key)
+            tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
+            if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
+                info.random_pos = len(address_manager.random_pos)
+                info.is_tried = True
+                id_count = address_manager.id_count
+                address_manager.random_pos.append(id_count)
+                address_manager.map_info[id_count] = info
+                address_manager.map_addr[info.peer_info.host] = id_count
+                address_manager.tried_matrix[tried_bucket][tried_bucket_pos] = id_count
+                address_manager.id_count += 1
+                address_manager.tried_count += 1
+
+    # process
+    for node_id, bucket in new_table_nodes:
+        if node_id >= 0 and node_id < address_manager.new_count:
+            info = address_manager.map_info[node_id]
+            bucket_pos = info.get_bucket_position(address_manager.key, True, bucket)
+            if address_manager.new_matrix[bucket][bucket_pos] == -1 and info.ref_count < NEW_BUCKETS_PER_ADDRESS:
+                info.ref_count += 1
+                address_manager.new_matrix[bucket][bucket_pos] = node_id
+
+    # remove deads
+    address_manager.prune_dead_peers()
+
+    address_manager.load_used_table_positions()
+
+    return address_manager
+
+
 class AddressManagerStore:
     """
     Metadata table:
@@ -66,109 +162,13 @@ class AddressManagerStore:
                 try:
                     # try using the new method
                     async with aiofiles.open(peers_file_path, "rb") as f:
-                        address_manager = cls.deserialize_bytes(io.BytesIO(await f.read()))
+                        address_manager = deserialize_bytes(io.BytesIO(await f.read()))
                 except Exception:
                     log.exception(f"Unable to create address_manager from {peers_file_path}")
 
         if address_manager is None:
             log.info("Creating new address_manager")
             address_manager = AddressManager()
-
-        return address_manager
-
-    @classmethod
-    def serialize_bytes(cls, address_manager: AddressManager) -> bytes:
-        out = io.BytesIO()
-        nodes = io.BytesIO()
-        trieds = io.BytesIO()
-        new_table = io.BytesIO()
-        unique_ids: dict[int, int] = {}
-        count_ids: int = 0
-
-        for node_id, info in address_manager.map_info.items():
-            unique_ids[node_id] = count_ids
-            if info.ref_count > 0:
-                assert count_ids != address_manager.new_count
-                info.stream(nodes)
-                count_ids += 1
-            if info.is_tried:
-                info.stream(nodes)
-
-        out.write(address_manager.key.to_bytes(32, byteorder="big"))
-        uint64(count_ids).stream(out)
-
-        count = 0
-        for bucket in range(NEW_BUCKET_COUNT):
-            for i in range(BUCKET_SIZE):
-                if address_manager.new_matrix[bucket][i] != -1:
-                    count += 1
-                    uint64(unique_ids[address_manager.new_matrix[bucket][i]]).stream(new_table)
-                    uint64(bucket).stream(new_table)
-
-        # give ourselves a clue how long the new_table is
-        uint32(count).stream(out)
-        out.write(new_table.getvalue())
-
-        out.write(nodes.getvalue())
-        out.write(trieds.getvalue())
-        return out.getvalue()
-
-    @classmethod
-    def deserialize_bytes(cls, data: io.BytesIO) -> AddressManager:
-        address_manager = AddressManager()
-
-        address_manager.key = int.from_bytes(data.read(32), byteorder="big")
-
-        address_manager.new_count = uint64.parse(data)
-        # deserialize new_table
-        new_table_count = uint32.parse(data)
-        new_table_nodes: list[tuple[uint64, uint64]] = []
-        for i in range(0, new_table_count):
-            node_id = uint64.parse(data)
-            bucket = uint64.parse(data)
-            new_table_nodes.append((node_id, bucket))
-
-        # deserialize node info
-        address_manager.id_count = 0
-        length = len(data.getvalue())
-        while data.tell() < length:
-            # breakpoint()
-            info = ExtendedPeerInfo.parse(data)
-            # check if we're a new node
-            if address_manager.id_count < address_manager.new_count:
-                address_manager.map_addr[info.peer_info.host] = address_manager.id_count
-                address_manager.map_info[address_manager.id_count] = info
-                info.random_pos = len(address_manager.random_pos)
-                address_manager.random_pos.append(address_manager.id_count)
-                address_manager.id_count += 1
-            else:
-                # we're a tried node
-                tried_bucket = info.get_tried_bucket(address_manager.key)
-                tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
-                if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
-                    info.random_pos = len(address_manager.random_pos)
-                    info.is_tried = True
-                    id_count = address_manager.id_count
-                    address_manager.random_pos.append(id_count)
-                    address_manager.map_info[id_count] = info
-                    address_manager.map_addr[info.peer_info.host] = id_count
-                    address_manager.tried_matrix[tried_bucket][tried_bucket_pos] = id_count
-                    address_manager.id_count += 1
-                    address_manager.tried_count += 1
-
-        # process
-        for node_id, bucket in new_table_nodes:
-            if node_id >= 0 and node_id < address_manager.new_count:
-                info = address_manager.map_info[node_id]
-                bucket_pos = info.get_bucket_position(address_manager.key, True, bucket)
-                if address_manager.new_matrix[bucket][bucket_pos] == -1 and info.ref_count < NEW_BUCKETS_PER_ADDRESS:
-                    info.ref_count += 1
-                    address_manager.new_matrix[bucket][bucket_pos] = node_id
-
-        # remove deads
-        address_manager.prune_dead_peers()
-
-        address_manager.load_used_table_positions()
 
         return address_manager
 

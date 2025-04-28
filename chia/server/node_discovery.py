@@ -20,7 +20,7 @@ from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
-from chia.server.address_manager_store import AddressManagerStore
+from chia.server.address_manager_store import AddressManagerStore, serialize_bytes
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -415,7 +415,7 @@ class FullNodeDiscovery:
             serialize_interval = random.randint(15 * 60, 30 * 60)
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
-                serialised_bytes = AddressManagerStore.serialize_bytes(self.address_manager)
+                serialised_bytes = serialize_bytes(self.address_manager)
             await write_file_async(self.peers_file_path, serialised_bytes, file_mode=0o644)
 
     async def _periodically_cleanup(self) -> None:

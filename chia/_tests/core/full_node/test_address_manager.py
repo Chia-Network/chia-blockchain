@@ -15,7 +15,7 @@ from chia.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
 )
-from chia.server.address_manager_store import AddressManagerStore, PeerDataSerialization
+from chia.server.address_manager_store import AddressManagerStore, PeerDataSerialization, serialize_bytes
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.files import write_file_async
 
@@ -572,7 +572,7 @@ class TestPeerManager:
         if peers_dat_filename.exists():
             peers_dat_filename.unlink()
         # Write out the serialized peer data
-        serialised_bytes = AddressManagerStore.serialize_bytes(addrman)
+        serialised_bytes = serialize_bytes(addrman)
         await write_file_async(peers_dat_filename, serialised_bytes, file_mode=0o644)
         # Read in the serialized peer data
         addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
@@ -754,7 +754,7 @@ class TestPeerManager:
             peers_dat_filename.unlink()
 
         # Create the new serialization (this would happen automatically through scheduled task)
-        serialised_bytes = AddressManagerStore.serialize_bytes(addrman)
+        serialised_bytes = serialize_bytes(addrman)
         await write_file_async(peers_dat_filename, serialised_bytes, file_mode=0o644)
         # Load and check the new serialization
         addrman3 = await AddressManagerStore.create_address_manager(peers_dat_filename)
