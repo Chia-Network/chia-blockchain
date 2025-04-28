@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Collection, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -18,6 +18,7 @@ import aiosqlite
 import chia_rs.datalayer
 import zstd
 from chia_rs.datalayer import (
+    DeltaReader,
     KeyAlreadyPresentError,
     KeyId,
     MerkleBlob,
@@ -195,34 +196,33 @@ class DataStore:
         root_hash: Optional[bytes32],
         filename: Path,
     ) -> None:
-        internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+        if root_hash is None:
+            merkle_blob = MerkleBlob(b"")
+        else:
+            internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
 
-        missing_hashes: list[bytes32] = []
+            delta_reader = DeltaReader(internal_nodes=internal_nodes, leaf_nodes=terminal_nodes)
+            root = await self.get_tree_root(store_id=store_id)
+            if root.node_hash is not None:
+                delta_reader.collect_from_merkle_blob(
+                    self.get_merkle_path(store_id=store_id, root_hash=root.node_hash), indexes=[TreeIndex(0)]
+                )
+            missing_hashes = delta_reader.get_missing_hashes()
 
-        for _, (left, right) in internal_nodes.items():
-            for node_hash in (left, right):
-                if node_hash not in internal_nodes and node_hash not in terminal_nodes:
-                    missing_hashes.append(node_hash)
+            if len(missing_hashes) > 0:
+                # TODO: consider adding transactions around this code
+                merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
+                    missing_hashes, root, store_id
+                )
 
-        # TODO: consider adding transactions around this code
-        root = await self.get_tree_root(store_id=store_id)
-        latest_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash, read_only=True)
-        known_hashes: dict[bytes32, TreeIndex] = {}
-        if not latest_blob.empty():
-            nodes = latest_blob.get_nodes_with_indexes()
-            known_hashes = {node.hash: index for index, node in nodes}
+                # TODO: consider parallel collection
+                for old_root_hash, indexes in merkle_blob_queries.items():
+                    delta_reader.collect_from_merkle_blob(
+                        self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes=indexes
+                    )
 
-        merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
-            known_hashes, missing_hashes, root, store_id
-        )
+            merkle_blob, _ = delta_reader.create_merkle_blob(root_hash, set())
 
-        more_internal_nodes, more_terminal_nodes = await self.process_merkle_blob_queries(
-            store_id=store_id, queries=merkle_blob_queries
-        )
-        internal_nodes.update(more_internal_nodes)
-        terminal_nodes.update(more_terminal_nodes)
-
-        merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
 
@@ -250,22 +250,11 @@ class DataStore:
 
     async def build_merkle_blob_queries_for_missing_hashes(
         self,
-        known_hashes: Mapping[bytes32, TreeIndex],
-        missing_hashes: Sequence[bytes32],
+        missing_hashes: Collection[bytes32],
         root: Root,
         store_id: bytes32,
     ) -> defaultdict[bytes32, list[TreeIndex]]:
         queries = defaultdict[bytes32, list[TreeIndex]](list)
-
-        new_missing_hashes: list[bytes32] = []
-        for hash in missing_hashes:
-            if hash in known_hashes:
-                assert root.node_hash is not None, "if root.node_hash were None then known_hashes would be empty"
-                queries[root.node_hash].append(known_hashes[hash])
-            else:
-                new_missing_hashes.append(hash)
-
-        missing_hashes = new_missing_hashes
 
         if missing_hashes:
             async with self.db_wrapper.reader() as reader:
