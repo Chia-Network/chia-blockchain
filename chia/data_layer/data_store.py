@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Collection, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -211,7 +211,9 @@ class DataStore:
 
             if len(missing_hashes) > 0:
                 # TODO: consider adding transactions around this code
-                merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes({}, (), root, store_id)
+                merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
+                    missing_hashes, root, store_id
+                )
 
                 # TODO: consider parallel collection
                 for old_root_hash, indexes in merkle_blob_queries.items():
@@ -248,22 +250,11 @@ class DataStore:
 
     async def build_merkle_blob_queries_for_missing_hashes(
         self,
-        known_hashes: Mapping[bytes32, TreeIndex],
-        missing_hashes: Sequence[bytes32],
+        missing_hashes: Collection[bytes32],
         root: Root,
         store_id: bytes32,
     ) -> defaultdict[bytes32, list[TreeIndex]]:
         queries = defaultdict[bytes32, list[TreeIndex]](list)
-
-        new_missing_hashes: list[bytes32] = []
-        for hash in missing_hashes:
-            if hash in known_hashes:
-                assert root.node_hash is not None, "if root.node_hash were None then known_hashes would be empty"
-                queries[root.node_hash].append(known_hashes[hash])
-            else:
-                new_missing_hashes.append(hash)
-
-        missing_hashes = new_missing_hashes
 
         if missing_hashes:
             async with self.db_wrapper.reader() as reader:
