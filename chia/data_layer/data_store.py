@@ -6,7 +6,6 @@ import itertools
 import logging
 import shutil
 import sqlite3
-import time
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable, Collection, Mapping, Sequence
 from contextlib import asynccontextmanager
@@ -184,11 +183,6 @@ class DataStore:
                     CREATE INDEX IF NOT EXISTS nodes_generation_index ON nodes(generation)
                     """
                 )
-                # await writer.execute(
-                #     """
-                #     CREATE INDEX IF NOT EXISTS nodes_generation_store_id_index ON nodes(generation, store_id)
-                #     """
-                # )
 
             yield self
 
@@ -202,17 +196,9 @@ class DataStore:
         store_id: bytes32,
         root_hash: Optional[bytes32],
         filename: Path,
-        existing_generation: int,
     ) -> None:
-        now = time.monotonic()
-        ref_time = now
-
         internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
         maybe_new_hashes = {*internal_nodes.keys(), *terminal_nodes.keys()}
-
-        now = time.monotonic()
-        delta_read_time = now - ref_time
-        ref_time = now
 
         delta_reader = DeltaReader(internal_nodes=internal_nodes, leaf_nodes=terminal_nodes)
         root = await self.get_tree_root(store_id=store_id)
@@ -220,46 +206,18 @@ class DataStore:
             delta_reader.collect_from_merkle_blob(self.get_blob_path(root.node_hash).as_posix(), indexes=[TreeIndex(0)])
         missing_hashes = delta_reader.get_missing_hashes()
 
-        now = time.monotonic()
-        latest_blob_time = now - ref_time
-        ref_time = now
-
-        # missing_hashes: list[bytes32] = []
-
-        # for _, (left, right) in internal_nodes.items():
-        #     for node_hash in (left, right):
-        #         if node_hash not in internal_nodes and node_hash not in terminal_nodes:
-        #             missing_hashes.append(node_hash)
-
         merkle_blob_queries: dict[bytes32, tuple[int, list[TreeIndex]]] = {}
-        build_queries_time = 0
         if len(missing_hashes) > 0:
             # TODO: consider adding transactions around this code
-            # root = await self.get_tree_root(store_id=store_id)
-            # latest_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash, read_only=True)
-            # known_hashes: dict[bytes32, TreeIndex] = {}
-            # if not latest_blob.empty():
-            #     nodes = latest_blob.get_nodes_with_indexes()
-            #     known_hashes = {node.hash: index for index, node in nodes}
             known_hashes = "n/a"
             merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
                 known_hashes, root.generation, missing_hashes, root, store_id
             )
-            now = time.monotonic()
-            build_queries_time = now - ref_time
-        ref_time = now
 
         for old_root_hash, (generation, indexes) in merkle_blob_queries.items():
             delta_reader.collect_from_merkle_blob(self.get_blob_path(old_root_hash).as_posix(), indexes=indexes)
-        now = time.monotonic()
-        process_queries_time = now - ref_time
-        ref_time = now
 
         merkle_blob, hashes_and_indexes = delta_reader.create_merkle_blob(root_hash, maybe_new_hashes)
-
-        now = time.monotonic()
-        create_blob_time = now - ref_time
-        ref_time = now
 
         async with self.db_wrapper.writer() as writer:
             await writer.executemany(
@@ -267,97 +225,26 @@ class DataStore:
                 INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (
-                    (store_id, hash, root_hash, root.generation + 1, index.raw)
-                    for hash, index in hashes_and_indexes
-                    # if hash not in existing_hashes
-                ),
+                ((store_id, hash, root_hash, root.generation + 1, index.raw) for hash, index in hashes_and_indexes),
             )
-        # merkle_blob = MerkleBlob.from_many(
-        #     root_hash,
-        #     {
-        #         self.get_blob_path(hash).as_posix(): indexes
-        #         for hash, (_generation, indexes) in merkle_blob_queries.items()
-        #     },
-        #     internal_nodes,
-        #     terminal_nodes,
-        # )
-        # more_internal_nodes, more_terminal_nodes = await self.process_merkle_blob_queries(store_id=store_id, queries=merkle_blob_queries
-        # , existing_generation)
-        # internal_nodes.update(more_internal_nodes)
-        # terminal_nodes.update(more_terminal_nodes)
-        now = time.monotonic()
-        add_nodes_time = now - ref_time
-        ref_time = now
 
-        now = time.monotonic()
-        ref_time = now
-        # merkle_blob = MerkleBlob.from_node_list(internal_nodes, terminal_nodes, root_hash)
-
-        print(
-            f"getting missing hashes took: {delta_read_time + latest_blob_time + build_queries_time + process_queries_time + create_blob_time + add_nodes_time:.1f} <- {delta_read_time:.1f} + {latest_blob_time:.1f} + {build_queries_time:.1f} + {process_queries_time:.1f} + {create_blob_time:.1f} + {add_nodes_time:.1f}"
-        )
-        # if len(missing_hashes) > 0:
-        #     print(f"getting missing hashes took: {delta_read_time + latest_blob_time + build_queries_time + process_queries_time:.1f} <- {delta_read_time:.1f} + {latest_blob_time:.1f} + {build_queries_time:.1f} + {process_queries_time:.1f}")
-        # else:
-        #     print("getting missing hashes took: n/a")
-
-        now = time.monotonic()
-        from_node_list_time = now - ref_time
-        ref_time = now
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
-        print(f"   just inserted generation: {root.generation} for {store_id.hex()} with hash {root.node_hash.hex()}")
-
-        now = time.monotonic()
-        insert_root_time = now - ref_time
-        ref_time = now
-        print(
-            f"     building and inserting: {from_node_list_time + insert_root_time:.1f} <- {from_node_list_time:.1f} + {insert_root_time:.1f}"
-        )
 
     async def process_merkle_blob_queries(
         self,
         store_id: bytes32,
-        queries: Mapping[bytes32, tuple[int, list[TreeIndex]]],
-        existing_generation: int,
+        queries: Mapping[bytes32, list[TreeIndex]],
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
 
         for root_hash_blob, (generation, indexes) in queries.items():
-            now = time.monotonic()
-            ref_time = now
             # TODO: load only the reference index
             merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root_hash_blob, read_only=True)
-            now = time.monotonic()
-            get_blob_time = now - ref_time
-            ref_time = now
             internal, leafs = await anyio.to_thread.run_sync(merkle_blob.get_internal_terminal, indexes)
-            now = time.monotonic()
-            rust_time = now - ref_time
-            ref_time = now
             internal_nodes.update(internal)
             terminal_nodes.update(leafs)
-            now = time.monotonic()
-            update_time = now - ref_time
-            ref_time = now
-            print(
-                f"    processing a query took: {get_blob_time + rust_time + update_time:.1f} for gen {generation} ({existing_generation}) <- {get_blob_time:.1f} + {rust_time:.1f} + {update_time:.1f}"
-            )
-            # for index in indexes:
-            #     nodes = merkle_blob.get_nodes_with_indexes(index=index)
-            #     # TODO: consider implementing all or in part in rust for potential speedup
-            #     index_to_hash = {index: node.hash for index, node in nodes}
-            #     for _, node in nodes:
-            #         if isinstance(node, chia_rs.datalayer.LeafNode):
-            #             if node.hash in terminal_nodes:
-            #                 print(f" =========   auughhghghhhhh already there (leaf): {node.hash}")
-            #             terminal_nodes[node.hash] = (node.key, node.value)
-            #         elif isinstance(node, chia_rs.datalayer.InternalNode):
-            #             if node.hash in internal_nodes:
-            #                 print(f" =========   auughhghghhhhh already there (internal): {node.hash}")
-            #             internal_nodes[node.hash] = (index_to_hash[node.left], index_to_hash[node.right])
 
         return internal_nodes, terminal_nodes
 
@@ -371,20 +258,7 @@ class DataStore:
     ) -> defaultdict[bytes32, tuple[int, list[TreeIndex]]]:
         queries = {}  # defaultdict[bytes32, tuple[int, list[TreeIndex]]](list)
 
-        # new_missing_hashes: list[bytes32] = []
-        # queries[root.node_hash] = (known_generation, [])
-        # for hash in missing_hashes:
-        #     if hash in known_hashes:
-        #         assert root.node_hash is not None, "if root.node_hash were None then known_hashes would be empty"
-        #         queries[root.node_hash][1].append(known_hashes[hash])
-        #     else:
-        #         new_missing_hashes.append(hash)
-        #
-        # missing_hashes = new_missing_hashes
-
         if missing_hashes:
-            # clock = time.monotonic
-            # this_start = clock()
             async with self.db_wrapper.reader() as reader:
                 cursor = await reader.execute(
                     # TODO: the INDEXED BY seems like it shouldn't be needed, figure out why it is
@@ -398,15 +272,8 @@ class DataStore:
                     current_generation = 0
                 else:
                     current_generation = row[0]
-            # this_end = clock()
-            # this_delta = this_end - this_start
-            # print(f"get max generation took {this_delta:.2f}s")
 
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
-
-        adding_hashes = 0
-        load_time = 0
-        insert_time = 0
 
         while missing_hashes:
             found_hashes: set[bytes32] = set()
@@ -419,10 +286,6 @@ class DataStore:
                         WHERE store_id = ? AND hash IN ({placeholders})
                         LIMIT {len(batch.entries)}
                     """
-                    q = query.replace("?", f"x'{store_id.hex()}'", 1)
-                    for entry in batch.entries:
-                        q = q.replace("?", f"x'{entry.hex()}'", 1)
-                    log.error(f"query: {q}")
 
                     async with reader.execute(query, (store_id, *batch.entries)) as cursor:
                         rows = await cursor.fetchall()
@@ -443,14 +306,9 @@ class DataStore:
                 else:
                     raise Exception("Invalid delta file, cannot find all the required hashes")
 
-                ref_time = time.monotonic()
-                this_load_time, this_insert_time = await self.add_node_hashes(store_id, current_generation)
-                load_time += this_load_time
-                insert_time += this_insert_time
-                adding_hashes += time.monotonic() - ref_time
+                await self.add_node_hashes(store_id, current_generation)
                 log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
-        print(f"              adding hashes: {adding_hashes:.1f} <- {load_time:.1f} + {insert_time:.1f}")
         return queries
 
     async def read_from_file(
@@ -458,9 +316,6 @@ class DataStore:
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
-
-        add_time = 0
-        start = time.monotonic()
 
         with open(filename, "rb") as reader:
             async with self.db_wrapper.writer() as writer:
@@ -492,20 +347,15 @@ class DataStore:
                         node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
                         internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
                     else:
-                        ref_time = time.monotonic()
                         kid, vid = await self.add_key_value(
                             serialized_node.value1,
                             serialized_node.value2,
                             store_id,
                             writer=writer,
                         )
-                        add_time += time.monotonic() - ref_time
                         node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
                         terminal_nodes[node_hash] = (kid, vid)
 
-        duration = time.monotonic() - start
-        not_add_time = duration - add_time
-        print(f"        read from file took: {duration:.1f} <- {not_add_time:.1f} + {add_time:.1f}")
         return internal_nodes, terminal_nodes
 
     async def migrate_db(self, server_files_location: Path) -> None:
@@ -826,15 +676,10 @@ class DataStore:
         root = await self.get_tree_root(store_id=store_id, generation=generation)
         if root.node_hash is None:
             return
-        ref_time = time.monotonic()
         merkle_blob = await self.get_merkle_blob(
             store_id=store_id, root_hash=root.node_hash, read_only=True, update_cache=False
         )
         hash_to_index = merkle_blob.get_hashes_indexes()
-        # existing_hashes = await self.get_existing_hashes(hash_to_index.keys(), store_id)
-        now = time.monotonic()
-        load_time = now - ref_time
-        ref_time = time.monotonic()
 
         async with self.db_wrapper.writer() as writer:
             await writer.executemany(
@@ -848,9 +693,6 @@ class DataStore:
                     # if hash not in existing_hashes
                 ),
             )
-        now = time.monotonic()
-        insert_time = now - ref_time
-        return load_time, insert_time
 
     async def _insert_root(
         self,

@@ -225,7 +225,6 @@ async def insert_from_delta_file(
                     store_id,
                     None if root_hash == bytes32.zeros else root_hash,
                     target_filename_path,
-                    existing_generation,
                 )
                 log.info(
                     f"Successfully inserted hash {root_hash} from delta file. "
