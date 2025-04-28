@@ -62,7 +62,6 @@ class ExtendedPeerInfo:
         self.last_count_attempt: int = 0
 
     def to_string(self) -> str:
-        assert self.src is not None
         out = (
             self.peer_info.host
             + " "
