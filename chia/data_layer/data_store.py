@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Collection, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Collection
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
-import anyio
 import chia_rs.datalayer
 import zstd
 from chia_rs.datalayer import (
@@ -156,7 +155,7 @@ class DataStore:
                     """
                     CREATE TABLE IF NOT EXISTS ids(
                         kv_id INTEGER PRIMARY KEY,
-                        hash BLOB NOT NULL,
+                        blob BLOB,
                         store_id BLOB NOT NULL CHECK(length(store_id) == 32)
                     )
                     """
@@ -175,7 +174,7 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE UNIQUE INDEX IF NOT EXISTS ids_blob_index ON ids(hash, store_id)
+                    CREATE UNIQUE INDEX IF NOT EXISTS ids_blob_index ON ids(blob, store_id)
                     """
                 )
                 await writer.execute(
@@ -197,66 +196,53 @@ class DataStore:
         root_hash: Optional[bytes32],
         filename: Path,
     ) -> None:
-        internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
-        maybe_new_hashes = {*internal_nodes.keys(), *terminal_nodes.keys()}
+        if root_hash is None:
+            merkle_blob = MerkleBlob(b"")
+        else:
+            internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+            maybe_new_hashes = {*internal_nodes.keys(), *terminal_nodes.keys()}
 
-        delta_reader = DeltaReader(internal_nodes=internal_nodes, leaf_nodes=terminal_nodes)
-        root = await self.get_tree_root(store_id=store_id)
-        if root.node_hash is not None:
-            delta_reader.collect_from_merkle_blob(self.get_blob_path(root.node_hash).as_posix(), indexes=[TreeIndex(0)])
-        missing_hashes = delta_reader.get_missing_hashes()
+            delta_reader = DeltaReader(internal_nodes=internal_nodes, leaf_nodes=terminal_nodes)
+            root = await self.get_tree_root(store_id=store_id)
+            if root.node_hash is not None:
+                delta_reader.collect_from_merkle_blob(
+                    self.get_merkle_path(store_id=store_id, root_hash=root.node_hash), indexes=[TreeIndex(0)]
+                )
+            missing_hashes = delta_reader.get_missing_hashes()
 
-        merkle_blob_queries: dict[bytes32, tuple[int, list[TreeIndex]]] = {}
-        if len(missing_hashes) > 0:
-            # TODO: consider adding transactions around this code
-            known_hashes = "n/a"
-            merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
-                known_hashes, root.generation, missing_hashes, root, store_id
-            )
+            if len(missing_hashes) > 0:
+                # TODO: consider adding transactions around this code
+                merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
+                    missing_hashes, root, store_id
+                )
 
-        for old_root_hash, (generation, indexes) in merkle_blob_queries.items():
-            delta_reader.collect_from_merkle_blob(self.get_blob_path(old_root_hash).as_posix(), indexes=indexes)
+                # TODO: consider parallel collection
+                for old_root_hash, indexes in merkle_blob_queries.items():
+                    delta_reader.collect_from_merkle_blob(
+                        self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes=indexes
+                    )
 
-        merkle_blob, hashes_and_indexes = delta_reader.create_merkle_blob(root_hash, maybe_new_hashes)
+            merkle_blob, hashes_and_indexes = delta_reader.create_merkle_blob(root_hash, maybe_new_hashes)
 
-        async with self.db_wrapper.writer() as writer:
-            await writer.executemany(
-                """
-                INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                ((store_id, hash, root_hash, root.generation + 1, index.raw) for hash, index in hashes_and_indexes),
-            )
+            async with self.db_wrapper.writer() as writer:
+                await writer.executemany(
+                    """
+                    INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    ((store_id, hash, root_hash, root.generation + 1, index.raw) for hash, index in hashes_and_indexes),
+                )
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
 
-    async def process_merkle_blob_queries(
-        self,
-        store_id: bytes32,
-        queries: Mapping[bytes32, list[TreeIndex]],
-    ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
-        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
-        terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
-
-        for root_hash_blob, (generation, indexes) in queries.items():
-            # TODO: load only the reference index
-            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root_hash_blob, read_only=True)
-            internal, leafs = await anyio.to_thread.run_sync(merkle_blob.get_internal_terminal, indexes)
-            internal_nodes.update(internal)
-            terminal_nodes.update(leafs)
-
-        return internal_nodes, terminal_nodes
-
     async def build_merkle_blob_queries_for_missing_hashes(
         self,
-        known_hashes: Mapping[bytes32, TreeIndex],
-        known_generation: int,
-        missing_hashes: Sequence[bytes32],
+        missing_hashes: Collection[bytes32],
         root: Root,
         store_id: bytes32,
-    ) -> defaultdict[bytes32, tuple[int, list[TreeIndex]]]:
-        queries = {}  # defaultdict[bytes32, tuple[int, list[TreeIndex]]](list)
+    ) -> defaultdict[bytes32, list[TreeIndex]]:
+        queries = defaultdict[bytes32, list[TreeIndex]](list)
 
         if missing_hashes:
             async with self.db_wrapper.reader() as reader:
@@ -295,8 +281,8 @@ class DataStore:
                             index = TreeIndex(row["idx"])
                             if node_hash in found_hashes:
                                 raise Exception("Internal error: duplicate node_hash found in nodes table")
-                            queries.setdefault(root_hash_blob, (row["generation"], []))
-                            queries[root_hash_blob][1].append(index)
+                            queries.setdefault(root_hash_blob, [])
+                            queries[root_hash_blob].append(index)
                             found_hashes.add(node_hash)
 
             missing_hashes = [hash for hash in missing_hashes if hash not in found_hashes]
