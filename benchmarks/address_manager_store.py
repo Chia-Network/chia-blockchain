@@ -8,7 +8,6 @@ import time
 from datetime import datetime
 from ipaddress import IPv4Address
 from pathlib import Path
-from typing import Optional
 
 import aiofiles
 from chia_rs.sized_ints import uint16, uint64
