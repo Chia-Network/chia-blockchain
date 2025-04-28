@@ -234,7 +234,7 @@ class DataStore:
                 )
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
-        root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
+        await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
 
     async def build_merkle_blob_queries_for_missing_hashes(
         self,
@@ -267,7 +267,7 @@ class DataStore:
                 for batch in to_batches(missing_hashes, batch_size):
                     placeholders = ",".join(["?"] * len(batch.entries))
                     query = f"""
-                        SELECT generation, hash, root_hash, idx
+                        SELECT hash, root_hash, idx
                         FROM nodes
                         WHERE store_id = ? AND hash IN ({placeholders})
                         LIMIT {len(batch.entries)}
@@ -281,7 +281,6 @@ class DataStore:
                             index = TreeIndex(row["idx"])
                             if node_hash in found_hashes:
                                 raise Exception("Internal error: duplicate node_hash found in nodes table")
-                            queries.setdefault(root_hash_blob, [])
                             queries[root_hash_blob].append(index)
                             found_hashes.add(node_hash)
 
@@ -520,7 +519,7 @@ class DataStore:
 
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT kv_id FROM ids WHERE hash = ? AND store_id = ?",
+                "SELECT kv_id FROM ids WHERE blob = ? AND store_id = ?",
                 (
                     table_blob,
                     store_id,
@@ -536,7 +535,7 @@ class DataStore:
     async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT hash FROM ids WHERE kv_id = ? AND store_id = ?",
+                "SELECT blob FROM ids WHERE kv_id = ? AND store_id = ?",
                 (
                     kv_id,
                     store_id,
@@ -572,7 +571,7 @@ class DataStore:
             table_blob = blob
         try:
             row = await writer.execute_insert(
-                "INSERT INTO ids (hash, store_id) VALUES (?, ?)",
+                "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
                 (
                     table_blob,
                     store_id,
@@ -662,6 +661,7 @@ class DataStore:
         root = await self.get_tree_root(store_id=store_id, generation=generation)
         if root.node_hash is None:
             return
+
         merkle_blob = await self.get_merkle_blob(
             store_id=store_id, root_hash=root.node_hash, read_only=True, update_cache=False
         )
@@ -673,11 +673,7 @@ class DataStore:
                 INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (
-                    (store_id, hash, root.node_hash, root.generation, index.raw)
-                    for hash, index in hash_to_index.items()
-                    # if hash not in existing_hashes
-                ),
+                ((store_id, hash, root.node_hash, root.generation, index.raw) for hash, index in hash_to_index.items()),
             )
 
     async def _insert_root(
