@@ -273,6 +273,11 @@ class AddressManager:
                 if self.tried_matrix[bucket][pos] != -1:
                     self.used_tried_matrix_positions.add((bucket, pos))
 
+    def prune_dead_peers(self) -> None:
+        for id, info in list(self.map_info.items()):
+            if not info.is_tried and info.ref_count == 0:
+                self.delete_new_entry_(id)
+
     def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count

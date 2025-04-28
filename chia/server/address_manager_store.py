@@ -167,9 +167,7 @@ class AddressManagerStore:
                     address_manager.new_matrix[bucket][bucket_pos] = node_id
 
         # remove deads
-        for id, info in list(address_manager.map_info.items()):
-            if not info.is_tried and info.ref_count == 0:
-                address_manager.delete_new_entry_(id)
+        address_manager.prune_dead_peers()
 
         address_manager.load_used_table_positions()
 
@@ -237,9 +235,7 @@ class AddressManagerStore:
                         info.ref_count += 1
                         address_manager.new_matrix[bucket][bucket_pos] = node_id
 
-            for node_id, info in list(address_manager.map_info.items()):
-                if not info.is_tried and info.ref_count == 0:
-                    address_manager.delete_new_entry_(node_id)
+            address_manager.prune_dead_peers()
 
             address_manager.load_used_table_positions()
 
