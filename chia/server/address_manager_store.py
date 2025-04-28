@@ -66,7 +66,7 @@ class AddressManagerStore:
                 try:
                     # try using the new method
                     async with aiofiles.open(peers_file_path, "rb") as f:
-                        address_manager = await cls.deserialize_bytes(io.BytesIO(await f.read()))
+                        address_manager = cls.deserialize_bytes(io.BytesIO(await f.read()))
                 except Exception:
                     log.exception(f"Unable to create address_manager from {peers_file_path}")
 
@@ -114,7 +114,7 @@ class AddressManagerStore:
         return out.getvalue()
 
     @classmethod
-    async def deserialize_bytes(cls, data: io.BytesIO) -> AddressManager:
+    def deserialize_bytes(cls, data: io.BytesIO) -> AddressManager:
         address_manager = AddressManager()
 
         address_manager.key = int.from_bytes(data.read(32), byteorder="big")

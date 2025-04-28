@@ -19,6 +19,7 @@ from chia.server.address_manager import (
 )
 from chia.server.address_manager_store import AddressManagerStore
 from chia.types.peer_info import TimestampedPeerInfo
+from chia.util.files import write_file_async
 
 
 def generate_random_ip(rand: random.Random) -> str:
@@ -101,7 +102,9 @@ async def benchmark_serialize_deserialize(iterations: int = 5) -> None:
 
             # Benchmark serialize
             start_serialize = time.perf_counter()
-            await AddressManagerStore.serialize_bytes(address_manager, peers_file_path)
+
+            serialised_bytes = AddressManagerStore.serialize_bytes(address_manager)
+            await write_file_async(peers_file_path, serialised_bytes.getvalue(), file_mode=0o644)
             end_serialize = time.perf_counter()
             serialize_duration = end_serialize - start_serialize
             total_serialize_time += serialize_duration
@@ -111,7 +114,7 @@ async def benchmark_serialize_deserialize(iterations: int = 5) -> None:
             async with aiofiles.open(peers_file_path, "rb") as f:
                 data = io.BytesIO(await f.read())
             start_deserialize = time.perf_counter()
-            _ = await AddressManagerStore.deserialize_bytes(data)
+            _ = AddressManagerStore.deserialize_bytes(data)
             end_deserialize = time.perf_counter()
             deserialize_duration = end_deserialize - start_deserialize
             total_deserialize_time += deserialize_duration
