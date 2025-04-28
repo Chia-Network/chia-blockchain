@@ -3671,7 +3671,10 @@ class WalletRpcApi:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
             if record.type == TransactionType.COINBASE_REWARD.value:
-                if not include_pool_rewards and self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET:
+                if (
+                    not include_pool_rewards
+                    and self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET
+                ):
                     # Don't add pool rewards for pool wallets unless explicitly requested
                     continue
                 pool_reward_amount += record.amount
