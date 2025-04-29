@@ -215,11 +215,11 @@ class DataStore:
                     missing_hashes, root, store_id
                 )
 
-                # TODO: consider parallel collection
-                for old_root_hash, indexes in merkle_blob_queries.items():
-                    delta_reader.collect_from_merkle_blob(
-                        self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes=indexes
-                    )
+                jobs = [
+                    (self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes)
+                    for old_root_hash, indexes in merkle_blob_queries.items()
+                ]
+                delta_reader.collect_from_merkle_blobs(jobs)
 
             merkle_blob, _ = delta_reader.create_merkle_blob(root_hash, set())
 
