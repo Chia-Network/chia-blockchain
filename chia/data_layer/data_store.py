@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Collection, Mapping
+from collections.abc import AsyncIterator, Awaitable, Collection
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -225,28 +225,6 @@ class DataStore:
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
-
-    async def process_merkle_blob_queries(
-        self,
-        store_id: bytes32,
-        queries: Mapping[bytes32, list[TreeIndex]],
-    ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
-        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
-        terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
-
-        for root_hash_blob, indexes in queries.items():
-            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root_hash_blob, read_only=True)
-            for index in indexes:
-                nodes = merkle_blob.get_nodes_with_indexes(index=index)
-                # TODO: consider implementing all or in part in rust for potential speedup
-                index_to_hash = {index: node.hash for index, node in nodes}
-                for _, node in nodes:
-                    if isinstance(node, chia_rs.datalayer.LeafNode):
-                        terminal_nodes[node.hash] = (node.key, node.value)
-                    elif isinstance(node, chia_rs.datalayer.InternalNode):
-                        internal_nodes[node.hash] = (index_to_hash[node.left], index_to_hash[node.right])
-
-        return internal_nodes, terminal_nodes
 
     async def build_merkle_blob_queries_for_missing_hashes(
         self,
