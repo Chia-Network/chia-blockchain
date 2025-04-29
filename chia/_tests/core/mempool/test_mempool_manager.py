@@ -2981,7 +2981,7 @@ async def test_check_removals_with_block_creation(flags: int, old: bool) -> None
     assert bundle_add_info2.status == MempoolInclusionStatus.SUCCESS
     assert mempool_manager.peak is not None
     create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
-    new_block_gen = create_block(mempool_manager.peak.header_hash)
+    new_block_gen = create_block(mempool_manager.peak.header_hash, 10.0)
     assert new_block_gen is not None
     assert len(new_block_gen.additions) == 1
     assert set(new_block_gen.additions) == {
