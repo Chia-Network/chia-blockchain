@@ -13,6 +13,7 @@ import click
 import zstd
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    ENABLE_KECCAK,
     MEMPOOL_MODE,
     AugSchemeMPL,
     G1Element,
@@ -118,9 +119,9 @@ def main(
 
         ref_lookup_time = time() - start_time
 
-        flags: int
+        flags = ENABLE_KECCAK
         if mempool_mode:
-            flags = MEMPOOL_MODE
+            flags |= MEMPOOL_MODE
         else:
             flags = 0
 
