@@ -122,8 +122,6 @@ def main(
         flags = ENABLE_KECCAK
         if mempool_mode:
             flags |= MEMPOOL_MODE
-        else:
-            flags = 0
 
         call_f(block, hh, height, generator_blobs, ref_lookup_time, flags)
 
