@@ -54,7 +54,7 @@ def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants,
     else:
         run_block = run_block_generator
 
-    _, conds = run_block(
+    err, conds = run_block(
         bytes(generator.program),
         generator.generator_refs,
         constants.MAX_BLOCK_COST_CLVM,
@@ -63,6 +63,8 @@ def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants,
         None,
         constants,
     )
+    if conds is None:  # pragma: no cover
+        log.error(f"unexpected error while computing block cost: {err} height: {height} generator: {generator.program}")
     return uint64(0 if conds is None else conds.cost)
 
 
