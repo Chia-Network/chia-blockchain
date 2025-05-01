@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Collection
+from collections.abc import AsyncIterator, Awaitable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
+import anyio.to_thread
 import chia_rs.datalayer
 import zstd
 from chia_rs.datalayer import (
@@ -212,14 +213,14 @@ class DataStore:
             if len(missing_hashes) > 0:
                 # TODO: consider adding transactions around this code
                 merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
-                    missing_hashes, root, store_id
+                    missing_hashes, root, store_id, delta_reader
                 )
 
                 jobs = [
                     (self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes)
                     for old_root_hash, indexes in merkle_blob_queries.items()
                 ]
-                delta_reader.collect_from_merkle_blobs(jobs)
+                await anyio.to_thread.run_sync(delta_reader.collect_from_merkle_blobs, jobs)
 
             merkle_blob, _ = delta_reader.create_merkle_blob(root_hash, set())
 
@@ -228,12 +229,38 @@ class DataStore:
 
     async def build_merkle_blob_queries_for_missing_hashes(
         self,
-        missing_hashes: Collection[bytes32],
+        missing_hashes: set[bytes32],
         root: Root,
         store_id: bytes32,
+        delta_reader: DeltaReader,
     ) -> defaultdict[bytes32, list[TreeIndex]]:
         queries = defaultdict[bytes32, list[TreeIndex]](list)
 
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+
+        found_hashes: set[bytes32] = set()
+        async with self.db_wrapper.reader() as reader:
+            for batch in to_batches(missing_hashes, batch_size):
+                placeholders = ",".join(["?"] * len(batch.entries))
+                query = f"""
+                    SELECT hash, root_hash, idx
+                    FROM nodes
+                    WHERE store_id = ? AND hash IN ({placeholders})
+                    LIMIT {len(batch.entries)}
+                """
+
+                async with reader.execute(query, (store_id, *batch.entries)) as cursor:
+                    rows = await cursor.fetchall()
+                    for row in rows:
+                        node_hash = bytes32(row["hash"])
+                        root_hash_blob = bytes32(row["root_hash"])
+                        index = TreeIndex(row["idx"])
+                        if node_hash in found_hashes:
+                            raise Exception("Internal error: duplicate node_hash found in nodes table")
+                        queries[root_hash_blob].append(index)
+                        found_hashes.add(node_hash)
+
+        missing_hashes -= found_hashes
         if missing_hashes:
             async with self.db_wrapper.reader() as reader:
                 cursor = await reader.execute(
@@ -243,45 +270,56 @@ class DataStore:
                     "SELECT MAX(generation) FROM nodes INDEXED BY nodes_generation_index WHERE store_id = ?",
                     (store_id,),
                 )
-                row = await cursor.fetchone()
-                if row is None or row[0] is None:
+                generation_row = await cursor.fetchone()
+                if generation_row is None or generation_row[0] is None:
                     current_generation = 0
                 else:
-                    current_generation = row[0]
+                    current_generation = generation_row[0]
+            generations: Sequence[int] = [current_generation]
 
-        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
-
-        while missing_hashes:
-            found_hashes: set[bytes32] = set()
-            async with self.db_wrapper.reader() as reader:
-                for batch in to_batches(missing_hashes, batch_size):
-                    placeholders = ",".join(["?"] * len(batch.entries))
-                    query = f"""
-                        SELECT hash, root_hash, idx
-                        FROM nodes
-                        WHERE store_id = ? AND hash IN ({placeholders})
-                        LIMIT {len(batch.entries)}
-                    """
-
-                    async with reader.execute(query, (store_id, *batch.entries)) as cursor:
-                        rows = await cursor.fetchall()
-                        for row in rows:
-                            node_hash = bytes32(row["hash"])
-                            root_hash_blob = bytes32(row["root_hash"])
-                            index = TreeIndex(row["idx"])
-                            if node_hash in found_hashes:
-                                raise Exception("Internal error: duplicate node_hash found in nodes table")
-                            queries[root_hash_blob].append(index)
-                            found_hashes.add(node_hash)
-
-            missing_hashes = [hash for hash in missing_hashes if hash not in found_hashes]
-            if missing_hashes:
-                if current_generation < root.generation:
-                    current_generation += 1
-                else:
+            while missing_hashes:
+                if current_generation >= root.generation:
                     raise Exception("Invalid delta file, cannot find all the required hashes")
 
-                await self.add_node_hashes(store_id, current_generation)
+                current_generation = generations[-1] + 1
+
+                # TODO: at least shouldn't be hard coded
+                batch_size = 10
+                generations = range(
+                    current_generation,
+                    min(current_generation + batch_size, root.generation),
+                )
+                jobs: list[tuple[bytes32, Path]] = []
+                generations_by_root_hash: dict[bytes32, int] = {}
+                for generation in generations:
+                    generation_root = await self.get_tree_root(store_id=store_id, generation=generation)
+                    if generation_root.node_hash is None:
+                        # no need to process an empty generation
+                        continue
+                    path = self.get_merkle_path(store_id=store_id, root_hash=generation_root.node_hash)
+                    jobs.append((generation_root.node_hash, path))
+                    generations_by_root_hash[generation_root.node_hash] = generation
+
+                found = await anyio.to_thread.run_sync(
+                    delta_reader.collect_and_return_from_merkle_blobs,
+                    jobs,
+                )
+                async with self.db_wrapper.writer() as writer:
+                    await writer.executemany(
+                        """
+                        INSERT OR IGNORE INTO nodes(store_id, hash, root_hash, generation, idx)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (
+                            (store_id, hash, root_hash, generations_by_root_hash[root_hash], index.raw)
+                            for root_hash, map in found
+                            for hash, index in map.items()
+                        ),
+                    )
+
+                for root_hash, map in found:
+                    missing_hashes -= set(map.keys())
+
                 log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
         return queries
