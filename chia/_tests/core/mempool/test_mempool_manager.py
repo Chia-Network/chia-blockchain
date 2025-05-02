@@ -2599,7 +2599,7 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert spend.latest_singleton_coin == spend_c.coin.name()
 
 
-@pytest.mark.parametrize("flags", [ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF])
+@pytest.mark.parametrize("flags", [ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, ELIGIBLE_FOR_FF | ELIGIBLE_FOR_DEDUP])
 @pytest.mark.anyio
 async def test_check_removals_with_block_creation(flags: int) -> None:
     LAUNCHER_ID = bytes32([1] * 32)
@@ -2637,6 +2637,18 @@ async def test_check_removals_with_block_creation(flags: int) -> None:
     assert set(additions) == {Coin(singleton_spend.coin.name(), singleton_spend.coin.puzzle_hash, uint64(1))}
     assert len(removals) == 2
     assert set(removals) == {singleton_spend.coin, TEST_COIN}
+
+
+@pytest.mark.anyio
+async def test_dedup_not_canonical() -> None:
+    # this is 1, but with a non-canonical encoding
+    coin_spend = mk_coin_spend(TEST_COIN, solution="c00101")
+    coins = TestCoins(coins=[], lineage={})
+    mempool_manager = await setup_mempool(coins)
+    sb = SpendBundle([coin_spend], G2Element())
+    sb_conds = make_test_conds(spend_ids=[(TEST_COIN, ELIGIBLE_FOR_DEDUP)])
+    bundle_add_info = await mempool_manager.add_spend_bundle(sb, sb_conds, sb.name(), uint32(1))
+    assert bundle_add_info.status == MempoolInclusionStatus.FAILED
 
 
 def make_coin_record(coin: Coin, spent_block_index: int = 0) -> CoinRecord:

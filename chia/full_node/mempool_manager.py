@@ -200,8 +200,7 @@ def is_clvm_canonical(clvm_buffer: bytes) -> bool:
     encoded with the shortest representation. back-references are not allowed
     and will make this function return false
     """
-    if clvm_buffer == b"":
-        return True
+    assert clvm_buffer != b""
 
     offset = 0
     tokens_left = 1
@@ -625,8 +624,6 @@ class MempoolManager:
                 coin_id,
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
-            if eligibility_info.is_eligible_for_dedup:
-                assert is_clvm_canonical(bytes(coin_spend.solution))
 
             supports_dedup = eligibility_info.is_eligible_for_dedup and is_clvm_canonical(bytes(coin_spend.solution))
             mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
