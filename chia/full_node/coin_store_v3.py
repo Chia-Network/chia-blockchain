@@ -304,12 +304,13 @@ class CoinStore:
     def row_to_coin(self, row: sqlite3.Row) -> Coin:
         return Coin(bytes32(row[4]), bytes32(row[3]), uint64.from_bytes(row[5]))
 
-    def row_to_coin_state(self, row: sqlite3.Row) -> CoinState:
-        coin = self.row_to_coin(row)
-        spent_h = None
-        if row[1] != 0:
-            spent_h = row[1]
-        return CoinState(coin, spent_h, row[0])
+    def value_to_coin_state(self, blob: bytes) -> CoinState:
+        coin_record = CoinRecord.from_bytes(blob)
+        sbi = None if coin_record.spent_block_index == 0 else coin_record.spent_block_index
+        cbi = None if coin_record.confirmed_block_index == 0 else coin_record.confirmed_block_index
+
+        coin_state = CoinState(coin_record.coin, sbi, cbi)
+        return coin_state
 
     async def get_coin_states_by_puzzle_hashes(
         self,

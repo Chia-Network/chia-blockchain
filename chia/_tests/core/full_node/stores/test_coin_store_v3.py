@@ -62,13 +62,15 @@ def get_future_reward_coins(block: FullBlock) -> tuple[Coin, Coin]:
 
 
 @asynccontextmanager
-async def temp_rocks_db() -> AsyncIterator[DB]:
+async def temp_dbs(db_version: int = 2) -> AsyncIterator[tuple[DB, DBConnection]]:
     with TemporaryDirectory() as tmp_dir:
+        db_wrapper = DBConnection(db_version)
         rocks_db = DB(tmp_dir)
         try:
-            yield rocks_db
+            yield rocks_db, db_wrapper
         finally:
             del rocks_db
+            del db_wrapper
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -94,7 +96,8 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
 
     spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), wallet_a.get_new_puzzlehash(), coins_to_spend[0])
 
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, _db_wrapper = dbs
         coin_store = await CoinStore.create(rocks_db)
 
         blocks = bt.get_consecutive_blocks(
@@ -188,7 +191,8 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
 async def test_set_spent(db_version: int, bt: BlockTools) -> None:
     blocks = bt.get_consecutive_blocks(9, [])
 
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, _db_wrapper = dbs
         coin_store = await CoinStore.create(rocks_db)
 
         # Save/get block
@@ -235,7 +239,8 @@ async def test_num_unspent(bt: BlockTools) -> None:
     expect_unspent = 0
     test_excercised = False
 
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, _db_wrapper = dbs
         coin_store = await CoinStore.create(rocks_db)
 
         for block in blocks:
@@ -282,7 +287,8 @@ async def test_rollback(bt: BlockTools) -> None:
 
     reward_coin_count = 0
 
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, _db_wrapper = dbs
         coin_store = await CoinStore.create(rocks_db)
 
         selected_coin_name: Optional[bytes32] = None
@@ -351,7 +357,8 @@ async def test_rollback(bt: BlockTools) -> None:
 
 @pytest.mark.anyio
 async def ztest_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
         initial_block_count = 30
         reorg_length = 15
         blocks = bt.get_consecutive_blocks(initial_block_count)
@@ -411,7 +418,8 @@ async def ztest_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> N
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def ztest_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
         num_blocks = 20
         farmer_ph = bytes32(32 * b"0")
         pool_ph = bytes32(32 * b"1")
@@ -441,7 +449,8 @@ async def ztest_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) 
 
 @pytest.mark.anyio
 async def ztest_get_coin_states(db_version: int) -> None:
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
         crs = [
             CoinRecord(
                 Coin(std_hash(i.to_bytes(4, byteorder="big")), std_hash(b"2"), uint64(100)),
@@ -586,7 +595,8 @@ async def ztest_coin_state_batches(
     include_hinted: bool,
     min_amount: uint64,
 ) -> None:
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(rocks_db)
         hint_store = await HintStore.create(db_wrapper)
@@ -656,7 +666,8 @@ async def ztest_coin_state_batches(
 @pytest.mark.anyio
 @pytest.mark.parametrize("cut_off_middle", [True, False])
 async def ztest_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> None:
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
         ph = bytes32(b"0" * 32)
 
         # Generate coin records.
@@ -721,7 +732,8 @@ async def ztest_batch_many_coin_states(db_version: int, cut_off_middle: bool) ->
 
 @pytest.mark.anyio
 async def ztest_batch_no_puzzle_hashes(db_version: int) -> None:
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(rocks_db)
         await HintStore.create(db_wrapper)
@@ -733,7 +745,8 @@ async def ztest_batch_no_puzzle_hashes(db_version: int) -> None:
 
 @pytest.mark.anyio
 async def ztest_duplicate_by_hint(db_version: int) -> None:
-    async with temp_rocks_db() as rocks_db:
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
         # Initialize coin and hint stores.
         coin_store = await CoinStore.create(rocks_db)
         hint_store = await HintStore.create(db_wrapper)
