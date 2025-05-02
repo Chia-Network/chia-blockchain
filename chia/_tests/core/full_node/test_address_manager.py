@@ -596,7 +596,7 @@ class TestPeerManager:
         await addrman.mark_good(PeerInfo("250.7.1.1", uint16(8333)))
 
         peers_dat_filename = tmp_path / "peers.dat"
-        if peers_dat_filename.exists():
+        with contextlib.suppress(FileNotFoundError):
             peers_dat_filename.unlink()
         # Write out the serialized peer data but use a bad IP type
         out = io.BytesIO()
