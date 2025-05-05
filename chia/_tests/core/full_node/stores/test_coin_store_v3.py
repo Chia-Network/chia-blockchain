@@ -33,6 +33,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.generator_types import BlockGenerator
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 
@@ -62,15 +63,14 @@ def get_future_reward_coins(block: FullBlock) -> tuple[Coin, Coin]:
 
 
 @asynccontextmanager
-async def temp_dbs(db_version: int = 2) -> AsyncIterator[tuple[DB, DBConnection]]:
+async def temp_dbs(db_version: int = 2) -> AsyncIterator[tuple[DB, DBWrapper2]]:
     with TemporaryDirectory() as tmp_dir:
-        db_wrapper = DBConnection(db_version)
-        rocks_db = DB(tmp_dir)
-        try:
-            yield rocks_db, db_wrapper
-        finally:
-            del rocks_db
-            del db_wrapper
+        async with DBConnection(db_version) as db_wrapper:
+            rocks_db = DB(tmp_dir)
+            try:
+                yield rocks_db, db_wrapper
+            finally:
+                del rocks_db
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")

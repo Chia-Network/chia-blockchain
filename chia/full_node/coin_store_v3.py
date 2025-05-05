@@ -30,7 +30,7 @@ def u32_to_blob(index: int) -> bytes:
     return index.to_bytes(4, "big")
 
 
-def u64_to_blob(index: int) -> bytes:
+def u64_to_blob(index: uint64) -> bytes:
     return index.to_bytes(8, "big")
 
 
@@ -195,7 +195,7 @@ class CoinStore:
             return None
         return r[0]
 
-    async def get_coin_records(self, names: Collection[bytes32]) -> list[CoinRecord]:
+    async def get_coin_records(self, names: Collection[bytes32]) -> list[Optional[CoinRecord]]:
         if len(names) == 0:
             return []
 
@@ -207,80 +207,27 @@ class CoinStore:
         coin_records = [CoinRecord.from_bytes(_) if _ is not None else None for _ in blobs]
         return coin_records
 
-    async def block_infos_for_heights(self, heights: list[int]) -> list[Optional[BlockInfo]]:
+    async def block_infos_for_heights(self, heights: list[int]) -> list[BlockInfo]:
         def index_for_height(h: uint64) -> bytes:
             return b"b" + h.to_bytes(8, "big")
 
         indices = [index_for_height(_) for _ in heights]
-        blobs = self.rocksdb.multi_get(indices)
+        blobs = self.rocks_db.multi_get(indices)
         size_of_block_info = 32
         block_records = [BlockInfo.from_bytes(_) for _ in blobs[0::size_of_block_info]]
         return block_records
 
-    async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
-        # TODO:
-        # add a table to store creations/spends at each height
-        coins_added: Optional[list[CoinRecord]] = self.coins_added_at_height_cache.get(height)
-        if coins_added is not None:
-            return coins_added
+    async def get_block_info(self, height: int) -> BlockInfo:
+        def index_for_height(h: uint64) -> bytes:
+            return b"b" + h.to_bytes(8, "big")
 
-        index_list = self.coin_indices_created_at_height(height)
-        coins = await self.get_coin_records_by_indices(index_list)
-        self.coins_added_at_height_cache.put(height, coins)
-        return coins
-
-    async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
-        # TODO:
-        # add a table to store creations/spends at each height
-        # Special case to avoid querying all unspent coins (spent_index=0)
-        if height == 0:
-            return []
-        index_list = self.coin_indices_spent_at_height(height)
-        return await self.get_coin_records_by_indices(index_list)
+        key = index_for_height(uint64(height))
+        blob = self.rocks_db.get(key)
+        block_info = BlockInfo.from_bytes(blob)
+        return block_info
 
     async def get_all_coins(self, include_spent_coins: bool) -> list[CoinRecord]:
         raise NotImplementedError("get_all_coins is deprecated")
-
-    # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
-    async def get_coin_records_by_puzzle_hash(
-        self,
-        include_spent_coins: bool,
-        puzzle_hash: bytes32,
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
-    ) -> list[CoinRecord]:
-        return await self.get_coin_records_by_puzzle_hashes(
-            include_spent_coins, [puzzle_hash], start_height, end_height
-        )
-
-    async def get_coin_records_by_puzzle_hashes(
-        self,
-        include_spent_coins: bool,
-        puzzle_hashes: list[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
-    ) -> list[CoinRecord]:
-        # TODO: figure out how this will be implemented
-        if len(puzzle_hashes) == 0:
-            return []
-
-        coins = set()
-        puzzle_hashes_db: tuple[Any, ...]
-        puzzle_hashes_db = tuple(puzzle_hashes)
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
-                f"WHERE puzzle_hash in ({'?,' * (len(puzzle_hashes) - 1)}?) "
-                f"AND confirmed_index>=? AND confirmed_index<? "
-                f"{'' if include_spent_coins else 'AND spent_index=0'}",
-                (*puzzle_hashes_db, start_height, end_height),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
-                return list(coins)
 
     async def get_coin_records_by_names(
         self,
@@ -385,159 +332,34 @@ class CoinStore:
         max_height: uint32 = uint32.MAXIMUM,
         max_items: int = 50000,
     ) -> list[CoinState]:
-        raise NotImplementedError("get_coin_states_by_ids is not implemented")
-        if len(coin_ids) == 0:
-            return []
+        coin_states: list[CoinState] = []
 
-        coins: list[CoinState] = []
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            for batch in to_batches(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
-                coin_ids_db: tuple[Any, ...] = tuple(batch.entries)
+        values = self.rocks_db.multi_get([b"c" + _ for _ in coin_ids])
 
-                max_height_sql = ""
-                if max_height != uint32.MAXIMUM:
-                    max_height_sql = f"AND confirmed_index<={max_height} AND spent_index<={max_height}"
-
-                async with conn.execute(
-                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
-                    f"FROM coin_record WHERE coin_name in ({'?,' * (len(batch.entries) - 1)}?) "
-                    f"AND (confirmed_index>=? OR spent_index>=?) {max_height_sql}"
-                    f"{'' if include_spent_coins else 'AND spent_index=0'}"
-                    " LIMIT ?",
-                    (*coin_ids_db, min_height, min_height, max_items - len(coins)),
-                ) as cursor:
-                    for row in await cursor.fetchall():
-                        coins.append(self.row_to_coin_state(row))
-                if len(coins) >= max_items:
-                    break
-
-        return coins
-
-    MAX_PUZZLE_HASH_BATCH_SIZE = SQLITE_MAX_VARIABLE_NUMBER - 10
-
-    async def batch_coin_states_by_puzzle_hashes(
-        self,
-        puzzle_hashes: list[bytes32],
-        *,
-        min_height: uint32 = uint32(0),
-        include_spent: bool = True,
-        include_unspent: bool = True,
-        include_hinted: bool = True,
-        min_amount: uint64 = uint64(0),
-        max_items: int = 50000,
-    ) -> tuple[list[CoinState], Optional[uint32]]:
-        """
-        Returns the coin states, as well as the next block height (or `None` if finished).
-        You cannot exceed `CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE` puzzle hashes in the query.
-        """
-        raise NotImplementedError("batch_coin_states_by_puzzle_hashes is not implemented")
-        # TODO: create a rocksdb entry by puzzle hash with puzzle_hash/confirmed_block as the key
-
-        # This should be able to be changed later without breaking the protocol.
-        # We have a small deduction for other variables to be added to the query.
-        assert len(puzzle_hashes) <= CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
-
-        if len(puzzle_hashes) == 0:
-            return [], None
-
-        # Coin states are keyed by coin id to filter out and prevent duplicates.
-        coin_states_dict: dict[bytes32, CoinState] = dict()
-        coin_states: list[CoinState]
-
-        async with self.db_wrapper.reader() as conn:
-            puzzle_hashes_db = tuple(puzzle_hashes)
-            puzzle_hash_count = len(puzzle_hashes_db)
-
-            require_spent = "spent_index>0"
-            require_unspent = "spent_index=0"
-            amount_filter = "AND amount>=? " if min_amount > 0 else ""
-
-            if include_spent and include_unspent:
-                height_filter = ""
-            elif include_spent:
-                height_filter = f"AND {require_spent}"
-            elif include_unspent:
-                height_filter = f"AND {require_unspent}"
-            else:
-                # There are no coins which are both spent and unspent, so we're finished.
-                return [], None
-
-            cursor = await conn.execute(
-                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
-                f"WHERE puzzle_hash in ({'?,' * (puzzle_hash_count - 1)}?) "
-                f"AND (confirmed_index>=? OR spent_index>=?) "
-                f"{height_filter} {amount_filter}"
-                f"ORDER BY MAX(confirmed_index, spent_index) ASC "
-                f"LIMIT ?",
-                (
-                    puzzle_hashes_db
-                    + (min_height, min_height)
-                    + ((min_amount.to_bytes(8, "big"),) if min_amount > 0 else ())
-                    + (max_items + 1,)
-                ),
-            )
-
-            for row in await cursor.fetchall():
-                coin_state = self.row_to_coin_state(row)
-                coin_states_dict[coin_state.coin.name()] = coin_state
-
-            if include_hinted:
-                cursor = await conn.execute(
-                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
-                    f"WHERE coin_name IN (SELECT coin_id FROM hints "
-                    f"WHERE hint IN ({'?,' * (puzzle_hash_count - 1)}?)) "
-                    f"AND (confirmed_index>=? OR spent_index>=?) "
-                    f"{height_filter} {amount_filter}"
-                    f"ORDER BY MAX(confirmed_index, spent_index) ASC "
-                    f"LIMIT ?",
-                    (
-                        puzzle_hashes_db
-                        + (min_height, min_height)
-                        + ((min_amount.to_bytes(8, "big"),) if min_amount > 0 else ())
-                        + (max_items + 1,)
-                    ),
-                )
-
-                for row in await cursor.fetchall():
-                    coin_state = self.row_to_coin_state(row)
-                    coin_states_dict[coin_state.coin.name()] = coin_state
-
-            coin_states = list(coin_states_dict.values())
-
-            if include_hinted:
-                coin_states.sort(key=lambda cr: max(cr.created_height or uint32(0), cr.spent_height or uint32(0)))
-                while len(coin_states) > max_items + 1:
-                    coin_states.pop()
-
-        # If there aren't too many coin states, we've finished syncing these hashes.
-        # There is no next height to start from, so return `None`.
-        if len(coin_states) <= max_items:
-            return coin_states, None
-
-        # The last item is the start of the next batch of coin states.
-        next_coin_state = coin_states.pop()
-        next_height = uint32(max(next_coin_state.created_height or 0, next_coin_state.spent_height or 0))
-
-        # In order to prevent blocks from being split up between batches, remove
-        # all coin states whose max height is the same as the last coin state's height.
-        while len(coin_states) > 0:
-            last_coin_state = coin_states[-1]
-            height = uint32(max(last_coin_state.created_height or 0, last_coin_state.spent_height or 0))
-            if height != next_height:
+        for k, v in zip(coin_ids, values):
+            if v is None:
+                raise ValueError(f"coin {k.hex()} not found in DB")
+            cr = CoinRecord.from_bytes(v)
+            if cr.confirmed_block_index < min_height:
+                continue
+            if cr.confirmed_block_index > max_height:
+                continue
+            if cr.spent_block_index != 0 and include_spent_coins is False:
+                continue
+            sh = None if cr.spent_block_index == 0 else cr.spent_block_index
+            ch = None if cr.confirmed_block_index == 0 else cr.confirmed_block_index
+            cs = CoinState(cr.coin, sh, ch)
+            coin_states.append(cs)
+            if len(coin_states) >= max_items:
                 break
-
-            coin_states.pop()
-
-        return coin_states, next_height
+        return coin_states
 
     async def _coin_activity_after_height(self, block_index: int) -> AsyncGenerator[tuple[int, BlockInfo]]:
         """
         Yield tuples of (additions, removals) after the given block index in
         reverse chronological order (so largest block index first).
         """
-        last_block_index = bytes.fromhex("62ffffffffffffffff")
+        last_block_index = b"b" + bytes.fromhex("ffffffffffffffff")
         iterator = self.rocks_db.iterate_from(last_block_index, "reverse")
         for k, v in iterator:
             index = blob_to_int(k[1:])
@@ -575,47 +397,9 @@ class CoinStore:
 
         return list(coin_changes.values())
 
-    async def _add_block_summary(
-        self, height: uint32, timestamp: uint64, additions: list[Coin], removals: list[bytes32]
-    ) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # Convert additions and removals to blobs
-            additions_blob = b"".join([coin.name for coin in additions])
-            removals_blob = b"".join(removals)
-
-            await conn.execute(
-                "INSERT OR REPLACE INTO block_summary VALUES(?, ?, ?, ?)",
-                (height, timestamp, additions_blob, removals_blob),
-            )
-
-    # Store CoinRecord in DB
-    async def _add_coin_records(self, records: list[CoinRecord]) -> None:
-        name_index_list: list[tuple[bytes32, int]] = []
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            for record in records:
-                cursor = await conn.execute(
-                    "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        record.confirmed_block_index,
-                        record.spent_block_index,
-                        int(record.coinbase),
-                        record.coin.puzzle_hash,
-                        record.coin.parent_coin_info,
-                        uint64(record.coin.amount).stream_to_bytes(),
-                        record.timestamp,
-                    ),
-                )
-                rowid = cursor.lastrowid
-                assert rowid is not None
-                name = record.coin.name()
-                name_index_list.append((name, rowid))
-            for name, index in name_index_list:
-                index_blob = index_to_blob(index)
-                self.rocks_db.put(name, index_blob)
-
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_names: list[bytes32], index: uint32) -> None:
-        assert len(coin_names) == 0 or index > 0
+    async def _set_spent(self, coin_names: list[bytes32], height: uint32) -> None:
+        assert len(coin_names) == 0 or height > 0
 
         if len(coin_names) == 0:
             return None
@@ -627,14 +411,14 @@ class CoinStore:
                 raise ValueError(f"can't find coin for {name.hex()}")
             if cr.spent_block_index != 0:
                 raise ValueError("Invalid operation to set spent")
-            cr = dataclasses.replace(cr, spent_block_index=index)
+            cr = dataclasses.replace(cr, spent_block_index=height)
             new_spent_coin_records.append((name, cr))
 
         batch = WriteBatch()
         for name, cr in new_spent_coin_records:
             coin_record_blob = bytes(cr)
-            index = b"c" + name
-            batch.put(index, coin_record_blob)
+            key = b"c" + name
+            batch.put(key, coin_record_blob)
 
         self.rocks_db.write(batch)
 
@@ -663,8 +447,3 @@ class CoinStore:
                 return UnspentLineageInfo(
                     coin_id=bytes32(coin_id), parent_id=bytes32(parent_id), parent_parent_id=bytes32(parent_parent_id)
                 )
-
-    async def coin_indices_for_names(self, names: Collection[bytes32]) -> list[uint32]:
-        r = self.rocks_db.multi_get(names)
-        uint32_list = [int.from_bytes(_) for _ in r]
-        return uint32_list
