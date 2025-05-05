@@ -85,7 +85,7 @@ class ExtendedPeerInfo:
             return b"\x00"
         elif isinstance(ip._inner, IPv6Address):
             return b"\x01"
-        raise TypeError("Unsupported IPAddress type.")
+        raise TypeError("Unsupported IPAddress type.")  # pragma: no cover
 
     @classmethod
     def decode_ip(cls, data: io.BytesIO) -> str:

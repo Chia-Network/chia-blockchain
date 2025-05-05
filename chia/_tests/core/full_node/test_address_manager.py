@@ -542,8 +542,8 @@ class TestPeerManager:
                 retrieved_peers.append(peer)
             if len(retrieved_peers) == 3:
                 break
-        if len(retrieved_peers) != 3:
-            return False
+        if len(retrieved_peers) != 3:  # pragma: no cover
+            return False  # pragma: no cover
         recovered = 0
         for target_peer in wanted_peers:
             for current_peer in retrieved_peers:
@@ -734,7 +734,7 @@ class TestPeerManager:
         await addrman.mark_good(PeerInfo("250.7.1.1", uint16(8333)))
 
         peers_dat_filename = tmp_path / "peers.dat"
-        if peers_dat_filename.exists():
+        with contextlib.suppress(FileNotFoundError):
             peers_dat_filename.unlink()
         # Write out the serialized peer data in the old format
         await old_serialize(addrman, peers_dat_filename)
