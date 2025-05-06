@@ -26,7 +26,7 @@ from chiabip158 import PyBIP158
 from clvm.casts import int_to_bytes
 
 from chia._tests.conftest import ConsensusMode
-from chia._tests.util.misc import invariant_check_mempool
+from chia._tests.util.misc import Marks, datacases, invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -39,6 +39,7 @@ from chia.full_node.mempool_manager import (
     MempoolManager,
     TimelockConditions,
     can_replace,
+    check_removals,
     compute_assert_height,
     optional_max,
     optional_min,
@@ -228,6 +229,9 @@ async def setup_mempool_with_coins(
     return (mempool_manager, coins)
 
 
+CreateCoin = tuple[bytes32, int, Optional[bytes]]
+
+
 def make_test_conds(
     *,
     birth_height: Optional[int] = None,
@@ -242,13 +246,18 @@ def make_test_conds(
     before_seconds_absolute: Optional[int] = None,
     cost: int = 0,
     spend_ids: Sequence[tuple[Union[bytes32, Coin], int]] = [(TEST_COIN_ID, 0)],
+    created_coins: Optional[list[list[CreateCoin]]] = None,
 ) -> SpendBundleConditions:
-    spend_info: list[tuple[bytes32, bytes32, bytes32, uint64, int]] = []
-    for coin, flags in spend_ids:
+    if created_coins is None:
+        created_coins = []
+    if len(created_coins) < len(spend_ids):
+        created_coins.extend([[] for _ in range(len(spend_ids) - len(created_coins))])
+    spend_info: list[tuple[bytes32, bytes32, bytes32, uint64, int, list[CreateCoin]]] = []
+    for (coin, flags), create_coin in zip(spend_ids, created_coins):
         if isinstance(coin, Coin):
-            spend_info.append((coin.name(), coin.parent_coin_info, coin.puzzle_hash, coin.amount, flags))
+            spend_info.append((coin.name(), coin.parent_coin_info, coin.puzzle_hash, coin.amount, flags, create_coin))
         else:
-            spend_info.append((coin, IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT, flags))
+            spend_info.append((coin, IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT, flags, create_coin))
 
     return SpendBundleConditions(
         [
@@ -263,7 +272,7 @@ def make_test_conds(
                 None if before_seconds_relative is None else uint64(before_seconds_relative),
                 None if birth_height is None else uint32(birth_height),
                 None if birth_seconds is None else uint64(birth_seconds),
-                [],
+                create_coin,
                 [],
                 [],
                 [],
@@ -273,7 +282,7 @@ def make_test_conds(
                 [],
                 flags,
             )
-            for coin_id, parent_id, puzzle_hash, amount, flags in spend_info
+            for coin_id, parent_id, puzzle_hash, amount, flags, create_coin in spend_info
         ],
         0,
         uint32(height_absolute),
@@ -787,6 +796,19 @@ def test_optional_max() -> None:
     assert optional_max(uint32(123), uint32(234)) == uint32(234)
 
 
+def mk_coin_spend(coin: Coin) -> CoinSpend:
+    return make_spend(coin, SerializedProgram.to(None), SerializedProgram.to(None))
+
+
+def mk_bcs(coin_spend: CoinSpend, flags: int = 0) -> BundleCoinSpend:
+    return BundleCoinSpend(
+        coin_spend=coin_spend,
+        eligible_for_dedup=bool(flags & ELIGIBLE_FOR_DEDUP),
+        eligible_for_fast_forward=bool(flags & ELIGIBLE_FOR_FF),
+        additions=[],
+    )
+
+
 def mk_item(
     coins: list[Coin],
     *,
@@ -807,14 +829,9 @@ def mk_item(
     for c, f in zip(coins, flags):
         coin_id = c.name()
         spend_ids.append((coin_id, f))
-        spend = make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None))
-        coin_spends.append(spend)
-        bundle_coin_spends[coin_id] = BundleCoinSpend(
-            coin_spend=spend,
-            eligible_for_dedup=bool(f & ELIGIBLE_FOR_DEDUP),
-            eligible_for_fast_forward=bool(f & ELIGIBLE_FOR_FF),
-            additions=[],
-        )
+        coin_spend = mk_coin_spend(c)
+        coin_spends.append(coin_spend)
+        bundle_coin_spends[coin_id] = mk_bcs(coin_spend, f)
     spend_bundle = SpendBundle(coin_spends, G2Element())
     conds = make_test_conds(cost=cost, spend_ids=spend_ids)
     return MempoolItem(
@@ -2842,3 +2859,188 @@ async def test_spending_singleton_to_invalidate_existing_ff_spends() -> None:
     bundle_add_info2 = await mempool_manager.add_spend_bundle(sb2, sb2_conds, sb2.name(), uint32(1))
     assert bundle_add_info2.error == Err.MEMPOOL_CONFLICT
     assert bundle_add_info2.status == MempoolInclusionStatus.PENDING
+
+
+@pytest.mark.parametrize("flags", [ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF])
+@pytest.mark.anyio
+async def test_check_removals_with_block_creation(flags: int) -> None:
+    LAUNCHER_ID = bytes32([1] * 32)
+    PARENT_PARENT = bytes32([2] * 32)
+    singleton_spend = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT)
+    coins = TestCoins(
+        coins=[singleton_spend.coin, TEST_COIN], lineage={singleton_spend.coin.puzzle_hash: singleton_spend.coin}
+    )
+    mempool_manager = await setup_mempool(coins)
+    sb1 = SpendBundle([singleton_spend], G2Element())
+    sb1_conds = make_test_conds(
+        spend_ids=[(singleton_spend.coin, 0)],
+        created_coins=[[(singleton_spend.coin.puzzle_hash, 1, None)]],
+        cost=100_000_000,
+    )
+    bundle_add_info1 = await mempool_manager.add_spend_bundle(sb1, sb1_conds, sb1.name(), uint32(1))
+    assert bundle_add_info1.status == MempoolInclusionStatus.SUCCESS
+    invariant_check_mempool(mempool_manager.mempool)
+    extra_spend = make_spend(
+        TEST_COIN, IDENTITY_PUZZLE, Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42]])
+    )
+    sb2 = SpendBundle([singleton_spend, extra_spend], G2Element())
+    sb2_conds = make_test_conds(
+        spend_ids=[(singleton_spend.coin, flags), (TEST_COIN, 0)],
+        created_coins=[[(singleton_spend.coin.puzzle_hash, 1, None)], []],
+        cost=1337,
+    )
+    bundle_add_info2 = await mempool_manager.add_spend_bundle(sb2, sb2_conds, sb2.name(), uint32(1))
+    assert bundle_add_info2.status == MempoolInclusionStatus.SUCCESS
+    assert mempool_manager.peak is not None
+    block_generator = mempool_manager.create_block_generator(mempool_manager.peak.header_hash)
+    assert block_generator is not None
+    assert len(block_generator.additions) == 1
+    assert set(block_generator.additions) == {
+        Coin(singleton_spend.coin.name(), singleton_spend.coin.puzzle_hash, uint64(1))
+    }
+    assert len(block_generator.removals) == 2
+    assert set(block_generator.removals) == {singleton_spend.coin, TEST_COIN}
+
+
+def make_coin_record(coin: Coin, spent_block_index: int = 0) -> CoinRecord:
+    return CoinRecord(coin, uint32(0), uint32(spent_block_index), False, TEST_TIMESTAMP)
+
+
+@dataclasses.dataclass
+class CheckRemovalsCase:
+    id: str
+    removals: dict[bytes32, CoinRecord]
+    bundle_coin_spends: dict[bytes32, BundleCoinSpend] = dataclasses.field(default_factory=dict)
+    conflicting_mempool_items: dict[bytes32, list[MempoolItem]] = dataclasses.field(default_factory=dict)
+    expected_result: tuple[Optional[Err], list[MempoolItem]] = dataclasses.field(default_factory=lambda: (None, []))
+    marks: Marks = ()
+
+
+@datacases(
+    CheckRemovalsCase(
+        id="No removals",
+        removals={},
+        expected_result=(None, []),
+    ),
+    CheckRemovalsCase(
+        id="Unspent removal, no mempool conflicts",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN))},
+        expected_result=(None, []),
+    ),
+    CheckRemovalsCase(
+        id="Already spent non FF coin",
+        removals={TEST_COIN_ID: make_coin_record(TEST_COIN, spent_block_index=1)},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN))},
+        expected_result=(Err.DOUBLE_SPEND, []),
+    ),
+    CheckRemovalsCase(
+        id="Already spent FF coin, no mempool conflicts",
+        removals={TEST_COIN_ID: make_coin_record(TEST_COIN, spent_block_index=1)},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF)},
+        expected_result=(None, []),
+    ),
+    CheckRemovalsCase(
+        id="FF coin, non FF mempool conflict",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF)},
+        conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN])]},
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN])]),
+    ),
+    CheckRemovalsCase(
+        id="Dedup coin, non dedup mempool conflict",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_DEDUP)},
+        conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN])]},
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN])]),
+    ),
+    CheckRemovalsCase(
+        id="FF coin, FF mempool conflict",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF)},
+        conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_FF])]},
+        expected_result=(None, []),
+    ),
+    CheckRemovalsCase(
+        id="Dedup coin, Dedup mempool conflict",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_DEDUP)},
+        conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_DEDUP])]},
+        expected_result=(None, []),
+    ),
+    CheckRemovalsCase(
+        id="Regular coin, mempool conflict",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN))},
+        conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN])]},
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN])]),
+    ),
+    CheckRemovalsCase(
+        id="Both FF and non FF coins, FF one conflicts with existing non FF",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD, TEST_COIN_ID2: TEST_COIN_RECORD2},
+        bundle_coin_spends={
+            TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN)),
+            TEST_COIN_ID2: mk_bcs(mk_coin_spend(TEST_COIN2), ELIGIBLE_FOR_FF),
+        },
+        conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN])], TEST_COIN_ID2: [mk_item([TEST_COIN2])]},
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN]), mk_item([TEST_COIN2])]),
+    ),
+    CheckRemovalsCase(
+        id="Both FF and non FF coins, FF one conflicts with existing FF",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD, TEST_COIN_ID2: TEST_COIN_RECORD2},
+        bundle_coin_spends={
+            TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN)),
+            TEST_COIN_ID2: mk_bcs(mk_coin_spend(TEST_COIN2), ELIGIBLE_FOR_FF),
+        },
+        conflicting_mempool_items={
+            TEST_COIN_ID: [mk_item([TEST_COIN])],
+            TEST_COIN_ID2: [mk_item([TEST_COIN2], flags=[ELIGIBLE_FOR_FF])],
+        },
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN])]),
+    ),
+    CheckRemovalsCase(
+        id="Two FF coins, only one with non FF conflict",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD, TEST_COIN_ID2: TEST_COIN_RECORD2},
+        bundle_coin_spends={
+            TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF),
+            TEST_COIN_ID2: mk_bcs(mk_coin_spend(TEST_COIN2), ELIGIBLE_FOR_FF),
+        },
+        conflicting_mempool_items={
+            TEST_COIN_ID: [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_FF])],
+            TEST_COIN_ID2: [mk_item([TEST_COIN2])],
+        },
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN2])]),
+    ),
+    CheckRemovalsCase(
+        id="Conflicting items are added to conflicts only once",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD, TEST_COIN_ID2: TEST_COIN_RECORD2},
+        bundle_coin_spends={
+            TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN)),
+            TEST_COIN_ID2: mk_bcs(mk_coin_spend(TEST_COIN2)),
+        },
+        # Same item spends both coins
+        conflicting_mempool_items={
+            TEST_COIN_ID: [mk_item([TEST_COIN, TEST_COIN2])],
+            TEST_COIN_ID2: [mk_item([TEST_COIN, TEST_COIN2])],
+        },
+        # Item should be added only once in conflicts
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN, TEST_COIN2])]),
+    ),
+)
+def test_check_removals(case: CheckRemovalsCase) -> None:
+    def test_get_items_by_coin_ids(coin_ids: list[bytes32]) -> list[MempoolItem]:
+        items = set()
+        for coin_id in coin_ids:
+            items.update(case.conflicting_mempool_items.get(coin_id, []))
+        return list(items)
+
+    result = check_removals(
+        bundle_coin_spends=case.bundle_coin_spends,
+        removals=case.removals,
+        get_items_by_coin_ids=test_get_items_by_coin_ids,
+    )
+    expected_err, expected_conflicts = case.expected_result
+    err, conflicts = result
+    assert err == expected_err
+    assert len(conflicts) == len(expected_conflicts)
+    assert set(conflicts) == set(expected_conflicts)

@@ -149,6 +149,42 @@ QUOTE_BYTES = 2
 QUOTE_EXECUTION_COST = 20
 
 
+def check_removals(
+    removals: dict[bytes32, CoinRecord],
+    bundle_coin_spends: dict[bytes32, BundleCoinSpend],
+    *,
+    get_items_by_coin_ids: Callable[[list[bytes32]], list[MempoolItem]],
+) -> tuple[Optional[Err], list[MempoolItem]]:
+    """
+    This function checks for double spends, unknown spends and conflicting transactions in mempool.
+    Returns Error (if any), the set of existing MempoolItems with conflicting spends (if any).
+    Note that additions are not checked for duplicates, because having duplicate additions requires also
+    having duplicate removals.
+    """
+    conflicts = set()
+    for coin_id, coin_bcs in bundle_coin_spends.items():
+        # 1. Checks if it's been spent already
+        if removals[coin_id].spent and not coin_bcs.eligible_for_fast_forward:
+            return Err.DOUBLE_SPEND, []
+        # 2. Checks if there's a mempool conflict
+        # Only consider conflicts if the coin is not eligible for deduplication
+        conflicting_items = get_items_by_coin_ids([coin_id])
+        if not coin_bcs.eligible_for_fast_forward and not coin_bcs.eligible_for_dedup:
+            conflicts.update(conflicting_items)
+            continue
+        for item in conflicting_items:
+            if item in conflicts:
+                continue
+            conflict_bcs = item.bundle_coin_spends[coin_id]
+            if (coin_bcs.eligible_for_fast_forward and not conflict_bcs.eligible_for_fast_forward) or (
+                coin_bcs.eligible_for_dedup and not conflict_bcs.eligible_for_dedup
+            ):
+                conflicts.add(item)
+    if len(conflicts) > 0:
+        return Err.MEMPOOL_CONFLICT, list(conflicts)
+    return None, []
+
+
 class MempoolManager:
     pool: Executor
     constants: ConsensusConstants
@@ -450,7 +486,6 @@ class MempoolManager:
         addition_amount: int = 0
         # Map of coin ID to eligibility information
         eligibility_and_additions: dict[bytes32, EligibilityAndAdditions] = {}
-        non_eligible_coin_ids: list[bytes32] = []
         for spend in conds.spends:
             coin_id = bytes32(spend.coin_id)
             removal_names.add(coin_id)
@@ -468,7 +503,6 @@ class MempoolManager:
                 ff_puzzle_hash=bytes32(spend.puzzle_hash) if is_eligible_for_ff else None,
             )
         removal_names_from_coin_spends: set[bytes32] = set()
-        fast_forward_coin_ids: set[bytes32] = set()
         bundle_coin_spends: dict[bytes32, BundleCoinSpend] = {}
         for coin_spend in new_spend.coin_spends:
             coin_id = coin_spend.coin.name()
@@ -487,10 +521,6 @@ class MempoolManager:
                 lineage_info = await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash)
                 if lineage_info is None:
                     return Err.DOUBLE_SPEND, None, []
-                fast_forward_coin_ids.add(coin_id)
-            # We are now able to check eligibility of both dedup and fast forward
-            if not (eligibility_info.is_eligible_for_dedup or mark_as_fast_forward):
-                non_eligible_coin_ids.append(coin_id)
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
@@ -567,7 +597,9 @@ class MempoolManager:
 
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
-        fail_reason, conflicts = self.check_removals(non_eligible_coin_ids, removal_record_dict, fast_forward_coin_ids)
+        fail_reason, conflicts = check_removals(
+            removal_record_dict, bundle_coin_spends, get_items_by_coin_ids=self.mempool.get_items_by_coin_ids
+        )
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
@@ -636,33 +668,6 @@ class MempoolManager:
         )
 
         return None, potential, [item.name for item in conflicts]
-
-    def check_removals(
-        self,
-        non_eligible_coin_ids: list[bytes32],
-        removals: dict[bytes32, CoinRecord],
-        fast_forward_coin_ids: set[bytes32],
-    ) -> tuple[Optional[Err], list[MempoolItem]]:
-        """
-        This function checks for double spends, unknown spends and conflicting transactions in mempool.
-        Returns Error (if any), the set of existing MempoolItems with conflicting spends (if any).
-        Note that additions are not checked for duplicates, because having duplicate additions requires also
-        having duplicate removals.
-        """
-        assert self.peak is not None
-        # 1. Checks if it's been spent already
-        for record in removals.values():
-            if record.spent:
-                # Only consider it a double spend if this is not a fast forward
-                if record.name not in fast_forward_coin_ids:
-                    return Err.DOUBLE_SPEND, []
-        # 2. Checks if there's a mempool conflict
-        # Only consider conflicts if the coin is not eligible for deduplication
-        conflicts = self.mempool.get_items_by_coin_ids(non_eligible_coin_ids)
-        if len(conflicts) > 0:
-            return Err.MEMPOOL_CONFLICT, conflicts
-        # 5. If coins can be spent return list of unspents as we see them in local storage
-        return None, []
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
