@@ -4,7 +4,7 @@ import copy
 from unittest import TestCase
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -30,8 +30,7 @@ from chia.pools.pool_puzzles import (
 from chia.pools.pool_wallet_info import PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
+from chia.types.coin_spend import make_spend
 from chia.wallet.puzzles import singleton_top_layer
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (

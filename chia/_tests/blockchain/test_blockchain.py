@@ -12,11 +12,16 @@ from typing import Optional
 import pytest
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
     ConsensusConstants,
+    EndOfSubSlotBundle,
+    FullBlock,
     G2Element,
     InfusedChallengeChainSubSlot,
     MerkleSet,
+    SpendBundle,
     TransactionsInfo,
+    UnfinishedBlock,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -34,7 +39,6 @@ from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
@@ -52,11 +56,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err

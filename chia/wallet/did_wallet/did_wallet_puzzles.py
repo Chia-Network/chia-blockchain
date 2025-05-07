@@ -4,13 +4,13 @@ from collections.abc import Iterator
 from typing import Optional, Union
 
 from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH, NFT_INTERMEDIATE_LAUNCHER
-from chia_rs import G1Element
+from chia_rs import CoinSpend, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
@@ -70,7 +70,7 @@ def get_inner_puzhash_by_p2(
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
     recovery_list: Optional[list[bytes32]] = None,
-    recovery_list_hash: Optional[bytes32] = None,
+    recovery_list_hash: Optional[Program] = None,
 ) -> bytes32:
     """
     Calculate DID inner puzzle hash based on a P2 puzzle hash
@@ -84,14 +84,14 @@ def get_inner_puzhash_by_p2(
 
     if recovery_list is None and recovery_list_hash is None:
         raise ValueError("Cannot construct DID inner puzzle without information about recovery list")
-    if recovery_list is not None and recovery_list_hash is not None:
-        raise ValueError("Must only specify recovery information a single way to construct DID inner puzzle")
 
-    if recovery_list is not None:
+    # Allow both recovery_list and recovery_list_hash to be provided but
+    # in that case the list is ignored and the hash is used
+    # this matches the behaviour of create_innerpuz
+    if recovery_list_hash is not None:
+        backup_ids_hash = recovery_list_hash.as_atom()
+    elif recovery_list is not None:
         backup_ids_hash = shatree_atom_list(recovery_list)
-    else:
-        assert recovery_list_hash is not None
-        backup_ids_hash = recovery_list_hash
 
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     singleton_struct = shatree_pair(

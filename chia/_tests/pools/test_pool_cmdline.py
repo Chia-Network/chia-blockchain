@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from io import StringIO
 from typing import Optional, cast
 
+import click
 import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -481,6 +482,17 @@ async def test_plotnft_cli_join(
     # Create a farming plotnft to url http://pool.example.com
     wallet_id = await create_new_plotnft(wallet_environments)
 
+    # Test joining the same pool again
+    with pytest.raises(click.ClickException, match="already farming to pool http://pool.example.com"):
+        await JoinPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                client_info=client_info,
+            ),
+            id=wallet_id,
+            pool_url="http://pool.example.com",
+            dont_prompt=not prompt,
+        ).run()
+
     # HTTPS check on mainnet
     with pytest.raises(CliRpcConnectionError, match="must be HTTPS on mainnet"):
         config_override = wallet_state_manager.config.copy()
@@ -617,18 +629,6 @@ async def test_plotnft_cli_join(
         count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
     )
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
-
-    # Join the same pool test - code not ready yet for test
-    # Needs PR #18822
-    # with pytest.raises(CliRpcConnectionError, match="already joined"):
-    #     await JoinPlotNFTCMD(
-    #         rpc_info=NeedsWalletRPC(
-    #             client_info=client_info,
-    #         ),
-    #         id=wallet_id,
-    #         pool_url="http://127.0.0.1",
-    #         dont_prompt=not prompt,
-    #     ).run()
 
 
 @pytest.mark.parametrize(
@@ -1000,4 +1000,28 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             state="SELF_POOLING",
             fee=uint64(0),
             prompt=False,
+        )
+
+
+@pytest.mark.anyio
+async def test_plotnft_unsynced_joining(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
+    from chia.cmds.plotnft_funcs import join_pool
+    from chia.rpc.wallet_request_types import GetSyncStatusResponse
+
+    test_rpc_client = TestWalletRpcClient()
+
+    mock = mocker.patch.object(test_rpc_client, "get_sync_status")
+    mock.return_value = GetSyncStatusResponse(synced=False, syncing=True)
+
+    with pytest.raises(click.ClickException, match="Wallet must be synced before joining a pool"):
+        await join_pool(
+            wallet_info=WalletClientInfo(
+                client=cast(WalletRpcClient, test_rpc_client),
+                fingerprint=0,
+                config={"selected_network": "mainnet"},
+            ),
+            pool_url="http://pool.example.com",
+            fee=uint64(0),
+            prompt=False,
+            wallet_id=None,
         )

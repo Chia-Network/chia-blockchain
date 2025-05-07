@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia_rs import AugSchemeMPL, Coin, Program
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, Program, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -13,10 +13,8 @@ from chia.full_node.fee_estimation import MempoolInfo
 from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_spend import CoinSpend
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle
 
 MEMPOOL_INFO = MempoolInfo(
     max_size_in_cost=CLVMCost(uint64(INFINITE_COST * 10)),

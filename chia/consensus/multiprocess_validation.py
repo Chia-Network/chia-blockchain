@@ -11,8 +11,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 from chia_rs import (
+    BlockRecord,
     ConsensusConstants,
+    FullBlock,
     SpendBundleConditions,
+    SubEpochSummary,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
@@ -21,7 +24,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
@@ -29,8 +31,6 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain

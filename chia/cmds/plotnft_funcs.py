@@ -11,6 +11,7 @@ from pprint import pprint
 from typing import Any, Callable, Optional
 
 import aiohttp
+import click
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -23,7 +24,11 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_config import (
+    PoolWalletConfig,
+    load_pool_config,
+    update_pool_config,
+)
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -306,6 +311,17 @@ async def join_pool(
     prompt: bool,
 ) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+
+    sync_status = await wallet_info.client.get_sync_status()
+    if not sync_status.synced:
+        raise click.ClickException("Wallet must be synced before joining a pool.")
+
+    pool_wallet_info, _ = await wallet_info.client.pw_status(selected_wallet_id)
+    if (
+        pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
+        and pool_wallet_info.current.pool_url == pool_url
+    ):
+        raise click.ClickException(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
 
     enforce_https = wallet_info.config["selected_network"] == "mainnet"
 
