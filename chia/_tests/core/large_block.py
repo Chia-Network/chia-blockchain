@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import zstd
-
-from chia.types.full_block import FullBlock
+from chia_rs import FullBlock
 
 LARGE_BLOCK: FullBlock = FullBlock.from_bytes_unchecked(
     zstd.decompress(

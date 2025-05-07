@@ -3,25 +3,22 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from chia_rs import BlockRecord, FullBlock, SubEpochSummary, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.protocols import timelord_protocol
+from chia.server.aliases import FullNodeService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.timelord.timelord_api import TimelordAPI
-from chia.types.aliases import FullNodeService
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.unfinished_block import UnfinishedBlock
 
 
 class TestNewPeak:

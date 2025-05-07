@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, TypeVar, cast, get_args, get_origin
 
-from chia_rs import G1Element, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
@@ -15,7 +15,7 @@ from chia.pools.pool_puzzles import POOL_WAITING_ROOM_MOD as POOL_WAITINGROOM_MO
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
+from chia.types.coin_spend import compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.singleton_top_layer import (

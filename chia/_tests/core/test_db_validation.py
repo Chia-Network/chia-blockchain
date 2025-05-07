@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -19,7 +20,6 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import test_constants
-from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
 
 

@@ -28,10 +28,10 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.aliases import FarmerService, HarvesterService
 from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, HarvesterService
 from chia.util.batches import to_batches
 
 log = logging.getLogger(__name__)

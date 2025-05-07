@@ -14,10 +14,10 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
+from chia.server.aliases import CrawlerService
 from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
-from chia.types.aliases import CrawlerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path

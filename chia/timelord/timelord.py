@@ -18,9 +18,11 @@ from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 from chia_rs import (
     ChallengeChainSubSlot,
     ConsensusConstants,
+    EndOfSubSlotBundle,
     InfusedChallengeChainSubSlot,
     RewardChainBlock,
     RewardChainSubSlot,
+    SubEpochSummary,
     SubSlotProofs,
 )
 from chia_rs.sized_bytes import bytes32
@@ -38,9 +40,7 @@ from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord_state import LastState
 from chia.timelord.types import Chain, IterationType, StateType
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.streamable import Streamable, streamable
 from chia.util.task_referencer import create_referenced_task
 

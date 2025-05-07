@@ -4,7 +4,7 @@ import dataclasses
 from typing import Any
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import G2Element, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -18,7 +18,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.rpc.wallet_request_types import VCAddProofs, VCGetList, VCGetProofsForRoot, VCMint, VCSpend
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet

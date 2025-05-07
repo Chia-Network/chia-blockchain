@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from typing import Optional
 
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -15,7 +15,6 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 
 MAX_COST = 11000000000

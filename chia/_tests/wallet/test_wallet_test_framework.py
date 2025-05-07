@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs import BlockRecord
 
 from chia._tests.environments.wallet import (
     BalanceCheckingError,
@@ -8,7 +9,6 @@ from chia._tests.environments.wallet import (
     WalletStateTransition,
     WalletTestFramework,
 )
-from chia.consensus.block_record import BlockRecord
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 

@@ -5,6 +5,7 @@ from typing import Optional
 
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
 from chia_rs import (
+    CoinSpend,
     ConsensusConstants,
     SpendBundleConditions,
     get_flags_for_height_and_constants,
@@ -17,7 +18,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo, make_spend
+from chia.types.coin_spend import CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err

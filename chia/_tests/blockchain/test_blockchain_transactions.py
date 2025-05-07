@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import pytest
+from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
@@ -18,7 +19,7 @@ from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
@@ -65,7 +66,7 @@ class TestBlockchainTransactions:
         assert sb == spend_bundle
 
         last_block = blocks[-1]
-        result = await full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header_hash)
+        result = full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header_hash)
         assert result is not None
         next_spendbundle, _ = result
 

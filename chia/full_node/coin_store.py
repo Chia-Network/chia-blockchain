@@ -9,13 +9,13 @@ from typing import Any, ClassVar, Optional
 
 import typing_extensions
 from aiosqlite import Cursor
+from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.types.eligible_coin_spends import UnspentLineageInfo
+from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 

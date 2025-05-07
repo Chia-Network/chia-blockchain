@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from typing import Any, Optional, Union
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -25,10 +26,19 @@ from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.singleton import create_singleton_puzzle
+from chia.wallet.did_wallet.did_wallet_puzzles import (
+    DID_INNERPUZ_MOD,
+)
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_TOP_LAYER_MOD_HASH,
+    create_singleton_puzzle,
+)
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -41,15 +51,59 @@ def get_parent_num(did_wallet: DIDWallet):
     return len(did_wallet.did_info.parent_info)
 
 
+async def make_did_wallet(
+    wallet_state_manager: Any,
+    wallet: Wallet,
+    amount: uint64,
+    action_scope: WalletActionScope,
+    recovery_list: list[bytes32] = [],
+    metadata: dict[str, str] = {},
+    fee: uint64 = uint64(0),
+    use_alternate_recovery: bool = False,
+) -> DIDWallet:
+    def alt_create_innerpuz(
+        p2_puzzle_or_hash: Union[Program, bytes32],
+        recovery_list: list[bytes32],
+        num_of_backup_ids_needed: uint64,
+        launcher_id: bytes32,
+        metadata: Program = Program.to([]),
+        recovery_list_hash: Optional[Program] = None,
+    ) -> Program:
+        # override the default of NIL_TREEHASH with NIL to match other wallet implementations
+        nil_recovery = Program.to(None)
+        singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
+        return DID_INNERPUZ_MOD.curry(p2_puzzle_or_hash, nil_recovery, 0, singleton_struct, metadata)
+
+    if use_alternate_recovery:
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr("chia.wallet.did_wallet.did_wallet_puzzles.create_innerpuz", alt_create_innerpuz)
+            did_wallet = await DIDWallet.create_new_did_wallet(
+                wallet_state_manager, wallet, uint64(101), action_scope, metadata=metadata, fee=fee
+            )
+    else:
+        did_wallet = await DIDWallet.create_new_did_wallet(
+            wallet_state_manager, wallet, amount, action_scope, backups_ids=recovery_list, metadata=metadata, fee=fee
+        )
+
+    return did_wallet
+
+
 #  TODO: See Issue CHIA-1544
 #  This test should be ported to WalletTestFramework once we can replace keys in the wallet node
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
 async def test_creation_from_coin_spend(
-    self_hostname: str, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted: bool
+    self_hostname: str,
+    two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets,
+    trusted: bool,
+    use_alternate_recovery: bool,
 ) -> None:
     """
     Verify that DIDWallet.create_new_did_wallet_from_coin_spend() is called after Singleton creation on
@@ -92,8 +146,12 @@ async def test_creation_from_coin_spend(
 
     # Wallet1 sets up DIDWallet1 without any backup set
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(101), action_scope
+        did_wallet_0: DIDWallet = await make_did_wallet(
+            wallet_node_0.wallet_state_manager,
+            wallet_0,
+            uint64(101),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     with pytest.raises(RuntimeError):
@@ -129,9 +187,15 @@ async def test_creation_from_coin_spend(
     ],
     indirect=True,
 )
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_creation_from_backup_file(wallet_environments: WalletTestFramework) -> None:
+async def test_creation_from_backup_file(
+    wallet_environments: WalletTestFramework, use_alternate_recovery: bool
+) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     env_2 = wallet_environments.environments[2]
@@ -151,8 +215,12 @@ async def test_creation_from_backup_file(wallet_environments: WalletTestFramewor
 
     # Wallet1 sets up DIDWallet1 without any backup set
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_0.wallet_state_manager, env_0.xch_wallet, uint64(101), action_scope
+        did_wallet_0: DIDWallet = await make_did_wallet(
+            env_0.wallet_state_manager,
+            env_0.xch_wallet,
+            uint64(101),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     await wallet_environments.process_pending_states(
@@ -421,8 +489,14 @@ async def test_creation_from_backup_file(wallet_environments: WalletTestFramewor
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_did_recovery_with_multiple_backup_dids(wallet_environments: WalletTestFramework):
+async def test_did_recovery_with_multiple_backup_dids(
+    wallet_environments: WalletTestFramework, use_alternate_recovery: bool
+) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_node_0 = env_0.node
@@ -440,8 +514,12 @@ async def test_did_recovery_with_multiple_backup_dids(wallet_environments: Walle
     }
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(101), action_scope
+        did_wallet: DIDWallet = await make_did_wallet(
+            wallet_node_0.wallet_state_manager,
+            wallet_0,
+            uint64(101),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
     assert did_wallet.get_name() == "Profile 1"
     recovery_list = [bytes32.from_hexstr(did_wallet.get_my_DID())]
@@ -706,8 +784,12 @@ async def test_did_recovery_with_multiple_backup_dids(wallet_environments: Walle
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramework):
+async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
     wallet_node_0 = env_0.node
     wallet_0 = env_0.xch_wallet
@@ -721,8 +803,12 @@ async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramew
         ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(101), action_scope
+        did_wallet: DIDWallet = await make_did_wallet(
+            wallet_node_0.wallet_state_manager,
+            wallet_0,
+            uint64(101),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     await wallet_environments.process_pending_states(
@@ -774,8 +860,12 @@ async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramew
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
+async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
     wallet_node_0 = env_0.node
     wallet_0 = env_0.xch_wallet
@@ -787,8 +877,12 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
     }
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(101), action_scope
+        did_wallet_0 = await make_did_wallet(
+            wallet_node_0.wallet_state_manager,
+            wallet_0,
+            uint64(101),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     await wallet_environments.process_pending_states(
@@ -823,14 +917,14 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
     )
 
     # Delete the coin and wallet
-    coin = await did_wallet.get_coin()
+    coin = await did_wallet_0.get_coin()
     await wallet_node_0.wallet_state_manager.coin_store.delete_coin_record(coin.name())
-    await wallet_node_0.wallet_state_manager.delete_wallet(did_wallet.wallet_info.id)
-    wallet_node_0.wallet_state_manager.wallets.pop(did_wallet.wallet_info.id)
+    await wallet_node_0.wallet_state_manager.delete_wallet(did_wallet_0.wallet_info.id)
+    wallet_node_0.wallet_state_manager.wallets.pop(did_wallet_0.wallet_info.id)
     assert len(wallet_node_0.wallet_state_manager.wallets) == 1
     # Find lost DID
-    assert did_wallet.did_info.origin_coin is not None  # mypy
-    resp = await api_0.did_find_lost_did({"coin_id": did_wallet.did_info.origin_coin.name().hex()})
+    assert did_wallet_0.did_info.origin_coin is not None  # mypy
+    resp = await api_0.did_find_lost_did({"coin_id": did_wallet_0.did_info.origin_coin.name().hex()})
     assert resp["success"]
     did_wallets = list(
         filter(
@@ -839,6 +933,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
         )
     )
     did_wallet = wallet_node_0.wallet_state_manager.wallets[did_wallets[0].id]
+    assert isinstance(did_wallet, DIDWallet)
     env_0.wallet_aliases["did_found"] = did_wallets[0].id
     await env_0.change_balances(
         {
@@ -906,8 +1001,12 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_did_attest_after_recovery(wallet_environments: WalletTestFramework):
+async def test_did_attest_after_recovery(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_node_0 = env_0.node
@@ -925,8 +1024,12 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     }
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(101), action_scope
+        did_wallet: DIDWallet = await make_did_wallet(
+            wallet_node_0.wallet_state_manager,
+            wallet_0,
+            uint64(101),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
     await wallet_environments.process_pending_states(
         [
@@ -1513,8 +1616,12 @@ async def test_did_auto_transfer_limit(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_update_recovery_list(wallet_environments: WalletTestFramework):
+async def test_update_recovery_list(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
@@ -1526,8 +1633,12 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework):
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
-        did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, uint64(101), action_scope, []
+        did_wallet_1: DIDWallet = await make_did_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            uint64(101),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     await wallet_environments.process_pending_states(
@@ -1588,8 +1699,12 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_get_info(wallet_environments: WalletTestFramework):
+async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_node_0 = env_0.node
@@ -1612,7 +1727,7 @@ async def test_get_info(wallet_environments: WalletTestFramework):
         ph_1 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+        did_wallet_1: DIDWallet = await make_did_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_0,
             did_amount,
@@ -1620,6 +1735,7 @@ async def test_get_info(wallet_environments: WalletTestFramework):
             [],
             metadata={"twitter": "twitter"},
             fee=fee,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     await wallet_environments.process_pending_states(
@@ -1664,7 +1780,10 @@ async def test_get_info(wallet_environments: WalletTestFramework):
     assert response["metadata"]["twitter"] == "twitter"
     assert response["latest_coin"] == (await did_wallet_1.get_coin()).name().hex()
     assert response["num_verification"] == 0
-    assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
+    if use_alternate_recovery:
+        assert response["recovery_list_hash"] == ""
+    else:
+        assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
     assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
 
     # Test non-singleton coin
@@ -1732,8 +1851,12 @@ async def test_get_info(wallet_environments: WalletTestFramework):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_message_spend(wallet_environments: WalletTestFramework):
+async def test_message_spend(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
@@ -1747,8 +1870,14 @@ async def test_message_spend(wallet_environments: WalletTestFramework):
     fee = uint64(1000)
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, uint64(101), action_scope, [], fee=fee
+        did_wallet_1: DIDWallet = await make_did_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            uint64(101),
+            action_scope,
+            [],
+            fee=fee,
+            use_alternate_recovery=use_alternate_recovery,
         )
     await wallet_environments.process_pending_states(
         [
@@ -1796,8 +1925,12 @@ async def test_message_spend(wallet_environments: WalletTestFramework):
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_update_metadata(wallet_environments: WalletTestFramework):
+async def test_update_metadata(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
@@ -1811,8 +1944,14 @@ async def test_update_metadata(wallet_environments: WalletTestFramework):
     did_amount = uint64(101)
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, did_amount, action_scope, [], fee=fee
+        did_wallet_1: DIDWallet = await make_did_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            did_amount,
+            action_scope,
+            [],
+            fee=fee,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     await wallet_environments.process_pending_states(
@@ -2214,16 +2353,24 @@ async def test_did_resync(
     ],
     indirect=True,
 )
+@pytest.mark.parametrize(
+    "use_alternate_recovery",
+    [True, False],
+)
 @pytest.mark.anyio
-async def test_did_coin_records(wallet_environments: WalletTestFramework, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_did_coin_records(wallet_environments: WalletTestFramework, use_alternate_recovery: bool) -> None:
     # Setup
     wallet_node = wallet_environments.environments[0].node
     wallet = wallet_environments.environments[0].xch_wallet
 
     # Generate DID wallet
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, uint64(1), action_scope
+        did_wallet: DIDWallet = await make_did_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            uint64(1),
+            action_scope,
+            use_alternate_recovery=use_alternate_recovery,
         )
 
     await wallet_environments.process_pending_states(

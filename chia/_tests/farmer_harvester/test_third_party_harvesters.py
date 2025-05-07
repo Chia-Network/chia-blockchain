@@ -10,7 +10,15 @@ from os.path import dirname
 from typing import Optional, Union, cast
 
 import pytest
-from chia_rs import ChallengeChainSubSlot, FoliageBlockData, FoliageTransactionBlock, G1Element, RewardChainSubSlot
+from chia_rs import (
+    ChallengeChainSubSlot,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    G1Element,
+    ProofOfSpace,
+    RewardChainSubSlot,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -29,15 +37,13 @@ from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain

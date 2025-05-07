@@ -17,9 +17,17 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TextIO, Uni
 
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
     BLSCache,
+    CoinState,
     ConsensusConstants,
+    EndOfSubSlotBundle,
+    FullBlock,
+    HeaderBlock,
     PoolTarget,
+    SpendBundle,
+    SubEpochSummary,
+    UnfinishedBlock,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
@@ -30,7 +38,6 @@ from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.cost_calculator import NPCResult
@@ -50,32 +57,25 @@ from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
-from chia.full_node.tx_processing_queue import TransactionQueue
+from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate, RemovedMempoolItem
+from chia.protocols.wallet_protocol import CoinStateUpdate, RemovedMempoolItem
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
 from chia.types.coin_record import CoinRecord
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
-from chia.types.transaction_queue_entry import TransactionQueueEntry
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.augmented_chain import AugmentedBlockchain
@@ -2182,7 +2182,7 @@ class FullNode:
                     self.log.info(
                         f"Received orphan block of height {block.height} rh {block.reward_chain_block.get_hash()}"
                     )
-                    post_process_time = 0
+                    post_process_time = 0.0
                 else:
                     # Should never reach here, all the cases are covered
                     raise RuntimeError(f"Invalid result from add_block {added}")
@@ -2198,7 +2198,11 @@ class FullNode:
 
         if ppp_result is not None:
             assert state_change_summary is not None
+            post_process_time2 = time.monotonic()
             await self.peak_post_processing_2(block, peer, state_change_summary, ppp_result)
+            post_process_time2 = time.monotonic() - post_process_time2
+        else:
+            post_process_time2 = 0.0
 
         percent_full_str = (
             (
@@ -2215,6 +2219,7 @@ class FullNode:
             f"pre_validation: {pre_validation_time:0.2f}s, "
             f"CLVM: {pre_validation_result.timing / 1000.0:0.2f}s, "
             f"post-process: {post_process_time:0.2f}s, "
+            f"post-process2: {post_process_time2:0.2f}s, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",
         )
