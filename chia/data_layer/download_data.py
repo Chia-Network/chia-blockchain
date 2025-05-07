@@ -97,14 +97,8 @@ async def write_files_for_root(
             pass
 
     try:
-        last_seen_generation = await data_store.get_last_tree_root_by_hash(
-            store_id, root.node_hash, max_generation=root.generation
-        )
-        if last_seen_generation is None:
-            with open(filename_diff_tree, mode) as writer:
-                await data_store.write_tree_to_file(root, node_hash, store_id, True, writer)
-        else:
-            open(filename_diff_tree, mode).close()
+        with open(filename_diff_tree, mode) as writer:
+            await data_store.write_tree_to_file(root, node_hash, store_id, True, writer)
         written = True
     except FileExistsError:
         pass
