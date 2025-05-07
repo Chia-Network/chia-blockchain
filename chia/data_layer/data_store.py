@@ -196,19 +196,24 @@ class DataStore:
         store_id: bytes32,
         root_hash: Optional[bytes32],
         filename: Path,
+        delta_reader: Optional[DeltaReader] = None,
     ) -> None:
         if root_hash is None:
             merkle_blob = MerkleBlob(b"")
         else:
-            internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
-
-            delta_reader = DeltaReader(internal_nodes=internal_nodes, leaf_nodes=terminal_nodes)
             root = await self.get_tree_root(store_id=store_id)
-            if root.node_hash is not None:
-                delta_reader.collect_from_merkle_blob(
-                    self.get_merkle_path(store_id=store_id, root_hash=root.node_hash), indexes=[TreeIndex(0)]
-                )
-            missing_hashes = delta_reader.get_missing_hashes()
+            if delta_reader is None:
+                delta_reader = DeltaReader(internal_nodes={}, leaf_nodes={})
+                if root.node_hash is not None:
+                    delta_reader.collect_from_merkle_blob(
+                        self.get_merkle_path(store_id=store_id, root_hash=root.node_hash), indexes=[TreeIndex(0)]
+                    )
+
+            internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+            delta_reader.add_internal_nodes(internal_nodes)
+            delta_reader.add_leaf_nodes(terminal_nodes)
+
+            missing_hashes = await anyio.to_thread.run_sync(delta_reader.get_missing_hashes)
 
             if len(missing_hashes) > 0:
                 # TODO: consider adding transactions around this code
@@ -221,7 +226,7 @@ class DataStore:
                     await anyio.to_thread.run_sync(delta_reader.collect_from_merkle_blobs, jobs)
                 await self.build_cache_and_collect_missing_hashes(root, store_id, delta_reader)
 
-            merkle_blob, _ = delta_reader.create_merkle_blob(root_hash, set())
+            merkle_blob, _ = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)

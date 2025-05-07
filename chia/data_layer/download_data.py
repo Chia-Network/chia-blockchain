@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 import aiohttp
+from chia_rs.datalayer import DeltaReader
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import Literal
 
@@ -182,6 +183,8 @@ async def insert_from_delta_file(
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
+    delta_reader = DeltaReader(internal_nodes={}, leaf_nodes={})
+
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
@@ -225,6 +228,7 @@ async def insert_from_delta_file(
                     store_id,
                     None if root_hash == bytes32.zeros else root_hash,
                     target_filename_path,
+                    delta_reader=delta_reader,
                 )
                 log.info(
                     f"Successfully inserted hash {root_hash} from delta file. "
