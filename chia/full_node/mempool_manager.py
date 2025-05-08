@@ -149,6 +149,92 @@ QUOTE_BYTES = 2
 QUOTE_EXECUTION_COST = 20
 
 
+def is_atom_canonical(clvm_buffer: bytes, offset: int) -> tuple[int, bool]:
+    b = clvm_buffer[offset]
+    if (b & 0b11000000) == 0b10000000:
+        # 6 bits length prefix
+        mask = 0b00111111
+        prefix_len = 0
+        min_value = 1
+    elif (b & 0b11100000) == 0b11000000:
+        # 5 + 8 bits length prefix
+        mask = 0b00011111
+        prefix_len = 1
+        min_value = 1 << 6
+    elif (b & 0b11110000) == 0b11100000:
+        # 4 + 8 + 8 bits length prefix
+        mask = 0b00001111
+        prefix_len = 2
+        min_value = 1 << (5 + 8)
+    elif (b & 0b11111000) == 0b11110000:
+        # 3 + 8 + 8 + 8 bits length prefix
+        mask = 0b00000111
+        prefix_len = 3
+        min_value = 1 << (4 + 8 + 8)
+    elif (b & 0b11111100) == 0b11111000:
+        # 2 + 8 + 8 + 8 + 8 bits length prefix
+        mask = 0b00000011
+        prefix_len = 4
+        min_value = 1 << (3 + 8 + 8 + 8)
+    elif (b & 0b11111110) == 0b11111100:
+        # 1 + 8 + 8 + 8 + 8 + 8 bits length prefix
+        mask = 0b00000001
+        prefix_len = 5
+        min_value = 1 << (2 + 8 + 8 + 8 + 8)
+
+    atom_len = b & mask
+    for i in range(prefix_len):
+        atom_len <<= 8
+        offset += 1
+        atom_len |= clvm_buffer[offset]
+
+    return 1 + prefix_len + atom_len, atom_len >= min_value
+
+
+def is_clvm_canonical(clvm_buffer: bytes) -> bool:
+    """
+    checks whether the CLVM serialization is all canonical representation.
+    atoms can be serialized in more than one way by using more bytes than
+    necessary to encode the length prefix. This functions ensures that all atoms are
+    encoded with the shortest representation. back-references are not allowed
+    and will make this function return false
+    """
+    assert clvm_buffer != b""
+
+    offset = 0
+    tokens_left = 1
+    while True:
+        b = clvm_buffer[offset]
+
+        # pair
+        if b == 0xFF:
+            tokens_left += 1
+            offset += 1
+            continue
+
+        # back references cannot be considered canonical, since they may be
+        # encoded in many different ways
+        if b == 0xFE:
+            return False
+
+        # small atom or NIL
+        if b <= 0x80:
+            tokens_left -= 1
+            offset += 1
+        else:
+            atom_len, canonical = is_atom_canonical(clvm_buffer, offset)
+            if not canonical:
+                return False
+            tokens_left -= 1
+            offset += atom_len
+
+        if tokens_left == 0:
+            break
+
+    # if there's garbage at the end, it's not canonical
+    return offset == len(clvm_buffer)
+
+
 def check_removals(
     removals: dict[bytes32, CoinRecord],
     bundle_coin_spends: dict[bytes32, BundleCoinSpend],
@@ -166,20 +252,35 @@ def check_removals(
         # 1. Checks if it's been spent already
         if removals[coin_id].spent and not coin_bcs.eligible_for_fast_forward:
             return Err.DOUBLE_SPEND, []
+
         # 2. Checks if there's a mempool conflict
-        # Only consider conflicts if the coin is not eligible for deduplication
         conflicting_items = get_items_by_coin_ids([coin_id])
-        if not coin_bcs.eligible_for_fast_forward and not coin_bcs.eligible_for_dedup:
-            conflicts.update(conflicting_items)
-            continue
         for item in conflicting_items:
             if item in conflicts:
                 continue
             conflict_bcs = item.bundle_coin_spends[coin_id]
-            if (coin_bcs.eligible_for_fast_forward and not conflict_bcs.eligible_for_fast_forward) or (
-                coin_bcs.eligible_for_dedup and not conflict_bcs.eligible_for_dedup
+            # if the spend we're adding to the mempool is not DEDUP nor FF, it's
+            # just a regular conflict
+            if not coin_bcs.eligible_for_fast_forward and not coin_bcs.eligible_for_dedup:
+                conflicts.add(item)
+
+            # if the spend we're adding is FF, but there's a conflicting spend
+            # that isn't FF, they can't be chained, so that's a conflict
+            elif coin_bcs.eligible_for_fast_forward and not conflict_bcs.eligible_for_fast_forward:
+                conflicts.add(item)
+
+            # if the spend we're adding is DEDUP, but there's a conflicting spend
+            # that isn't DEDUP, we cannot merge them, so that's a conflict
+            elif coin_bcs.eligible_for_dedup and not conflict_bcs.eligible_for_dedup:
+                conflicts.add(item)
+
+            # if the spend we're adding is DEDUP but the existing spend has a
+            # different solution, we cannot merge them, so that's a conflict
+            elif coin_bcs.eligible_for_dedup and bytes(coin_bcs.coin_spend.solution) != bytes(
+                conflict_bcs.coin_spend.solution
             ):
                 conflicts.add(item)
+
     if len(conflicts) > 0:
         return Err.MEMPOOL_CONFLICT, list(conflicts)
     return None, []
@@ -511,6 +612,8 @@ class MempoolManager:
                 coin_id,
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
+
+            supports_dedup = eligibility_info.is_eligible_for_dedup and is_clvm_canonical(bytes(coin_spend.solution))
             mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
             lineage_info = None
             if mark_as_fast_forward:
@@ -523,7 +626,7 @@ class MempoolManager:
                     return Err.DOUBLE_SPEND, None, []
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
-                eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
+                eligible_for_dedup=supports_dedup,
                 eligible_for_fast_forward=mark_as_fast_forward,
                 additions=eligibility_info.spend_additions,
                 latest_singleton_lineage=lineage_info,
