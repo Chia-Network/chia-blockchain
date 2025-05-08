@@ -13,6 +13,7 @@ from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.full_node.coin_store_v3 import CoinStore as CoinStoreV3
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
@@ -631,3 +632,6 @@ class CoinStore:
                 return UnspentLineageInfo(
                     coin_id=bytes32(coin_id), parent_id=bytes32(parent_id), parent_parent_id=bytes32(parent_parent_id)
                 )
+
+
+CoinStore = CoinStoreV3  # type: ignore[assignment]

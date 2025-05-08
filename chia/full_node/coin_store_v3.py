@@ -12,6 +12,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from rocks_pyo3 import DB, WriteBatch
 
+from chia.util.db_wrapper import DBWrapper2
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
@@ -88,7 +89,9 @@ class CoinStore:
     # b(8 byte index) => block info
 
     @classmethod
-    async def create(cls, rocks_db: DB) -> CoinStore:
+    async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
+        rocks_db = db_wrapper._rocks_db
+        assert rocks_db is not None, "RocksDB is not initialized"
         return CoinStore(rocks_db)
 
     async def any_coins_unspent(self) -> bool:
@@ -178,6 +181,11 @@ class CoinStore:
 
         self.rocks_db.write(batch)
 
+        print(f"block info at {height}", block_info)
+        value = self.rocks_db.get(b"b" + height_blob)
+        assert value == bytes(block_info)
+        assert BlockInfo.from_bytes(value) == block_info
+
         end = time.monotonic()
         log.log(
             logging.WARNING if end - start > 10 else logging.DEBUG,
@@ -223,6 +231,7 @@ class CoinStore:
 
         key = index_for_height(uint64(height))
         blob = self.rocks_db.get(key)
+        assert blob is not None, f"Block info for height {height} not found in DB"
         block_info = BlockInfo.from_bytes(blob)
         return block_info
 
@@ -267,6 +276,7 @@ class CoinStore:
         *,
         max_items: int = 50000,
     ) -> set[CoinState]:
+        return set()
         # TODO: figure out how this will be implemented
         raise NotImplementedError("get_coin_states_by_puzzle_hashes is deprecated")
         if len(puzzle_hashes) == 0:
@@ -302,6 +312,7 @@ class CoinStore:
         end_height: uint32 = uint32((2**32) - 1),
     ) -> list[CoinRecord]:
         # TODO: figure out how this will be implemented
+        return []
         raise NotImplementedError("get_coin_records_by_parent_ids is deprecated")
         if len(parent_ids) == 0:
             return []
@@ -332,6 +343,7 @@ class CoinStore:
         max_height: uint32 = uint32.MAXIMUM,
         max_items: int = 50000,
     ) -> list[CoinState]:
+        return []
         coin_states: list[CoinState] = []
 
         values = self.rocks_db.multi_get([b"c" + _ for _ in coin_ids])

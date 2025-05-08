@@ -35,6 +35,7 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from packaging.version import Version
+from rocks_pyo3 import DB as RocksDB
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
@@ -228,12 +229,15 @@ class FullNode:
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
 
+        rocks_db_path = self.db_path.with_suffix(".rocksdb")
+        rocks_db = RocksDB(str(rocks_db_path))
         async with DBWrapper2.managed(
             self.db_path,
             db_version=db_version,
             reader_count=self.config.get("db_readers", 4),
             log_path=sql_log_path,
             synchronous=db_sync,
+            rocks_db=rocks_db,
         ) as self._db_wrapper:
             if self.db_wrapper.db_version != 2:
                 async with self.db_wrapper.reader_no_transaction() as conn:

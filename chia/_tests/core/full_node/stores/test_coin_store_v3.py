@@ -417,7 +417,7 @@ async def ztest_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> N
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def ztest_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
+async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
     async with temp_dbs() as dbs:
         rocks_db, db_wrapper = dbs
         num_blocks = 20
