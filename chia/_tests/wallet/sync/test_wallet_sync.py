@@ -31,6 +31,7 @@ from chia._tests.util.misc import patch_request_handler, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -59,7 +60,6 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.hash import std_hash
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
