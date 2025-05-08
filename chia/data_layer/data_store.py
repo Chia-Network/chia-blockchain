@@ -1562,7 +1562,7 @@ class DataStore:
             previous_merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=previous_root.node_hash)
             previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
             existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
-        tree_nodes: List[SerializedNode] = []
+        tree_nodes: list[SerializedNode] = []
 
         await self.get_nodes_for_file(
             root, node_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
