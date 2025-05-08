@@ -20,11 +20,11 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
-from chia.types.spend_bundle import estimate_fees
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import Err
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.query_filter import TransactionTypeFilter
