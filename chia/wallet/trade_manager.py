@@ -6,17 +6,19 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from chia_rs import CoinState
+from chia_rs import CoinState, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Literal
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.spend_bundle import estimate_fees
+from chia.types.coin_spend import compute_additions_with_cost
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.conditions import (
@@ -1064,3 +1066,19 @@ class TradeManager:
             }
         else:
             return requested_payments
+
+
+def estimate_fees(spend_bundle: SpendBundle) -> int:
+    """Unsafe to use for fees validation!!!"""
+    removed_amount = 0
+    added_amount = 0
+    max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+    for cs in spend_bundle.coin_spends:
+        removed_amount += cs.coin.amount
+        coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
+        max_cost -= cost
+        if max_cost < 0:
+            raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "estimate_fees() for SpendBundle")
+        for c in coins:
+            added_amount += c.amount
+    return removed_amount - added_amount
