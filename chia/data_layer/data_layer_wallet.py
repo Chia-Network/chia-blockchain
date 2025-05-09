@@ -18,7 +18,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import (
     AssertAnnouncement,
@@ -50,6 +49,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType

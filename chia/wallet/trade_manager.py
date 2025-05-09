@@ -15,7 +15,6 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.spend_bundle import estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -29,6 +28,7 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
+from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
