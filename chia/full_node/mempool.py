@@ -27,15 +27,15 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
-from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.clvm_cost import CLVMCost
-from chia.types.eligible_coin_spends import (
+from chia.full_node.eligible_coin_spends import (
     IdenticalSpendDedup,
     SingletonFastForward,
     SkipDedup,
 )
+from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.clvm_cost import CLVMCost
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
