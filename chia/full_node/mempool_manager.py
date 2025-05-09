@@ -295,7 +295,7 @@ class MempoolManager:
     nonzero_fee_minimum_fpc: int
     mempool_max_total_cost: int
     # a cache of MempoolItems that conflict with existing items in the pool
-    _conflict_cache: ConflictTxCache
+    _conflict_cache: Optional[ConflictTxCache]
     # cache of MempoolItems with height conditions making them not valid yet
     _pending_cache: PendingTxCache
     seen_cache_size: int
@@ -313,6 +313,7 @@ class MempoolManager:
         *,
         single_threaded: bool = False,
         max_tx_clvm_cost: Optional[uint64] = None,
+        use_conflict_cache: bool = True,
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -338,7 +339,10 @@ class MempoolManager:
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
-        self._conflict_cache = ConflictTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
+        if use_conflict_cache:
+            self._conflict_cache = ConflictTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
+        else:
+            self._conflict_cache = None
         self._pending_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self.seen_cache_size = 10000
         self._worker_queue_size = 0
@@ -370,7 +374,7 @@ class MempoolManager:
             return None
         return self.mempool.create_bundle_from_mempool_items(self.constants, self.peak.height)
 
-    def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float = 2.0) -> Optional[NewBlockGenerator]:
+    def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions and removals, for a new block
         """
@@ -378,9 +382,7 @@ class MempoolManager:
             return None
         return self.mempool.create_block_generator(self.constants, self.peak.height, timeout)
 
-    def create_block_generator2(
-        self, last_tb_header_hash: bytes32, timeout: float = 2.0
-    ) -> Optional[NewBlockGenerator]:
+    def create_block_generator2(self, last_tb_header_hash: bytes32, timeout: float) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions, for a new block
         """
@@ -536,7 +538,7 @@ class MempoolManager:
             if info.error is not None:
                 return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.FAILED, [], info.error)
             return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, [*info.removals, conflict], None)
-        elif err is Err.MEMPOOL_CONFLICT and item is not None:
+        elif self._conflict_cache is not None and err is Err.MEMPOOL_CONFLICT and item is not None:
             # The transaction has a conflict with another item in the
             # mempool, put it aside and re-try it later
             self._conflict_cache.add(item)
@@ -560,12 +562,13 @@ class MempoolManager:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
     ) -> tuple[Optional[Err], Optional[MempoolItem], list[bytes32]]:
         """
-        Validates new_spend with the given NPCResult, and spend_name, and the current mempool. The mempool should
+        Validates new_spend with the given SpendBundleConditions, and
+        spend_name, and the current mempool. The mempool should
         be locked during this call (blockchain lock).
 
         Args:
             new_spend: spend bundle to validate
-            conds: result of running the clvm transaction in a fake block
+            conds: result of running the clvm transaction
             spend_name: hash of the spend bundle data, passed in as an optimization
             first_added_height: The block height that `new_spend`  first entered this node's mempool.
                 Used to estimate how long a spend has taken to be included on the chain.
@@ -790,7 +793,7 @@ class MempoolManager:
         if not item and include_pending:
             # no async lock needed since we're not mutating the pending_cache
             item = self._pending_cache.get(bundle_hash)
-        if not item and include_pending:
+        if not item and include_pending and self._conflict_cache is not None:
             item = self._conflict_cache.get(bundle_hash)
 
         return item
@@ -963,7 +966,8 @@ class MempoolManager:
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
 
         potential_txs = self._pending_cache.drain(new_peak.height)
-        potential_txs.update(self._conflict_cache.drain())
+        if self._conflict_cache is not None:
+            potential_txs.update(self._conflict_cache.drain())
         txs_added = []
         for item in potential_txs.values():
             info = await self.add_spend_bundle(
