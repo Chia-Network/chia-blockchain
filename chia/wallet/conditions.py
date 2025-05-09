@@ -564,7 +564,7 @@ class SendMessage(Condition):
 
     def __post_init__(self) -> None:
         if self.mode_integer is None and (self.sender is None or self.receiver is None):
-            raise ValueError("Must specify either mode_integer or both sender and reciever")
+            raise ValueError("Must specify either mode_integer or both sender and receiver")
 
         if self.mode_integer is not None and self.sender is not None:
             assert self.mode_integer >> 3 == self.sender.mode, (
