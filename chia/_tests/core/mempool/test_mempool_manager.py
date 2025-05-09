@@ -191,6 +191,14 @@ def test_atom_canonical(clvm_hex: str, expect: int) -> None:
     assert is_canonical
 
 
+@pytest.mark.anyio
+async def test_bundles_are_canonical(test_bundles: list[SpendBundle]) -> None:
+    for sb in test_bundles:
+        for spend in sb.coin_spends:
+            assert is_clvm_canonical(bytes(spend.puzzle_reveal))
+            assert is_clvm_canonical(bytes(spend.solution))
+
+
 @dataclasses.dataclass(frozen=True)
 class TestBlockRecord:
     """
