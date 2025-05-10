@@ -562,6 +562,15 @@ class DataStore:
 
             return KeyOrValueId(row[0])
 
+    def get_blob_from_table_blob(self, table_blob: bytes, store_id: bytes32) -> bytes:
+        if not self._kvid_blob_is_file(table_blob):
+            return table_blob
+
+        blob_hash = bytes32(table_blob)
+        # TODO: seems that zstd needs hinting
+        # TODO: consider file-system based locking of either the file or the store directory
+        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
+
     async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
@@ -576,14 +585,7 @@ class DataStore:
             if row is None:
                 return None
 
-        table_blob = bytes(row[0])
-        if not self._kvid_blob_is_file(table_blob):
-            return table_blob
-
-        blob_hash = bytes32(table_blob)
-        # TODO: seems that zstd needs hinting
-        # TODO: consider file-system based locking of either the file or the store directory
-        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
+        return self.get_blob_from_table_blob(bytes(row[0]), store_id)
 
     async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid.raw, store_id)
@@ -1543,33 +1545,17 @@ class DataStore:
         kid = KeyId(kvid)
         return merkle_blob.get_proof_of_inclusion(kid)
 
-    async def write_tree_to_file(
+    async def get_nodes_for_file(
         self,
         root: Root,
         node_hash: bytes32,
         store_id: bytes32,
         deltas_only: bool,
-        writer: BinaryIO,
-        merkle_blob: Optional[MerkleBlob] = None,
-        hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
-        existing_hashes: Optional[set[bytes32]] = None,
+        merkle_blob: MerkleBlob,
+        hash_to_index: dict[bytes32, TreeIndex],
+        existing_hashes: set[bytes32],
+        tree_nodes: list[SerializedNode],
     ) -> None:
-        if node_hash == bytes32.zeros:
-            return
-
-        if merkle_blob is None:
-            merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
-        if hash_to_index is None:
-            hash_to_index = merkle_blob.get_hashes_indexes()
-        if existing_hashes is None:
-            if root.generation == 0:
-                existing_hashes = set()
-            else:
-                previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
-                previous_merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=previous_root.node_hash)
-                previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
-                existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
-
         if deltas_only:
             if node_hash in existing_hashes:
                 return
@@ -1577,25 +1563,94 @@ class DataStore:
         raw_index = hash_to_index[node_hash]
         raw_node = merkle_blob.get_raw_node(raw_index)
 
-        to_write = b""
         if isinstance(raw_node, chia_rs.datalayer.InternalNode):
             left_hash = merkle_blob.get_hash_at_index(raw_node.left)
             right_hash = merkle_blob.get_hash_at_index(raw_node.right)
-            await self.write_tree_to_file(
-                root, left_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index, existing_hashes
+            await self.get_nodes_for_file(
+                root, left_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
             )
-            await self.write_tree_to_file(
-                root, right_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index, existing_hashes
+            await self.get_nodes_for_file(
+                root, right_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
             )
-            to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
+            tree_nodes.append(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
         elif isinstance(raw_node, chia_rs.datalayer.LeafNode):
-            node = await self.get_terminal_node(raw_node.key, raw_node.value, store_id)
-            to_write = bytes(SerializedNode(True, node.key, node.value))
+            tree_nodes.append(
+                SerializedNode(
+                    True,
+                    raw_node.key.to_bytes(),
+                    raw_node.value.to_bytes(),
+                )
+            )
         else:
             raise Exception(f"Node is neither InternalNode nor TerminalNode: {raw_node}")
 
-        writer.write(len(to_write).to_bytes(4, byteorder="big"))
-        writer.write(to_write)
+    async def get_table_blobs(self, kv_ids: list[KeyOrValueId], store_id: bytes32) -> dict[KeyOrValueId, bytes]:
+        result: dict[KeyOrValueId, bytes] = {}
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+        kv_ids = list(set(kv_ids))
+
+        async with self.db_wrapper.reader() as reader:
+            for i in range(0, len(kv_ids), batch_size):
+                chunk = kv_ids[i : i + batch_size]
+                placeholders = ",".join(["?"] * len(chunk))
+                query = (
+                    f"SELECT blob, kv_id FROM ids WHERE store_id = ? AND kv_id IN ({placeholders}) LIMIT {len(chunk)}"
+                )
+
+                async with reader.execute(query, (store_id, *chunk)) as cursor:
+                    rows = await cursor.fetchall()
+                    result.update({row["kv_id"]: row["blob"] for row in rows})
+
+        if len(result) != len(kv_ids):
+            raise Exception("Cannot retrieve all the requested kv_ids")
+
+        return result
+
+    async def write_tree_to_file(
+        self,
+        root: Root,
+        node_hash: bytes32,
+        store_id: bytes32,
+        deltas_only: bool,
+        writer: BinaryIO,
+    ) -> None:
+        if node_hash == bytes32.zeros:
+            return
+
+        merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
+        hash_to_index = merkle_blob.get_hashes_indexes()
+        if root.generation == 0:
+            existing_hashes = set()
+        else:
+            previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
+            previous_merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=previous_root.node_hash)
+            previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
+            existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
+        tree_nodes: list[SerializedNode] = []
+
+        await self.get_nodes_for_file(
+            root, node_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
+        )
+        kv_ids = [
+            KeyOrValueId.from_bytes(raw_id)
+            for node in tree_nodes
+            if node.is_terminal
+            for raw_id in (node.value1, node.value2)
+        ]
+        table_blobs = await self.get_table_blobs(kv_ids, store_id)
+
+        for node in tree_nodes:
+            if node.is_terminal:
+                blobs = []
+                for raw_id in (node.value1, node.value2):
+                    id = KeyOrValueId.from_bytes(raw_id)
+                    id_table_blob = table_blobs[id]
+                    blobs.append(self.get_blob_from_table_blob(id_table_blob, store_id))
+                to_write = bytes(SerializedNode(True, blobs[0], blobs[1]))
+            else:
+                to_write = bytes(node)
+            writer.write(len(to_write).to_bytes(4, byteorder="big"))
+            writer.write(to_write)
 
     async def update_subscriptions_from_wallet(self, store_id: bytes32, new_urls: list[str]) -> None:
         async with self.db_wrapper.writer() as writer:
