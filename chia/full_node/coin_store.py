@@ -33,6 +33,7 @@ class CoinStore:
 
     db_wrapper: DBWrapper2
     coins_added_at_height_cache: LRUCache[uint32, list[CoinRecord]]
+    has_coin_record_ph_si_idx: bool = False
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
@@ -63,8 +64,20 @@ class CoinStore:
             log.info("DB: Creating index coin_spent_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
 
-            log.info("DB: Creating index coin_puzzle_hash")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
+            # We're keeping coin_puzzle_hash index for existing DBs and adding
+            # coin_record_ph_si_idx for the new ones.
+            async with conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'coin_puzzle_hash'"
+            ) as cursor:
+                no_coin_puzzle_hash_index = await cursor.fetchone() is None
+            if no_coin_puzzle_hash_index:
+                log.info("DB: Creating index coin_record_ph_si_idx")
+                await conn.execute(
+                    "CREATE INDEX IF NOT EXISTS coin_record_ph_si_idx ON coin_record(puzzle_hash, spent_index)"
+                )
+                self.has_coin_record_ph_si_idx = True
+            else:
+                log.info("DB: Using index coin_puzzle_hash instead of coin_record_ph_si_idx")
 
             log.info("DB: Creating index coin_parent_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
@@ -240,10 +253,11 @@ class CoinStore:
     ) -> list[CoinRecord]:
         coins = set()
 
+        index_to_use = "coin_record_ph_si_idx" if self.has_coin_record_ph_si_idx else "coin_puzzle_hash"
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash WHERE puzzle_hash=? "
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY {index_to_use} WHERE puzzle_hash=? "
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 (puzzle_hash, start_height, end_height),
@@ -267,10 +281,11 @@ class CoinStore:
         puzzle_hashes_db: tuple[Any, ...]
         puzzle_hashes_db = tuple(puzzle_hashes)
 
+        index_to_use = "coin_record_ph_si_idx" if self.has_coin_record_ph_si_idx else "coin_puzzle_hash"
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY {index_to_use} "
                 f"WHERE puzzle_hash in ({'?,' * (len(puzzle_hashes) - 1)}?) "
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
@@ -330,12 +345,13 @@ class CoinStore:
             return set()
 
         coins: set[CoinState] = set()
+        index_to_use = "coin_record_ph_si_idx" if self.has_coin_record_ph_si_idx else "coin_puzzle_hash"
         async with self.db_wrapper.reader_no_transaction() as conn:
             for batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: tuple[Any, ...] = tuple(batch.entries)
                 async with conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY {index_to_use} "
                     f"WHERE puzzle_hash in ({'?,' * (len(batch.entries) - 1)}?) "
                     f"AND (confirmed_index>=? OR spent_index>=?)"
                     f"{'' if include_spent_coins else 'AND spent_index=0'}"
@@ -460,10 +476,10 @@ class CoinStore:
             else:
                 # There are no coins which are both spent and unspent, so we're finished.
                 return [], None
-
+            index_to_use = "coin_record_ph_si_idx" if self.has_coin_record_ph_si_idx else "coin_puzzle_hash"
             cursor = await conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY {index_to_use} "
                 f"WHERE puzzle_hash in ({'?,' * (puzzle_hash_count - 1)}?) "
                 f"AND (confirmed_index>=? OR spent_index>=?) "
                 f"{height_filter} {amount_filter}"
@@ -619,29 +635,40 @@ class CoinStore:
     # Lookup the most recent unspent lineage that matches a puzzle hash
     async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
+            # We were leveraging the `coin_puzzle_hash` index that was created to
+            # serve prior purposes, but we're tansitioning to a more suitable
+            # `coin_record_ph_si_idx` index.
+            index_to_use = "coin_record_ph_si_idx" if self.has_coin_record_ph_si_idx else "coin_puzzle_hash"
             async with conn.execute(
-                "SELECT unspent.coin_name, "
-                "unspent.amount, "
-                "unspent.coin_parent, "
-                "parent.amount, "
-                "parent.coin_parent "
-                "FROM coin_record AS unspent INDEXED BY coin_puzzle_hash "
-                "LEFT JOIN coin_record AS parent ON unspent.coin_parent = parent.coin_name "
-                "WHERE unspent.spent_index = 0 "
-                "AND parent.spent_index > 0 "
-                "AND unspent.puzzle_hash = ? "
-                "AND parent.puzzle_hash = unspent.puzzle_hash",
+                f"""
+                SELECT coin_name, amount, coin_parent
+                FROM coin_record INDEXED BY {index_to_use}
+                WHERE puzzle_hash = ? AND spent_index = 0
+                """,
                 (puzzle_hash,),
             ) as cursor:
                 rows = list(await cursor.fetchall())
                 if len(rows) != 1:
                     log.debug("Expected 1 unspent with puzzle hash %s, but found %s", puzzle_hash.hex(), len(rows))
                     return None
-                coin_id, coin_amount, parent_id, parent_amount, parent_parent_id = rows[0]
-                return UnspentLineageInfo(
-                    coin_id=bytes32(coin_id),
-                    coin_amount=uint64(int_from_bytes(coin_amount)),
-                    parent_id=bytes32(parent_id),
-                    parent_amount=uint64(int_from_bytes(parent_amount)),
-                    parent_parent_id=bytes32(parent_parent_id),
-                )
+                coin_id, coin_amount, parent_id = rows[0]
+                async with conn.execute(
+                    """
+                    SELECT amount, coin_parent
+                    FROM coin_record
+                    WHERE coin_name = ? AND spent_index > 0 AND puzzle_hash = ?
+                    """,
+                    (parent_id, puzzle_hash),
+                ) as cursor2:
+                    row = await cursor2.fetchone()
+                    if row is None:
+                        log.debug("Couldn't find parent for the unspent with puzzle hash %s", puzzle_hash.hex())
+                        return None
+                    parent_amount, parent_parent_id = row
+                    return UnspentLineageInfo(
+                        coin_id=bytes32(coin_id),
+                        coin_amount=uint64(int_from_bytes(coin_amount)),
+                        parent_id=bytes32(parent_id),
+                        parent_amount=uint64(int_from_bytes(parent_amount)),
+                        parent_parent_id=bytes32(parent_parent_id),
+                    )
