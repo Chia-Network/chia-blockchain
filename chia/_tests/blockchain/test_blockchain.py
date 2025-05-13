@@ -1156,7 +1156,7 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
+        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.version_and_size", 62)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
         block_bad = recursive_replace(
@@ -1167,14 +1167,14 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
-            "reward_chain_block.proof_of_space.size",
+            "reward_chain_block.proof_of_space.version_and_size",
             32,
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.proof_of_space.proof",
-            bytes([1] * int(blocks[-1].reward_chain_block.proof_of_space.size * 64 / 8)),
+            bytes([1] * int((blocks[-1].reward_chain_block.proof_of_space.version_and_size & 0x7F) * 64 / 8)),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
