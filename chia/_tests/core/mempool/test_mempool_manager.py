@@ -2949,8 +2949,9 @@ async def test_spending_singleton_to_invalidate_existing_ff_spends() -> None:
 
 
 @pytest.mark.parametrize("flags", [ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, ELIGIBLE_FOR_FF | ELIGIBLE_FOR_DEDUP])
+@pytest.mark.parametrize("old", [True, False])
 @pytest.mark.anyio
-async def test_check_removals_with_block_creation(flags: int) -> None:
+async def test_check_removals_with_block_creation(flags: int, old: bool) -> None:
     LAUNCHER_ID = bytes32([1] * 32)
     PARENT_PARENT = bytes32([2] * 32)
     singleton_spend = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT)
@@ -2979,14 +2980,15 @@ async def test_check_removals_with_block_creation(flags: int) -> None:
     bundle_add_info2 = await mempool_manager.add_spend_bundle(sb2, sb2_conds, sb2.name(), uint32(1))
     assert bundle_add_info2.status == MempoolInclusionStatus.SUCCESS
     assert mempool_manager.peak is not None
-    block_generator = mempool_manager.create_block_generator(mempool_manager.peak.header_hash)
-    assert block_generator is not None
-    assert len(block_generator.additions) == 1
-    assert set(block_generator.additions) == {
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+    new_block_gen = create_block(mempool_manager.peak.header_hash)
+    assert new_block_gen is not None
+    assert len(new_block_gen.additions) == 1
+    assert set(new_block_gen.additions) == {
         Coin(singleton_spend.coin.name(), singleton_spend.coin.puzzle_hash, uint64(1))
     }
-    assert len(block_generator.removals) == 2
-    assert set(block_generator.removals) == {singleton_spend.coin, TEST_COIN}
+    assert len(new_block_gen.removals) == 2
+    assert set(new_block_gen.removals) == {singleton_spend.coin, TEST_COIN}
 
 
 @pytest.mark.anyio
