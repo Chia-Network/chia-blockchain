@@ -654,6 +654,34 @@ class DataStore:
         kid, vid = merkle_blob.get_node_by_hash(node_hash)
         return await self.get_terminal_node(kid, vid, store_id)
 
+    async def get_terminal_nodes_by_hashes(
+        self,
+        node_hashes: list[bytes32],
+        store_id: bytes32,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
+    ) -> list[TerminalNode]:
+        resolved_root_hash: Optional[bytes32]
+        if root_hash is unspecified:
+            root = await self.get_tree_root(store_id=store_id)
+            resolved_root_hash = root.node_hash
+        else:
+            resolved_root_hash = root_hash
+
+        merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
+        kv_ids: list[KeyOrValueId] = []
+        for node_hash in node_hashes:
+            kid, vid = merkle_blob.get_node_by_hash(node_hash)
+            kv_ids.append(KeyOrValueId(kid.raw))
+            kv_ids.append(KeyOrValueId(vid.raw))
+        table_blobs = await self.get_table_blobs(kv_ids, store_id)
+
+        terminal_nodes: list[TerminalNode] = []
+        for node_hash in node_hashes:
+            kid, vid = merkle_blob.get_node_by_hash(node_hash)
+            terminal_nodes.append(self.get_terminal_node_from_table_blobs(kid, vid, table_blobs, store_id))
+
+        return terminal_nodes
+
     async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
@@ -998,6 +1026,13 @@ class DataStore:
 
         return internal_nodes
 
+    def get_terminal_node_from_table_blobs(
+        self, kid: KeyId, vid: ValueId, table_blobs: dict[KeyOrValueId, bytes], store_id: bytes32
+    ) -> TerminalNode:
+        key = self.get_blob_from_table_blob(table_blobs[KeyOrValueId(kid.raw)], store_id)
+        value = self.get_blob_from_table_blob(table_blobs[KeyOrValueId(vid.raw)], store_id)
+        return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
+
     async def get_keys_values(
         self,
         store_id: bytes32,
@@ -1017,11 +1052,12 @@ class DataStore:
                 return []
 
             kv_ids = merkle_blob.get_keys_values()
+            kv_ids_unpacked = [KeyOrValueId(id.raw) for pair in kv_ids.items() for id in pair]
+            table_blobs = await self.get_table_blobs(kv_ids_unpacked, store_id)
 
             terminal_nodes: list[TerminalNode] = []
             for kid, vid in kv_ids.items():
-                terminal_node = await self.get_terminal_node(kid, vid, store_id)
-                terminal_nodes.append(terminal_node)
+                terminal_nodes.append(self.get_terminal_node_from_table_blobs(kid, vid, table_blobs, store_id))
 
         return terminal_nodes
 
@@ -1048,9 +1084,11 @@ class DataStore:
                     return KeysValuesCompressed({}, {}, {}, resolved_root_hash)
 
                 kv_ids = merkle_blob.get_keys_values()
-                for kid, vid in kv_ids.items():
-                    node = await self.get_terminal_node(kid, vid, store_id)
+                kv_ids_unpacked = [KeyOrValueId(id.raw) for pair in kv_ids.items() for id in pair]
+                table_blobs = await self.get_table_blobs(kv_ids_unpacked, store_id)
 
+                for kid, vid in kv_ids.items():
+                    node = self.get_terminal_node_from_table_blobs(kid, vid, table_blobs, store_id)
                     keys_values_hashed[key_hash(node.key)] = leaf_hash(node.key, node.value)
                     key_hash_to_length[key_hash(node.key)] = len(node.key)
                     leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
@@ -1068,11 +1106,12 @@ class DataStore:
         pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
 
         keys: list[bytes] = []
+        leaf_hashes: list[bytes32] = []
         for hash in pagination_data.hashes:
             leaf_hash = keys_values_compressed.keys_values_hashed[hash]
-            node = await self.get_terminal_node_by_hash(leaf_hash, store_id, root_hash)
-            assert isinstance(node, TerminalNode)
-            keys.append(node.key)
+            leaf_hashes.append(leaf_hash)
+        nodes = await self.get_terminal_nodes_by_hashes(leaf_hashes, store_id, root_hash)
+        keys = [node.key for node in nodes]
 
         return KeysPaginationData(
             pagination_data.total_pages,
@@ -1091,12 +1130,7 @@ class DataStore:
         keys_values_compressed = await self.get_keys_values_compressed(store_id, root_hash)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
 
-        keys_values: list[TerminalNode] = []
-        for hash in pagination_data.hashes:
-            node = await self.get_terminal_node_by_hash(hash, store_id, root_hash)
-            assert isinstance(node, TerminalNode)
-            keys_values.append(node)
-
+        keys_values = await self.get_terminal_nodes_by_hashes(pagination_data.hashes, store_id, root_hash)
         return KeysValuesPaginationData(
             pagination_data.total_pages,
             pagination_data.total_bytes,
@@ -1133,15 +1167,25 @@ class DataStore:
 
         pagination_data = get_hashes_for_page(page, lengths, max_page_size)
         kv_diff: list[DiffData] = []
-
+        insertion_hashes: list[bytes32] = []
+        deletion_hashes: list[bytes32] = []
         for hash in pagination_data.hashes:
-            root_hash = hash2 if hash in insertions else hash1
-            node = await self.get_terminal_node_by_hash(hash, store_id, root_hash)
-            assert isinstance(node, TerminalNode)
             if hash in insertions:
-                kv_diff.append(DiffData(OperationType.INSERT, node.key, node.value))
+                insertion_hashes.append(hash)
             else:
-                kv_diff.append(DiffData(OperationType.DELETE, node.key, node.value))
+                deletion_hashes.append(hash)
+        if hash2 != bytes32.zeros:
+            insertion_nodes = await self.get_terminal_nodes_by_hashes(insertion_hashes, store_id, hash2)
+        else:
+            insertion_nodes = []
+        if hash1 != bytes32.zeros:
+            deletion_nodes = await self.get_terminal_nodes_by_hashes(deletion_hashes, store_id, hash1)
+        else:
+            deletion_nodes = []
+        for node in insertion_nodes:
+            kv_diff.append(DiffData(OperationType.INSERT, node.key, node.value))
+        for node in deletion_nodes:
+            kv_diff.append(DiffData(OperationType.DELETE, node.key, node.value))
 
         return KVDiffPaginationData(
             pagination_data.total_pages,
@@ -1206,11 +1250,11 @@ class DataStore:
                 return []
 
             kv_ids = merkle_blob.get_keys_values()
+            raw_key_ids = [KeyOrValueId(id.raw) for id in kv_ids.keys()]
+            table_blobs = await self.get_table_blobs(raw_key_ids, store_id)
             keys: list[bytes] = []
             for kid in kv_ids.keys():
-                key = await self.get_blob_from_kvid(kid.raw, store_id)
-                if key is None:
-                    raise Exception(f"Unknown key corresponding to KeyId: {kid}")
+                key = self.get_blob_from_table_blob(table_blobs[KeyOrValueId(kid.raw)], store_id)
                 keys.append(key)
 
         return keys
