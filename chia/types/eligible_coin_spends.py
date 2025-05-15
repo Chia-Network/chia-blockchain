@@ -47,9 +47,7 @@ class DedupCoinSpend:
 @dataclasses.dataclass(frozen=True)
 class UnspentLineageInfo:
     coin_id: bytes32
-    coin_amount: uint64
     parent_id: bytes32
-    parent_amount: uint64
     parent_parent_id: bytes32
 
 
@@ -70,16 +68,19 @@ def set_next_singleton_version(
         next iteration
     """
     singleton_child = next(
-        (addition for addition in singleton_additions if addition.puzzle_hash == current_singleton.puzzle_hash), None
+        (
+            addition
+            for addition in singleton_additions
+            if addition.puzzle_hash == current_singleton.puzzle_hash and addition.amount == current_singleton.amount
+        ),
+        None,
     )
     if singleton_child is None:
         raise ValueError("Could not find fast forward child singleton.")
     # Keep track of this in order to chain the next ff
     fast_forward_spends[current_singleton.puzzle_hash] = UnspentLineageInfo(
         coin_id=singleton_child.name(),
-        coin_amount=singleton_child.amount,
         parent_id=singleton_child.parent_coin_info,
-        parent_amount=current_singleton.amount,
         parent_parent_id=current_singleton.parent_coin_info,
     )
 
@@ -107,14 +108,10 @@ def perform_the_fast_forward(
         ValueError if none of the additions are considered to be the singleton's
         next iteration
     """
-    new_coin = Coin(
-        unspent_lineage_info.parent_id, spend_data.coin_spend.coin.puzzle_hash, unspent_lineage_info.coin_amount
-    )
-    new_parent = Coin(
-        unspent_lineage_info.parent_parent_id,
-        spend_data.coin_spend.coin.puzzle_hash,
-        unspent_lineage_info.parent_amount,
-    )
+    singleton_ph = spend_data.coin_spend.coin.puzzle_hash
+    singleton_amount = spend_data.coin_spend.coin.amount
+    new_coin = Coin(unspent_lineage_info.parent_id, singleton_ph, singleton_amount)
+    new_parent = Coin(unspent_lineage_info.parent_parent_id, singleton_ph, singleton_amount)
     # These hold because puzzle hash is not expected to change
     assert new_coin.name() == unspent_lineage_info.coin_id
     assert new_parent.name() == unspent_lineage_info.parent_id
@@ -126,7 +123,7 @@ def perform_the_fast_forward(
     for addition in spend_data.additions:
         patched_addition = Coin(unspent_lineage_info.coin_id, addition.puzzle_hash, addition.amount)
         patched_additions.append(patched_addition)
-        if addition.puzzle_hash == spend_data.coin_spend.coin.puzzle_hash:
+        if addition.puzzle_hash == singleton_ph and addition.amount == singleton_amount:
             # We found the next version of this singleton
             singleton_child = patched_addition
     if singleton_child is None:
@@ -135,9 +132,7 @@ def perform_the_fast_forward(
     # Keep track of this in order to chain the next ff
     fast_forward_spends[spend_data.coin_spend.coin.puzzle_hash] = UnspentLineageInfo(
         coin_id=singleton_child.name(),
-        coin_amount=singleton_child.amount,
         parent_id=singleton_child.parent_coin_info,
-        parent_amount=unspent_lineage_info.coin_amount,
         parent_parent_id=unspent_lineage_info.parent_id,
     )
     return new_coin_spend, patched_additions
