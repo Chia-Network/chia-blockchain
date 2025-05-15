@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional, Union
 
-from chia_rs import ChallengeBlockInfo, ConsensusConstants
+from chia_rs import ChallengeBlockInfo, ConsensusConstants, EndOfSubSlotBundle, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -11,8 +11,6 @@ from chia.protocols import timelord_protocol
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.types import Chain, StateType
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 
 log = logging.getLogger(__name__)
 

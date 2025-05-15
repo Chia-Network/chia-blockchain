@@ -3,12 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from chia_rs import Foliage, FoliageTransactionBlock, RewardChainBlockUnfinished
+from chia_rs import EndOfSubSlotBundle, Foliage, FoliageTransactionBlock, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint128
 
 from chia.types.blockchain_format.vdf import VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.streamable import Streamable, streamable
 
 

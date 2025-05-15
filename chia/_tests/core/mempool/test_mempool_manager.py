@@ -11,8 +11,10 @@ from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
     AugSchemeMPL,
+    CoinSpend,
     ConsensusConstants,
     G2Element,
+    SpendBundle,
     SpendBundleConditions,
     SpendConditions,
     get_conditions_from_spendbundle,
@@ -52,7 +54,7 @@ from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, P
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.eligible_coin_spends import (
@@ -60,13 +62,11 @@ from chia.types.eligible_coin_spends import (
     EligibilityAndAdditions,
     IdenticalSpendDedup,
     SkipDedup,
-    UnspentLineageInfo,
     run_for_cost,
 )
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import BundleCoinSpend, MempoolItem
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
 from chia.wallet.conditions import AssertCoinAnnouncement
@@ -495,6 +495,9 @@ def make_bundle_spends_map_and_fee(
             eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
             eligible_for_fast_forward=eligibility_info.ff_puzzle_hash is not None,
             additions=eligibility_info.spend_additions,
+            latest_singleton_lineage=UnspentLineageInfo(coin_id, coin_spend.coin.parent_coin_info, bytes32([0] * 32))
+            if eligibility_info.ff_puzzle_hash is not None
+            else None,
         )
     fee = uint64(removals_amount - additions_amount)
     return bundle_coin_spends, fee
@@ -1125,7 +1128,7 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     spends = low_rate_spends + high_rate_spends if reverse_tx_order else high_rate_spends + low_rate_spends
     await send_spends_to_mempool(spends)
     assert mempool_manager.peak is not None
-    result = await mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
+    result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     # Make sure we filled the block with only high rate spends
     assert len([s for s in high_rate_spends if s in result[0].coin_spends]) == len(result[0].coin_spends)
@@ -1222,7 +1225,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
 
     assert mempool_manager.peak is not None
     caplog.set_level(logging.DEBUG)
-    result = await mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
+    result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
     agg, additions = result
     skipped_due_to_eligible_coins = sum(
@@ -2263,7 +2266,9 @@ class TestCoins:
 
 
 # creates a CoinSpend of a made up
-def make_singleton_spend(launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32)) -> CoinSpend:
+def make_singleton_spend(
+    launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32), child_amount: int = 1
+) -> CoinSpend:
     from chia_rs import supports_fast_forward
 
     from chia.wallet.lineage_proof import LineageProof
@@ -2276,7 +2281,7 @@ def make_singleton_spend(launcher_id: bytes32, parent_parent_id: bytes32 = bytes
 
     lineage_proof = LineageProof(parent_parent_id, IDENTITY_PUZZLE_HASH, uint64(1))
 
-    inner_solution = Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(1)]])
+    inner_solution = Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(child_amount)]])
     singleton_solution = SerializedProgram.from_program(
         solution_for_singleton(lineage_proof, uint64(1), inner_solution)
     )
@@ -2357,8 +2362,11 @@ async def test_new_peak_ff_eviction(
     assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
     item = mempool_manager.get_mempool_item(bundle.name())
     assert item is not None
-    assert item.bundle_coin_spends[singleton_spend.coin.name()].eligible_for_fast_forward
-    assert item.bundle_coin_spends[singleton_spend.coin.name()].latest_singleton_coin == singleton_spend.coin.name()
+    singleton_name = singleton_spend.coin.name()
+    assert item.bundle_coin_spends[singleton_name].eligible_for_fast_forward
+    latest_singleton_lineage = item.bundle_coin_spends[singleton_name].latest_singleton_lineage
+    assert latest_singleton_lineage is not None
+    assert latest_singleton_lineage.coin_id == singleton_name
 
     spent_coins: list[bytes32] = []
 
@@ -2388,7 +2396,9 @@ async def test_new_peak_ff_eviction(
         item = mempool_manager.get_mempool_item(bundle.name())
         assert item is not None
         assert item.bundle_coin_spends[singleton_spend.coin.name()].eligible_for_fast_forward
-        assert item.bundle_coin_spends[singleton_spend.coin.name()].latest_singleton_coin == singleton_spend.coin.name()
+        latest_singleton_lineage = item.bundle_coin_spends[singleton_spend.coin.name()].latest_singleton_lineage
+        assert latest_singleton_lineage is not None
+        assert latest_singleton_lineage.coin_id == singleton_spend.coin.name()
 
 
 @pytest.mark.anyio
@@ -2456,9 +2466,11 @@ async def test_multiple_ff(use_optimization: bool) -> None:
     item = mempool_manager.get_mempool_item(bundle.name())
     assert item is not None
     spend = item.bundle_coin_spends[singleton_spend1.coin.name()]
-    assert spend.latest_singleton_coin == singleton_spend3.coin.name()
+    assert spend.latest_singleton_lineage is not None
+    assert spend.latest_singleton_lineage.coin_id == singleton_spend3.coin.name()
     spend = item.bundle_coin_spends[singleton_spend2.coin.name()]
-    assert spend.latest_singleton_coin == singleton_spend3.coin.name()
+    assert spend.latest_singleton_lineage is not None
+    assert spend.latest_singleton_lineage.coin_id == singleton_spend3.coin.name()
 
 
 @pytest.mark.anyio
@@ -2505,7 +2517,8 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert item is not None
     spend = item.bundle_coin_spends[spend_a.coin.name()]
     assert spend.eligible_for_fast_forward
-    assert spend.latest_singleton_coin == spend_a.coin.name()
+    assert spend.latest_singleton_lineage is not None
+    assert spend.latest_singleton_lineage.coin_id == spend_a.coin.name()
 
     coins.update_lineage(singleton_ph, spend_b.coin)
     coins.spend_coin(spend_a.coin.name(), uint32(11))
@@ -2516,7 +2529,8 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert item is not None
     spend = item.bundle_coin_spends[spend_a.coin.name()]
     assert spend.eligible_for_fast_forward
-    assert spend.latest_singleton_coin == spend_b.coin.name()
+    assert spend.latest_singleton_lineage is not None
+    assert spend.latest_singleton_lineage.coin_id == spend_b.coin.name()
 
     coins.update_lineage(singleton_ph, spend_c.coin)
     coins.spend_coin(spend_b.coin.name(), uint32(12))
@@ -2527,12 +2541,12 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     assert item is not None
     spend = item.bundle_coin_spends[spend_a.coin.name()]
     assert spend.eligible_for_fast_forward
-    assert spend.latest_singleton_coin == spend_c.coin.name()
+    assert spend.latest_singleton_lineage is not None
+    assert spend.latest_singleton_lineage.coin_id == spend_c.coin.name()
 
 
-@pytest.mark.anyio
 @pytest.mark.parametrize("old", [True, False])
-async def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
+def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
     bundles = transactions_1000[:10]
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
     coins = TestCoins(all_coins, {})
@@ -2545,7 +2559,7 @@ async def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
 
     create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
 
-    assert await create_block(bytes32([1] * 32), 10.0) is None
+    assert create_block(bytes32([1] * 32), 10.0) is None
 
 
 @pytest.fixture(name="test_wallet")
@@ -2675,7 +2689,7 @@ async def test_create_block_generator(
 
     assert mempool_manager.peak is not None
     create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
-    new_block_gen = await create_block(mempool_manager.peak.header_hash, 10.0)
+    new_block_gen = create_block(mempool_manager.peak.header_hash, 10.0)
     assert new_block_gen is not None
 
     # now, make sure the generator we got is valid
@@ -2756,7 +2770,7 @@ async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bu
 
     assert mempool_manager.peak is not None
     create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
-    new_block_gen = await create_block(mempool_manager.peak.header_hash, 10.0)
+    new_block_gen = create_block(mempool_manager.peak.header_hash, 10.0)
     assert new_block_gen is not None
 
     # now, make sure the generator we got is valid
@@ -2786,3 +2800,45 @@ async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bu
 
     assert removals == set(new_block_gen.removals)
     assert additions == set(new_block_gen.additions)
+
+
+@pytest.mark.anyio
+async def test_spending_singleton_to_invalidate_existing_ff_spends() -> None:
+    """
+    This test covers the scenario where we attempt to add a transaction to the
+    mempool that contains a singleton that is spent in a way that tries to
+    invalidate existing fast forward spends from existing items in the mempool.
+    """
+    LAUNCHER_ID = bytes32([1] * 32)
+    PARENT_PARENT = bytes32([2] * 32)
+    singleton_spend1 = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT)
+    # This differs in the child amount
+    singleton_spend2 = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT, child_amount=3)
+    coins = TestCoins(
+        coins=[singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2],
+        lineage={singleton_spend2.coin.puzzle_hash: singleton_spend2.coin},
+    )
+    mempool_manager = await setup_mempool(coins)
+    coin_spend1 = make_spend(
+        TEST_COIN, IDENTITY_PUZZLE, Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42]])
+    )
+    sb1 = SpendBundle([singleton_spend1, coin_spend1], G2Element())
+    sb1_conds = make_test_conds(spend_ids=[(singleton_spend1.coin, ELIGIBLE_FOR_FF), (TEST_COIN, 0)], cost=100_000_000)
+    bundle_add_info1 = await mempool_manager.add_spend_bundle(sb1, sb1_conds, sb1.name(), uint32(1))
+    assert bundle_add_info1.status == MempoolInclusionStatus.SUCCESS
+    invariant_check_mempool(mempool_manager.mempool)
+    # Trying to spend the same singleton with a different child amount should
+    # trigger a conflict on any replace by fee attempt.
+    coin_spend2 = make_spend(
+        TEST_COIN2, IDENTITY_PUZZLE, Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42]])
+    )
+    sb2 = SpendBundle([singleton_spend2, coin_spend1, coin_spend2], G2Element())
+    # This singleton spend is not eligible for fast forward as its next
+    # iteration has a different amount.
+    sb2_conds = make_test_conds(spend_ids=[(singleton_spend2.coin, 0), (TEST_COIN, 0), (TEST_COIN2, 0)], cost=1337)
+    # This transaction conflicts with the previous one no matter what fee you
+    # pay, because we're changing the fast forward eligibility flag for the
+    # singleton spend.
+    bundle_add_info2 = await mempool_manager.add_spend_bundle(sb2, sb2_conds, sb2.name(), uint32(1))
+    assert bundle_add_info2.error == Err.MEMPOOL_CONFLICT
+    assert bundle_add_info2.status == MempoolInclusionStatus.PENDING

@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
 
-from chia_rs import AugSchemeMPL, Coin, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from clvm_tools.binutils import assemble
@@ -17,7 +17,6 @@ from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
-from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.rpc.wallet_request_types import (
@@ -79,7 +78,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -112,7 +110,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -2600,7 +2598,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.as_atom()),
+            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,
@@ -2729,7 +2727,7 @@ class WalletRpcApi:
                     inner_solution: Program = full_solution.rest().rest().first()
                     recovery_list: list[bytes32] = []
                     backup_required: int = num_verification.as_int()
-                    if recovery_list_hash != NIL_TREEHASH:
+                    if not did_recovery_is_nil(recovery_list_hash):
                         try:
                             for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                                 recovery_list.append(did[0])
@@ -3822,12 +3820,18 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
 
-        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
-        owner_pubkey = pool_wallet_info.current.owner_pubkey
-        target_puzzlehash = None
-
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
+
+        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
+        if (
+            pool_wallet_info.current.state == FARMING_TO_POOL.value
+            and pool_wallet_info.current.pool_url == request["pool_url"]
+        ):
+            raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
+
+        owner_pubkey = pool_wallet_info.current.owner_pubkey
+        target_puzzlehash = None
 
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32.from_hexstr(request["target_puzzlehash"])
