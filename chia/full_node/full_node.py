@@ -259,6 +259,7 @@ class FullNode:
             start_time = time.monotonic()
             reserved_cores = self.config.get("reserved_cores", 0)
             single_threaded = self.config.get("single_threaded", False)
+            use_conflict_cache = self.config.get("mempool_conflict_cache", True)
             log_coins = self.config.get("log_coins", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
@@ -278,6 +279,7 @@ class FullNode:
                 get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 single_threaded=single_threaded,
+                use_conflict_cache=use_conflict_cache,
             )
 
             # Transactions go into this queue from the server, and get sent to respond_transaction
