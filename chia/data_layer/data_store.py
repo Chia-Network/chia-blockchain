@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Iterable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -672,7 +672,7 @@ class DataStore:
         for node_hash in node_hashes:
             kid, vid = merkle_blob.get_node_by_hash(node_hash)
             kv_ids.append((kid, vid))
-        kv_ids_unpacked = [KeyOrValueId(id.raw) for kv_id in kv_ids for id in kv_id]
+        kv_ids_unpacked = (KeyOrValueId(id.raw) for kv_id in kv_ids for id in kv_id)
         table_blobs = await self.get_table_blobs(kv_ids_unpacked, store_id)
 
         terminal_nodes: list[TerminalNode] = []
@@ -1083,7 +1083,7 @@ class DataStore:
                     return KeysValuesCompressed({}, {}, {}, resolved_root_hash)
 
                 kv_ids = merkle_blob.get_keys_values()
-                kv_ids_unpacked = [KeyOrValueId(id.raw) for pair in kv_ids.items() for id in pair]
+                kv_ids_unpacked = (KeyOrValueId(id.raw) for pair in kv_ids.items() for id in pair)
                 table_blobs = await self.get_table_blobs(kv_ids_unpacked, store_id)
 
                 for kid, vid in kv_ids.items():
@@ -1249,7 +1249,7 @@ class DataStore:
                 return []
 
             kv_ids = merkle_blob.get_keys_values()
-            raw_key_ids = [KeyOrValueId(id.raw) for id in kv_ids.keys()]
+            raw_key_ids = (KeyOrValueId(id.raw) for id in kv_ids.keys())
             table_blobs = await self.get_table_blobs(raw_key_ids, store_id)
             keys: list[bytes] = []
             for kid in kv_ids.keys():
@@ -1627,10 +1627,12 @@ class DataStore:
         else:
             raise Exception(f"Node is neither InternalNode nor TerminalNode: {raw_node}")
 
-    async def get_table_blobs(self, kv_ids: list[KeyOrValueId], store_id: bytes32) -> dict[KeyOrValueId, bytes]:
+    async def get_table_blobs(
+        self, kv_ids_iter: Iterable[KeyOrValueId], store_id: bytes32
+    ) -> dict[KeyOrValueId, bytes]:
         result: dict[KeyOrValueId, bytes] = {}
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
-        kv_ids = list(set(kv_ids))
+        kv_ids = list(dict.fromkeys(kv_ids_iter))
 
         async with self.db_wrapper.reader() as reader:
             for i in range(0, len(kv_ids), batch_size):
@@ -1674,12 +1676,12 @@ class DataStore:
         await self.get_nodes_for_file(
             root, node_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
         )
-        kv_ids = [
+        kv_ids = (
             KeyOrValueId.from_bytes(raw_id)
             for node in tree_nodes
             if node.is_terminal
             for raw_id in (node.value1, node.value2)
-        ]
+        )
         table_blobs = await self.get_table_blobs(kv_ids, store_id)
 
         for node in tree_nodes:
