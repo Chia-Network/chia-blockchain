@@ -87,7 +87,7 @@ class HarvesterAPI:
             f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}"
         )
 
-        start = time.time()
+        start = time.monotonic()
         assert len(new_challenge.challenge_hash) == 32
 
         loop = asyncio.get_running_loop()
@@ -253,11 +253,11 @@ class HarvesterAPI:
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
-        time_taken = time.time() - start
+        time_taken = time.monotonic() - start
         total_proofs_found = 0
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
-            time_taken = time.time() - start
+            time_taken = time.monotonic() - start
             if time_taken > 8:
                 self.harvester.log.warning(
                     f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"

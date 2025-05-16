@@ -23,15 +23,15 @@ from chia._tests.core.mempool.test_mempool_manager import (
 from chia._tests.util.key_tool import KeyTool
 from chia._tests.util.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.eligible_coin_spends import (
+    SingletonFastForward,
+    perform_the_fast_forward,
+)
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.eligible_coin_spends import (
-    SingletonFastForward,
-    perform_the_fast_forward,
-)
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, UnspentLineageInfo

@@ -2,3 +2,4 @@
 /.github/**/* @Chia-Network/actions-reviewers
 /PRETTY_GOOD_PRACTICES.md	@altendky @Chia-Network/required-reviewers
 /tests/ether.py @altendky @Chia-Network/required-reviewers
+/pyproject.toml @altendky @Chia-Network/required-reviewers

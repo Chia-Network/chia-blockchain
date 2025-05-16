@@ -37,6 +37,7 @@ from chia._tests.blockchain.blockchain_test_utils import (
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
@@ -58,7 +59,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash

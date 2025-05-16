@@ -19,9 +19,9 @@ from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import estimate_fees
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
+from chia.wallet.estimate_fees import estimate_fees
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 

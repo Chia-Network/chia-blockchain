@@ -14,6 +14,7 @@ from chia_rs import FullBlock
 
 from chia._tests.util.full_sync import FakePeer, FakeServer, run_sync_test
 from chia.cmds.init_funcs import chia_init
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -21,7 +22,6 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
 
 

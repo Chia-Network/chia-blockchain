@@ -49,6 +49,7 @@ def data_group() -> None:
 
 
 def print_date(*args: Any, **kwargs: Any) -> None:
+    kwargs.setdefault("flush", True)
     s = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     print(f"{s}:", *args, **kwargs)
 
@@ -112,6 +113,10 @@ class SyncTimeCommand:
                 key_value_blob_path = working_path.joinpath("key-value-blobs")
                 key_value_blob_path.mkdir(parents=True, exist_ok=True)
 
+                wallet_client_info = await exit_stack.enter_async_context(self.wallet_rpc_info.wallet_rpc())
+                wallet_rpc = wallet_client_info.client
+                await wallet_rpc.dl_track_new(launcher_id=self.store_id)
+
                 data_store = await exit_stack.enter_async_context(
                     DataStore.managed(
                         database=database_path,
@@ -127,13 +132,14 @@ class SyncTimeCommand:
 
                 print_date("subscribed")
 
-                wallet_client_info = await exit_stack.enter_async_context(self.wallet_rpc_info.wallet_rpc())
-                wallet_rpc = wallet_client_info.client
-
                 to_download = await wallet_rpc.dl_history(
                     launcher_id=self.store_id,
                     min_generation=uint32(1),
                     max_generation=uint32(self.generation_limit + 1),
+                )
+
+                print_date(
+                    f"found generations to download: {to_download[-1].generation} -> {to_download[0].generation}"
                 )
 
                 root_hashes = [record.root for record in reversed(to_download)]

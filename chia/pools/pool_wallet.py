@@ -41,10 +41,10 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import compute_additions
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType

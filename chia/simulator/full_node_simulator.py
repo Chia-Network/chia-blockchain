@@ -11,6 +11,7 @@ from chia_rs import BlockRecord, FullBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
@@ -25,7 +26,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsP
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.conditions import CreateCoin

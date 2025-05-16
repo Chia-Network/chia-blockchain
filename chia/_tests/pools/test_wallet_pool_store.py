@@ -14,7 +14,8 @@ from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import compute_additions, make_spend
+from chia.types.coin_spend import make_spend
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.wallet_pool_store import WalletPoolStore
 
 

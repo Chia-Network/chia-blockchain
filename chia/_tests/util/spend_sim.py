@@ -37,12 +37,12 @@ from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
+from chia.wallet.wallet_spend_bundle import T_SpendBundle
 
 """
 The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.

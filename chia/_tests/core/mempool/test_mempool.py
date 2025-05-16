@@ -43,6 +43,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.eligible_coin_spends import run_for_cost
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
@@ -67,16 +68,15 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.eligible_coin_spends import run_for_cost
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
-from chia.types.spend_bundle import estimate_fees
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
+from chia.wallet.estimate_fees import estimate_fees
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)

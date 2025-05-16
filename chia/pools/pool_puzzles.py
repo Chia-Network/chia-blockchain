@@ -22,13 +22,13 @@ from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_spend import compute_additions
 from chia.wallet.puzzles.singleton_top_layer import (
     SINGLETON_LAUNCHER_HASH,
     SINGLETON_MOD,
     SINGLETON_MOD_HASH,
     puzzle_for_singleton,
 )
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
 log = logging.getLogger(__name__)
