@@ -668,16 +668,15 @@ class DataStore:
             resolved_root_hash = root_hash
 
         merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
-        kv_ids: list[KeyOrValueId] = []
+        kv_ids: list[tuple[KeyId, ValueId]] = []
         for node_hash in node_hashes:
             kid, vid = merkle_blob.get_node_by_hash(node_hash)
-            kv_ids.append(KeyOrValueId(kid.raw))
-            kv_ids.append(KeyOrValueId(vid.raw))
-        table_blobs = await self.get_table_blobs(kv_ids, store_id)
+            kv_ids.append((kid, vid))
+        kv_ids_unpacked = [KeyOrValueId(id.raw) for kv_id in kv_ids for id in kv_id]
+        table_blobs = await self.get_table_blobs(kv_ids_unpacked, store_id)
 
         terminal_nodes: list[TerminalNode] = []
-        for node_hash in node_hashes:
-            kid, vid = merkle_blob.get_node_by_hash(node_hash)
+        for kid, vid in kv_ids:
             terminal_nodes.append(self.get_terminal_node_from_table_blobs(kid, vid, table_blobs, store_id))
 
         return terminal_nodes
