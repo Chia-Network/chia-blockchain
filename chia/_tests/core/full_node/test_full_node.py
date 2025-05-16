@@ -40,6 +40,7 @@ from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.get_block_challenge import get_block_challenge
@@ -91,15 +92,14 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.types.spend_bundle import estimate_fees
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.task_referencer import create_referenced_task
 from chia.util.vdf_prover import get_vdf_info_and_proof
+from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
@@ -2993,6 +2993,117 @@ async def test_declare_proof_of_space_overflow(
         compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
         await full_node_api.full_node.add_block(block)
         assert full_node_api.full_node.blockchain.get_peak_height() == block.height
+
+
+@pytest.mark.anyio
+async def test_add_unfinished_block_with_generator_refs(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+) -> None:
+    """
+    Robustly test add_unfinished_block, including generator refs and edge cases.
+    Assert block height after each added block.
+    """
+    full_node_1, _, _, _, wallet, wallet_receiver, bt = wallet_nodes
+    coinbase_puzzlehash = wallet.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        5, block_list_input=[], guarantee_transaction_block=True, farmer_reward_puzzle_hash=coinbase_puzzlehash
+    )
+    for i in range(3):
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=wallet.generate_signed_transaction(
+                uint64(1000),
+                wallet_receiver.get_new_puzzlehash(),
+                blocks[-3].get_included_reward_coins()[0],
+            ),
+            block_refs=[blocks[-1].height, blocks[-2].height],
+        )
+
+    for idx, block in enumerate(blocks[:-1]):
+        await full_node_1.full_node.add_block(block)
+        # Assert block height after each add
+    peak = full_node_1.full_node.blockchain.get_peak()
+    assert peak is not None and peak.height == blocks[-2].height
+    block = blocks[-1]
+    unf = unfinished_from_full_block(block)
+
+    # Test with missing generator ref (should raise ConsensusError)
+    bad_refs = [uint32(9999999)]
+    unf_bad = unf.replace(transactions_generator_ref_list=bad_refs)
+    with pytest.raises(Exception) as excinfo:
+        await full_node_1.full_node.add_unfinished_block(unf_bad, None)
+    assert excinfo.value.args[0] == Err.GENERATOR_REF_HAS_NO_GENERATOR
+
+    unf_no_gen = unf.replace(transactions_generator_ref_list=bad_refs, transactions_generator=None)
+    with pytest.raises(Exception) as excinfo:
+        await full_node_1.full_node.add_unfinished_block(unf_no_gen, None)
+    assert isinstance(excinfo.value, ConsensusError)
+    assert excinfo.value.code == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+
+    # Duplicate generator refs (should raise ConsensusError or be rejected)
+    dup_ref = blocks[-2].height
+    unf_dup_refs = unf.replace(transactions_generator_ref_list=[dup_ref, dup_ref])
+    with pytest.raises(Exception) as excinfo:
+        await full_node_1.full_node.add_unfinished_block(unf_dup_refs, None)
+    assert isinstance(excinfo.value, ConsensusError)
+    assert excinfo.value.code == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+
+    # ref block with no generator
+    unf_bad_ref = unf.replace(transactions_generator_ref_list=[uint32(2)])
+    with pytest.raises(Exception) as excinfo:
+        await full_node_1.full_node.add_unfinished_block(unf_bad_ref, None)
+    assert excinfo.value.args[0] == Err.GENERATOR_REF_HAS_NO_GENERATOR
+
+    # Generator ref points to block not yet in store (simulate by using a future height)
+    unf_future_ref = unf.replace(transactions_generator_ref_list=[uint32(blocks[-1].height + 1000)])
+    with pytest.raises(Exception) as excinfo:
+        await full_node_1.full_node.add_unfinished_block(unf_future_ref, None)
+    assert excinfo.value.args[0] == Err.GENERATOR_REF_HAS_NO_GENERATOR
+
+    # Generator ref points to itself
+    unf_self_ref = unf.replace(transactions_generator_ref_list=[block.height])
+    # Should raise ConsensusError or be rejected
+    with pytest.raises(Exception) as excinfo:
+        await full_node_1.full_node.add_unfinished_block(unf_self_ref, None)
+    assert excinfo.value.args[0] == Err.GENERATOR_REF_HAS_NO_GENERATOR
+
+    # unsorted Generator refs
+    unf_unsorted = unf.replace(transactions_generator_ref_list=[blocks[-2].height, blocks[-1].height])
+    with pytest.raises(Exception) as excinfo:
+        await full_node_1.full_node.add_unfinished_block(unf_unsorted, None)
+    assert excinfo.value.args[0] == Err.GENERATOR_REF_HAS_NO_GENERATOR
+
+    # valid unfinished block with refs
+    await full_node_1.full_node.add_unfinished_block(unf, None)
+    assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
+    assert full_node_1.full_node.full_node_store.seen_unfinished_block(unf.get_hash())
+
+    # Test disconnected block
+    fork_blocks = blocks[:-3]
+    for i in range(3):
+        # Add a block with a transaction
+        fork_blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=fork_blocks,
+            guarantee_transaction_block=True,
+            transaction_data=wallet.generate_signed_transaction(
+                uint64(1000),
+                wallet_receiver.get_new_puzzlehash(),
+                fork_blocks[-3].get_included_reward_coins()[0],
+            ),
+            min_signage_point=blocks[-1].reward_chain_block.signage_point_index + 1,
+            seed=b"random_seed",
+            block_refs=[fork_blocks[-2].height],
+        )
+
+    disconnected_unf = unfinished_from_full_block(fork_blocks[-1])
+    # Should not raise, but should not add the block either
+    await full_node_1.full_node.add_unfinished_block(disconnected_unf, None)
+    assert disconnected_unf.get_hash() not in full_node_1.full_node.full_node_store.seen_unfinished_blocks
 
 
 def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:

@@ -36,6 +36,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from packaging.version import Version
 
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
@@ -78,7 +79,6 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
@@ -1346,7 +1346,7 @@ class FullNode:
             ],
         ) -> None:
             nonlocal fork_info
-            block_rate = 0
+            block_rate = 0.0
             block_rate_time = time.monotonic()
             block_rate_height = -1
             while True:
@@ -1377,12 +1377,13 @@ class FullNode:
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
                 if end_height - block_rate_height > 100:
                     now = time.monotonic()
-                    block_rate = int((end_height - block_rate_height) // (now - block_rate_time))
+                    block_rate = (end_height - block_rate_height) / (now - block_rate_time)
                     block_rate_time = now
                     block_rate_height = end_height
 
                 self.log.info(
-                    f"Added blocks {start_height} to {end_height} ({block_rate} blocks/s) (from: {peer.peer_info.ip})"
+                    "Added blocks {start_height} to {end_height} "
+                    f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
                 if state_change_summary is not None:
@@ -2135,7 +2136,8 @@ class FullNode:
             )
             pre_validation_result = await future
             added: Optional[AddBlockResult] = None
-            pre_validation_time = time.monotonic() - validation_start
+            add_block_start = time.monotonic()
+            pre_validation_time = add_block_start - validation_start
             try:
                 if pre_validation_result.error is not None:
                     if Err(pre_validation_result.error) == Err.INVALID_PREV_BLOCK_HASH:
@@ -2154,6 +2156,7 @@ class FullNode:
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
                         block, pre_validation_result, ssi, fork_info
                     )
+                add_block_time = time.monotonic() - add_block_start
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None
                 elif added == AddBlockResult.INVALID_BLOCK:
@@ -2218,6 +2221,7 @@ class FullNode:
             f"Block validation: {validation_time:0.2f}s, "
             f"pre_validation: {pre_validation_time:0.2f}s, "
             f"CLVM: {pre_validation_result.timing / 1000.0:0.2f}s, "
+            f"add-block: {add_block_time:0.2f}s, "
             f"post-process: {post_process_time:0.2f}s, "
             f"post-process2: {post_process_time2:0.2f}s, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
@@ -2853,10 +2857,16 @@ class FullNode:
 
         total_time = time.monotonic() - start_time
 
-        self.log.log(
-            logging.DEBUG if total_time < 0.5 else logging.WARNING,
-            f"Broadcasting added transaction {mempool_item.name} to {len(peer_ids)} peers took {total_time:.4f}s",
-        )
+        if len(peer_ids) == 0:
+            self.log.log(
+                logging.DEBUG if total_time < 0.5 else logging.WARNING,
+                f"Looking up hints for {len(conds.spends)} spends took {total_time:.4f}s",
+            )
+        else:
+            self.log.log(
+                logging.DEBUG if total_time < 0.5 else logging.WARNING,
+                f"Broadcasting added transaction {mempool_item.name} to {len(peer_ids)} peers took {total_time:.4f}s",
+            )
 
     async def broadcast_removed_tx(self, mempool_removals: list[MempoolRemoveInfo]) -> None:
         total_removals = sum(len(r.items) for r in mempool_removals)

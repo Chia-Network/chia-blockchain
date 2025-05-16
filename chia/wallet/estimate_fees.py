@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-from typing import TypeVar
-
 from chia_rs import SpendBundle
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.coin_spend import compute_additions_with_cost
 from chia.util.errors import Err, ValidationError
-
-T_SpendBundle = TypeVar("T_SpendBundle", bound="SpendBundle")
+from chia.wallet.util.compute_additions import compute_additions_with_cost
 
 
 # This function executes all the puzzles to compute the difference between
