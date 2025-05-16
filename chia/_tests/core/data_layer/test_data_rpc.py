@@ -3003,18 +3003,18 @@ async def test_pagination_rpcs(
             "total_pages": 1,
             "total_bytes": 8,
             "diff": [
-                {"type": "DELETE", "key": key6.hex(), "value": value6.hex()},
                 {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()},
+                {"type": "DELETE", "key": key6.hex(), "value": value6.hex()},
             ],
         }
         assert diff_res == diff_reference
 
-        with pytest.raises(Exception, match="Can't find keys"):
+        with pytest.raises(Exception, match="Cannot find merkle blob"):
             await data_rpc_api.get_keys(
                 {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
             )
 
-        with pytest.raises(Exception, match="Can't find keys and values"):
+        with pytest.raises(Exception, match="Cannot find merkle blob"):
             await data_rpc_api.get_keys_values(
                 {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
             )
