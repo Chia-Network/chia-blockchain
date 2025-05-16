@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
 
-from chia_rs import AugSchemeMPL, Coin, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from clvm_tools.binutils import assemble
@@ -17,7 +17,6 @@ from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
-from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.rpc.wallet_request_types import (
@@ -79,7 +78,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -109,11 +107,10 @@ from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
-    master_sk_to_singleton_owner_sk,
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -870,7 +867,7 @@ class WalletRpcApi:
                     await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                         request.fee,
                         inner_action_scope,
-                        (
+                        extra_conditions=(
                             *extra_conditions,
                             CreateCoinAnnouncement(
                                 create_coin_announcement.msg, announcement_origin
@@ -1106,9 +1103,7 @@ class WalletRpcApi:
                 if "initial_target_state" not in request:
                     raise AttributeError("Daemon didn't send `initial_target_state`. Try updating the daemon.")
 
-                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(
-                    new=not action_scope.config.tx_config.reuse_puzhash
-                )
+                owner_puzzle_hash: bytes32 = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
 
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
 
@@ -1121,17 +1116,15 @@ class WalletRpcApi:
                     max_pwi = 1
                     for _, wallet in self.service.wallet_state_manager.wallets.items():
                         if wallet.type() == WalletType.POOLING_WALLET:
-                            assert isinstance(wallet, PoolWallet)
-                            pool_wallet_index = await wallet.get_pool_wallet_index()
-                            max_pwi = max(max_pwi, pool_wallet_index)
+                            max_pwi += 1
 
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
-                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
+                    owner_pk: G1Element = self.service.wallet_state_manager.main_wallet.hardened_pubkey_for_path(
+                        # copied from chia.wallet.derive_keys. Could maybe be an exported constant in the future.
+                        [12381, 8444, 5, max_pwi]
                     )
-                    owner_pk: G1Element = owner_sk.get_g1()
 
                     initial_target_state = initial_pool_state_from_dict(
                         request["initial_target_state"], owner_pk, owner_puzzle_hash
@@ -1274,9 +1267,9 @@ class WalletRpcApi:
 
         outputs = [
             CreateCoin(
-                await wallet.get_puzzle_hash(new=True)
-                if isinstance(wallet, Wallet)
-                else await wallet.standard_wallet.get_puzzle_hash(new=True),
+                await action_scope.get_puzzle_hash(
+                    self.service.wallet_state_manager, override_reuse_puzhash_with=False
+                ),
                 request.amount_per_coin,
             )
             for _ in range(request.number_of_coins)
@@ -1388,13 +1381,10 @@ class WalletRpcApi:
         )
         if isinstance(wallet, Wallet):
             primary_output_amount = uint64(primary_output_amount - request.fee)
-            main_wallet = wallet
-        else:
-            main_wallet = wallet.standard_wallet
 
         await wallet.generate_signed_transaction(
             [primary_output_amount],
-            [await main_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
+            [await action_scope.get_puzzle_hash(self.service.wallet_state_manager)],
             action_scope,
             request.fee,
             coins=set(coins),
@@ -1480,13 +1470,13 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-        if wallet.type() == WalletType.STANDARD_WALLET:
-            assert isinstance(wallet, Wallet)
-            raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
-            address = encode_puzzle_hash(raw_puzzle_hash, prefix)
-        elif wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
-            assert isinstance(wallet, CATWallet)
-            raw_puzzle_hash = await wallet.standard_wallet.get_puzzle_hash(create_new)
+        if wallet.type() in {WalletType.STANDARD_WALLET, WalletType.CAT, WalletType.CRCAT}:
+            async with self.service.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG, push=request.get("save_derivations", True)
+            ) as action_scope:
+                raw_puzzle_hash = await action_scope.get_puzzle_hash(
+                    self.service.wallet_state_manager, override_reuse_puzhash_with=not create_new
+                )
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
             raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
@@ -1828,9 +1818,10 @@ class WalletRpcApi:
         # Since we've bumping the derivation index without having found any new puzzles, we want
         # to preserve the current last used index, so we call create_more_puzzle_hashes with
         # mark_existing_as_used=False
-        await self.service.wallet_state_manager.create_more_puzzle_hashes(
+        result = await self.service.wallet_state_manager.create_more_puzzle_hashes(
             from_zero=False, mark_existing_as_used=False, up_to_index=index, num_additional_phs=0
         )
+        await result.commit(self.service.wallet_state_manager)
 
         updated: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
         updated_index = updated if updated is not None else None
@@ -2607,7 +2598,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.as_atom()),
+            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,
@@ -2736,7 +2727,7 @@ class WalletRpcApi:
                     inner_solution: Program = full_solution.rest().rest().first()
                     recovery_list: list[bytes32] = []
                     backup_required: int = num_verification.as_int()
-                    if recovery_list_hash != NIL_TREEHASH:
+                    if not did_recovery_is_nil(recovery_list_hash):
                         try:
                             for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                                 recovery_list.append(did[0])
@@ -3017,18 +3008,14 @@ class WalletRpcApi:
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
-            royalty_puzhash = await nft_wallet.standard_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
+            royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         else:
             royalty_puzhash = royalty_address
         target_address = request.get("target_address")
         if isinstance(target_address, str):
             target_puzhash = decode_puzzle_hash(target_address)
         elif target_address is None:
-            target_puzhash = await nft_wallet.standard_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
+            target_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         else:
             target_puzhash = target_address
         if "uris" not in request:
@@ -3527,7 +3514,7 @@ class WalletRpcApi:
         if isinstance(royalty_address, str) and royalty_address != "":
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address in {None, ""}:
-            royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+            royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         else:
             royalty_puzhash = bytes32.from_hexstr(royalty_address)
         royalty_percentage = request.get("royalty_percentage", None)
@@ -3629,6 +3616,7 @@ class WalletRpcApi:
         async with action_scope.use() as interface:
             sb = WalletSpendBundle.aggregate(
                 [tx.spend_bundle for tx in interface.side_effects.transactions if tx.spend_bundle is not None]
+                + [sb for sb in interface.side_effects.extra_spends]
             )
         nft_id_list = []
         for cs in sb.coin_spends:
@@ -3832,12 +3820,18 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
 
-        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
-        owner_pubkey = pool_wallet_info.current.owner_pubkey
-        target_puzzlehash = None
-
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
+
+        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
+        if (
+            pool_wallet_info.current.state == FARMING_TO_POOL.value
+            and pool_wallet_info.current.pool_url == request["pool_url"]
+        ):
+            raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
+
+        owner_pubkey = pool_wallet_info.current.owner_pubkey
+        target_puzzlehash = None
 
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32.from_hexstr(request["target_puzzlehash"])
@@ -4270,9 +4264,7 @@ class WalletRpcApi:
             [
                 request.new_puzhash
                 if request.new_puzhash is not None
-                else await vc_wallet.standard_wallet.get_puzzle_hash(
-                    new=not action_scope.config.tx_config.reuse_puzhash
-                )
+                else await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
             ],
             action_scope,
             request.fee,

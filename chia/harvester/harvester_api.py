@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -21,7 +21,6 @@ from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     calculate_pos_challenge,
     generate_plot_public_key,
     passes_plot_filter,
@@ -88,7 +87,7 @@ class HarvesterAPI:
             f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}"
         )
 
-        start = time.time()
+        start = time.monotonic()
         assert len(new_challenge.challenge_hash) == 32
 
         loop = asyncio.get_running_loop()
@@ -254,11 +253,11 @@ class HarvesterAPI:
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
-        time_taken = time.time() - start
+        time_taken = time.monotonic() - start
         total_proofs_found = 0
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
-            time_taken = time.time() - start
+            time_taken = time.monotonic() - start
             if time_taken > 8:
                 self.harvester.log.warning(
                     f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"

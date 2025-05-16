@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+import asyncio
+import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs import (
+    MEMPOOL_MODE,
+    BlockRecord,
+    CoinSpend,
+    FullBlock,
+    SpendBundle,
+    SpendBundleConditions,
+    run_block_generator2,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
@@ -21,12 +31,8 @@ from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.log_exceptions import log_exceptions
@@ -124,6 +130,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
             "/get_mempool_items_by_coin_name": self.get_mempool_items_by_coin_name,
+            "/create_block_generator": self.create_block_generator,
             # Fee estimation
             "/get_fee_estimate": self.get_fee_estimate,
         }
@@ -835,6 +842,75 @@ class FullNodeRpcApi:
         items = self.service.mempool_manager.mempool.get_items_by_coin_id(coin_name)
 
         return {"mempool_items": [item.to_json_dict() for item in items]}
+
+    async def create_block_generator(self, _: dict[str, Any]) -> EndpointResult:
+        gen = NewBlockGenerator()
+
+        # Grab best transactions from Mempool for given tip target
+        async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
+            peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
+
+            if peak is None:
+                return {
+                    "generator": gen.program,
+                    "refs": gen.block_refs,
+                    "additions": gen.additions,
+                    "removals": gen.removals,
+                    "sig": gen.signature,
+                    "cost": gen.cost,
+                }
+
+            # Finds the last transaction block before this one
+            curr_l_tb: BlockRecord = peak
+            while not curr_l_tb.is_transaction_block:
+                curr_l_tb = self.service.blockchain.block_record(curr_l_tb.prev_hash)
+
+            self.service.log.info("Beginning simulated block construction from mempool")
+            start_time = time.monotonic()
+
+            try:
+                maybe_gen = self.service.mempool_manager.create_block_generator2(curr_l_tb.header_hash)
+                if maybe_gen is None:
+                    self.service.log.error(f"failed to create block generator, peak: {peak}")
+                else:
+                    gen = maybe_gen
+            except Exception:
+                self.service.log.exception(f"Error creating block generator, peak: {peak}")
+            self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time:0.2f} seconds")
+
+            if maybe_gen is not None:
+                # this also validates the signature
+                err, conds = await asyncio.get_running_loop().run_in_executor(
+                    self.service.blockchain.pool,
+                    run_block_generator2,
+                    bytes(gen.program),
+                    gen.generator_refs,
+                    self.service.constants.MAX_BLOCK_COST_CLVM,
+                    MEMPOOL_MODE,
+                    gen.signature,
+                    None,
+                    self.service.constants,
+                )
+                if err is not None:
+                    self.service.log.error(f"failed to validate block: {err}")
+                else:
+                    assert conds is not None
+                    if conds.cost != gen.cost:
+                        self.service.log.error(
+                            f"invalid cost of generated block: {conds.cost} expected {gen.cost}"
+                            f" exe-cost: {conds.execution_cost}"
+                            f" cond-cost: {conds.condition_cost}"
+                        )
+                    # TODO: maybe validate additions and removals too
+
+        return {
+            "generator": gen.program,
+            "refs": gen.block_refs,
+            "additions": gen.additions,
+            "removals": gen.removals,
+            "sig": gen.signature,
+            "cost": gen.cost,
+        }
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """

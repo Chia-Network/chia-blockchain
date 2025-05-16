@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Optional, Protocol, TypeVar, final
+from typing import Callable, Generic, Optional, Protocol, TypeVar
 
 import aiosqlite
 
@@ -87,7 +87,6 @@ _T_SideEffects = TypeVar("_T_SideEffects", bound=SideEffects)
 _T_Config = TypeVar("_T_Config")
 
 
-@final
 @dataclass
 class ActionScope(Generic[_T_SideEffects, _T_Config]):
     """

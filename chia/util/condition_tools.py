@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Callable, Union
 
-from chia_rs import G1Element
+from chia_rs import G1Element, SpendBundleConditions, SpendConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -13,7 +13,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 

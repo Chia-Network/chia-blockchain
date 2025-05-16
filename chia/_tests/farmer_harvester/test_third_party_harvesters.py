@@ -10,12 +10,21 @@ from os.path import dirname
 from typing import Optional, Union, cast
 
 import pytest
-from chia_rs import FoliageBlockData, FoliageTransactionBlock, G1Element
+from chia_rs import (
+    ChallengeChainSubSlot,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    G1Element,
+    ProofOfSpace,
+    RewardChainSubSlot,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -29,19 +38,15 @@ from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 

@@ -11,6 +11,7 @@ from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.benchmarks import rand_g1, rand_hash
 from chia.pools.pool_wallet import PoolWallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 
 
 @dataclass
@@ -52,6 +53,14 @@ class MockPoolWalletInfo:
     launcher_id: bytes32
     p2_singleton_puzzle_hash: bytes32
     current: MockPoolState
+
+
+@dataclass
+class MockActionScope:
+    payout_instructions_ph: bytes32
+
+    async def get_puzzle_hash(self, wallet_state_manager: Any) -> bytes32:
+        return self.payout_instructions_ph
 
 
 @pytest.mark.anyio
@@ -108,7 +117,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
         wallet_id=MagicMock(),
     )
 
-    await wallet.update_pool_config()
+    await wallet.update_pool_config(cast(WalletActionScope, MockActionScope(payout_instructions_ph)))
 
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id
@@ -191,7 +200,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
         wallet_id=MagicMock(),
     )
 
-    await wallet.update_pool_config()
+    await wallet.update_pool_config(MagicMock())
 
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id

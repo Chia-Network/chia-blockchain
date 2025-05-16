@@ -14,8 +14,8 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.harvester.harvester import Harvester
 from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
+from chia.server.aliases import FarmerService, HarvesterService
 from chia.server.outbound_message import Message, NodeType
-from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 
 

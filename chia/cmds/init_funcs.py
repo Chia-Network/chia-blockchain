@@ -11,6 +11,14 @@ import yaml
 from chia.cmds.configure import configure
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.ssl.create_ssl import create_all_ssl
+from chia.ssl.ssl_check import (
+    DEFAULT_PERMISSIONS_CERT_FILE,
+    DEFAULT_PERMISSIONS_KEY_FILE,
+    RESTRICT_MASK_CERT_FILE,
+    RESTRICT_MASK_KEY_FILE,
+    check_and_fix_permissions_for_ssl_file,
+    fix_ssl,
+)
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import (
     create_default_chia_config,
@@ -23,14 +31,6 @@ from chia.util.config import (
 from chia.util.db_version import set_db_version
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
-from chia.util.ssl_check import (
-    DEFAULT_PERMISSIONS_CERT_FILE,
-    DEFAULT_PERMISSIONS_KEY_FILE,
-    RESTRICT_MASK_CERT_FILE,
-    RESTRICT_MASK_KEY_FILE,
-    check_and_fix_permissions_for_ssl_file,
-    fix_ssl,
-)
 from chia.wallet.derive_keys import (
     _derive_path,
     _derive_path_unhardened,

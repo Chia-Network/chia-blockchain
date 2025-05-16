@@ -3,17 +3,22 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from chia_rs import CoinSpend, SpendBundle, SpendBundleConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.streamable import recurse_jsonify
 
 
 @dataclass(frozen=True)
+class UnspentLineageInfo:
+    coin_id: bytes32
+    parent_id: bytes32
+    parent_parent_id: bytes32
+
+
+@dataclass
 class BundleCoinSpend:
     coin_spend: CoinSpend
     eligible_for_dedup: bool
@@ -21,6 +26,12 @@ class BundleCoinSpend:
     additions: list[Coin]
     # cost on the specific solution in this item
     cost: Optional[uint64] = None
+
+    # if this spend is eligible for fast forward, this may be set to the
+    # current unspent lineage belonging to this singleton, that we would rebase
+    # this spend on top of if we were to make a block now
+    # When finding MempoolItems by coin ID, we use Coin ID from it if it's set
+    latest_singleton_lineage: Optional[UnspentLineageInfo] = None
 
 
 @dataclass(frozen=True)

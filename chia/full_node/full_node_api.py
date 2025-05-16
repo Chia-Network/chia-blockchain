@@ -12,13 +12,21 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 import anyio
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
+    CoinState,
+    EndOfSubSlotBundle,
     FoliageBlockData,
     FoliageTransactionBlock,
+    FullBlock,
     G1Element,
     G2Element,
     MerkleSet,
     PoolTarget,
+    RespondToPhUpdates,
     RewardChainBlockUnfinished,
+    SpendBundle,
+    SubEpochSummary,
+    UnfinishedBlock,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
@@ -27,7 +35,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
@@ -36,14 +43,13 @@ from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
-from chia.full_node.tx_processing_queue import TransactionQueueFull
+from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
-    CoinState,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
@@ -58,16 +64,10 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
-from chia.types.transaction_queue_entry import TransactionQueueEntry
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
@@ -717,8 +717,10 @@ class FullNodeAPI:
                 request.reward_chain_vdf.challenge,
             ):
                 return None
-            existing_sp = self.full_node.full_node_store.get_signage_point(
-                request.challenge_chain_vdf.output.get_hash()
+            existing_sp = self.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+                request.challenge_chain_vdf.output.get_hash(),
+                request.challenge_chain_vdf.challenge,
+                request.index_from_challenge,
             )
             if existing_sp is not None and existing_sp.rc_vdf == request.reward_chain_vdf:
                 return None
@@ -795,8 +797,8 @@ class FullNodeAPI:
             return None
 
         async with self.full_node.timelord_lock:
-            sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point(
-                request.challenge_chain_sp
+            sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+                request.challenge_chain_sp, request.challenge_hash, request.signage_point_index
             )
 
             if sp_vdfs is None:
@@ -835,10 +837,7 @@ class FullNodeAPI:
             # 3. In a future sub-slot that we already know of
 
             # Grab best transactions from Mempool for given tip target
-            aggregate_signature: G2Element = G2Element()
-            block_generator: Optional[BlockGenerator] = None
-            additions: Optional[list[Coin]] = []
-            removals: Optional[list[Coin]] = []
+            new_block_gen: Optional[NewBlockGenerator]
             async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
 
@@ -863,12 +862,26 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        block = await self.full_node.mempool_manager.create_block_generator(curr_l_tb.header_hash)
-                        if block is not None:
-                            block_generator, aggregate_signature, additions = block
+                        # TODO: once we're confident in the new block creation,
+                        # switch to it by default
+                        if self.full_node.config.get("original_block_creation", True):
+                            create_block = self.full_node.mempool_manager.create_block_generator
+                        else:
+                            create_block = self.full_node.mempool_manager.create_block_generator2
+
+                        new_block_gen = create_block(curr_l_tb.header_hash)
+
+                        if (
+                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
+                        ):  # pragma: no cover
+                            self.log.error("Cannot farm blocks pre-hard fork")
+
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
+                        new_block_gen = None
+                else:
+                    new_block_gen = None
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1005,10 +1018,7 @@ class FullNodeAPI:
                 timestamp,
                 self.full_node.blockchain,
                 b"",
-                block_generator,
-                aggregate_signature,
-                additions,
-                removals,
+                new_block_gen,
                 prev_b,
                 finished_sub_slots,
             )
@@ -1064,9 +1074,6 @@ class FullNodeAPI:
                     timestamp,
                     self.full_node.blockchain,
                     b"",
-                    None,
-                    G2Element(),
-                    None,
                     None,
                     prev_b,
                     finished_sub_slots,
@@ -1377,7 +1384,7 @@ class FullNodeAPI:
             if status == MempoolInclusionStatus.SUCCESS:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
             else:
-                # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+                # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
                 if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
                     response = wallet_protocol.TransactionAck(
                         spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None
@@ -1652,7 +1659,7 @@ class FullNodeAPI:
                 end_time - start_time,
             )
 
-        response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
+        response = RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 

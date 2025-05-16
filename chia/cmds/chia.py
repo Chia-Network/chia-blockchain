@@ -12,7 +12,7 @@ from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
-from chia.cmds.dev import dev_cmd
+from chia.cmds.dev.main import dev_cmd
 from chia.cmds.farm import farm_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
@@ -27,10 +27,10 @@ from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
+from chia.ssl.ssl_check import check_ssl
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, resolve_root_path
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
-from chia.util.ssl_check import check_ssl
 
 CONTEXT_SETTINGS = {
     "help_option_names": ["-h", "--help"],
@@ -58,19 +58,19 @@ CONTEXT_SETTINGS = {
 def cli(
     ctx: click.Context,
     root_path: str,
-    keys_root_path: Optional[str] = None,
+    keys_root_path: str,
     passphrase_file: Optional[TextIOWrapper] = None,
 ) -> None:
     from pathlib import Path
 
     context = ChiaCliContext.set_default(ctx=ctx)
     context.root_path = Path(root_path)
+    context.keys_root_path = Path(keys_root_path)
 
-    # keys_root_path and passphrase_file will be None if the passphrase options have been
+    set_keys_root_path(Path(keys_root_path))
+
+    # passphrase_file will be None if the passphrase options have been
     # scrubbed from the CLI options
-    if keys_root_path is not None:
-        set_keys_root_path(Path(keys_root_path))
-
     if passphrase_file is not None:
         import sys
 

@@ -11,6 +11,7 @@ import pytest
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     ConsensusConstants,
+    FullBlock,
     SpendBundleConditions,
     get_flags_for_height_and_constants,
     run_block_generator,
@@ -25,7 +26,6 @@ from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
@@ -123,8 +123,8 @@ async def ignore_block_validation(
     monkeypatch.setattr(
         "chia.consensus.multiprocess_validation.verify_and_get_quality_string", lambda *_, **__: bytes32.zeros
     )
-    monkeypatch.setattr("chia.consensus.block_record.BlockRecord.sp_total_iters", lambda *_: uint128(0))
-    monkeypatch.setattr("chia.consensus.block_record.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))
+    monkeypatch.setattr("chia_rs.BlockRecord.sp_total_iters", lambda *_: uint128(0))
+    monkeypatch.setattr("chia_rs.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))
     monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_sp_iters", lambda *_: uint64(0))
     monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_ip_iters", lambda *_: uint64(0))
     monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_sub_slot_iters", lambda *_: uint64(1))
@@ -132,7 +132,7 @@ async def ignore_block_validation(
     monkeypatch.setattr("chia.full_node.full_node_store.calculate_sp_interval_iters", lambda *_: uint64(1))
     monkeypatch.setattr("chia.consensus.pot_iterations.calculate_sp_interval_iters", lambda *_: uint64(1))
     monkeypatch.setattr("chia.consensus.pot_iterations.calculate_ip_iters", lambda *_: uint64(1))
-    monkeypatch.setattr("chia.consensus.block_record.BlockRecord.sp_sub_slot_total_iters", lambda *_: uint64(1))
+    monkeypatch.setattr("chia_rs.BlockRecord.sp_sub_slot_total_iters", lambda *_: uint64(1))
 
 
 @pytest.fixture(scope="function", params=[True, False])
@@ -152,7 +152,7 @@ def new_action_scope_wrapper(func: Any) -> Any:
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         ph_indexes: dict[uint32, int] = {}
         for wallet_id in self.wallets:
-            ph_indexes[wallet_id] = await self.puzzle_store.get_unused_count(wallet_id)
+            ph_indexes[wallet_id] = await self.puzzle_store.get_used_count(wallet_id)
 
         async with func(self, *args, **kwargs) as action_scope:
             yield action_scope
@@ -160,7 +160,7 @@ def new_action_scope_wrapper(func: Any) -> Any:
         # Finally, check that the number of puzzle hashes did or did not increase by the specified amount
         if action_scope.config.tx_config.reuse_puzhash:
             for wallet_id, ph_index in zip(self.wallets, ph_indexes):
-                if not ph_indexes[wallet_id] == (await self.puzzle_store.get_unused_count(wallet_id)):
+                if not ph_indexes[wallet_id] == (await self.puzzle_store.get_used_count(wallet_id)):
                     raise NewPuzzleHashError(
                         f"wallet ID {wallet_id} generated new puzzle hashes while reuse_puzhash was False"
                     )
