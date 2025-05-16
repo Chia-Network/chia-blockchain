@@ -1052,7 +1052,7 @@ class DataStore:
                 return []
 
             kv_ids = merkle_blob.get_keys_values()
-            kv_ids_unpacked = [KeyOrValueId(id.raw) for pair in kv_ids.items() for id in pair]
+            kv_ids_unpacked = (KeyOrValueId(id.raw) for pair in kv_ids.items() for id in pair)
             table_blobs = await self.get_table_blobs(kv_ids_unpacked, store_id)
 
             terminal_nodes: list[TerminalNode] = []
