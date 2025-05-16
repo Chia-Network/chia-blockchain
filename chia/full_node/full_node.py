@@ -1346,7 +1346,7 @@ class FullNode:
             ],
         ) -> None:
             nonlocal fork_info
-            block_rate = 0
+            block_rate = 0.0
             block_rate_time = time.monotonic()
             block_rate_height = -1
             while True:
@@ -1377,12 +1377,13 @@ class FullNode:
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
                 if end_height - block_rate_height > 100:
                     now = time.monotonic()
-                    block_rate = int((end_height - block_rate_height) // (now - block_rate_time))
+                    block_rate = (end_height - block_rate_height) / (now - block_rate_time)
                     block_rate_time = now
                     block_rate_height = end_height
 
                 self.log.info(
-                    f"Added blocks {start_height} to {end_height} ({block_rate} blocks/s) (from: {peer.peer_info.ip})"
+                    "Added blocks {start_height} to {end_height} "
+                    f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
                 if state_change_summary is not None:
