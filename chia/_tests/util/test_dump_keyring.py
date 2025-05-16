@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from click.testing import CliRunner
 
 from chia._tests.util.misc import Marks, datacases
-from chia.util.dump_keyring import dump
+from chia.cmds.dump_keyring import dump
 from chia.util.keychain import Keychain
 
 output_prefix = """Attempting to dump contents of keyring file: {path}
