@@ -640,6 +640,32 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class NFTMintNFTRequest(TransactionEndpointRequest):
+    wallet_id: uint32
+    royalty_address: Optional[str]
+    target_address: Optional[str]
+    uris: list[str]
+    hash: bytes32
+    royalty_amount: uint16 = uint16(0)
+    meta_uris: list[str] = field(default_factory=list)
+    license_uris: list[str] = field(default_factory=list)
+    edition_number: uint64 = uint64(1)
+    edition_total: uint64 = uint64(1)
+    meta_hash: Optional[bytes32] = None
+    license_hash: Optional[bytes32] = None
+    did_id: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTMintNFTResponse(TransactionEndpointResponse):
+    wallet_id: uint32
+    spend_bundle: WalletSpendBundle
+    nft_id: str
+
+
+@streamable
+@kw_only_dataclass
 class NFTSetDIDBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
@@ -806,14 +832,6 @@ class CancelOfferResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class CancelOffersResponse(TransactionEndpointResponse):
     pass
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTMintNFTResponse(TransactionEndpointResponse):
-    wallet_id: uint32
-    spend_bundle: WalletSpendBundle
-    nft_id: str
 
 
 @streamable

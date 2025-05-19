@@ -64,6 +64,7 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     LogIn,
+    NFTMintNFTRequest,
     PushTransactions,
     PushTX,
     SetWalletResyncOnStartup,
@@ -1617,12 +1618,14 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     res = await wallet_1_rpc.create_new_nft_wallet(None)
     nft_wallet_id = res["wallet_id"]
     mint_res = await wallet_1_rpc.mint_nft(
-        nft_wallet_id,
-        None,
-        None,
-        "0xD4584AD463139FA8C0D9F68F4B59F185",
-        ["https://www.chia.net/img/branding/chia-logo.svg"],
-        DEFAULT_TX_CONFIG,
+        request=NFTMintNFTRequest(
+            wallet_id=nft_wallet_id,
+            royalty_address=None,
+            target_address=None,
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+        ),
+        tx_config=DEFAULT_TX_CONFIG,
     )
 
     spend_bundle = mint_res.spend_bundle
@@ -2386,12 +2389,14 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     nft_wallet_id = nft_wallet["wallet_id"]
     address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
     await wc.mint_nft(
-        nft_wallet_id,
+        request=NFTMintNFTRequest(
+            wallet_id=nft_wallet_id,
+            royalty_address=address,
+            target_address=address,
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            uris=["http://test.nft"],
+        ),
         tx_config=DEFAULT_TX_CONFIG,
-        royalty_address=address,
-        target_address=address,
-        hash="deadbeef",
-        uris=["http://test.nft"],
     )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)

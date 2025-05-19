@@ -27,6 +27,7 @@ from chia.cmds.units import units
 from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
+    NFTMintNFTRequest,
     SendTransactionResponse,
     VCAddProofs,
     VCGet,
@@ -1209,24 +1210,26 @@ async def mint_nft(
                     did_id = ""
 
             mint_response = await wallet_client.mint_nft(
-                wallet_id,
-                royalty_address,
-                target_address,
-                hash,
-                uris,
-                CMDTXConfigLoader(
+                request=NFTMintNFTRequest(
+                    wallet_id=uint32(wallet_id),
+                    royalty_address=royalty_address,
+                    target_address=target_address,
+                    hash=bytes32(hexstr_to_bytes(hash)),
+                    uris=uris,
+                    meta_hash=bytes32(hexstr_to_bytes(metadata_hash)) if metadata_hash is not None else None,
+                    meta_uris=metadata_uris,
+                    license_hash=bytes32(hexstr_to_bytes(license_hash)) if license_hash is not None else None,
+                    license_uris=license_uris,
+                    edition_total=uint64(edition_total) if edition_total is not None else uint64(1),
+                    edition_number=uint64(edition_number) if edition_number is not None else uint64(1),
+                    fee=fee,
+                    royalty_amount=uint16(royalty_percentage),
+                    did_id=did_id,
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                metadata_hash,
-                metadata_uris,
-                license_hash,
-                license_uris,
-                edition_total,
-                edition_number,
-                fee,
-                royalty_percentage,
-                did_id,
-                push=push,
                 timelock_info=condition_valid_times,
             )
             spend_bundle = mint_response.spend_bundle

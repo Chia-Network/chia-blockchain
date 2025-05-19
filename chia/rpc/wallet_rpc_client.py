@@ -62,6 +62,7 @@ from chia.rpc.wallet_request_types import (
     NFTGetByDIDResponse,
     NFTGetWalletsWithDIDsResponse,
     NFTMintBulkResponse,
+    NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetDIDBulk,
     NFTSetDIDBulkResponse,
@@ -986,47 +987,16 @@ class WalletRpcClient(RpcClient):
 
     async def mint_nft(
         self,
-        wallet_id: int,
-        royalty_address: Optional[str],
-        target_address: Optional[str],
-        hash: str,
-        uris: list[str],
+        request: NFTMintNFTRequest,
         tx_config: TXConfig,
-        meta_hash: Optional[str] = "",
-        meta_uris: list[str] = [],
-        license_hash: Optional[str] = "",
-        license_uris: list[str] = [],
-        edition_total: Optional[int] = 1,
-        edition_number: Optional[int] = 1,
-        fee: int = 0,
-        royalty_percentage: int = 0,
-        did_id: Optional[str] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTMintNFTResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "royalty_address": royalty_address,
-            "target_address": target_address,
-            "hash": hash,
-            "uris": uris,
-            "meta_hash": meta_hash,
-            "meta_uris": meta_uris,
-            "license_hash": license_hash,
-            "license_uris": license_uris,
-            "edition_number": edition_number,
-            "edition_total": edition_total,
-            "royalty_percentage": royalty_percentage,
-            "did_id": did_id,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_mint_nft", request)
-        return json_deserialize_with_clvm_streamable(response, NFTMintNFTResponse)
+        return NFTMintNFTResponse.from_json_dict(
+            await self.fetch(
+                "nft_mint_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def add_uri_to_nft(
         self,

@@ -49,6 +49,8 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeightResponse,
     LogIn,
     LogInResponse,
+    NFTMintNFTRequest,
+    NFTMintNFTResponse,
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
@@ -2993,80 +2995,69 @@ class WalletRpcApi:
     # NFT Wallet
     ##########################################################################################
     @tx_endpoint(push=True)
+    @marshal
     async def nft_mint_nft(
         self,
-        request: dict[str, Any],
+        request: NFTMintNFTRequest,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> NFTMintNFTResponse:
         log.debug("Got minting RPC request: %s", request)
-        wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
-        nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-        royalty_address = request.get("royalty_address")
-        royalty_amount = uint16(request.get("royalty_percentage", 0))
-        if royalty_amount == 10000:
+        nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
+        if request.royalty_amount == 10000:
             raise ValueError("Royalty percentage cannot be 100%")
-        if isinstance(royalty_address, str):
-            royalty_puzhash = decode_puzzle_hash(royalty_address)
-        elif royalty_address is None:
+        if isinstance(request.royalty_address, str):
+            royalty_puzhash = decode_puzzle_hash(request.royalty_address)
+        elif request.royalty_address is None:
             royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         else:
-            royalty_puzhash = royalty_address
-        target_address = request.get("target_address")
-        if isinstance(target_address, str):
-            target_puzhash = decode_puzzle_hash(target_address)
-        elif target_address is None:
+            royalty_puzhash = request.royalty_address
+        if isinstance(request.target_address, str):
+            target_puzhash = decode_puzzle_hash(request.target_address)
+        elif request.target_address is None:
             target_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         else:
-            target_puzhash = target_address
-        if "uris" not in request:
-            return {"success": False, "error": "Data URIs is required"}
-        if not isinstance(request["uris"], list):
-            return {"success": False, "error": "Data URIs must be a list"}
-        if not isinstance(request.get("meta_uris", []), list):
-            return {"success": False, "error": "Metadata URIs must be a list"}
-        if not isinstance(request.get("license_uris", []), list):
-            return {"success": False, "error": "License URIs must be a list"}
+            target_puzhash = request.target_address
         metadata_list = [
-            ("u", request["uris"]),
-            ("h", hexstr_to_bytes(request["hash"])),
-            ("mu", request.get("meta_uris", [])),
-            ("lu", request.get("license_uris", [])),
-            ("sn", uint64(request.get("edition_number", 1))),
-            ("st", uint64(request.get("edition_total", 1))),
+            ("u", request.uris),
+            ("h", request.hash),
+            ("mu", request.meta_uris),
+            ("lu", request.license_uris),
+            ("sn", request.edition_number),
+            ("st", request.edition_total),
         ]
-        if "meta_hash" in request and len(request["meta_hash"]) > 0:
-            metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
-        if "license_hash" in request and len(request["license_hash"]) > 0:
-            metadata_list.append(("lh", hexstr_to_bytes(request["license_hash"])))
+        if request.meta_hash is not None:
+            metadata_list.append(("mh", request.meta_hash))
+        if request.license_hash is not None:
+            metadata_list.append(("lh", request.license_hash))
         metadata = Program.to(metadata_list)
-        fee = uint64(request.get("fee", 0))
-        did_id = request.get("did_id", None)
-        if did_id is not None:
-            if did_id == "":
-                did_id = b""
+        if request.did_id is not None:
+            if request.did_id == "":
+                did_id: Optional[bytes] = b""
             else:
-                did_id = decode_puzzle_hash(did_id)
+                did_id = decode_puzzle_hash(request.did_id)
+        else:
+            did_id = request.did_id
 
         nft_id = await nft_wallet.generate_new_nft(
             metadata,
             action_scope,
             target_puzhash,
             royalty_puzhash,
-            royalty_amount,
+            request.royalty_amount,
             did_id,
-            fee,
+            request.fee,
             extra_conditions=extra_conditions,
         )
         nft_id_bech32 = encode_puzzle_hash(nft_id, AddressType.NFT.hrp(self.service.config))
-        return {
-            "wallet_id": wallet_id,
-            "success": True,
-            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-            "nft_id": nft_id_bech32,
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        return NFTMintNFTResponse(
+            [],
+            [],
+            wallet_id=request.wallet_id,
+            spend_bundle=WalletSpendBundle([], G2Element()),  # tx_endpoint wrapper will take care of this
+            nft_id=nft_id_bech32,
+        )
 
     async def nft_count_nfts(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = request.get("wallet_id", None)
