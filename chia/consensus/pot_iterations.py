@@ -112,7 +112,6 @@ def validate_pospace_and_get_reuierd_iters(
         cc_sp_hash,
         sub_slot_iters,
         prev_transaction_block_height,
-        # todo pass proof.type
     )
 
 
@@ -141,4 +140,4 @@ def calculate_iterations_quality(
             phase_out=calculate_phase_out(constants, ssi, prev_transaction_block_height),
         )
     else:
-        return uint64(0)
+        assert False, "V2 plots not supported yet"
