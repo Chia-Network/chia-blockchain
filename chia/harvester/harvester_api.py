@@ -144,11 +144,13 @@ class HarvesterAPI:
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):
                         required_iters: uint64 = calculate_iterations_quality(
-                            self.harvester.constants.DIFFICULTY_CONSTANT_FACTOR,
+                            self.harvester.constants,
                             quality_str,
                             plot_info.prover.get_size(),
                             difficulty,
                             new_challenge.sp_hash,
+                            sub_slot_iters,
+                            new_challenge.last_tx_height,
                         )
                         sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:

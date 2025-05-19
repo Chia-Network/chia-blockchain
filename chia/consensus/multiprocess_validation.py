@@ -27,11 +27,13 @@ from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.get_block_challenge import get_block_challenge
+from chia.consensus.get_block_challenge import get_block_challenge, prev_tx_block
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from chia.consensus.pot_iterations import (
+    is_overflow_block,
+    validate_pospace_and_get_reuierd_iters,
+)
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
@@ -211,23 +213,19 @@ async def pre_validate_block(
         cc_sp_hash: bytes32 = challenge
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-    q_str: Optional[bytes32] = verify_and_get_quality_string(
-        block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
-    )
-    if q_str is None:
-        return return_error(Err.INVALID_POSPACE)
 
-    # TODO: support v2 plots
-    pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
-    assert pos_size_v1 is not None
-
-    required_iters: uint64 = calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        pos_size_v1,
-        vs.difficulty,
+    required_iters = validate_pospace_and_get_reuierd_iters(
+        constants,
+        block.reward_chain_block.proof_of_space,
+        challenge,
         cc_sp_hash,
+        block.height,
+        vs.difficulty,
+        vs.ssi,
+        prev_tx_block(blockchain, prev_b),
     )
+    if required_iters is None:
+        return return_error(Err.INVALID_POSPACE)
 
     try:
         block_rec = block_to_block_record(

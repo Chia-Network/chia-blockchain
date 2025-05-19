@@ -11,6 +11,7 @@ from chia.util.hash import std_hash
 AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
 DEFAULT_CONSTANTS = ConsensusConstants(
+    FADE_OUT_PERIOD=uint32(256),
     SLOT_BLOCKS_TARGET=uint32(32),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(16),  # Must be less than half of SLOT_BLOCKS_TARGET
     MAX_SUB_SLOT_BLOCKS=uint32(128),  # Must be less than half of SUB_EPOCH_BLOCKS
@@ -79,7 +80,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
-    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_FORMAT_HARD_FORK_HEIGHT=uint32(0xFFFFFFFF),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030

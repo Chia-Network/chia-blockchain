@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality,
+    calculate_iterations_quality_v1,
     calculate_sp_iters,
     is_overflow_block,
 )
@@ -106,7 +106,16 @@ class TestPotIterations:
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        required_iters = calculate_iterations_quality(uint128(2**25), quality, k, difficulty, sp_hash)
+                        # todo: add v2
+                        required_iters = calculate_iterations_quality_v1(
+                            test_constants,
+                            quality,
+                            k,
+                            difficulty,
+                            sp_hash,
+                            100000000,
+                            uint32(0),
+                        )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import Optional, Union
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -101,3 +101,21 @@ def get_block_challenge(
                 curr = blocks.block_record(curr.prev_hash)
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     return challenge
+
+
+def prev_tx_block(blocks: BlockRecordsProtocol, prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]]) -> uint32:
+    prev_transaction_b_height = uint32(0)
+    if prev_b is not None and isinstance(prev_b, BlockRecord):
+        if prev_b.prev_transaction_block_hash is not None:
+            prev_transaction_b_height = blocks.block_record(prev_b.prev_transaction_block_hash).height
+    elif prev_b is not None and isinstance(prev_b, FullBlock):
+        if prev_b.foliage_transaction_block is not None:
+            prev_transaction_b_height = blocks.block_record(
+                prev_b.foliage_transaction_block.prev_transaction_block_hash
+            ).height
+    elif prev_b is not None and isinstance(prev_b, HeaderBlock):
+        if prev_b.foliage_transaction_block is not None:
+            prev_transaction_b_height = blocks.block_record(
+                prev_b.foliage_transaction_block.prev_transaction_block_hash
+            ).height
+    return prev_transaction_b_height

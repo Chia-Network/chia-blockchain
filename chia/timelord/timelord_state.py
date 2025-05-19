@@ -38,7 +38,9 @@ class LastState:
         self.last_height: uint32 = uint32(0)
         self.total_iters: uint128 = uint128(0)
         self.last_challenge_sb_or_eos_total_iters = uint128(0)
-        self.last_block_total_iters: Optional[uint128] = None
+        self.last_tx_block_total_iters: Optional[uint128] = None
+        self.last_tx_block_block_height: uint32 = uint32(0)
+        self.last_tx_block_sp_index: uint8 = uint8(0)
         self.last_peak_challenge: bytes32 = constants.GENESIS_CHALLENGE
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
@@ -52,13 +54,7 @@ class LastState:
             self.state_type = StateType.PEAK
             self.peak = state
             self.subslot_end = None
-            _, self.last_ip = iters_from_block(
-                self.constants,
-                state.reward_chain_block,
-                state.sub_slot_iters,
-                state.difficulty,
-                state.reward_chain_block.height,
-            )
+
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
             self.last_weight = state.reward_chain_block.weight
@@ -68,7 +64,17 @@ class LastState:
             self.difficulty = state.difficulty
             self.sub_slot_iters = state.sub_slot_iters
             if state.reward_chain_block.is_transaction_block:
-                self.last_block_total_iters = self.total_iters
+                self.last_tx_block_block_height = state.reward_chain_block.height
+                self.last_tx_block_total_iters = self.total_iters
+                self.last_tx_block_sp_index = state.reward_chain_block.signage_point_index
+            _, self.last_ip = iters_from_block(
+                self.constants,
+                state.reward_chain_block,
+                state.sub_slot_iters,
+                state.difficulty,
+                state.reward_chain_block.height,
+                self.last_tx_block_block_height,
+            )
             self.reward_challenge_cache = state.previous_reward_challenges
             self.last_challenge_sb_or_eos_total_iters = self.peak.last_challenge_sb_or_eos_total_iters
             self.new_epoch = False
@@ -168,7 +174,10 @@ class LastState:
         return None
 
     def get_last_block_total_iters(self) -> Optional[uint128]:
-        return self.last_block_total_iters
+        return self.last_tx_block_total_iters
+
+    def get_last_tx_height(self) -> uint32:
+        return self.last_tx_block_block_height
 
     def get_passed_ses_height_but_not_yet_included(self) -> bool:
         return self.passed_ses_height_but_not_yet_included

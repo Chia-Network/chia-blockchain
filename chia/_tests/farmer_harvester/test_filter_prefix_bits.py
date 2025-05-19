@@ -121,6 +121,7 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         sub_slot_iters=uint64(1000000),
         signage_point_index=uint8(2),
         peak_height=peak_height,
+        last_tx_height=uint32(0),
     )
     await farmer_api.new_signage_point(sp)
     await time_out_assert(5, state_has_changed, True)
