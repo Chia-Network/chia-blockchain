@@ -37,8 +37,7 @@ def calculate_phase_out(
 ) -> uint64:
     sp_interval_iters = calculate_sp_interval_iters(constants, sub_slot_iters)
     phase_out = uint64(
-        (uint32(prev_transaction_block_height - constants.PLOT_FORMAT_HARD_FORK_HEIGHT) / FADE_OUT_PERIOD)
-        * sp_interval_iters
+        (uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) / FADE_OUT_PERIOD) * sp_interval_iters
     )
     return phase_out
 
