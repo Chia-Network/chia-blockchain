@@ -11,7 +11,6 @@ from chia.util.hash import std_hash
 AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
 test_constants = ConsensusConstants(
-    FADE_OUT_PERIOD=uint32(1024),
     SLOT_BLOCKS_TARGET=uint32(32),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(16),
     MAX_SUB_SLOT_BLOCKS=uint32(128),
