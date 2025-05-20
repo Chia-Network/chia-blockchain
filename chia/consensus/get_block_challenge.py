@@ -103,19 +103,29 @@ def get_block_challenge(
     return challenge
 
 
-def prev_tx_block(blocks: BlockRecordsProtocol, prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]]) -> uint32:
-    prev_transaction_b_height = uint32(0)
-    if prev_b is not None and isinstance(prev_b, BlockRecord):
+def prev_tx_block(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]],
+) -> uint32:
+    # todo add check to make sure we dont return tx block from same sp as block we are validating
+    if prev_b is None:
+        return uint32(0)
+    if isinstance(prev_b, BlockRecord):
         if prev_b.prev_transaction_block_hash is not None:
-            prev_transaction_b_height = blocks.block_record(prev_b.prev_transaction_block_hash).height
-    elif prev_b is not None and isinstance(prev_b, FullBlock):
+            return prev_b.height
+        else:
+            curr = prev_b
+    elif isinstance(prev_b, FullBlock):
         if prev_b.foliage_transaction_block is not None:
-            prev_transaction_b_height = blocks.block_record(
-                prev_b.foliage_transaction_block.prev_transaction_block_hash
-            ).height
-    elif prev_b is not None and isinstance(prev_b, HeaderBlock):
+            return prev_b.height
+        else:
+            curr = blocks.block_record(prev_b.header_hash)
+    elif isinstance(prev_b, HeaderBlock):        
         if prev_b.foliage_transaction_block is not None:
-            prev_transaction_b_height = blocks.block_record(
-                prev_b.foliage_transaction_block.prev_transaction_block_hash
-            ).height
-    return prev_transaction_b_height
+            return prev_b.height
+        else:
+            curr = blocks.block_record(prev_b.header_hash)
+    while curr.is_transaction_block is False:
+        prev_b = blocks.block_record(curr.prev_hash)
+    return prev_b.height

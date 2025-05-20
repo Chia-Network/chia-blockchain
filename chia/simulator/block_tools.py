@@ -53,7 +53,8 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality,
+    calculate_iterations_quality_v1,
+    calculate_phase_out,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
@@ -1500,14 +1501,14 @@ class BlockTools:
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
-                    required_iters = calculate_iterations_quality(
+                    required_iters = calculate_iterations_quality_v1(
                         constants,
                         quality_str,
                         plot_info.prover.get_size(),
                         difficulty,
                         signage_point,
                         sub_slot_iters,
-                        prev_transaction_b_height,
+                        calculate_phase_out(constants, sub_slot_iters, prev_transaction_b_height),
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
@@ -1760,11 +1761,7 @@ def load_block_list(
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
         cache = BlockCache(blocks)
-        prev_transaction_b_height = uint32(0)
-        if full_block.foliage_transaction_block is not None:
-            prev_transaction_b_height = cache.block_record(
-                full_block.foliage_transaction_block.prev_transaction_block_hash
-            ).height
+        prev_transaction_b_height = uint32(0)  # todo handle hard fork 2
 
         required_iters = validate_pospace_and_get_reuierd_iters(
             constants,
