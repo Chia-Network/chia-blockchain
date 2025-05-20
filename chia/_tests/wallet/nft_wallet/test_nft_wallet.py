@@ -578,7 +578,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
             wallet_id=uint32(env.wallet_aliases["nft"]),
             royalty_address=encode_puzzle_hash(wallet_ph, AddressType.NFT.hrp(wallet_node.config)),
             target_address=None,
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F184D4584AD463139FA8C0D9F68F4B59F184"),
             uris=["https://chialisp.com/img/logo.svg"],
             meta_uris=[
                 "https://bafybeigzcazxeu7epmm4vtkuadrvysv74lbzzbl2evphtae6k57yhgynp4.ipfs.nftstorage.link/6590.json"
@@ -633,7 +633,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     )
     coins = [NFTInfo.from_json_dict(d) for d in coins_response["nft_list"]]
     assert len(coins) == 1
-    assert coins[0].data_hash.hex() == "0xD4584AD463139FA8C0D9F68F4B59F184"[2:].lower()
+    assert coins[0].data_hash.hex() == "0xD4584AD463139FA8C0D9F68F4B59F184D4584AD463139FA8C0D9F68F4B59F184"[2:].lower()
 
     # test counts
 
@@ -924,7 +924,7 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
             wallet_id=nft_wallet.id(),
             royalty_address=None,
             target_address=None,
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F181D4584AD463139FA8C0D9F68F4B59F181"),
             uris=["https://url1"],
             did_id="",
             push=True,
@@ -977,7 +977,7 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     assert non_did_nft["mint_height"] > 0
     assert non_did_nft["supports_did"]
     assert non_did_nft["data_uris"][0] == "https://url1"
-    assert non_did_nft["data_hash"] == "0xD4584AD463139FA8C0D9F68F4B59F181".lower()
+    assert non_did_nft["data_hash"] == "0xD4584AD463139FA8C0D9F68F4B59F181D4584AD463139FA8C0D9F68F4B59F181".lower()
     assert non_did_nft["owner_did"] is None
 
 
@@ -1038,9 +1038,9 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
     royalty_bech32 = encode_puzzle_hash(royalty_address, AddressType.NFT.hrp(env.node.config))
     data_hash_param = "0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"
     license_uris = ["http://mylicenseuri"]
-    license_hash = "0xcafef00d"
+    license_hash = "0xcafef00dcafef00dcafef00dcafef00dcafef00dcafef00dcafef00dcafef00d"
     meta_uris = ["http://metauri"]
-    meta_hash = "0xdeadbeef"
+    meta_hash = "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
     royalty_percentage = 200
     sn = 10
     st = 100
