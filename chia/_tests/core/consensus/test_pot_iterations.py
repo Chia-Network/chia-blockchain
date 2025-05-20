@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -98,7 +98,7 @@ class TestPotIterations:
         num_sps = 16
         sp_interval_iters = uint64(100000000 // 32)
         difficulty = uint64(500000000000)
-
+        constants = test_constants.replace(DIFFICULTY_CONSTANT_FACTOR=uint128(2**25))
         for slot_index in range(total_slots):
             total_wins_in_slot = 0
             for sp_index in range(num_sps):
@@ -108,13 +108,7 @@ class TestPotIterations:
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
                         # todo: add v2
                         required_iters = calculate_iterations_quality_v1(
-                            test_constants,
-                            quality,
-                            k,
-                            difficulty,
-                            sp_hash,
-                            100000000,
-                            uint32(0),
+                            constants, quality, k, difficulty, sp_hash, 100000000, uint32(0)
                         )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1

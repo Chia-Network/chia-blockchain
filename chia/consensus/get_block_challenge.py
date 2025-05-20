@@ -126,6 +126,6 @@ def prev_tx_block(
             return prev_b.height
         else:
             curr = blocks.block_record(prev_b.header_hash)
-    while curr.is_transaction_block is False:
-        prev_b = blocks.block_record(curr.prev_hash)
+    while curr.is_transaction_block is False and curr.height > 0:
+        curr = blocks.block_record(curr.prev_hash)
     return prev_b.height
