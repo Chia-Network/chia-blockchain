@@ -121,7 +121,7 @@ def prev_tx_block(
             return prev_b.height
         else:
             curr = blocks.block_record(prev_b.header_hash)
-    elif isinstance(prev_b, HeaderBlock):        
+    elif isinstance(prev_b, HeaderBlock):
         if prev_b.foliage_transaction_block is not None:
             return prev_b.height
         else:
