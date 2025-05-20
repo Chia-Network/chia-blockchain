@@ -1622,8 +1622,9 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
             wallet_id=nft_wallet_id,
             royalty_address=None,
             target_address=None,
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+            push=True,
         ),
         tx_config=DEFAULT_TX_CONFIG,
     )
@@ -2393,8 +2394,9 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
             wallet_id=nft_wallet_id,
             royalty_address=address,
             target_address=address,
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["http://test.nft"],
+            push=True,
         ),
         tx_config=DEFAULT_TX_CONFIG,
     )

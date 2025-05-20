@@ -641,11 +641,11 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 @streamable
 @kw_only_dataclass
 class NFTMintNFTRequest(TransactionEndpointRequest):
-    wallet_id: uint32
-    royalty_address: Optional[str]
-    target_address: Optional[str]
-    uris: list[str]
-    hash: bytes32
+    wallet_id: uint32 = field(default_factory=default_raise)
+    royalty_address: Optional[str] = field(default_factory=default_raise)
+    target_address: Optional[str] = field(default_factory=default_raise)
+    uris: list[str] = field(default_factory=default_raise)
+    hash: bytes32 = field(default_factory=default_raise)
     royalty_amount: uint16 = uint16(0)
     meta_uris: list[str] = field(default_factory=list)
     license_uris: list[str] = field(default_factory=list)

@@ -99,7 +99,10 @@ async def test_nft_wallet_creation_automatically(wallet_environments: WalletTest
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
     )
     metadata = Program.to(
-        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
+        [
+            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+        ]
     )
 
     async with nft_wallet_0.wallet_state_manager.new_action_scope(
@@ -240,7 +243,10 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
     )
     metadata = Program.to(
-        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
+        [
+            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+        ]
     )
     async with nft_wallet_0.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -539,8 +545,9 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
             wallet_id=uint32(env.wallet_aliases["nft"]),
             royalty_address=encode_puzzle_hash(wallet_ph, AddressType.NFT.hrp(wallet_node.config)),
             target_address=None,
-            hash=bytes32(hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -571,12 +578,13 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
             wallet_id=uint32(env.wallet_aliases["nft"]),
             royalty_address=encode_puzzle_hash(wallet_ph, AddressType.NFT.hrp(wallet_node.config)),
             target_address=None,
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F184"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://chialisp.com/img/logo.svg"],
             meta_uris=[
                 "https://bafybeigzcazxeu7epmm4vtkuadrvysv74lbzzbl2evphtae6k57yhgynp4.ipfs.nftstorage.link/6590.json"
             ],
             meta_hash=bytes32.from_hexstr("0x6a9cb99b7b9a987309e8dd4fd14a7ca2423858585da68cc9ec689669dd6dd6ab"),
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -661,8 +669,9 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
             wallet_id=nft_wallet.id(),
             royalty_address=None,
             target_address=None,
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -685,12 +694,12 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
     coins: list[dict[str, Any]] = (await env.rpc_client.list_nfts(nft_wallet.id(), start_index=0, num=1))["nft_list"]
     coin = coins[0]
     assert coin["mint_height"] > 0
-    assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185"
+    assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185d4584ad463139fa8c0d9f68f4b59f185"
     assert coin["chain_info"] == disassemble(
         Program.to(
             [
                 ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185")),
                 ("mu", []),
                 ("lu", []),
                 ("sn", uint64(1)),
@@ -864,8 +873,9 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
             wallet_id=nft_wallet.id(),
             royalty_address=None,
             target_address=encode_puzzle_hash(nft_ph, "txch"),
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -914,9 +924,10 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
             wallet_id=nft_wallet.id(),
             royalty_address=None,
             target_address=None,
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F181"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://url1"],
             did_id="",
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -952,7 +963,7 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     assert did_nft["mint_height"] > 0
     assert did_nft["supports_did"]
     assert did_nft["data_uris"][0] == "https://www.chia.net/img/branding/chia-logo.svg"
-    assert did_nft["data_hash"] == "0xD4584AD463139FA8C0D9F68F4B59F185".lower()
+    assert did_nft["data_hash"] == "0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185".lower()
     assert did_nft["owner_did"][2:] == hex_did_id
     # Check unassigned NFT
     nft_wallets = await env.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
@@ -1025,7 +1036,7 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         royalty_address = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     royalty_bech32 = encode_puzzle_hash(royalty_address, AddressType.NFT.hrp(env.node.config))
-    data_hash_param = "0xD4584AD463139FA8C0D9F68F4B59F185"
+    data_hash_param = "0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"
     license_uris = ["http://mylicenseuri"]
     license_hash = "0xcafef00d"
     meta_uris = ["http://metauri"]
@@ -1047,6 +1058,7 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
             edition_total=uint64(st),
             edition_number=uint64(sn),
             royalty_amount=uint16(royalty_percentage),
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -1172,10 +1184,11 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
             wallet_id=uint32(env_0.wallet_aliases["nft"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             fee=uint64(fee),
             did_id=hmr_did_id,
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -1441,10 +1454,11 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
             wallet_id=uint32(env.wallet_aliases["nft"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id=hmr_did_id,
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -1621,10 +1635,11 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
             wallet_id=uint32(env.wallet_aliases["nft_w_did"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id=hmr_did_id,
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -1675,10 +1690,11 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
             wallet_id=uint32(env.wallet_aliases["nft_no_did"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id="",
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -1717,10 +1733,11 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
             wallet_id=uint32(env.wallet_aliases["nft_w_did"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id=hmr_did_id,
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -1929,10 +1946,11 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
             wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id=hmr_did_id,
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -1983,10 +2001,11 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
             wallet_id=uint32(env_0.wallet_aliases["nft_no_did"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id="",
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -2025,10 +2044,11 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
             wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id=hmr_did_id,
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -2210,10 +2230,11 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
             wallet_id=uint32(env.wallet_aliases["nft_w_did1"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id="",
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -2446,10 +2467,11 @@ async def test_set_nft_status(wallet_environments: WalletTestFramework) -> None:
             wallet_id=uint32(env.wallet_aliases["nft"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id="",
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
@@ -2538,10 +2560,11 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
             wallet_id=uint32(env.wallet_aliases["nft"]),
             royalty_address=None,
             target_address=None,  # doesn't matter so we'll just reuse
-            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185"),
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             did_id="",
+            push=True,
         ),
         tx_config=wallet_environments.tx_config,
     )
