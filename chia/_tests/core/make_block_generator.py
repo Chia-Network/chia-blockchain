@@ -24,7 +24,7 @@ def int_to_public_key(index: int) -> G1Element:
 
 def puzzle_hash_for_index(index: int, puzzle_hash_db: dict[bytes32, SerializedProgram]) -> bytes32:
     public_key: G1Element = int_to_public_key(index)
-    puzzle = SerializedProgram.from_program(puzzle_for_pk(public_key))
+    puzzle = puzzle_for_pk(public_key).to_serialized()
     puzzle_hash: bytes32 = puzzle.get_tree_hash()
     puzzle_hash_db[puzzle_hash] = puzzle
     return puzzle_hash
@@ -56,7 +56,7 @@ def make_spend_bundle(count: int) -> SpendBundle:
     for coin in coins:
         puzzle_reveal = puzzle_hash_db[coin.puzzle_hash]
         conditions = conditions_for_payment(coin)
-        solution = SerializedProgram.from_program(solution_for_conditions(conditions))
+        solution = solution_for_conditions(conditions).to_serialized()
         coin_spend = make_spend(coin, puzzle_reveal, solution)
         coin_spends.append(coin_spend)
 

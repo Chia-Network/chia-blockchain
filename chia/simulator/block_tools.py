@@ -87,7 +87,7 @@ from chia.ssl.create_ssl import create_all_ssl
 from chia.ssl.ssl_check import fix_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
+from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
@@ -154,7 +154,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     ret: list[Coin] = []
     for cs in sb.coin_spends:
         parent_id = cs.coin.name()
-        _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
+        _, r = run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)
         for cond in Program.to(r).as_iter():
             atoms = cond.as_iter()
             op = next(atoms).atom
@@ -176,7 +176,7 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
 
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
-        cost, result = generator._run(INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
+        cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -185,13 +185,13 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
             puzzle = spend.at("rf")
             solution = spend.at("rrrf")
 
-            cost, result = puzzle._run(INFINITE_COST, DEFAULT_FLAGS, solution)
+            cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(result)
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
+        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
 
         for res in result.first().as_iter():
             # each condition item is:

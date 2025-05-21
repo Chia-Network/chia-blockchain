@@ -301,9 +301,8 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
 
         remark_condition: Program = next(
             condition
-            for condition in successful_spend.coin_spends[0]
-            .puzzle_reveal.to_program()
-            .run(successful_spend.coin_spends[0].solution.to_program())
+            for condition in Program.from_serialized(successful_spend.coin_spends[0].puzzle_reveal)
+            .run(Program.from_serialized(successful_spend.coin_spends[0].solution))
             .as_iter()
             if condition.first() == Program.to(1)
         )

@@ -14,7 +14,7 @@ from typing_extensions import Literal
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -704,7 +704,7 @@ class TradeManager:
             parse_conditions_non_consensus(
                 condition
                 for spend in final_spend_bundle.coin_spends
-                for condition in spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter()
+                for condition in run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_iter()
             )
         )
         # this executes the puzzles again

@@ -13,6 +13,7 @@ from clvm.casts import int_from_bytes
 from chia.consensus.condition_tools import conditions_dict_for_solution
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet import singleton
@@ -111,7 +112,7 @@ class WalletSingletonStore:
         if inner_puz is None:  # pragma: no cover
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
 
-        lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
+        lineage_bytes = [x.as_atom() for x in Program.from_serialized(coin_state.solution).first().as_iter()]
         if len(lineage_bytes) == 2:
             lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, uint64(int_from_bytes(lineage_bytes[1])))
         else:

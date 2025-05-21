@@ -10,7 +10,6 @@ from chia_rs.sized_ints import uint64
 from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.cat_wallet.cat_utils import (
@@ -265,11 +264,9 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         valid_spend = tail_offer.to_valid_spend(random_hash)
         real_blue_spend = next(spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend))
         real_blue_spend_replaced = real_blue_spend.replace(
-            solution=SerializedProgram.from_program(
-                real_blue_spend.solution.to_program().replace(
-                    ffrfrf=Program.to(-113), ffrfrr=Program.to([str_to_tail("blue"), []])
-                )
-            ),
+            solution=Program.from_serialized(real_blue_spend.solution)
+            .replace(ffrfrf=Program.to(-113), ffrfrr=Program.to([str_to_tail("blue"), []]))
+            .to_serialized(),
         )
         valid_spend = WalletSpendBundle(
             [real_blue_spend_replaced, *[spend for spend in valid_spend.coin_spends if spend != real_blue_spend]],

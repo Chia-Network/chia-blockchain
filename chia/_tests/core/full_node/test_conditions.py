@@ -104,7 +104,7 @@ async def check_conditions(
     blocks = await initial_blocks(bt)
     coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 
-    coin_spend = make_spend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
+    coin_spend = make_spend(coin, EASY_PUZZLE, condition_solution)
     spend_bundle = SpendBundle([coin_spend], aggsig)
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
