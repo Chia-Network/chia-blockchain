@@ -13,7 +13,6 @@ from chia_rs import (
     HeaderBlock,
     RewardChainSubSlot,
     SubSlotProofs,
-    calculate_sp_interval_iters,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
@@ -25,6 +24,7 @@ from chia.consensus.get_block_challenge import final_eos_is_already_included, ge
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
+    calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
     validate_pospace_and_get_reuierd_iters,
@@ -510,7 +510,7 @@ def validate_unfinished_header_block(
         return None, ValidationError(Err.INVALID_POSPACE)
 
     # 7. check required iters
-    if required_iters >= calculate_sp_interval_iters(constants.NUM_SPS_SUB_SLOT, expected_vs.ssi):
+    if required_iters >= calculate_sp_interval_iters(constants, expected_vs.ssi):
         return None, ValidationError(Err.INVALID_REQUIRED_ITERS)
 
     # 8a. check signage point index 0 has no cc sp
