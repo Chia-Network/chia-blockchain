@@ -63,7 +63,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import get_typed_plot_size, verify_and_get_quality_string
 from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -979,7 +979,7 @@ class FullNodeAPI:
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants,
                 quality_string,
-                request.proof_of_space,
+                get_typed_plot_size(request.proof_of_space),
                 difficulty,
                 request.challenge_chain_sp,
                 sub_slot_iters,

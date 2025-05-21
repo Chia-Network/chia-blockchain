@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
 from bitstring import BitArray
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PrivateKey, ProofOfSpace
@@ -12,6 +12,47 @@ from chiapos import Verifier
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
+
+
+class PlotSizeV1:
+    def __init__(self, value: uint8):
+        self.value = value
+
+    def __int__(self) -> uint8:
+        return self.value
+
+    def __repr__(self) -> str:
+        return f"PlotSizeV1({self.value})"
+
+
+class PlotSizeV2:
+    def __init__(self, value: uint8):
+        self.value = value
+
+    def __int__(self) -> uint8:
+        return self.value
+
+    def __repr__(self) -> str:
+        return f"PlotSizeV2({self.value})"
+
+
+def get_typed_plot_size(pos: ProofOfSpace) -> Union[PlotSizeV1, PlotSizeV2]:
+    """
+    Returns a typed plot size from a ProofOfSpace object.
+    Raises ValueError if neither size_v1 nor size_v2 is available.
+    """
+    size_v1 = pos.size_v1()
+    size_v2 = pos.size_v2()
+
+    if size_v1 is not None and size_v2 is not None:
+        raise ValueError("ProofOfSpace cannot have both size_v1 and size_v2")
+    if size_v1 is None and size_v2 is None:
+        raise ValueError("ProofOfSpace must have either size_v1 or size_v2")
+
+    if size_v1 is not None:
+        return PlotSizeV1(size_v1)
+    assert size_v2 is not None
+    return PlotSizeV2(size_v2)
 
 
 def get_plot_id(pos: ProofOfSpace) -> bytes32:
