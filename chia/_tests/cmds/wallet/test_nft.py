@@ -402,7 +402,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
             )
 
     inst_rpc_client = NFTSetDidRpcClient()
-    nft_coin_id = get_bytes32(2).hex()
+    nft_coin_id = get_bytes32(2)
     did_id = encode_puzzle_hash(get_bytes32(3), "did:chia:")
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
@@ -412,7 +412,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
         FINGERPRINT_ARG,
         "-i4",
         "--nft-coin-id",
-        nft_coin_id,
+        nft_coin_id.hex(),
         "--did-id",
         did_id,
         "-m0.5",
