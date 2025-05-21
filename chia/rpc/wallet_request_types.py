@@ -351,7 +351,7 @@ class NFTCountNFTsResponse(Streamable):
 class NFTGetNFTs(Streamable):
     wallet_id: Optional[uint32] = None
     start_index: uint32 = uint32(0)
-    num: uint32 = uint32(0)
+    num: uint32 = uint32(50)
 
 
 @streamable

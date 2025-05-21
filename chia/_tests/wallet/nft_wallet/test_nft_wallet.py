@@ -8,6 +8,7 @@ import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
+from clvm_tools.binutils import disassemble
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -691,15 +692,17 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
     coin = coins[0]
     assert coin.mint_height > 0
     assert coin.data_hash == bytes32.from_hexstr("0xd4584ad463139fa8c0d9f68f4b59f185d4584ad463139fa8c0d9f68f4b59f185")
-    assert coin.chain_info == Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185")),
-            ("mu", []),
-            ("lu", []),
-            ("sn", uint64(1)),
-            ("st", uint64(1)),
-        ]
+    assert coin.chain_info == disassemble(
+        Program.to(
+            [
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185")),
+                ("mu", []),
+                ("lu", []),
+                ("sn", uint64(1)),
+                ("st", uint64(1)),
+            ]
+        )
     )
 
     nft_coin_id = encode_puzzle_hash(coin.nft_coin_id, AddressType.NFT.hrp(env.node.config))
@@ -2404,7 +2407,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
 
     res = await env.rpc_client.get_nft_info(coin_id=nft_coin_id.hex(), latest=True)
     assert res["success"]
-    assert coins[0] == res["nft_info"]
+    assert coins[0].to_json_dict() == res["nft_info"]
 
     # Test set DID1 -> DID2
     hex_did_id2 = did_wallet2.get_my_DID()
@@ -2458,7 +2461,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     nft_coin_id = coin.nft_coin_id
     res = await env.rpc_client.get_nft_info(coin_id=nft_coin_id.hex(), latest=True)
     assert res["success"]
-    assert coins[0] == res["nft_info"]
+    assert coins[0].to_json_dict() == res["nft_info"]
 
     # Test set DID2 -> None
     await env.rpc_client.set_nft_did(
@@ -2496,7 +2499,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     assert coin.owner_did is None
     res = await env.rpc_client.get_nft_info(coin_id=nft_coin_id.hex(), latest=True)
     assert res["success"]
-    assert coins[0] == res["nft_info"]
+    assert coins[0].to_json_dict() == res["nft_info"]
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
