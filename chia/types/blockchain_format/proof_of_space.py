@@ -56,8 +56,9 @@ def verify_and_get_quality_string(
             log.error(f"Invalid v2 plot size: {size_v2}")
             return None
         prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    else:
+    else:  # pragme: no cover
         log.error(f"Unknown plot version: {pos.version_and_size:x}")
+        return None
 
     plot_id: bytes32 = get_plot_id(pos)
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
