@@ -21,7 +21,7 @@ class SerializedProgram(chia_rs.Program):
         """
         Convert a Program object to a SerializedProgram.
         """
-        return SerializedProgram.from_bytes(program.to_bytes())
+        return SerializedProgram.from_bytes(bytes(program))
     
     def uncurry(self) -> tuple[Program, Program]:
         self.to_program().uncurry()
