@@ -1246,7 +1246,7 @@ def validate_recent_blocks(
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
 
-        if (challenge is not None) and (prev_challenge is not None):
+        if (challenge is not None) and (prev_challenge is not None) and transaction_blocks > 1:
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
                 assert prev_block_record is not None
@@ -1330,7 +1330,7 @@ def _validate_pospace_recent_chain(
         block.height,
         diff,
         ssi,
-        prev_tx_block(constants, blocks, block),
+        prev_tx_block(constants, blocks, blocks.block_record(block.prev_header_hash)),
     )
     if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
