@@ -13,7 +13,7 @@ def to_program(self) -> Program:
     """
     Convert the SerializedProgram to a Program object.
     """
-    return Program.from_bytes(self.to_bytes())
+    return Program.from_bytes(bytes(self))
 
 
 SerializedProgram.to_program = to_program
@@ -43,14 +43,14 @@ SerializedProgram.uncurry = uncurry
 
 
 def run_with_cost(self, max_cost: int, args: Any):
-    return self.to_program().run_with_cost(max_cost, args)
+    return self._run(max_cost, 0, args)
 
 
 SerializedProgram.run_with_cost = run_with_cost
 
 
 def run_mempool_with_cost(self, max_cost: int, args: Any):
-    return self.to_program().run_with_cost(max_cost, args, chia_rs.MEMPOOL_MODE)
+    return self._run(max_cost, chia_rs.MEMPOOL_MODE, args)
 
 
 SerializedProgram.run_mempool_with_cost = run_mempool_with_cost
