@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TypeVar
 
 from chia_rs import AugSchemeMPL, CoinSpend, G2Element, SpendBundle
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.spend_bundle import T_SpendBundle
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
+
+T_SpendBundle = TypeVar("T_SpendBundle", bound="SpendBundle")
 
 
 class WalletSpendBundle(SpendBundle):

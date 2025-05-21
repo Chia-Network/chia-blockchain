@@ -24,6 +24,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -46,7 +47,6 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 
