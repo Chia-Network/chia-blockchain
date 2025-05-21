@@ -16,6 +16,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.wallet_request_types import (
     NFTCoin,
+    NFTCountNFTs,
     NFTGetByDID,
     NFTMintNFTRequest,
     NFTSetDIDBulk,
@@ -636,17 +637,10 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     assert coins[0].data_hash.hex() == "0xD4584AD463139FA8C0D9F68F4B59F184D4584AD463139FA8C0D9F68F4B59F184"[2:].lower()
 
     # test counts
-
-    resp = await wait_rpc_state_condition(
-        10, env.rpc_client.fetch, ["nft_count_nfts", {"wallet_id": env.wallet_aliases["nft"]}], lambda x: x["success"]
-    )
-    assert resp["count"] == 2
-    resp = await wait_rpc_state_condition(10, env.rpc_client.fetch, ["nft_count_nfts", {}], lambda x: x["success"])
-    assert resp["count"] == 2
+    assert (await env.rpc_client.count_nfts(NFTCountNFTs(uint32(env.wallet_aliases["nft"])))).count == 2
+    assert (await env.rpc_client.count_nfts(NFTCountNFTs())).count == 2
     with pytest.raises(ResponseFailureError, match="Wallet 50 not found."):
-        resp = await wait_rpc_state_condition(
-            10, env.rpc_client.fetch, ["nft_count_nfts", {"wallet_id": 50}], lambda x: x["success"] is False
-        )
+        await env.rpc_client.count_nfts(NFTCountNFTs(uint32(50)))
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")

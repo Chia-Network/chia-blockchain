@@ -49,6 +49,8 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeightResponse,
     LogIn,
     LogInResponse,
+    NFTCountNFTs,
+    NFTCountNFTsResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
     PushTransactions,
@@ -3059,19 +3061,19 @@ class WalletRpcApi:
             nft_id=nft_id_bech32,
         )
 
-    async def nft_count_nfts(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = request.get("wallet_id", None)
+    @marshal
+    async def nft_count_nfts(self, request: NFTCountNFTs) -> NFTCountNFTsResponse:
         count = 0
-        if wallet_id is not None:
+        if request.wallet_id is not None:
             try:
-                nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+                nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
             except KeyError:
                 # wallet not found
-                return {"success": False, "error": f"Wallet {wallet_id} not found."}
+                raise ValueError(f"Wallet {request.wallet_id} not found.")
             count = await nft_wallet.get_nft_count()
         else:
             count = await self.service.wallet_state_manager.nft_store.count()
-        return {"wallet_id": wallet_id, "success": True, "count": count}
+        return NFTCountNFTsResponse(request.wallet_id, uint64(count))
 
     async def nft_get_nfts(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = request.get("wallet_id", None)
