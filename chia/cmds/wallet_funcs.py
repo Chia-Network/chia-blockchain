@@ -29,6 +29,7 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     NFTGetNFTs,
     NFTMintNFTRequest,
+    NFTSetNFTDID,
     SendTransactionResponse,
     VCAddProofs,
     VCGet,
@@ -1404,14 +1405,16 @@ async def set_nft_did(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.set_nft_did(
-                wallet_id,
-                did_id,
-                nft_coin_id,
-                fee,
+                NFTSetNFTDID(
+                    wallet_id=uint32(wallet_id),
+                    did_id=did_id,
+                    nft_coin_id=bytes32.from_hexstr(nft_coin_id),
+                    fee=fee,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()

@@ -695,6 +695,21 @@ class NFTMintNFTResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class NFTSetNFTDID(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    nft_coin_id: bytes32 = field(default_factory=default_raise)
+    did_id: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTSetNFTDIDResponse(TransactionEndpointResponse):
+    wallet_id: uint32
+    spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
 class NFTSetDIDBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
@@ -873,13 +888,6 @@ class NFTAddURIResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True)
 class NFTTransferNFTResponse(TransactionEndpointResponse):
-    wallet_id: uint32
-    spend_bundle: WalletSpendBundle
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTSetNFTDIDResponse(TransactionEndpointResponse):
     wallet_id: uint32
     spend_bundle: WalletSpendBundle
 

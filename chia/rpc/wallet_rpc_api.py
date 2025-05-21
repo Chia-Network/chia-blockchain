@@ -55,6 +55,8 @@ from chia.rpc.wallet_request_types import (
     NFTGetNFTsResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
+    NFTSetNFTDID,
+    NFTSetNFTDIDResponse,
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
@@ -3097,37 +3099,33 @@ class WalletRpcApi:
         return NFTGetNFTsResponse(request.wallet_id, nft_info_list)
 
     @tx_endpoint(push=True)
+    @marshal
     async def nft_set_nft_did(
         self,
-        request: dict[str, Any],
+        request: NFTSetNFTDID,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-        did_id = request.get("did_id", b"")
-        if did_id != b"":
-            did_id = decode_puzzle_hash(did_id)
-        nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+    ) -> NFTSetNFTDIDResponse:
+        nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
+        if request.did_id is not None:
+            did_id: bytes = decode_puzzle_hash(request.did_id)
+        else:
+            did_id = b""
+        nft_coin_info = await nft_wallet.get_nft_coin_by_id(request.nft_coin_id)
         if not (
             await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
-            return {"success": False, "error": "The NFT doesn't support setting a DID."}
+            raise ValueError("The NFT doesn't support setting a DID.")
 
-        fee = uint64(request.get("fee", 0))
         await nft_wallet.set_nft_did(
             nft_coin_info,
             did_id,
             action_scope,
-            fee=fee,
+            fee=request.fee,
             extra_conditions=extra_conditions,
         )
-        return {
-            "wallet_id": wallet_id,
-            "success": True,
-            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint wrapper takes care of setting most of these default values
+        return NFTSetNFTDIDResponse([], [], request.wallet_id, WalletSpendBundle([], G2Element()))
 
     @tx_endpoint(push=True)
     async def nft_set_did_bulk(

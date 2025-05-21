@@ -21,6 +21,7 @@ from chia.rpc.wallet_request_types import (
     NFTGetNFTs,
     NFTMintNFTRequest,
     NFTSetDIDBulk,
+    NFTSetNFTDID,
     NFTSetNFTStatus,
     NFTTransferBulk,
     NFTWalletWithDID,
@@ -1346,10 +1347,13 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
 
     # Set DID
     await env_1.rpc_client.set_nft_did(
-        wallet_id=env_1.wallet_aliases["nft"],
-        did_id=hmr_did_id,
-        nft_coin_id=nft_coin_id.hex(),
-        fee=fee,
+        NFTSetNFTDID(
+            wallet_id=uint32(env_1.wallet_aliases["nft"]),
+            did_id=hmr_did_id,
+            nft_coin_id=nft_coin_id,
+            fee=uint64(fee),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
     )
 
@@ -2355,11 +2359,14 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     )
 
     await env.rpc_client.set_nft_did(
-        wallet_id=env.wallet_aliases["nft_no_did"],
-        did_id=hmr_did_id,
-        nft_coin_id=nft_coin_id.hex(),
+        NFTSetNFTDID(
+            wallet_id=uint32(env.wallet_aliases["nft_no_did"]),
+            did_id=hmr_did_id,
+            nft_coin_id=nft_coin_id,
+            fee=uint64(0),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
-        fee=0,
     )
 
     await wallet_environments.process_pending_states(
@@ -2413,11 +2420,14 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     hex_did_id2 = did_wallet2.get_my_DID()
     hmr_did_id2 = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id2), AddressType.DID.hrp(env.node.config))
     await env.rpc_client.set_nft_did(
-        wallet_id=env.wallet_aliases["nft_w_did1"],
-        did_id=hmr_did_id2,
-        nft_coin_id=nft_coin_id.hex(),
+        NFTSetNFTDID(
+            wallet_id=uint32(env.wallet_aliases["nft_w_did1"]),
+            did_id=hmr_did_id2,
+            nft_coin_id=nft_coin_id,
+            fee=uint64(0),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
-        fee=0,
     )
 
     await wallet_environments.process_pending_states(
@@ -2465,11 +2475,14 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
 
     # Test set DID2 -> None
     await env.rpc_client.set_nft_did(
-        wallet_id=env.wallet_aliases["nft_w_did2"],
-        did_id=None,
-        nft_coin_id=nft_coin_id.hex(),
+        NFTSetNFTDID(
+            wallet_id=uint32(env.wallet_aliases["nft_w_did2"]),
+            did_id=None,
+            nft_coin_id=nft_coin_id,
+            fee=uint64(0),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
-        fee=0,
     )
 
     await wallet_environments.process_pending_states(

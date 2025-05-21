@@ -70,6 +70,7 @@ from chia.rpc.wallet_request_types import (
     NFTMintNFTResponse,
     NFTSetDIDBulk,
     NFTSetDIDBulkResponse,
+    NFTSetNFTDID,
     NFTSetNFTDIDResponse,
     NFTSetNFTStatus,
     NFTTransferBulk,
@@ -1084,28 +1085,16 @@ class WalletRpcClient(RpcClient):
 
     async def set_nft_did(
         self,
-        wallet_id: int,
-        did_id: Optional[str],
-        nft_coin_id: str,
-        fee: int,
+        request: NFTSetNFTDID,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTSetNFTDIDResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if did_id is not None:
-            request["did_id"] = did_id
-        response = await self.fetch("nft_set_nft_did", request)
-        return json_deserialize_with_clvm_streamable(response, NFTSetNFTDIDResponse)
+        return NFTSetNFTDIDResponse.from_json_dict(
+            await self.fetch(
+                "nft_set_nft_did", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def set_nft_status(self, request: NFTSetNFTStatus) -> None:
         await self.fetch("nft_set_nft_status", request.to_json_dict())

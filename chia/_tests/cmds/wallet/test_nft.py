@@ -15,6 +15,7 @@ from chia.rpc.wallet_request_types import (
     NFTGetNFTsResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
+    NFTSetNFTDID,
     NFTSetNFTDIDResponse,
     NFTTransferNFTResponse,
 )
@@ -376,19 +377,27 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     class NFTSetDidRpcClient(TestWalletRpcClient):
         async def set_nft_did(
             self,
-            wallet_id: int,
-            did_id: str,
-            nft_coin_id: str,
-            fee: int,
+            request: NFTSetNFTDID,
             tx_config: TXConfig,
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> NFTSetNFTDIDResponse:
-            self.add_to_log("set_nft_did", (wallet_id, did_id, nft_coin_id, fee, tx_config, push, timelock_info))
+            self.add_to_log(
+                "set_nft_did",
+                (
+                    request.wallet_id,
+                    request.did_id,
+                    request.nft_coin_id,
+                    request.fee,
+                    tx_config,
+                    request.push,
+                    timelock_info,
+                ),
+            )
             return NFTSetNFTDIDResponse(
                 [STD_UTX],
                 [STD_TX],
-                uint32(wallet_id),
+                request.wallet_id,
                 WalletSpendBundle([], G2Element()),
             )
 
