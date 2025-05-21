@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import Any, TypeVar
 
 import chia_rs
 
@@ -20,7 +20,7 @@ SerializedProgram.to_program = to_program
 
 
 @classmethod
-def from_program(cls, program: Program) -> Self:
+def from_program(cls, program: Program):  # noqa
     """
     Convert a Program object to a SerializedProgram.
     """
