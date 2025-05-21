@@ -22,3 +22,12 @@ class SerializedProgram(chia_rs.Program):
         Convert a Program object to a SerializedProgram.
         """
         return SerializedProgram.from_bytes(program.to_bytes())
+    
+    def uncurry(self) -> tuple[Program, Program]:
+        self.to_program().uncurry()
+
+    def run_with_cost(self, max_cost, args):
+        return self.to_program().run_with_cost(max_cost, args)
+    
+    def run_mempool_with_cost(self, max_cost, args):
+        return self.to_program().run_with_cost(max_cost, args, chia_rs.MEMPOOL_MODE)
