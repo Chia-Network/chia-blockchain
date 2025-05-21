@@ -12,6 +12,7 @@ from typing_extensions import dataclass_transform
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -343,6 +344,21 @@ class NFTCountNFTs(Streamable):
 class NFTCountNFTsResponse(Streamable):
     wallet_id: Optional[uint32]
     count: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetNFTs(Streamable):
+    wallet_id: Optional[uint32] = None
+    start_index: uint32 = uint32(0)
+    num: uint32 = uint32(0)
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetNFTsResponse(Streamable):
+    wallet_id: Optional[uint32]
+    nft_list: list[NFTInfo]
 
 
 @streamable

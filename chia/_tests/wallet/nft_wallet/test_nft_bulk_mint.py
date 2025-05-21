@@ -4,15 +4,14 @@ from typing import cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.rpc.wallet_request_types import PushTransactions
+from chia.rpc.wallet_request_types import NFTGetNFTs, PushTransactions
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.transaction_record import TransactionRecord
@@ -415,10 +414,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
     )
 
     # check NFT edition numbers
-    nfts = [
-        NFTInfo.from_json_dict(nft)
-        for nft in (await env_1.rpc_client.list_nfts(env_1.wallet_aliases["nft"]))["nft_list"]
-    ]
+    nfts = [nft for nft in (await env_1.rpc_client.list_nfts(NFTGetNFTs(uint32(env_1.wallet_aliases["nft"])))).nft_list]
     for nft in nfts:
         edition_num = nft.edition_number
         meta_dict = metadata_list[edition_num - 1]

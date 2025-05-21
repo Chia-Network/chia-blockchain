@@ -11,6 +11,8 @@ from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient,
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.rpc.wallet_request_types import (
     NFTAddURIResponse,
+    NFTGetNFTs,
+    NFTGetNFTsResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetNFTDIDResponse,
@@ -309,10 +311,10 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
 
     # set RPC Client
     class NFTListRpcClient(TestWalletRpcClient):
-        async def list_nfts(self, wallet_id: int, num: int = 50, start_index: int = 0) -> dict[str, object]:
-            self.add_to_log("list_nfts", (wallet_id, num, start_index))
+        async def list_nfts(self, request: NFTGetNFTs) -> NFTGetNFTsResponse:
+            self.add_to_log("list_nfts", (request.wallet_id, request.num, request.start_index))
             nft_list = []
-            for i in range(start_index, start_index + num):
+            for i in range(request.start_index, request.start_index + request.num):
                 index_bytes = bytes32([i] * 32)
                 nft_list.append(
                     NFTInfo(
@@ -336,9 +338,9 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                         mint_height=uint32(1),
                         supports_did=True,
                         p2_address=get_bytes32(8),
-                    ).to_json_dict()
+                    )
                 )
-            return {"nft_list": nft_list}
+            return NFTGetNFTsResponse(request.wallet_id, nft_list)
 
     inst_rpc_client = NFTListRpcClient()
     launcher_ids = [bytes32([i] * 32).hex() for i in range(50, 60)]

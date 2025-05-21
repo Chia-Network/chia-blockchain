@@ -64,6 +64,7 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     LogIn,
+    NFTGetNFTs,
     NFTMintNFTRequest,
     PushTransactions,
     PushTX,
@@ -1674,7 +1675,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
     assert nft_info_1["nft_coin_id"][2:] == (await nft_wallet_1.get_current_nfts())[0].coin.name().hex()
     # Cross-check NFT
-    nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
+    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs(nft_wallet_id_1))).nft_list[0].to_json_dict()
     assert nft_info_1 == nft_info_2
 
     # Test royalty endpoint

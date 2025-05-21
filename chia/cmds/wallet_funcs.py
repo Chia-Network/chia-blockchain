@@ -27,6 +27,7 @@ from chia.cmds.units import units
 from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
+    NFTGetNFTs,
     NFTMintNFTRequest,
     SendTransactionResponse,
     VCAddProofs,
@@ -1376,11 +1377,10 @@ async def list_nfts(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
-            response = await wallet_client.list_nfts(wallet_id, num, start_index)
-            nft_list = response["nft_list"]
+            response = await wallet_client.list_nfts(NFTGetNFTs(uint32(wallet_id), uint32(start_index), uint32(num)))
+            nft_list = response.nft_list
             if len(nft_list) > 0:
-                for n in nft_list:
-                    nft = NFTInfo.from_json_dict(n)
+                for nft in nft_list:
                     print_nft_info(nft, config=config)
             else:
                 print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")

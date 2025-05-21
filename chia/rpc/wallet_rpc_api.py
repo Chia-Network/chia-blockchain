@@ -51,6 +51,8 @@ from chia.rpc.wallet_request_types import (
     LogInResponse,
     NFTCountNFTs,
     NFTCountNFTsResponse,
+    NFTGetNFTs,
+    NFTGetNFTsResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
     PushTransactions,
@@ -3075,30 +3077,24 @@ class WalletRpcApi:
             count = await self.service.wallet_state_manager.nft_store.count()
         return NFTCountNFTsResponse(request.wallet_id, uint64(count))
 
-    async def nft_get_nfts(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = request.get("wallet_id", None)
+    @marshal
+    async def nft_get_nfts(self, request: NFTGetNFTs) -> NFTGetNFTsResponse:
         nfts: list[NFTCoinInfo] = []
-        if wallet_id is not None:
-            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+        if request.wallet_id is not None:
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         else:
             nft_wallet = None
-        try:
-            start_index = int(request.get("start_index", 0))
-        except (TypeError, ValueError):
-            start_index = 0
-        try:
-            count = int(request.get("num", 50))
-        except (TypeError, ValueError):
-            count = 50
         nft_info_list = []
         if nft_wallet is not None:
-            nfts = await nft_wallet.get_current_nfts(start_index=start_index, count=count)
+            nfts = await nft_wallet.get_current_nfts(start_index=request.start_index, count=request.num)
         else:
-            nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(start_index=start_index, count=count)
+            nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(
+                start_index=request.start_index, count=request.num
+            )
         for nft in nfts:
             nft_info = await nft_puzzle_utils.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
             nft_info_list.append(nft_info)
-        return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
+        return NFTGetNFTsResponse(request.wallet_id, nft_info_list)
 
     @tx_endpoint(push=True)
     async def nft_set_nft_did(
