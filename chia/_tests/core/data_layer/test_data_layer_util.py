@@ -37,10 +37,15 @@ def create_valid_proof_of_inclusion(layer_count: int, other_hash_side: Side) -> 
     other_hashes = [bytes32([i] * 32) for i in range(layer_count)]
 
     for other_hash in other_hashes:
-        new_layer = ProofOfInclusionLayer.from_hashes(
-            primary_hash=existing_hash,
+        if other_hash_side == Side.LEFT:
+            combined_hash = internal_hash(other_hash, existing_hash)
+        else:
+            combined_hash = internal_hash(existing_hash, other_hash)
+
+        new_layer = ProofOfInclusionLayer(
             other_hash_side=other_hash_side,
             other_hash=other_hash,
+            combined_hash=combined_hash,
         )
 
         layers.append(new_layer)
