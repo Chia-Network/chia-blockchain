@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
 from bitstring import BitArray
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PrivateKey, ProofOfSpace
@@ -12,6 +12,47 @@ from chiapos import Verifier
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
+
+
+class PlotSizeV1:
+    def __init__(self, value: uint8):
+        self.value = value
+
+    def __int__(self) -> uint8:
+        return self.value
+
+    def __repr__(self) -> str:
+        return f"PlotSizeV1({self.value})"
+
+
+class PlotSizeV2:
+    def __init__(self, value: uint8):
+        self.value = value
+
+    def __int__(self) -> uint8:
+        return self.value
+
+    def __repr__(self) -> str:
+        return f"PlotSizeV2({self.value})"
+
+
+def get_typed_plot_size(pos: ProofOfSpace) -> Union[PlotSizeV1, PlotSizeV2]:
+    """
+    Returns a typed plot size from a ProofOfSpace object.
+    Raises ValueError if neither size_v1 nor size_v2 is available.
+    """
+    size_v1 = pos.size_v1()
+    size_v2 = pos.size_v2()
+
+    if size_v1 is not None and size_v2 is not None:
+        raise ValueError("ProofOfSpace cannot have both size_v1 and size_v2")
+    if size_v1 is None and size_v2 is None:
+        raise ValueError("ProofOfSpace must have either size_v1 or size_v2")
+
+    if size_v1 is not None:
+        return PlotSizeV1(size_v1)
+    assert size_v2 is not None
+    return PlotSizeV2(size_v2)
 
 
 def get_plot_id(pos: ProofOfSpace) -> bytes32:
@@ -34,6 +75,22 @@ def verify_and_get_quality_string(
     *,
     height: uint32,
 ) -> Optional[bytes32]:
+    # todo: use new proof to get format
+    if pos.size_v1 is not None:
+        return verify_and_get_quality_string_v1(pos, constants, original_challenge_hash, signage_point, height=height)
+    else:
+        assert pos.size_v2 is not None
+        return verify_and_get_quality_string_v2(pos, constants, original_challenge_hash, signage_point, height=height)
+
+
+def verify_and_get_quality_string_v1(
+    pos: ProofOfSpace,
+    constants: ConsensusConstants,
+    original_challenge_hash: bytes32,
+    signage_point: bytes32,
+    *,
+    height: uint32,
+) -> Optional[bytes32]:
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
         log.error("Expected pool public key or pool contract puzzle hash but got neither")
@@ -41,52 +98,47 @@ def verify_and_get_quality_string(
     if (pos.pool_public_key is not None) and (pos.pool_contract_puzzle_hash is not None):
         log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
-    size_v1 = pos.size_v1()
-    size_v2 = pos.size_v2()
-    if size_v1 is not None:
-        if size_v1 < constants.MIN_PLOT_SIZE:
-            log.error(f"Plot size is lower than the minimum: {size_v1}")
-            return None
-        if size_v1 > constants.MAX_PLOT_SIZE:
-            log.error(f"Plot size is higher than the maximum: {size_v1}")
-            return None
-        prefix_bits = calculate_prefix_bits(constants, height)
-    elif size_v2 is not None:
-        if size_v2 not in {28, 30, 32}:
-            log.error(f"Invalid v2 plot size: {size_v2}")
-            return None
-        prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    else:
-        log.error(f"Unknown plot version: {pos.version_and_size:x}")
-
+    size = pos.size_v1()
+    if size is None:
+        log.error("Expected size_v1 but got None")
+        return None
+    if size < constants.MIN_PLOT_SIZE:
+        log.error("Plot size is lower than the minimum")
+        return None
+    if size > constants.MAX_PLOT_SIZE:
+        log.error("Plot size is higher than the maximum")
+        return None
     plot_id: bytes32 = get_plot_id(pos)
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
         log.error("Calculated pos challenge doesn't match the provided one")
         return None
+    prefix_bits = calculate_prefix_bits(constants, height)
     if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
         log.error("Did not pass the plot filter")
         return None
 
-    return get_quality_string(pos, plot_id)
-
-
-def get_quality_string(pos: ProofOfSpace, plot_id: bytes32) -> Optional[bytes32]:
-    size_v1 = pos.size_v1()
-    size_v2 = pos.size_v2()
-    if size_v1 is not None:
-        quality_str = Verifier().validate_proof(plot_id, size_v1, pos.challenge, bytes(pos.proof))
-        if not quality_str:
-            return None
-    elif size_v2 is not None:
-        quality_str = validate_proof_v2(plot_id, size_v2, pos.challenge, bytes(pos.proof))
-        if not quality_str:
-            return None
-    else:
+    size = pos.size_v1()
+    if size is None:
+        log.error("Expected size_v1 but got None")
+        return None
+    quality_str = Verifier().validate_proof(plot_id, size, pos.challenge, bytes(pos.proof))
+    if not quality_str:
         return None
 
     return bytes32(quality_str)
+
+
+def verify_and_get_quality_string_v2(
+    pos: ProofOfSpace,
+    constants: ConsensusConstants,
+    original_challenge_hash: bytes32,
+    signage_point: bytes32,
+    *,
+    height: uint32,
+) -> Optional[bytes32]:
+    return None
 
 
 def passes_plot_filter(

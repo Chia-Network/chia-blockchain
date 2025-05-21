@@ -63,7 +63,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import get_typed_plot_size, verify_and_get_quality_string
 from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -975,16 +975,15 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            # TODO: support v2 plots after the hard fork
-            pos_size_v1 = request.proof_of_space.size_v1()
-            assert pos_size_v1
-
+            tx_peak = self.full_node.blockchain.get_tx_peak()
             required_iters: uint64 = calculate_iterations_quality(
-                self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
+                self.full_node.constants,
                 quality_string,
-                pos_size_v1,
+                get_typed_plot_size(request.proof_of_space),
                 difficulty,
                 request.challenge_chain_sp,
+                sub_slot_iters,
+                tx_peak.height if tx_peak is not None else uint32(0),
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(
