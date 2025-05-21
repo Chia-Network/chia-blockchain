@@ -12,6 +12,7 @@ new_signage_point_json: dict[str, Any] = {
     "sub_slot_iters": 8265724497259558930,
     "signage_point_index": 194,
     "peak_height": 1,
+    "last_tx_height": 0,
     "sp_source_data": None,
 }
 
@@ -2160,6 +2161,7 @@ new_signage_point_harvester_json: dict[str, Any] = {
         }
     ],
     "filter_prefix_bits": 9,
+    "last_tx_height": 0,
 }
 
 new_proof_of_space_json: dict[str, Any] = {

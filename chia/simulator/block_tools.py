@@ -1507,7 +1507,6 @@ class BlockTools:
                         plot_info.prover.get_size(),
                         difficulty,
                         signage_point,
-                        sub_slot_iters,
                         calculate_phase_out(constants, sub_slot_iters, prev_transaction_b_height),
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):

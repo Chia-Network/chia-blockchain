@@ -71,7 +71,6 @@ def calculate_iterations_quality_v1(
     size: int,
     difficulty: uint64,
     cc_sp_output_hash: bytes32,
-    ssi: uint64,
     phase_out: uint64,
 ) -> uint64:
     """
@@ -139,7 +138,6 @@ def calculate_iterations_quality(
             size=size_1,
             difficulty=difficulty,
             cc_sp_output_hash=cc_sp_output_hash,
-            ssi=ssi,
             phase_out=calculate_phase_out(constants, ssi, prev_transaction_block_height),
         )
     else:
