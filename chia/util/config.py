@@ -20,6 +20,7 @@ from typing_extensions import Literal
 
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import UnresolvedPeerInfo
+from chia.util.layered_dict import LayeredDict
 from chia.util.lock import Lockfile
 
 log = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ def lock_and_load_config(
     root_path: Path,
     filename: Union[str, Path],
     fill_missing_services: bool = False,
-) -> Iterator[dict[str, Any]]:
+) -> Iterator[LayeredDict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
         config = _load_config_maybe_locked(
             root_path=root_path,
@@ -97,7 +98,7 @@ def load_config(
     sub_config: Optional[str] = None,
     exit_on_error: bool = True,
     fill_missing_services: bool = False,
-) -> dict[str, Any]:
+) -> LayeredDict[str, Any]:
     return _load_config_maybe_locked(
         root_path=root_path,
         filename=filename,
@@ -115,7 +116,7 @@ def _load_config_maybe_locked(
     exit_on_error: bool = True,
     acquire_lock: bool = True,
     fill_missing_services: bool = False,
-) -> dict[str, Any]:
+) -> LayeredDict[str, Any]:
     # This must be called under an acquired config lock, or acquire_lock should be True
 
     path = config_path_for_filename(root_path, filename)
@@ -131,20 +132,24 @@ def _load_config_maybe_locked(
     for i in range(10):
         try:
             # at least we intend it to be this type
-            r: dict[str, Any]
+            loaded: dict[str, Any]
             with contextlib.ExitStack() as exit_stack:
                 if acquire_lock:
                     exit_stack.enter_context(lock_config(root_path, filename))
                 with open(path) as opened_config_file:
-                    r = yaml.safe_load(opened_config_file)
-            if r is None:
+                    loaded = yaml.safe_load(opened_config_file)
+            if loaded is None:
                 log.error(f"yaml.safe_load returned None: {path}")
                 time.sleep(i * 0.1)
                 continue
-            if fill_missing_services:
-                r.update(load_defaults_for_missing_services(config=r, config_name=path.name))
+            marshalled_default_config: str = initial_config_file(path.name)
+            unmarshalled_default_config = yaml.safe_load(marshalled_default_config)
+            r = LayeredDict(dicts=[loaded, unmarshalled_default_config], path=[])
+            # if fill_missing_services:
+            #     r.update(load_defaults_for_missing_services(config=r, config_name=path.name))
             if sub_config is not None:
-                r = cast(dict[str, Any], r.get(sub_config))
+                # TODO: should this be an index and not a .get() to raise instead of getting None?
+                r = cast(LayeredDict[str, Any], r.get(sub_config))
             return r
         except Exception as e:
             tb = traceback.format_exc()
@@ -158,7 +163,7 @@ def load_config_cli(
     filename: str,
     sub_config: Optional[str] = None,
     fill_missing_services: bool = False,
-) -> dict[str, Any]:
+) -> LayeredDict[str, Any]:
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.
@@ -306,7 +311,8 @@ def selected_network_address_prefix(config: dict[str, Any]) -> str:
     return address_prefix
 
 
-def load_defaults_for_missing_services(config: dict[str, Any], config_name: str) -> dict[str, Any]:
+# TODO: refactor into layering
+def load_defaults_for_missing_services(config: LayeredDict[str, Any], config_name: str) -> LayeredDict[str, Any]:
     services = ["data_layer"]
     missing_services = [service for service in services if service not in config]
     defaulted = {}
