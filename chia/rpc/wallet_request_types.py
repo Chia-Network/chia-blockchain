@@ -753,9 +753,9 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True)
 class NFTTransferNFT(TransactionEndpointRequest):
-    wallet_id: uint32
-    target_address: str
-    nft_coin_id: str
+    wallet_id: uint32 = field(default_factory=default_raise)
+    target_address: str = field(default_factory=default_raise)
+    nft_coin_id: str = field(default_factory=default_raise)
 
 
 @streamable
