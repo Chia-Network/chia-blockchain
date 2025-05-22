@@ -9,6 +9,15 @@ from chia.types.blockchain_format.program import Program
 SerializedProgram = chia_rs.Program
 
 
+def _run(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
+    result = self._run_to_lazynode(max_cost, flags, args)
+    ret = (result[0], Program(result[1]))
+    return ret
+
+
+SerializedProgram._run = _run
+
+
 def to_program(self) -> Program:
     """
     Convert the SerializedProgram to a Program object.
@@ -28,12 +37,6 @@ def from_program(cls, program: Program):  # noqa
 
 
 SerializedProgram.from_program = from_program
-
-def _run(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
-    return self.to_program()._run(max_cost, flags, args)
-
-
-SerializedProgram._run = _run
 
 def uncurry(self) -> tuple[Program, Program]:
     self.to_program().uncurry()
