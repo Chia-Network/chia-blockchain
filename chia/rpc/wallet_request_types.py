@@ -375,6 +375,18 @@ class NFTGetByDIDResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class NFTGetWalletDID(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetWalletDIDResponse(Streamable):
+    did_id: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
 class NFTSetNFTStatus(Streamable):
     wallet_id: uint32
     coin_id: bytes32

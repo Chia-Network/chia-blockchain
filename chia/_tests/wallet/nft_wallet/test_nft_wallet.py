@@ -19,6 +19,7 @@ from chia.rpc.wallet_request_types import (
     NFTCountNFTs,
     NFTGetByDID,
     NFTGetNFTs,
+    NFTGetWalletDID,
     NFTMintNFTRequest,
     NFTSetDIDBulk,
     NFTSetNFTDID,
@@ -859,8 +860,8 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
         NFTWalletWithDID(wallet_id=nft_wallet.id(), did_id=hmr_did_id, did_wallet_id=did_wallet.id())
     ]
 
-    res = await env.rpc_client.get_nft_wallet_did(wallet_id=nft_wallet.id())
-    assert res.get("did_id") == hmr_did_id
+    get_did_res = await env.rpc_client.get_nft_wallet_did(NFTGetWalletDID(nft_wallet.id()))
+    assert get_did_res.did_id == hmr_did_id
 
     # Create a NFT with DID
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:

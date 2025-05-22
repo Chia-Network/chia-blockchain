@@ -28,6 +28,7 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
     NFTGetNFTs,
+    NFTGetWalletDID,
     NFTMintNFTRequest,
     NFTSetNFTDID,
     SendTransactionResponse,
@@ -939,8 +940,7 @@ async def print_balances(
                     my_did = get_did_response["my_did"]
                     print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
                 elif typ == WalletType.NFT:
-                    get_did_response = await wallet_client.get_nft_wallet_did(wallet_id)
-                    my_did = get_did_response["did_id"]
+                    my_did = (await wallet_client.get_nft_wallet_did(NFTGetWalletDID(wallet_id))).did_id
                     if my_did is not None and len(my_did) > 0:
                         print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
                 elif len(asset_id) > 0:
@@ -1197,8 +1197,8 @@ async def mint_nft(
         royalty_address = royalty_cli_address.validate_address_type(AddressType.XCH) if royalty_cli_address else None
         target_address = target_cli_address.validate_address_type(AddressType.XCH) if target_cli_address else None
         try:
-            response = await wallet_client.get_nft_wallet_did(wallet_id)
-            wallet_did = response["did_id"]
+            response = await wallet_client.get_nft_wallet_did(NFTGetWalletDID(uint32(wallet_id)))
+            wallet_did = response.did_id
             wallet_has_did = wallet_did is not None
             did_id: Optional[str] = wallet_did
             # Handle the case when the user wants to disable DID ownership

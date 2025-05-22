@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
@@ -13,6 +13,8 @@ from chia.rpc.wallet_request_types import (
     NFTAddURIResponse,
     NFTGetNFTs,
     NFTGetNFTsResponse,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetNFTDID,
@@ -82,9 +84,9 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
 
     # set RPC Client
     class NFTCreateRpcClient(TestWalletRpcClient):
-        async def get_nft_wallet_did(self, wallet_id: uint8) -> dict[str, Optional[str]]:
-            self.add_to_log("get_nft_wallet_did", (wallet_id,))
-            return {"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}
+        async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
+            self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
+            return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
 
         async def mint_nft(
             self,
