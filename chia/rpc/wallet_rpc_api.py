@@ -57,6 +57,7 @@ from chia.rpc.wallet_request_types import (
     NFTGetNFTsResponse,
     NFTGetWalletDID,
     NFTGetWalletDIDResponse,
+    NFTGetWalletsWithDIDsResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetDIDBulk,
@@ -65,6 +66,7 @@ from chia.rpc.wallet_request_types import (
     NFTSetNFTDIDResponse,
     NFTTransferBulk,
     NFTTransferBulkResponse,
+    NFTWalletWithDID,
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
@@ -3292,7 +3294,8 @@ class WalletRpcApi:
             did_id = encode_puzzle_hash(did_bytes, AddressType.DID.hrp(self.service.config))
         return NFTGetWalletDIDResponse(None if len(did_id) == 0 else did_id)
 
-    async def nft_get_wallets_with_dids(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def nft_get_wallets_with_dids(self, request: Empty) -> NFTGetWalletsWithDIDsResponse:
         all_wallets = self.service.wallet_state_manager.wallets.values()
         did_wallets_by_did_id: dict[bytes32, uint32] = {}
 
@@ -3302,7 +3305,7 @@ class WalletRpcApi:
                 if wallet.did_info.origin_coin is not None:
                     did_wallets_by_did_id[wallet.did_info.origin_coin.name()] = wallet.id()
 
-        did_nft_wallets: list[dict[str, Any]] = []
+        did_nft_wallets: list[NFTWalletWithDID] = []
         for wallet in all_wallets:
             if isinstance(wallet, NFTWallet):
                 nft_wallet_did: Optional[bytes32] = wallet.get_did()
@@ -3312,13 +3315,13 @@ class WalletRpcApi:
                         log.warning(f"NFT wallet {wallet.id()} has DID {nft_wallet_did.hex()} but no DID wallet")
                     else:
                         did_nft_wallets.append(
-                            {
-                                "wallet_id": wallet.id(),
-                                "did_id": encode_puzzle_hash(nft_wallet_did, AddressType.DID.hrp(self.service.config)),
-                                "did_wallet_id": did_wallet_id,
-                            }
+                            NFTWalletWithDID(
+                                wallet_id=wallet.id(),
+                                did_id=encode_puzzle_hash(nft_wallet_did, AddressType.DID.hrp(self.service.config)),
+                                did_wallet_id=did_wallet_id,
+                            )
                         )
-        return {"success": True, "nft_wallets": did_nft_wallets}
+        return NFTGetWalletsWithDIDsResponse(did_nft_wallets)
 
     async def nft_set_nft_status(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id: uint32 = uint32(request["wallet_id"])
