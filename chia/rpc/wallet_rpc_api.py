@@ -59,6 +59,8 @@ from chia.rpc.wallet_request_types import (
     NFTSetDIDBulkResponse,
     NFTSetNFTDID,
     NFTSetNFTDIDResponse,
+    NFTTransferBulk,
+    NFTTransferBulkResponse,
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
@@ -3203,12 +3205,13 @@ class WalletRpcApi:
             )
 
     @tx_endpoint(push=True)
+    @marshal
     async def nft_transfer_bulk(
         self,
-        request: dict[str, Any],
+        request: NFTTransferBulk,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> NFTTransferBulkResponse:
         """
         Bulk transfer NFTs to an address.
         accepted `request` dict keys:
@@ -3218,36 +3221,26 @@ class WalletRpcApi:
         :param request:
         :return:
         """
-        if len(request["nft_coin_list"]) > MAX_NFT_CHUNK_SIZE:
-            return {"success": False, "error": f"You can only transfer {MAX_NFT_CHUNK_SIZE} NFTs at once"}
-        address = request["target_address"]
-        if isinstance(address, str):
-            puzzle_hash = decode_puzzle_hash(address)
-        else:
-            return dict(success=False, error="target_address parameter missing")
+        if len(request.nft_coin_list) > MAX_NFT_CHUNK_SIZE:
+            raise ValueError(f"You can only transfer {MAX_NFT_CHUNK_SIZE} NFTs at once")
+        address = request.target_address
+        puzzle_hash = decode_puzzle_hash(address)
         nft_dict: dict[uint32, list[NFTCoinInfo]] = {}
         coin_ids = []
-        fee = uint64(request.get("fee", 0))
 
         nft_wallet: NFTWallet
-        for nft_coin in request["nft_coin_list"]:
-            if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
-                log.error(f"Cannot transfer NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
-                continue
-            wallet_id = uint32(nft_coin["wallet_id"])
-            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-            nft_coin_id = nft_coin["nft_coin_id"]
+        for nft_coin in request.nft_coin_list:
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=nft_coin.wallet_id, required_type=NFTWallet)
+            nft_coin_id = nft_coin.nft_coin_id
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-                nft_id = decode_puzzle_hash(nft_coin_id)
-                nft_coin_info = await nft_wallet.get_nft(nft_id)
+                nft_coin_info = await nft_wallet.get_nft(decode_puzzle_hash(nft_coin_id))
             else:
-                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin_id))
             assert nft_coin_info is not None
-            if wallet_id in nft_dict:
-                nft_dict[wallet_id].append(nft_coin_info)
+            if nft_coin.wallet_id in nft_dict:
+                nft_dict[nft_coin.wallet_id].append(nft_coin_info)
             else:
-                nft_dict[wallet_id] = [nft_coin_info]
+                nft_dict[nft_coin.wallet_id] = [nft_coin_info]
         first = True
         for wallet_id, nft_list in nft_dict.items():
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
@@ -3257,7 +3250,7 @@ class WalletRpcApi:
                 )
             else:
                 await nft_wallet.bulk_transfer_nft(
-                    nft_list, puzzle_hash, action_scope, fee, extra_conditions=extra_conditions
+                    nft_list, puzzle_hash, action_scope, request.fee, extra_conditions=extra_conditions
                 )
             for coin in nft_list:
                 coin_ids.append(coin.coin.name())
@@ -3268,13 +3261,13 @@ class WalletRpcApi:
         for wallet_id in nft_dict.keys():
             self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
         async with action_scope.use() as interface:
-            return {
-                "wallet_id": list(nft_dict.keys()),
-                "success": True,
-                "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-                "tx_num": len(interface.side_effects.transactions),
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+            return NFTTransferBulkResponse(
+                [],
+                [],
+                wallet_id=list(nft_dict.keys()),
+                spend_bundle=WalletSpendBundle([], G2Element()),
+                tx_num=uint16(len(interface.side_effects.transactions)),
+            )
 
     async def nft_get_by_did(self, request: dict[str, Any]) -> EndpointResult:
         did_id: Optional[bytes32] = None
