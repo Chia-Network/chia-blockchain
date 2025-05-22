@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 from chia_rs.sized_ints import uint64
 
 from chia.protocols import timelord_protocol
+from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
@@ -37,7 +38,7 @@ class TimelordAPI:
         self.timelord.state_changed_callback = callback
 
     @metadata.request()
-    async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord) -> None:
+    async def new_peak_timelord(self, new_peak: NewPeakTimelord) -> None:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:
@@ -99,7 +100,7 @@ class TimelordAPI:
 
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
-    def check_orphaned_unfinished_block(self, new_peak: timelord_protocol.NewPeakTimelord):
+    def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord):
         new_peak_unf_rh = new_peak.reward_chain_block.get_unfinished().get_hash()
         for unf_block in self.timelord.unfinished_blocks:
             if unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters:
