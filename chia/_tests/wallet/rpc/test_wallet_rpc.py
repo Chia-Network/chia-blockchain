@@ -64,6 +64,7 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     LogIn,
+    NFTGetInfo,
     NFTGetNFTs,
     NFTMintNFTRequest,
     NFTTransferNFT,
@@ -1647,14 +1648,14 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     # Test with the hex version of nft_id
     nft_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
-    nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
+    nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
+    assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
     # Test with the bech32m version of nft_id
     hmr_nft_id = encode_puzzle_hash(
         (await nft_wallet.get_current_nfts())[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
     )
-    nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
+    nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(hmr_nft_id))).nft_info
+    assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
 
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
@@ -1673,12 +1674,12 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     )[0].id
     nft_wallet_1 = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
     assert isinstance(nft_wallet_1, NFTWallet)
-    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id, False))).nft_info
     assert nft_info_1 == nft_info
-    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info_1["nft_coin_id"][2:] == (await nft_wallet_1.get_current_nfts())[0].coin.name().hex()
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
+    assert nft_info_1.nft_coin_id == (await nft_wallet_1.get_current_nfts())[0].coin.name()
     # Cross-check NFT
-    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs(nft_wallet_id_1))).nft_list[0].to_json_dict()
+    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs(nft_wallet_id_1))).nft_list[0]
     assert nft_info_1 == nft_info_2
 
     # Test royalty endpoint

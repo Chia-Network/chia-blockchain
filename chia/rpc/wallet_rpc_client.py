@@ -62,6 +62,8 @@ from chia.rpc.wallet_request_types import (
     NFTCountNFTsResponse,
     NFTGetByDID,
     NFTGetByDIDResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
     NFTGetNFTs,
     NFTGetNFTsResponse,
     NFTGetWalletDID,
@@ -1048,10 +1050,8 @@ class WalletRpcClient(RpcClient):
         del response["success"]
         return response
 
-    async def get_nft_info(self, coin_id: str, latest: bool = True) -> dict[str, Any]:
-        request = {"coin_id": coin_id, "latest": latest}
-        response = await self.fetch("nft_get_info", request)
-        return response
+    async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
+        return NFTGetInfoResponse.from_json_dict(await self.fetch("nft_get_info", request.to_json_dict()))
 
     async def transfer_nft(
         self,

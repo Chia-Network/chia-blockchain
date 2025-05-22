@@ -18,6 +18,7 @@ from chia.rpc.wallet_request_types import (
     NFTCoin,
     NFTCountNFTs,
     NFTGetByDID,
+    NFTGetInfo,
     NFTGetNFTs,
     NFTGetWalletDID,
     NFTMintNFTRequest,
@@ -2417,9 +2418,8 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     assert coin.owner_did.hex() == hex_did_id
     nft_coin_id = coin.nft_coin_id
 
-    res = await env.rpc_client.get_nft_info(coin_id=nft_coin_id.hex(), latest=True)
-    assert res["success"]
-    assert coins[0].to_json_dict() == res["nft_info"]
+    nft_get_info_res = await env.rpc_client.get_nft_info(NFTGetInfo(coin_id=nft_coin_id.hex(), latest=True))
+    assert coins[0] == nft_get_info_res.nft_info
 
     # Test set DID1 -> DID2
     hex_did_id2 = did_wallet2.get_my_DID()
@@ -2474,9 +2474,8 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     assert coin.owner_did is not None
     assert coin.owner_did.hex() == hex_did_id2
     nft_coin_id = coin.nft_coin_id
-    res = await env.rpc_client.get_nft_info(coin_id=nft_coin_id.hex(), latest=True)
-    assert res["success"]
-    assert coins[0].to_json_dict() == res["nft_info"]
+    nft_get_info_res = await env.rpc_client.get_nft_info(NFTGetInfo(coin_id=nft_coin_id.hex(), latest=True))
+    assert coins[0] == nft_get_info_res.nft_info
 
     # Test set DID2 -> None
     await env.rpc_client.set_nft_did(
@@ -2515,9 +2514,8 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     assert len(coins) == 1
     coin = coins[0]
     assert coin.owner_did is None
-    res = await env.rpc_client.get_nft_info(coin_id=nft_coin_id.hex(), latest=True)
-    assert res["success"]
-    assert coins[0].to_json_dict() == res["nft_info"]
+    nft_get_info_res = await env.rpc_client.get_nft_info(NFTGetInfo(coin_id=nft_coin_id.hex(), latest=True))
+    assert coins[0] == nft_get_info_res.nft_info
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")

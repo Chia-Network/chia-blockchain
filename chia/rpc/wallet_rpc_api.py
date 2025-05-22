@@ -53,6 +53,8 @@ from chia.rpc.wallet_request_types import (
     NFTCountNFTsResponse,
     NFTGetByDID,
     NFTGetByDIDResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
     NFTGetNFTs,
     NFTGetNFTsResponse,
     NFTGetWalletDID,
@@ -3364,27 +3366,25 @@ class WalletRpcApi:
         # tx_endpoint takes care of filling in default values here
         return NFTTransferNFTResponse([], [], request.wallet_id, WalletSpendBundle([], G2Element()))
 
-    async def nft_get_info(self, request: dict[str, Any]) -> EndpointResult:
-        if "coin_id" not in request:
-            return {"success": False, "error": "Coin ID is required."}
-        coin_id = request["coin_id"]
-        if coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-            coin_id = decode_puzzle_hash(coin_id)
+    @marshal
+    async def nft_get_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
+        if request.coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+            coin_id = decode_puzzle_hash(request.coin_id)
         else:
             try:
-                coin_id = bytes32.from_hexstr(coin_id)
+                coin_id = bytes32.from_hexstr(request.coin_id)
             except ValueError:
-                return {"success": False, "error": f"Invalid Coin ID format for 'coin_id': {request['coin_id']!r}"}
+                raise ValueError(f"Invalid Coin ID format for 'coin_id': {request.coin_id!r}")
         # Get coin state
         peer = self.service.get_full_node_peer()
-        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.latest)
         # convert to NFTInfo
         # Check if the metadata is updated
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
 
         uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*full_puzzle.uncurry())
         if uncurried_nft is None:
-            return {"success": False, "error": "The coin is not a NFT."}
+            raise ValueError("The coin is not a NFT.")
         metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
         # Note: This is not the actual unspent NFT full puzzle.
         # There is no way to rebuild the full puzzle in a different wallet.
@@ -3408,10 +3408,7 @@ class WalletRpcApi:
             [uncurried_nft.singleton_launcher_id], peer=peer
         )
         if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
-            return {
-                "success": False,
-                "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
-            }
+            raise ValueError(f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found")
         minter_did = await self.service.wallet_state_manager.get_minter_did(launcher_coin[0].coin, peer)
 
         nft_info: NFTInfo = await nft_puzzle_utils.get_nft_info_from_puzzle(
@@ -3428,7 +3425,7 @@ class WalletRpcApi:
         )
         # This is a bit hacky, it should just come out like this, but this works for this RPC
         nft_info = dataclasses.replace(nft_info, p2_address=p2_puzzle_hash)
-        return {"success": True, "nft_info": nft_info}
+        return NFTGetInfoResponse(nft_info)
 
     @tx_endpoint(push=True)
     async def nft_add_uri(

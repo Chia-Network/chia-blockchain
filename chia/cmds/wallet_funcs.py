@@ -27,6 +27,7 @@ from chia.cmds.units import units
 from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
+    NFTGetInfo,
     NFTGetNFTs,
     NFTGetWalletDID,
     NFTMintNFTRequest,
@@ -472,7 +473,7 @@ async def make_offer(
                         if hrp == "nft":
                             coin_id = decode_puzzle_hash(name)
                             unit = 1
-                            info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(coin_id.hex()))["nft_info"])
+                            info = (await wallet_client.get_nft_info(NFTGetInfo(coin_id.hex()))).nft_info
                             id = info.launcher_id.hex()
                             assert isinstance(id, str)
                             if item in requests:
@@ -1433,9 +1434,8 @@ async def get_nft_info(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, config):
         try:
-            response = await wallet_client.get_nft_info(nft_coin_id)
-            nft_info = NFTInfo.from_json_dict(response["nft_info"])
-            print_nft_info(nft_info, config=config)
+            response = await wallet_client.get_nft_info(NFTGetInfo(nft_coin_id))
+            print_nft_info(response.nft_info, config=config)
         except Exception as e:
             print(f"Failed to get NFT info: {e}")
 
@@ -1443,7 +1443,7 @@ async def get_nft_info(
 async def get_nft_royalty_percentage_and_address(
     nft_coin_id: bytes32, wallet_client: WalletRpcClient
 ) -> tuple[uint16, bytes32]:
-    info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(nft_coin_id.hex()))["nft_info"])
+    info = (await wallet_client.get_nft_info(NFTGetInfo(nft_coin_id.hex()))).nft_info
     assert info.royalty_puzzle_hash is not None
     percentage = uint16(info.royalty_percentage) if info.royalty_percentage is not None else 0
     return uint16(percentage), info.royalty_puzzle_hash

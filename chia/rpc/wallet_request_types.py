@@ -408,6 +408,19 @@ class NFTGetWalletsWithDIDsResponse(Streamable):
     nft_wallets: list[NFTWalletWithDID]
 
 
+@streamable
+@dataclass(frozen=True)
+class NFTGetInfo(Streamable):
+    coin_id: str
+    latest: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetInfoResponse(Streamable):
+    nft_info: NFTInfo
+
+
 # utility for NFTSetDIDBulk
 @streamable
 @dataclass(frozen=True)
