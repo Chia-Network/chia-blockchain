@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 from chia_rs.sized_ints import uint64
 
 from chia.protocols import timelord_protocol
-from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
@@ -63,6 +62,8 @@ class TimelordAPI:
                     "Not skipping peak, has equal weight but lower iterations,"
                     f"current peak:{self.timelord.last_state.total_iters} new peak "
                     f"{new_peak.reward_chain_block.total_iters}"
+                    f"current rh: {self.timelord.last_state.peak.reward_chain_block.get_hash()}"
+                    f"new peak rh: {new_peak.reward_chain_block.get_hash()}"
                 )
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
@@ -82,7 +83,7 @@ class TimelordAPI:
                 log.info(
                     "Not skipping peak, don't have. Maybe we are not the fastest timelord "
                     f"height: {new_peak.reward_chain_block.height} weight:"
-                    f"{new_peak.reward_chain_block.weight} "
+                    f"{new_peak.reward_chain_block.weight} rh {new_peak.reward_chain_block.get_hash()}"
                 )
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
@@ -98,14 +99,23 @@ class TimelordAPI:
 
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
-    def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord):
+    def check_orphaned_unfinished_block(self, new_peak: timelord_protocol.NewPeakTimelord):
+        new_peak_unf_rh = new_peak.reward_chain_block.get_unfinished().get_hash()
         for unf_block in self.timelord.unfinished_blocks:
             if unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters:
+                if unf_block.reward_chain_block.get_hash() == new_peak_unf_rh:
+                    log.debug("unfinished block is the same as the new peak")
+                    continue
                 # there is an unfinished block that would be orphaned by this peak
+                log.info(f"this peak would orphan unfinished block {unf_block.reward_chain_block.get_hash()}")
                 return True
         for unf_block in self.timelord.overflow_blocks:
             if unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters:
+                if unf_block.reward_chain_block.get_hash() == new_peak_unf_rh:
+                    log.debug("overflow unfinished block is the same as the new peak")
+                    continue
                 # there is an unfinished block (overflow) that would be orphaned by this peak
+                log.info(f"this peak would orphan unfinished overflow block {unf_block.reward_chain_block.get_hash()}")
                 return True
         return False
 
