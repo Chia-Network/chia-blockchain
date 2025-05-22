@@ -77,6 +77,7 @@ from chia.rpc.wallet_request_types import (
     NFTSetNFTStatus,
     NFTTransferBulk,
     NFTTransferBulkResponse,
+    NFTTransferNFT,
     NFTTransferNFTResponse,
     PushTransactions,
     PushTransactionsResponse,
@@ -1054,27 +1055,16 @@ class WalletRpcClient(RpcClient):
 
     async def transfer_nft(
         self,
-        wallet_id: int,
-        nft_coin_id: str,
-        target_address: str,
-        fee: int,
+        request: NFTTransferNFT,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTTransferNFTResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "target_address": target_address,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_transfer_nft", request)
-        return json_deserialize_with_clvm_streamable(response, NFTTransferNFTResponse)
+        return NFTTransferNFTResponse.from_json_dict(
+            await self.fetch(
+                "nft_transfer_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def count_nfts(self, request: NFTCountNFTs) -> NFTCountNFTsResponse:
         return NFTCountNFTsResponse.from_json_dict(await self.fetch("nft_count_nfts", request.to_json_dict()))

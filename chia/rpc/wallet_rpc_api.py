@@ -67,6 +67,8 @@ from chia.rpc.wallet_request_types import (
     NFTSetNFTStatus,
     NFTTransferBulk,
     NFTTransferBulkResponse,
+    NFTTransferNFT,
+    NFTTransferNFTResponse,
     NFTWalletWithDID,
     PushTransactions,
     PushTransactionsResponse,
@@ -3332,50 +3334,35 @@ class WalletRpcApi:
         return Empty()
 
     @tx_endpoint(push=True)
+    @marshal
     async def nft_transfer_nft(
         self,
-        request: dict[str, Any],
+        request: NFTTransferNFT,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        address = request["target_address"]
-        if isinstance(address, str):
-            puzzle_hash = decode_puzzle_hash(address)
+    ) -> NFTTransferNFTResponse:
+        puzzle_hash = decode_puzzle_hash(request.target_address)
+        nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
+        nft_coin_id = request.nft_coin_id
+        if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+            nft_coin_info = await nft_wallet.get_nft(decode_puzzle_hash(nft_coin_id))
         else:
-            return dict(success=False, error="target_address parameter missing")
-        nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-        try:
-            nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-                nft_id = decode_puzzle_hash(nft_coin_id)
-                nft_coin_info = await nft_wallet.get_nft(nft_id)
-            else:
-                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
-            assert nft_coin_info is not None
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin_id))
+        assert nft_coin_info is not None
 
-            fee = uint64(request.get("fee", 0))
-            await nft_wallet.generate_signed_transaction(
-                [uint64(nft_coin_info.coin.amount)],
-                [puzzle_hash],
-                action_scope,
-                coins={nft_coin_info.coin},
-                fee=fee,
-                new_owner=b"",
-                new_did_inner_hash=b"",
-                extra_conditions=extra_conditions,
-            )
-            await nft_wallet.update_coin_status(nft_coin_info.coin.name(), True)
-            return {
-                "wallet_id": wallet_id,
-                "success": True,
-                "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
-        except Exception as e:
-            log.exception(f"Failed to transfer NFT: {e}")
-            return {"success": False, "error": str(e)}
+        await nft_wallet.generate_signed_transaction(
+            [uint64(nft_coin_info.coin.amount)],
+            [puzzle_hash],
+            action_scope,
+            coins={nft_coin_info.coin},
+            fee=request.fee,
+            new_owner=b"",
+            new_did_inner_hash=b"",
+            extra_conditions=extra_conditions,
+        )
+        await nft_wallet.update_coin_status(nft_coin_info.coin.name(), True)
+        # tx_endpoint takes care of filling in default values here
+        return NFTTransferNFTResponse([], [], request.wallet_id, WalletSpendBundle([], G2Element()))
 
     async def nft_get_info(self, request: dict[str, Any]) -> EndpointResult:
         if "coin_id" not in request:

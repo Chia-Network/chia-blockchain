@@ -31,6 +31,7 @@ from chia.rpc.wallet_request_types import (
     NFTGetWalletDID,
     NFTMintNFTRequest,
     NFTSetNFTDID,
+    NFTTransferNFT,
     SendTransactionResponse,
     VCAddProofs,
     VCGet,
@@ -1311,14 +1312,16 @@ async def transfer_nft(
         try:
             target_address = target_cli_address.validate_address_type(AddressType.XCH)
             response = await wallet_client.transfer_nft(
-                wallet_id,
-                nft_coin_id,
-                target_address,
-                fee,
+                NFTTransferNFT(
+                    uint32(wallet_id),
+                    nft_coin_id,
+                    target_address,
+                    fee=fee,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()

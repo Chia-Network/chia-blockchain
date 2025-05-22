@@ -25,6 +25,7 @@ from chia.rpc.wallet_request_types import (
     NFTSetNFTDID,
     NFTSetNFTStatus,
     NFTTransferBulk,
+    NFTTransferNFT,
     NFTWalletWithDID,
 )
 from chia.simulator.simulator_protocol import ReorgProtocol
@@ -1290,10 +1291,13 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     mint_resp = await env_0.rpc_client.transfer_nft(
-        wallet_id=env_0.wallet_aliases["nft"],
-        nft_coin_id=coin.nft_coin_id.hex(),
-        target_address=encode_puzzle_hash(wallet_1_ph, "xch"),
-        fee=fee,
+        NFTTransferNFT(
+            wallet_id=uint32(env_0.wallet_aliases["nft"]),
+            nft_coin_id=coin.nft_coin_id.hex(),
+            target_address=encode_puzzle_hash(wallet_1_ph, "xch"),
+            fee=uint64(fee),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
     )
     assert len(compute_memos(mint_resp.spend_bundle)) > 0

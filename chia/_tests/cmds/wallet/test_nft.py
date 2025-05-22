@@ -19,6 +19,7 @@ from chia.rpc.wallet_request_types import (
     NFTMintNFTResponse,
     NFTSetNFTDID,
     NFTSetNFTDIDResponse,
+    NFTTransferNFT,
     NFTTransferNFTResponse,
 )
 from chia.types.signing_mode import SigningMode
@@ -250,21 +251,27 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     class NFTTransferRpcClient(TestWalletRpcClient):
         async def transfer_nft(
             self,
-            wallet_id: int,
-            nft_coin_id: str,
-            target_address: str,
-            fee: int,
+            request: NFTTransferNFT,
             tx_config: TXConfig,
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> NFTTransferNFTResponse:
             self.add_to_log(
-                "transfer_nft", (wallet_id, nft_coin_id, target_address, fee, tx_config, push, timelock_info)
+                "transfer_nft",
+                (
+                    request.wallet_id,
+                    request.nft_coin_id,
+                    request.target_address,
+                    request.fee,
+                    tx_config,
+                    request.push,
+                    timelock_info,
+                ),
             )
             return NFTTransferNFTResponse(
                 [STD_UTX],
                 [STD_TX],
-                uint32(wallet_id),
+                request.wallet_id,
                 WalletSpendBundle([], G2Element()),
             )
 
