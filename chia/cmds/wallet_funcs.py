@@ -1313,9 +1313,9 @@ async def transfer_nft(
             target_address = target_cli_address.validate_address_type(AddressType.XCH)
             response = await wallet_client.transfer_nft(
                 NFTTransferNFT(
-                    uint32(wallet_id),
-                    nft_coin_id,
-                    target_address,
+                    wallet_id=uint32(wallet_id),
+                    nft_coin_id=nft_coin_id,
+                    target_address=target_address,
                     fee=fee,
                     push=push,
                 ),

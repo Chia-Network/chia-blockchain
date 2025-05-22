@@ -1658,7 +1658,9 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
-    await wallet_1_rpc.transfer_nft(NFTTransferNFT(nft_wallet_id, nft_id, addr, push=True), DEFAULT_TX_CONFIG)
+    await wallet_1_rpc.transfer_nft(
+        NFTTransferNFT(wallet_id=nft_wallet_id, nft_coin_id=nft_id, target_address=addr, push=True), DEFAULT_TX_CONFIG
+    )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
