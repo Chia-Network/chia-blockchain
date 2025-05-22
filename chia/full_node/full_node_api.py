@@ -871,7 +871,7 @@ class FullNodeAPI:
                         elif block_version == 1:
                             create_block = self.full_node.mempool_manager.create_block_generator2
                         else:
-                            self.log.warn(f"Unknown 'block_creation' config: {block_version}")
+                            self.log.warning(f"Unknown 'block_creation' config: {block_version}")
                             create_block = self.full_node.mempool_manager.create_block_generator
 
                         new_block_gen = create_block(curr_l_tb.header_hash, block_timeout)
