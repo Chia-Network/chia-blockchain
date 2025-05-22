@@ -51,6 +51,8 @@ from chia.rpc.wallet_request_types import (
     LogInResponse,
     NFTCountNFTs,
     NFTCountNFTsResponse,
+    NFTGetByDID,
+    NFTGetByDIDResponse,
     NFTGetNFTs,
     NFTGetNFTsResponse,
     NFTMintNFTRequest,
@@ -3269,14 +3271,15 @@ class WalletRpcApi:
                 tx_num=uint16(len(interface.side_effects.transactions)),
             )
 
-    async def nft_get_by_did(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def nft_get_by_did(self, request: NFTGetByDID) -> NFTGetByDIDResponse:
         did_id: Optional[bytes32] = None
-        if request.get("did_id", None) is not None:
-            did_id = decode_puzzle_hash(request["did_id"])
+        if request.did_id is not None:
+            did_id = decode_puzzle_hash(request.did_id)
         for wallet in self.service.wallet_state_manager.wallets.values():
             if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
-                return {"wallet_id": wallet.wallet_id, "success": True}
-        return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
+                return NFTGetByDIDResponse(uint32(wallet.wallet_id))
+        raise ValueError(f"Cannot find a NFT wallet DID = {did_id}")
 
     async def nft_get_wallet_did(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
