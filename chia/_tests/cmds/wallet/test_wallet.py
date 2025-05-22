@@ -30,6 +30,8 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     CreateOfferForIDsResponse,
     GetHeightInfoResponse,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
     SendTransactionResponse,
     TakeOfferResponse,
 )
@@ -246,9 +248,9 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 "unconfirmed_wallet_balance": uint64(0),
             }
 
-        async def get_nft_wallet_did(self, wallet_id: uint8) -> dict[str, Optional[str]]:
-            self.add_to_log("get_nft_wallet_did", (wallet_id,))
-            return {"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}
+        async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
+            self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
+            return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
 
         async def get_connections(
             self, node_type: Optional[NodeType] = None
