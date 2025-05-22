@@ -64,6 +64,7 @@ from chia.rpc.wallet_request_types import (
     NFTSetDIDBulkResponse,
     NFTSetNFTDID,
     NFTSetNFTDIDResponse,
+    NFTSetNFTStatus,
     NFTTransferBulk,
     NFTTransferBulkResponse,
     NFTWalletWithDID,
@@ -3323,14 +3324,12 @@ class WalletRpcApi:
                         )
         return NFTGetWalletsWithDIDsResponse(did_nft_wallets)
 
-    async def nft_set_nft_status(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id: uint32 = uint32(request["wallet_id"])
-        coin_id: bytes32 = bytes32.from_hexstr(request["coin_id"])
-        status: bool = request["in_transaction"]
+    @marshal
+    async def nft_set_nft_status(self, request: NFTSetNFTStatus) -> Empty:
         assert self.service.wallet_state_manager is not None
-        nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-        await nft_wallet.update_coin_status(coin_id, status)
-        return {"success": True}
+        nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
+        await nft_wallet.update_coin_status(request.coin_id, request.in_transaction)
+        return Empty()
 
     @tx_endpoint(push=True)
     async def nft_transfer_nft(
