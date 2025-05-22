@@ -1102,9 +1102,7 @@ class WalletRpcClient(RpcClient):
         await self.fetch("nft_set_nft_status", request.to_json_dict())
 
     async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
-        return NFTGetWalletDIDResponse.from_json_dict(
-            await self.fetch("nft_get_wallets_with_dids", request.to_json_dict())
-        )
+        return NFTGetWalletDIDResponse.from_json_dict(await self.fetch("nft_get_wallet_did", request.to_json_dict()))
 
     async def get_nft_wallets_with_dids(self) -> NFTGetWalletsWithDIDsResponse:
         return NFTGetWalletsWithDIDsResponse.from_json_dict(await self.fetch("nft_get_wallets_with_dids", {}))

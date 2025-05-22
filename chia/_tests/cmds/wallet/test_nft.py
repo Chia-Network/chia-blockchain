@@ -167,7 +167,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 1,
                 500000000000,
                 0,
-                "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652",
+                "did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
                 True,
                 TXConfig(
                     min_coin_amount=uint64(0),
