@@ -279,7 +279,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "test2:\n   -Total Balance:         2000000.0  (2000000000 mojo)",
         "   -Asset ID:              dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860",
         "NFT Wallet:\n   -Total Balance:         1.0",
-        "   -DID ID:                0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652",
+        "   -DID ID:                did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
         "FULL_NODE 127.0.0.1",
         "47482/47482 01010101... May 12",
     ]
