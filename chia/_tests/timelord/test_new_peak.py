@@ -279,7 +279,12 @@ class TestNewPeak:
                 # make two new blocks on tip
                 block_1 = bt.get_consecutive_blocks(1, default_1000_blocks, time_per_block=9, force_overflow=True)[-1]
                 block_2 = bt.get_consecutive_blocks(
-                    1, default_1000_blocks, seed=b"data", time_per_block=50, skip_slots=1, min_signage_point=block_1.reward_chain_block.signage_point_index
+                    1,
+                    default_1000_blocks,
+                    seed=b"data",
+                    time_per_block=50,
+                    skip_slots=1,
+                    min_signage_point=block_1.reward_chain_block.signage_point_index,
                 )[-1]
                 # make sure block_2 has higher iterations
                 assert block_2.total_iters >= block_1.total_iters
@@ -305,7 +310,7 @@ class TestNewPeak:
                 )
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
-                assert timelord_api.timelord.overflow_blocks[-1].get_hash() == timelord_unf_block.get_hash()                
+                assert timelord_api.timelord.overflow_blocks[-1].get_hash() == timelord_unf_block.get_hash()
                 new_peak = timelord_peak_from_block(b2, block_2)
                 assert timelord_unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters
                 assert block_1.reward_chain_block.get_hash() != new_peak.reward_chain_block.get_hash()
