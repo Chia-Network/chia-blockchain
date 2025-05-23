@@ -1,3 +1,6 @@
+# mypy: ignore-errors
+# mypy does not like method assignment
+
 from __future__ import annotations
 
 from typing import Any, TypeVar
