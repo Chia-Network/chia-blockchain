@@ -20,6 +20,7 @@ import chia_rs.datalayer
 import zstd
 from chia_rs.datalayer import (
     DeltaReader,
+    DeltaFileCache,
     KeyAlreadyPresentError,
     KeyId,
     MerkleBlob,
