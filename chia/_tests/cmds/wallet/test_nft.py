@@ -10,6 +10,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.rpc.wallet_request_types import (
+    NFTAddURI,
     NFTAddURIResponse,
     NFTGetNFTs,
     NFTGetNFTsResponse,
@@ -191,17 +192,25 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     class NFTAddUriRpcClient(TestWalletRpcClient):
         async def add_uri_to_nft(
             self,
-            wallet_id: int,
-            nft_coin_id: str,
-            key: str,
-            uri: str,
-            fee: int,
+            request: NFTAddURI,
             tx_config: TXConfig,
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> NFTAddURIResponse:
-            self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, tx_config, push, timelock_info))
-            return NFTAddURIResponse([STD_UTX], [STD_TX], uint32(wallet_id), WalletSpendBundle([], G2Element()))
+            self.add_to_log(
+                "add_uri_to_nft",
+                (
+                    request.wallet_id,
+                    request.nft_coin_id,
+                    request.key,
+                    request.uri,
+                    request.fee,
+                    tx_config,
+                    request.push,
+                    timelock_info,
+                ),
+            )
+            return NFTAddURIResponse([STD_UTX], [STD_TX], request.wallet_id, WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = NFTAddUriRpcClient()
     nft_coin_id = get_bytes32(2).hex()

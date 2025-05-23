@@ -780,6 +780,22 @@ class NFTTransferNFTResponse(TransactionEndpointResponse):
 
 @streamable
 @dataclass(frozen=True)
+class NFTAddURI(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    uri: str = field(default_factory=default_raise)
+    key: str = field(default_factory=default_raise)
+    nft_coin_id: str = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTAddURIResponse(TransactionEndpointResponse):
+    wallet_id: uint32
+    spend_bundle: WalletSpendBundle
+
+
+@streamable
+@dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str = field(default_factory=default_raise)
     target_address: Optional[str] = None
@@ -916,13 +932,6 @@ class CancelOfferResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class CancelOffersResponse(TransactionEndpointResponse):
     pass
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTAddURIResponse(TransactionEndpointResponse):
-    wallet_id: uint32
-    spend_bundle: WalletSpendBundle
 
 
 @streamable

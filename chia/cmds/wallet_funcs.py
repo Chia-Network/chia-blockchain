@@ -27,6 +27,7 @@ from chia.cmds.units import units
 from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
+    NFTAddURI,
     NFTGetInfo,
     NFTGetNFTs,
     NFTGetWalletDID,
@@ -1276,15 +1277,17 @@ async def add_uri_to_nft(
             else:
                 raise ValueError("You must provide at least one of the URI flags")
             response = await wallet_client.add_uri_to_nft(
-                wallet_id,
-                nft_coin_id,
-                key,
-                uri_value,
-                fee,
+                NFTAddURI(
+                    wallet_id=uint32(wallet_id),
+                    nft_coin_id=nft_coin_id,
+                    key=key,
+                    uri=uri_value,
+                    fee=fee,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()

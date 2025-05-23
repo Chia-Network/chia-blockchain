@@ -15,6 +15,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.wallet_request_types import (
+    NFTAddURI,
     NFTCoin,
     NFTCountNFTs,
     NFTGetByDID,
@@ -711,11 +712,14 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
 
     nft_coin_id = encode_puzzle_hash(coin.nft_coin_id, AddressType.NFT.hrp(env.node.config))
     await env.rpc_client.add_uri_to_nft(
-        wallet_id=nft_wallet.id(),
-        nft_coin_id=nft_coin_id,
-        uri="http://metadata",
-        key="mu",
-        fee=0,
+        NFTAddURI(
+            wallet_id=nft_wallet.id(),
+            nft_coin_id=nft_coin_id,
+            uri="http://metadata",
+            key="mu",
+            fee=uint64(0),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
     )
 
@@ -751,11 +755,14 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
 
     # add yet another URI, this time using a hex nft_coin_id
     await env.rpc_client.add_uri_to_nft(
-        wallet_id=nft_wallet.id(),
-        nft_coin_id=coin.nft_coin_id.hex(),
-        uri="http://data",
-        key="u",
-        fee=0,
+        NFTAddURI(
+            wallet_id=nft_wallet.id(),
+            nft_coin_id=coin.nft_coin_id.hex(),
+            uri="http://data",
+            key="u",
+            fee=uint64(0),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
     )
 
@@ -1545,11 +1552,14 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
     # add another URI
     fee = 100
     await env.rpc_client.add_uri_to_nft(
-        wallet_id=env.wallet_aliases["nft"],
-        nft_coin_id=nft_coin_id.hex(),
-        key="mu",
-        uri="http://metadata",
-        fee=fee,
+        NFTAddURI(
+            wallet_id=uint32(env.wallet_aliases["nft"]),
+            nft_coin_id=nft_coin_id.hex(),
+            key="mu",
+            uri="http://metadata",
+            fee=uint64(fee),
+            push=True,
+        ),
         tx_config=wallet_environments.tx_config,
     )
 

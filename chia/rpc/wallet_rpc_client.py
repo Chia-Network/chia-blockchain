@@ -57,6 +57,7 @@ from chia.rpc.wallet_request_types import (
     GetTransactionMemoResponse,
     LogIn,
     LogInResponse,
+    NFTAddURI,
     NFTAddURIResponse,
     NFTCountNFTs,
     NFTCountNFTsResponse,
@@ -1010,29 +1011,16 @@ class WalletRpcClient(RpcClient):
 
     async def add_uri_to_nft(
         self,
-        wallet_id: int,
-        nft_coin_id: str,
-        key: str,
-        uri: str,
-        fee: int,
+        request: NFTAddURI,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTAddURIResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "uri": uri,
-            "key": key,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_add_uri", request)
-        return json_deserialize_with_clvm_streamable(response, NFTAddURIResponse)
+        return NFTAddURIResponse.from_json_dict(
+            await self.fetch(
+                "nft_ad_uri", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def nft_calculate_royalties(
         self,

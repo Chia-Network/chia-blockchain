@@ -49,6 +49,8 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeightResponse,
     LogIn,
     LogInResponse,
+    NFTAddURI,
+    NFTAddURIResponse,
     NFTCountNFTs,
     NFTCountNFTsResponse,
     NFTGetByDID,
@@ -3428,35 +3430,27 @@ class WalletRpcApi:
         return NFTGetInfoResponse(nft_info)
 
     @tx_endpoint(push=True)
+    @marshal
     async def nft_add_uri(
         self,
-        request: dict[str, Any],
+        request: NFTAddURI,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
+    ) -> NFTAddURIResponse:
         # Note metadata updater can only add one uri for one field per spend.
         # If you want to add multiple uris for one field, you need to spend multiple times.
-        nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-        uri = request["uri"]
-        key = request["key"]
-        nft_coin_id = request["nft_coin_id"]
-        if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-            nft_coin_id = decode_puzzle_hash(nft_coin_id)
+        nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
+        if request.nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+            nft_coin_id = decode_puzzle_hash(request.nft_coin_id)
         else:
-            nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+            nft_coin_id = bytes32.from_hexstr(request.nft_coin_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
 
-        fee = uint64(request.get("fee", 0))
         await nft_wallet.update_metadata(
-            nft_coin_info, key, uri, action_scope, fee=fee, extra_conditions=extra_conditions
+            nft_coin_info, request.key, request.uri, action_scope, fee=request.fee, extra_conditions=extra_conditions
         )
-        return {
-            "wallet_id": wallet_id,
-            "success": True,
-            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint takes care of setting the default values here
+        return NFTAddURIResponse([], [], request.wallet_id, WalletSpendBundle([], G2Element()))
 
     async def nft_calculate_royalties(self, request: dict[str, Any]) -> EndpointResult:
         return NFTWallet.royalty_calculation(
