@@ -23,6 +23,7 @@ class HarvesterRpcApi:
         return {
             "/get_plots": self.get_plots,
             "/refresh_plots": self.refresh_plots,
+            "/hard_refresh_plots": self.hard_refresh_plots,
             "/delete_plot": self.delete_plot,
             "/add_plot_directory": self.add_plot_directory,
             "/get_plot_directories": self.get_plot_directories,
@@ -63,6 +64,13 @@ class HarvesterRpcApi:
         }
 
     async def refresh_plots(self, _: dict[str, Any]) -> EndpointResult:
+        self.service.plot_manager.trigger_refresh()
+        return {}
+
+    async def hard_refresh_plots(self, _: dict[str, Any]) -> EndpointResult:
+        # Clear the plot cache
+        self.service.plot_manager.cache.clear()
+        # Trigger a refresh
         self.service.plot_manager.trigger_refresh()
         return {}
 
