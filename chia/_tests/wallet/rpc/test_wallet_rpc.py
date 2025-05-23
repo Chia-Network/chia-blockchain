@@ -59,17 +59,20 @@ from chia.rpc.wallet_request_types import (
     DefaultCAT,
     DeleteKey,
     DIDGetPubkey,
+    FungibleAsset,
     GetNotifications,
     GetPrivateKey,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     LogIn,
+    NFTCalculateRoyalties,
     NFTGetInfo,
     NFTGetNFTs,
     NFTMintNFTRequest,
     NFTTransferNFT,
     PushTransactions,
     PushTX,
+    RoyaltyAsset,
     SetWalletResyncOnStartup,
     SplitCoins,
     VerifySignature,
@@ -1684,14 +1687,23 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     # Test royalty endpoint
     royalty_summary = await wallet_1_rpc.nft_calculate_royalties(
-        {
-            "my asset": ("my address", uint16(10000)),
-        },
-        {
-            None: uint64(10000),
-        },
+        NFTCalculateRoyalties(
+            [
+                RoyaltyAsset(
+                    "my_asset",
+                    "my_address",
+                    uint16(10000),
+                )
+            ],
+            [
+                FungibleAsset(
+                    None,
+                    uint64(10000),
+                )
+            ],
+        )
     )
-    assert royalty_summary == {
+    assert royalty_summary.to_json_dict() == {
         "my asset": [
             {
                 "asset": None,

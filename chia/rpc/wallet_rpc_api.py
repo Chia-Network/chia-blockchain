@@ -51,6 +51,8 @@ from chia.rpc.wallet_request_types import (
     LogInResponse,
     NFTAddURI,
     NFTAddURIResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
     NFTCountNFTs,
     NFTCountNFTsResponse,
     NFTGetByDID,
@@ -3452,13 +3454,16 @@ class WalletRpcApi:
         # tx_endpoint takes care of setting the default values here
         return NFTAddURIResponse([], [], request.wallet_id, WalletSpendBundle([], G2Element()))
 
-    async def nft_calculate_royalties(self, request: dict[str, Any]) -> EndpointResult:
-        return NFTWallet.royalty_calculation(
-            {
-                asset["asset"]: (asset["royalty_address"], uint16(asset["royalty_percentage"]))
-                for asset in request.get("royalty_assets", [])
-            },
-            {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
+    @marshal
+    async def nft_calculate_royalties(self, request: NFTCalculateRoyalties) -> NFTCalculateRoyaltiesResponse:
+        return NFTCalculateRoyaltiesResponse.from_json_dict(
+            NFTWallet.royalty_calculation(
+                {
+                    asset.asset: (asset.royalty_address, uint16(asset.royalty_percentage))
+                    for asset in request.royalty_assets
+                },
+                {asset.asset: asset.amount for asset in request.fungible_assets},
+            )
         )
 
     @tx_endpoint(push=False)

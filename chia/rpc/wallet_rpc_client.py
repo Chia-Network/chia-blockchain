@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import Any, Optional, Union, cast
 
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror
@@ -59,6 +59,8 @@ from chia.rpc.wallet_request_types import (
     LogInResponse,
     NFTAddURI,
     NFTAddURIResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
     NFTCountNFTs,
     NFTCountNFTsResponse,
     NFTGetByDID,
@@ -1024,19 +1026,11 @@ class WalletRpcClient(RpcClient):
 
     async def nft_calculate_royalties(
         self,
-        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
-        fungible_asset_dict: dict[Any, uint64],
-    ) -> dict[str, list[dict[str, Any]]]:
-        request = {
-            "royalty_assets": [
-                {"asset": id, "royalty_address": royalty_info[0], "royalty_percentage": royalty_info[1]}
-                for id, royalty_info in royalty_assets_dict.items()
-            ],
-            "fungible_assets": [{"asset": name, "amount": amount} for name, amount in fungible_asset_dict.items()],
-        }
-        response = await self.fetch("nft_calculate_royalties", request)
-        del response["success"]
-        return response
+        request: NFTCalculateRoyalties,
+    ) -> NFTCalculateRoyaltiesResponse:
+        return NFTCalculateRoyaltiesResponse.from_json_dict(
+            await self.fetch("nft_calculate_royalties", request.to_json_dict())
+        )
 
     async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
         return NFTGetInfoResponse.from_json_dict(await self.fetch("nft_get_info", request.to_json_dict()))

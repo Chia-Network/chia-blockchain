@@ -421,6 +421,81 @@ class NFTGetInfoResponse(Streamable):
     nft_info: NFTInfo
 
 
+# utility for NFTCalculateRoyalties
+@streamable
+@dataclass(frozen=True)
+class RoyaltyAsset(Streamable):
+    asset: str
+    royalty_address: str
+    royalty_percentage: uint16
+
+
+# utility for NFTCalculateRoyalties
+@streamable
+@dataclass(frozen=True)
+class FungibleAsset(Streamable):
+    asset: Optional[str]
+    amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCalculateRoyalties(Streamable):
+    royalty_assets: list[RoyaltyAsset] = field(default_factory=list)
+    fungible_assets: list[FungibleAsset] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if len(set(a.asset for a in self.royalty_assets)) != len(self.royalty_assets):
+            raise ValueError("Multiple royalty assets with same name specified")
+        if len(set(a.asset for a in self.royalty_assets)) != len(self.royalty_assets):
+            raise ValueError("Multiple fungible assets with same name specified")
+
+
+# utility for NFTCalculateRoyaltiesResponse
+@streamable
+@dataclass(frozen=True)
+class RoyaltySummary(Streamable):
+    royalty_asset: str
+    fungible_asset: str
+    royalty_address: str
+    royalty_amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCalculateRoyaltiesResponse(Streamable):
+    nft_info: list[RoyaltySummary]
+
+    # old response is a dict with arbitrary keys so we must override serialization for backwards compatibility
+    def to_json_dict(self) -> dict[str, Any]:
+        summary_dict: dict[str, Any] = {}
+        for info in self.nft_info:
+            summary_dict.setdefault(info.royalty_asset, [])
+            summary_dict[info.royalty_asset].append(
+                {
+                    "asset": info.fungible_asset,
+                    "address": info.royalty_address,
+                    "amount": info.royalty_amount,
+                }
+            )
+
+        return summary_dict
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> NFTCalculateRoyaltiesResponse:
+        return cls(
+            [
+                RoyaltySummary(
+                    royalty_asset,
+                    summary["fungible_asset"],
+                    summary["royalty_address"],
+                    uint64(summary["royalty_amount"]),
+                )
+                for royalty_asset, summary in json_dict.items()
+            ]
+        )
+
+
 # utility for NFTSetDIDBulk
 @streamable
 @dataclass(frozen=True)

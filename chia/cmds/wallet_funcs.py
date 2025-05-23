@@ -26,14 +26,18 @@ from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_request_types import (
     CATSpendResponse,
+    FungibleAsset,
     GetNotifications,
     NFTAddURI,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
     NFTGetInfo,
     NFTGetNFTs,
     NFTGetWalletDID,
     NFTMintNFTRequest,
     NFTSetNFTDID,
     NFTTransferNFT,
+    RoyaltyAsset,
     SendTransactionResponse,
     VCAddProofs,
     VCGet,
@@ -453,8 +457,8 @@ async def make_offer(
             offer_dict: dict[Union[uint32, str], int] = {}
             driver_dict: dict[str, Any] = {}
             printable_dict: dict[str, tuple[str, int, int]] = {}  # dict[asset_name, tuple[amount, unit, multiplier]]
-            royalty_asset_dict: dict[Any, tuple[Any, uint16]] = {}
-            fungible_asset_dict: dict[Any, uint64] = {}
+            royalty_assets: list[RoyaltyAsset] = []
+            fungible_assets: list[FungibleAsset] = []
             for item in [*offers, *requests]:
                 name, amount = tuple(item.split(":")[0:2])
                 try:
@@ -467,7 +471,7 @@ async def make_offer(
                         name = "Unknown CAT"
                     unit = units["cat"]
                     if item in offers:
-                        fungible_asset_dict[name] = uint64(abs(int(Decimal(amount) * unit)))
+                        fungible_assets.append(FungibleAsset(name, uint64(abs(int(Decimal(amount) * unit)))))
                 except ValueError:
                     try:
                         hrp, _ = bech32_decode(name)
@@ -501,9 +505,12 @@ async def make_offer(
                                             "royalty_percentage": str(info.royalty_percentage),
                                         },
                                     }
-                                    royalty_asset_dict[name] = (
-                                        encode_puzzle_hash(info.royalty_puzzle_hash, AddressType.XCH.hrp(config)),
-                                        info.royalty_percentage,
+                                    royalty_assets.append(
+                                        RoyaltyAsset(
+                                            name,
+                                            encode_puzzle_hash(info.royalty_puzzle_hash, AddressType.XCH.hrp(config)),
+                                            info.royalty_percentage,
+                                        )
                                     )
                         else:
                             id = decode_puzzle_hash(name).hex()
@@ -518,7 +525,7 @@ async def make_offer(
                             name = await wallet_client.get_cat_name(id)
                             unit = units["cat"]
                         if item in offers:
-                            fungible_asset_dict[name] = uint64(abs(int(Decimal(amount) * unit)))
+                            fungible_assets.append(FungibleAsset(name, uint64(abs(int(Decimal(amount) * unit)))))
                 multiplier: int = -1 if item in offers else 1
                 printable_dict[name] = (amount, unit, multiplier)
                 if id in offer_dict:
@@ -545,19 +552,21 @@ async def make_offer(
                     print()
                     print(f"Including Fees: {Decimal(fee) / units['chia']} XCH, {fee} mojos")
 
-                if royalty_asset_dict != {}:
-                    royalty_summary: dict[Any, list[dict[str, Any]]] = await wallet_client.nft_calculate_royalties(
-                        royalty_asset_dict, fungible_asset_dict
+                if royalty_assets != []:
+                    royalty_summary: NFTCalculateRoyaltiesResponse = await wallet_client.nft_calculate_royalties(
+                        NFTCalculateRoyalties(royalty_assets, fungible_assets)
                     )
                     total_amounts_requested: dict[Any, int] = {}
                     print()
                     print("Royalties Summary:")
-                    for nft_id, summaries in royalty_summary.items():
+                    for nft_id, summaries in royalty_summary.to_json_dict().items():
                         print(f"  - For {nft_id}:")
                         for summary in summaries:
                             divisor = units["chia"] if summary["asset"] == "XCH" else units["cat"]
                             converted_amount = Decimal(summary["amount"]) / divisor
-                            total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
+                            total_amounts_requested.setdefault(
+                                summary["asset"], next(a.amount for a in fungible_assets if a.asset == summary["asset"])
+                            )
                             total_amounts_requested[summary["asset"]] += summary["amount"]
                             print(
                                 f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa
@@ -766,17 +775,20 @@ async def take_offer(
 
         print()
 
-        royalty_asset_dict: dict[Any, tuple[Any, uint16]] = {}
+        royalty_assets = []
         for royalty_asset_id in nft_coin_ids_supporting_royalties_from_offer(offer):
             if royalty_asset_id.hex() in offered:
                 percentage, address = await get_nft_royalty_percentage_and_address(royalty_asset_id, wallet_client)
-                royalty_asset_dict[encode_puzzle_hash(royalty_asset_id, AddressType.NFT.hrp(config))] = (
-                    encode_puzzle_hash(address, AddressType.XCH.hrp(config)),
-                    percentage,
+                royalty_assets.append(
+                    RoyaltyAsset(
+                        encode_puzzle_hash(royalty_asset_id, AddressType.NFT.hrp(config)),
+                        encode_puzzle_hash(address, AddressType.XCH.hrp(config)),
+                        percentage,
+                    )
                 )
 
-        if royalty_asset_dict != {}:
-            fungible_asset_dict: dict[Any, uint64] = {}
+        if royalty_assets != []:
+            fungible_assets = []
             for fungible_asset_id in fungible_assets_from_offer(offer):
                 fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else "xch"
                 if fungible_asset_id_str in requested:
@@ -787,20 +799,24 @@ async def take_offer(
                         result = await wallet_client.cat_asset_id_to_name(fungible_asset_id)
                         if result is not None:
                             nft_royalty_currency = result[1]
-                    fungible_asset_dict[nft_royalty_currency] = uint64(requested[fungible_asset_id_str])
+                    fungible_assets.append(
+                        FungibleAsset(nft_royalty_currency, uint64(requested[fungible_asset_id_str]))
+                    )
 
-            if fungible_asset_dict != {}:
-                royalty_summary: dict[Any, list[dict[str, Any]]] = await wallet_client.nft_calculate_royalties(
-                    royalty_asset_dict, fungible_asset_dict
+            if fungible_assets != []:
+                royalty_summary = await wallet_client.nft_calculate_royalties(
+                    NFTCalculateRoyalties(royalty_assets, fungible_assets)
                 )
                 total_amounts_requested: dict[Any, int] = {}
                 print("Royalties Summary:")
-                for nft_id, summaries in royalty_summary.items():
+                for nft_id, summaries in royalty_summary.to_json_dict().items():
                     print(f"  - For {nft_id}:")
                     for summary in summaries:
                         divisor = units["chia"] if summary["asset"] == network_xch else units["cat"]
                         converted_amount = Decimal(summary["amount"]) / divisor
-                        total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
+                        total_amounts_requested.setdefault(
+                            summary["asset"], next(a.amount for a in fungible_assets if a.asset == summary["asset"])
+                        )
                         total_amounts_requested[summary["asset"]] += summary["amount"]
                         print(
                             f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa

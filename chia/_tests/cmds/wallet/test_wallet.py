@@ -9,7 +9,7 @@ import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -29,9 +29,12 @@ from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
+    FungibleAsset,
     GetHeightInfoResponse,
+    NFTCalculateRoyalties,
     NFTGetWalletDID,
     NFTGetWalletDIDResponse,
+    RoyaltyAsset,
     SendTransactionResponse,
     TakeOfferResponse,
 )
@@ -806,13 +809,25 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "get_cat_name": [(3,)],
         "nft_calculate_royalties": [
             (
-                {
-                    "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft": (
-                        "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
-                        1000,
-                    )
-                },
-                {"XCH": 10000000000000, "test3": 100000},
+                NFTCalculateRoyalties(
+                    [
+                        RoyaltyAsset(
+                            "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft",
+                            "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
+                            uint16(1000),
+                        )
+                    ],
+                    [
+                        FungibleAsset(
+                            "XCH",
+                            uint64(10000000000000),
+                        ),
+                        FungibleAsset(
+                            "test3",
+                            uint64(100000),
+                        ),
+                    ],
+                ),
             )
         ],
         "create_offer_for_ids": [
