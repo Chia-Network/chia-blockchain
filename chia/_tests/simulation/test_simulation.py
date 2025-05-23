@@ -46,7 +46,8 @@ test_constants_modified = test_constants.replace(
     NUM_SPS_SUB_SLOT=uint32(32),  # Must be a power of 2
     EPOCH_BLOCKS=uint32(280),
     SUB_SLOT_ITERS_STARTING=uint64(2**20),
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(5),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(5),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(5),
 )
 
 

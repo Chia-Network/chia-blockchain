@@ -26,7 +26,12 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     EPOCH_BLOCKS=uint32(4608),  # The number of blocks per epoch, mainnet 4608. Must be multiple of SUB_EPOCH_SB
     SIGNIFICANT_BITS=uint8(8),  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS=uint16(1024),  # Max is 1024 (based on ClassGroupElement int size)
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(
+        9
+    ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
+        9
+    ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
     MIN_PLOT_SIZE=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE=uint8(50),
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
@@ -74,12 +79,18 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
+    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFF),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
+    PLOT_DIFFICULTY_4_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_5_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_6_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_7_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_8_HEIGHT=uint32(0xFFFFFFFF),
 )
 
 

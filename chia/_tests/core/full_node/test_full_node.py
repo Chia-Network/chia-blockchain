@@ -1621,7 +1621,7 @@ async def test_unfinished_block_with_replaced_generator(
                 pos.pool_public_key,
                 pos.pool_contract_puzzle_hash,
                 public_key,
-                pos.size,
+                pos.version_and_size,
                 pos.proof,
             )
 

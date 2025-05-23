@@ -56,7 +56,7 @@ async def farmer_harvester_with_filter_size_9(
         return len(await farmer_rpc_cl.get_connections()) > 0
 
     local_b_tools = await create_block_tools_async(
-        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9)), keychain=get_temp_keyring
+        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(9)), keychain=get_temp_keyring
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)

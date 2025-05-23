@@ -25,7 +25,7 @@ declare_proof_of_space_json: dict[str, Any] = {
         "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "pool_contract_puzzle_hash": None,
         "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-        "size": 204,
+        "version_and_size": 204,
         "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
     },
     "challenge_chain_sp_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -124,7 +124,7 @@ respond_proof_of_weight_json: dict[str, Any] = {
                             "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                             "pool_contract_puzzle_hash": None,
                             "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                            "size": 204,
+                            "version_and_size": 204,
                             "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
                         },
                         "cc_signage_point": {
@@ -268,7 +268,7 @@ respond_proof_of_weight_json: dict[str, Any] = {
                         "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                         "pool_contract_puzzle_hash": None,
                         "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                        "size": 204,
+                        "version_and_size": 204,
                         "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
                     },
                     "challenge_chain_sp_vdf": {
@@ -462,7 +462,7 @@ respond_blocks_json: dict[str, Any] = {
                     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                     "pool_contract_puzzle_hash": None,
                     "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                    "size": 204,
+                    "version_and_size": 204,
                     "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
                 },
                 "challenge_chain_sp_vdf": {
@@ -638,7 +638,7 @@ respond_blocks_json: dict[str, Any] = {
                     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                     "pool_contract_puzzle_hash": None,
                     "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                    "size": 204,
+                    "version_and_size": 204,
                     "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
                 },
                 "challenge_chain_sp_vdf": {
@@ -820,7 +820,7 @@ respond_block_json: dict[str, Any] = {
                 "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                 "pool_contract_puzzle_hash": None,
                 "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                "size": 204,
+                "version_and_size": 204,
                 "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
             },
             "challenge_chain_sp_vdf": {
@@ -1005,7 +1005,7 @@ respond_unfinished_block_json: dict[str, Any] = {
                 "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                 "pool_contract_puzzle_hash": None,
                 "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                "size": 204,
+                "version_and_size": 204,
                 "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
             },
             "challenge_chain_sp_vdf": {
@@ -1370,7 +1370,7 @@ respond_header_block_json: dict[str, Any] = {
                 "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                 "pool_contract_puzzle_hash": None,
                 "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                "size": 204,
+                "version_and_size": 204,
                 "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
             },
             "challenge_chain_sp_vdf": {
@@ -1551,7 +1551,7 @@ respond_block_headers_json: dict[str, Any] = {
                     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                     "pool_contract_puzzle_hash": None,
                     "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                    "size": 204,
+                    "version_and_size": 204,
                     "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
                 },
                 "challenge_chain_sp_vdf": {
@@ -1806,7 +1806,7 @@ respond_header_blocks_json: dict[str, Any] = {
                     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
                     "pool_contract_puzzle_hash": None,
                     "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-                    "size": 204,
+                    "version_and_size": 204,
                     "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
                 },
                 "challenge_chain_sp_vdf": {
@@ -2171,7 +2171,7 @@ new_proof_of_space_json: dict[str, Any] = {
         "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "pool_contract_puzzle_hash": None,
         "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-        "size": 204,
+        "version_and_size": 204,
         "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
     },
     "signage_point_index": 160,
@@ -2224,7 +2224,7 @@ request_signatures_json: dict[str, Any] = {
             "pool_public_key": None,
             "pool_contract_puzzle_hash": "0x1b9d1eaa3c6a9b27cd90ad9070eb012794a74b277446417bc7b904145010c087",
             "plot_public_key": "0x8fde05dff50c7409c6ac3c5c42d7cdf596e6232bdfa833e715dbd19cfec3e9d08a407b11288a0a6fd25a932ebd0d6a3f",
-            "size": 20,
+            "version_and_size": 20,
             "proof": "0x6b99913f88112ab38726b8119e7f7006b24274f1a8c4c552c2a23c8076bdf0d4e8546c4a47fb5b82041e429a3fd44936ce5e9d811a4996a6f0d2896805b6ae018430d944db57080b1abb5863cb48c6deeaf86e93e6c2f0f8f88f527aa4966d88e1e607dadb45869f18225ef1b987d2b43a08a8defff0b0320106fdaad531edfca2b7b78d873d3f20a3780b2baaea3caafb8ad47f43e649872d16e69afd06527d",
         },
         "challenge_chain_sp_vdf": {
@@ -2327,7 +2327,7 @@ post_partial_payload_json: dict[str, Any] = {
         "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "pool_contract_puzzle_hash": None,
         "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-        "size": 204,
+        "version_and_size": 204,
         "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
     },
     "sp_hash": "0x929287fab514e2204808821e2afe8c4d84f0093c75554b067fe4fca272890c9d",
@@ -2344,7 +2344,7 @@ post_partial_request_json: dict[str, Any] = {
             "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
             "pool_contract_puzzle_hash": None,
             "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-            "size": 204,
+            "version_and_size": 204,
             "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
         },
         "sp_hash": "0x929287fab514e2204808821e2afe8c4d84f0093c75554b067fe4fca272890c9d",
@@ -2423,7 +2423,7 @@ new_peak_timelord_json: dict[str, Any] = {
             "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
             "pool_contract_puzzle_hash": None,
             "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-            "size": 204,
+            "version_and_size": 204,
             "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
         },
         "challenge_chain_sp_vdf": {
@@ -2492,7 +2492,7 @@ new_unfinished_block_timelord_json: dict[str, Any] = {
             "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
             "pool_contract_puzzle_hash": None,
             "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
-            "size": 204,
+            "version_and_size": 204,
             "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
         },
         "challenge_chain_sp_vdf": {

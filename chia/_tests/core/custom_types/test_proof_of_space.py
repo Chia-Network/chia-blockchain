@@ -27,6 +27,7 @@ class ProofOfSpaceCase:
     marks: Marks = ()
 
 
+# TODO: test v2 plots
 @datacases(
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
@@ -108,7 +109,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        size=case.plot_size,
+        version_and_size=case.plot_size,
         proof=b"1",
     )
     quality_string = verify_and_get_quality_string(
@@ -125,7 +126,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 
 
 class TestProofOfSpace:
-    @pytest.mark.parametrize("prefix_bits", [DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER, 8, 7, 6, 5, 1, 0])
+    @pytest.mark.parametrize("prefix_bits", [DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER_V1, 8, 7, 6, 5, 1, 0])
     def test_can_create_proof(self, prefix_bits: int, seeded_random: random.Random) -> None:
         """
         Tests that the change of getting a correct proof is exactly 1/target_filter.

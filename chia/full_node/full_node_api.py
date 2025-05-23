@@ -975,10 +975,14 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
+            # TODO: support v2 plots after the hard fork
+            pos_size_v1 = request.proof_of_space.size_v1()
+            assert pos_size_v1
+
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
                 quality_string,
-                request.proof_of_space.size,
+                pos_size_v1,
                 difficulty,
                 request.challenge_chain_sp,
             )

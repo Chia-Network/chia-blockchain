@@ -143,7 +143,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     BLOCKS_CACHE_SIZE=uint32(340 * 3),  # Coordinate with the above values
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
@@ -1756,10 +1756,14 @@ def load_block_list(
             full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash, height=full_block.height
         )
         assert quality_str is not None
+        # TODO: support v2 plots
+        pos_size_v1 = full_block.reward_chain_block.proof_of_space.size_v1()
+        assert pos_size_v1 is not None
+
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_str,
-            full_block.reward_chain_block.proof_of_space.size,
+            pos_size_v1,
             uint64(difficulty),
             sp_hash,
         )

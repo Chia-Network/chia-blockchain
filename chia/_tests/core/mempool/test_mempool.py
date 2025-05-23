@@ -2866,7 +2866,7 @@ class TestMaliciousGenerators:
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
         res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
+        assert res == (MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH)
 
 
 coins = make_test_coins()
