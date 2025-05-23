@@ -21,7 +21,14 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
+from chia.rpc.wallet_request_types import (
+    GetSyncStatusResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
+    SendTransactionMultiResponse,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.coin_record import CoinRecord
@@ -157,9 +164,9 @@ class TestWalletRpcClient(TestRpcClient):
         else:
             return None
 
-    async def get_nft_info(self, coin_id: str, latest: bool = True) -> dict[str, Any]:
-        self.add_to_log("get_nft_info", (coin_id, latest))
-        coin_id_bytes = bytes32.fromhex(coin_id)
+    async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
+        self.add_to_log("get_nft_info", (request.coin_id, request.latest))
+        coin_id_bytes = bytes32.fromhex(request.coin_id)
         nft_info = NFTInfo(
             nft_id=encode_puzzle_hash(coin_id_bytes, "nft"),
             launcher_id=bytes32([1] * 32),
@@ -182,17 +189,21 @@ class TestWalletRpcClient(TestRpcClient):
             supports_did=True,
             p2_address=bytes32([8] * 32),
         )
-        return {"nft_info": nft_info.to_json_dict()}
+        return NFTGetInfoResponse(nft_info)
 
     async def nft_calculate_royalties(
         self,
-        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
-        fungible_asset_dict: dict[Any, uint64],
-    ) -> dict[Any, list[dict[str, Any]]]:
-        self.add_to_log("nft_calculate_royalties", (royalty_assets_dict, fungible_asset_dict))
-        return NFTWallet.royalty_calculation(
-            royalty_assets_dict=royalty_assets_dict,
-            fungible_asset_dict=fungible_asset_dict,
+        request: NFTCalculateRoyalties,
+    ) -> NFTCalculateRoyaltiesResponse:
+        self.add_to_log("nft_calculate_royalties", (request,))
+        return NFTCalculateRoyaltiesResponse.from_json_dict(
+            NFTWallet.royalty_calculation(
+                {
+                    asset.asset: (asset.royalty_address, uint16(asset.royalty_percentage))
+                    for asset in request.royalty_assets
+                },
+                {asset.asset: asset.amount for asset in request.fungible_assets},
+            )
         )
 
     async def get_spendable_coins(

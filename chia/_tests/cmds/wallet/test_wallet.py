@@ -9,7 +9,7 @@ import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -29,7 +29,12 @@ from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
+    FungibleAsset,
     GetHeightInfoResponse,
+    NFTCalculateRoyalties,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
+    RoyaltyAsset,
     SendTransactionResponse,
     TakeOfferResponse,
 )
@@ -246,9 +251,9 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 "unconfirmed_wallet_balance": uint64(0),
             }
 
-        async def get_nft_wallet_did(self, wallet_id: uint8) -> dict[str, Optional[str]]:
-            self.add_to_log("get_nft_wallet_did", (wallet_id,))
-            return {"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}
+        async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
+            self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
+            return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
 
         async def get_connections(
             self, node_type: Optional[NodeType] = None
@@ -277,7 +282,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "test2:\n   -Total Balance:         2000000.0  (2000000000 mojo)",
         "   -Asset ID:              dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860",
         "NFT Wallet:\n   -Total Balance:         1.0",
-        "   -DID ID:                0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652",
+        "   -DID ID:                did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
         "FULL_NODE 127.0.0.1",
         "47482/47482 01010101... May 12",
     ]
@@ -804,13 +809,25 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "get_cat_name": [(3,)],
         "nft_calculate_royalties": [
             (
-                {
-                    "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft": (
-                        "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
-                        1000,
-                    )
-                },
-                {"XCH": 10000000000000, "test3": 100000},
+                NFTCalculateRoyalties(
+                    [
+                        RoyaltyAsset(
+                            "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft",
+                            "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
+                            uint16(1000),
+                        )
+                    ],
+                    [
+                        FungibleAsset(
+                            "XCH",
+                            uint64(10000000000000),
+                        ),
+                        FungibleAsset(
+                            "test3",
+                            uint64(100000),
+                        ),
+                    ],
+                ),
             )
         ],
         "create_offer_for_ids": [
