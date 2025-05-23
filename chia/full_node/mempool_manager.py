@@ -370,7 +370,7 @@ class MempoolManager:
             return None
         return self.mempool.create_bundle_from_mempool_items(self.constants, self.peak.height)
 
-    def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float = 2.0) -> Optional[NewBlockGenerator]:
+    def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions and removals, for a new block
         """
@@ -378,9 +378,7 @@ class MempoolManager:
             return None
         return self.mempool.create_block_generator(self.constants, self.peak.height, timeout)
 
-    def create_block_generator2(
-        self, last_tb_header_hash: bytes32, timeout: float = 2.0
-    ) -> Optional[NewBlockGenerator]:
+    def create_block_generator2(self, last_tb_header_hash: bytes32, timeout: float) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions, for a new block
         """
@@ -560,12 +558,13 @@ class MempoolManager:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
     ) -> tuple[Optional[Err], Optional[MempoolItem], list[bytes32]]:
         """
-        Validates new_spend with the given NPCResult, and spend_name, and the current mempool. The mempool should
+        Validates new_spend with the given SpendBundleConditions, and
+        spend_name, and the current mempool. The mempool should
         be locked during this call (blockchain lock).
 
         Args:
             new_spend: spend bundle to validate
-            conds: result of running the clvm transaction in a fake block
+            conds: result of running the clvm transaction
             spend_name: hash of the spend bundle data, passed in as an optimization
             first_added_height: The block height that `new_spend`  first entered this node's mempool.
                 Used to estimate how long a spend has taken to be included on the chain.
