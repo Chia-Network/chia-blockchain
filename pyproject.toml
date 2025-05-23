@@ -96,7 +96,7 @@ types-cryptography = { version = ">=3.3.23.2", optional = true }
 types-pyyaml = { version = ">=6.0.12.20240917", optional = true }
 types-setuptools = { version = ">=75.5.0.20241122", optional = true }
 lxml = { version = ">=5.2.2", optional = true }
-miniupnpc = { version = ">=2.2.2", source = "chia", optional = true }
+miniupnpc = {version = ">=2.3.2, <3", optional = true}
 # big-o = {version = "0.11.0", optional = true}
 # numpy = [
 # 	{version="<=1.24.4", python = "<3.9", optional = true},
