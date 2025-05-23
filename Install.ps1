@@ -105,7 +105,11 @@ foreach ($extra in $extras)
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
-.penv/Scripts/poetry install @extras_cli
+.penv/Scripts/poetry install -vvvvvvvvvvvvvvvv @extras_cli
+
+Write-Output "    ======== dumping clvm tools rs version"
+.venv/Scripts/python -c "import clvm_tools_rs; print(clvm_tools_rs.get_version())"
+Write-Output "    ======== ^^^^^"
 
 if ($i)
 {
