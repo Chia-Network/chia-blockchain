@@ -122,7 +122,7 @@ class TradeManager:
     ) -> set[bytes32]:
         """
         Returns list of coins we want to check if they are included in filter,
-        These will include coins that belong to us and coins that that on other side of treade
+        These will include coins that belong to us and coins that on other side of trade
         """
         coin_ids = await self.trade_store.get_coin_ids_of_interest_with_trade_statuses(
             trade_statuses=[TradeStatus.PENDING_ACCEPT, TradeStatus.PENDING_CONFIRM, TradeStatus.PENDING_CANCEL]
