@@ -17,10 +17,11 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.aliases import FullNodeService
 from chia.server.outbound_message import NodeType
+from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
 from chia.util.task_timing import maybe_manage_task_instrumentation
 

@@ -7,8 +7,8 @@ from chia_rs.sized_ints import uint16
 
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.server.outbound_message import NodeType
+from chia.server.resolve_peer_info import get_unresolved_peer_infos, set_peer_info
 from chia.types.peer_info import UnresolvedPeerInfo
-from chia.util.config import get_unresolved_peer_infos, set_peer_info
 
 
 @dataclass
