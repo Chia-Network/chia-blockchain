@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import Any
 
 import chia_rs
 
@@ -32,7 +32,7 @@ SerializedProgram.to_program = to_program
 
 
 @classmethod
-def from_program(cls, program: Program):  # noqa
+def from_program(cls, program: Program):
     """
     Convert a Program object to a SerializedProgram.
     """
@@ -41,9 +41,10 @@ def from_program(cls, program: Program):  # noqa
 
 SerializedProgram.from_program = from_program
 
+
 def uncurry(self) -> tuple[Program, Program]:
     result = self.uncurry_rust()
-    return (Program(result[0], result[1]))
+    return Program(result[0], result[1])
 
 
 SerializedProgram.uncurry = uncurry
