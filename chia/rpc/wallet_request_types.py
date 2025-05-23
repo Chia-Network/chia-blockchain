@@ -456,7 +456,7 @@ class NFTCalculateRoyalties(Streamable):
 @dataclass(frozen=True)
 class RoyaltySummary(Streamable):
     royalty_asset: str
-    fungible_asset: str
+    fungible_asset: Optional[str]
     royalty_address: str
     royalty_amount: uint64
 
@@ -483,15 +483,24 @@ class NFTCalculateRoyaltiesResponse(Streamable):
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> NFTCalculateRoyaltiesResponse:
+        # There's some awkwardness here because the canonical format of this response
+        # returns all of the asset information on the same level as the "success"
+        # key that gets automatically returned by the RPC
+        #
+        # This is an unfortunate design choice, but one we must preserve for
+        # backwards compatibility. This means the code below has some logic it
+        # probably shouldn't have ignoring "assets" named "success".
         return cls(
             [
                 RoyaltySummary(
                     royalty_asset,
-                    summary["fungible_asset"],
-                    summary["royalty_address"],
-                    uint64(summary["royalty_amount"]),
+                    summary["asset"],
+                    summary["address"],
+                    uint64(summary["amount"]),
                 )
-                for royalty_asset, summary in json_dict.items()
+                for royalty_asset, summaries in json_dict.items()
+                if royalty_asset != "success"
+                for summary in summaries
             ]
         )
 

@@ -1690,8 +1690,8 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
         NFTCalculateRoyalties(
             [
                 RoyaltyAsset(
-                    "my_asset",
-                    "my_address",
+                    "my asset",
+                    "my address",
                     uint16(10000),
                 )
             ],
