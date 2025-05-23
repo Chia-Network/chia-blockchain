@@ -10,7 +10,7 @@ SerializedProgram = chia_rs.Program
 
 
 def _run(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
-    result = self._run_to_lazynode(max_cost, flags, args)
+    result = self.run_rust(max_cost, flags, args)
     ret = (result[0], Program(result[1]))
     return ret
 
@@ -39,7 +39,8 @@ def from_program(cls, program: Program):  # noqa
 SerializedProgram.from_program = from_program
 
 def uncurry(self) -> tuple[Program, Program]:
-    self.to_program().uncurry()
+    result = self.uncurry_rust()
+    return (Program(result[0], result[1]))
 
 
 SerializedProgram.uncurry = uncurry
