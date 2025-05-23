@@ -64,6 +64,8 @@ from chia.rpc.wallet_request_types import (
     NFTGetWalletDID,
     NFTGetWalletDIDResponse,
     NFTGetWalletsWithDIDsResponse,
+    NFTMintBulk,
+    NFTMintBulkResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetDIDBulk,
@@ -3467,118 +3469,78 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=False)
+    @marshal
     async def nft_mint_bulk(
         self,
-        request: dict[str, Any],
+        request: NFTMintBulk,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> NFTMintBulkResponse:
         if action_scope.config.push:
             raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = uint32(request["wallet_id"])
-        nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-        royalty_address = request.get("royalty_address", None)
-        if isinstance(royalty_address, str) and royalty_address != "":
-            royalty_puzhash = decode_puzzle_hash(royalty_address)
-        elif royalty_address in {None, ""}:
+        nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
+        if request.royalty_address in {None, ""}:
             royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         else:
-            royalty_puzhash = bytes32.from_hexstr(royalty_address)
-        royalty_percentage = request.get("royalty_percentage", None)
-        if royalty_percentage is None:
-            royalty_percentage = uint16(0)
-        else:
-            royalty_percentage = uint16(int(royalty_percentage))
+            assert request.royalty_address is not None  # hello mypy
+            royalty_puzhash = decode_puzzle_hash(request.royalty_address)
         metadata_list = []
-        for meta in request["metadata_list"]:
-            if "uris" not in meta.keys():
-                return {"success": False, "error": "Data URIs is required"}
-            if not isinstance(meta["uris"], list):
-                return {"success": False, "error": "Data URIs must be a list"}
-            if not isinstance(meta.get("meta_uris", []), list):
-                return {"success": False, "error": "Metadata URIs must be a list"}
-            if not isinstance(meta.get("license_uris", []), list):
-                return {"success": False, "error": "License URIs must be a list"}
+        for meta in request.metadata_list:
             nft_metadata = [
-                ("u", meta["uris"]),
-                ("h", hexstr_to_bytes(meta["hash"])),
-                ("mu", meta.get("meta_uris", [])),
-                ("lu", meta.get("license_uris", [])),
-                ("sn", uint64(meta.get("edition_number", 1))),
-                ("st", uint64(meta.get("edition_total", 1))),
+                ("u", meta.uris),
+                ("h", meta.hash),
+                ("mu", meta.meta_uris),
+                ("lu", meta.license_uris),
+                ("sn", meta.edition_number),
+                ("st", meta.edition_total),
             ]
-            if "meta_hash" in meta and len(meta["meta_hash"]) > 0:
-                nft_metadata.append(("mh", hexstr_to_bytes(meta["meta_hash"])))
-            if "license_hash" in meta and len(meta["license_hash"]) > 0:
-                nft_metadata.append(("lh", hexstr_to_bytes(meta["license_hash"])))
+            if meta.meta_hash is not None:
+                nft_metadata.append(("mh", meta.meta_hash))
+            if meta.license_hash is not None:
+                nft_metadata.append(("lh", meta.license_hash))
             metadata_program = Program.to(nft_metadata)
             metadata_dict = {
                 "program": metadata_program,
-                "royalty_pc": royalty_percentage,
+                "royalty_pc": request.royalty_percentage,
                 "royalty_ph": royalty_puzhash,
             }
             metadata_list.append(metadata_dict)
-        target_address_list = request.get("target_list", None)
-        target_list = []
-        if target_address_list:
-            for target in target_address_list:
-                target_list.append(decode_puzzle_hash(target))
-        mint_number_start = request.get("mint_number_start", 1)
-        mint_total = request.get("mint_total", None)
-        xch_coin_list = request.get("xch_coins", None)
-        xch_coins = None
-        if xch_coin_list:
-            xch_coins = {Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list}
-        xch_change_target = request.get("xch_change_target", None)
-        if xch_change_target is not None:
-            if xch_change_target[:2] == "xch":
-                xch_change_ph = decode_puzzle_hash(xch_change_target)
+        target_list = [decode_puzzle_hash(target) for target in request.target_list]
+        if request.xch_change_target is not None:
+            if request.xch_change_target[:2] == "xch":
+                xch_change_ph = decode_puzzle_hash(request.xch_change_target)
             else:
-                xch_change_ph = bytes32.from_hexstr(xch_change_target)
+                xch_change_ph = bytes32.from_hexstr(request.xch_change_target)
         else:
             xch_change_ph = None
-        new_innerpuzhash = request.get("new_innerpuzhash", None)
-        new_p2_puzhash = request.get("new_p2_puzhash", None)
-        did_coin_dict = request.get("did_coin", None)
-        if did_coin_dict:
-            did_coin = Coin.from_json_dict(did_coin_dict)
-        else:
-            did_coin = None
-        did_lineage_parent_hex = request.get("did_lineage_parent", None)
-        if did_lineage_parent_hex:
-            did_lineage_parent = bytes32.from_hexstr(did_lineage_parent_hex)
-        else:
-            did_lineage_parent = None
-        mint_from_did = request.get("mint_from_did", False)
-        fee = uint64(request.get("fee", 0))
 
-        if mint_from_did:
+        if request.mint_from_did:
             await nft_wallet.mint_from_did(
                 metadata_list,
-                mint_number_start=mint_number_start,
-                mint_total=mint_total,
+                mint_number_start=request.mint_number_start,
+                mint_total=request.mint_total,
                 target_list=target_list,
-                xch_coins=xch_coins,
+                xch_coins=set(request.xch_coins) if request.xch_coins is not None else None,
                 xch_change_ph=xch_change_ph,
-                new_innerpuzhash=new_innerpuzhash,
-                new_p2_puzhash=new_p2_puzhash,
-                did_coin=did_coin,
-                did_lineage_parent=did_lineage_parent,
-                fee=fee,
+                new_innerpuzhash=request.new_innerpuzhash,
+                new_p2_puzhash=request.new_p2_puzhash,
+                did_coin=request.did_coin,
+                did_lineage_parent=request.did_lineage_parent,
+                fee=request.fee,
                 action_scope=action_scope,
                 extra_conditions=extra_conditions,
             )
         else:
             await nft_wallet.mint_from_xch(
                 metadata_list,
-                mint_number_start=mint_number_start,
-                mint_total=mint_total,
+                mint_number_start=request.mint_number_start,
+                mint_total=request.mint_total,
                 target_list=target_list,
-                xch_coins=xch_coins,
+                xch_coins=set(request.xch_coins) if request.xch_coins is not None else None,
                 xch_change_ph=xch_change_ph,
-                fee=fee,
+                fee=request.fee,
                 action_scope=action_scope,
                 extra_conditions=extra_conditions,
             )
@@ -3592,12 +3554,13 @@ class WalletRpcApi:
             if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                 nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
 
-        return {
-            "success": True,
-            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-            "nft_id_list": nft_id_list,
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will take care of the default values here
+        return NFTMintBulkResponse(
+            [],
+            [],
+            WalletSpendBundle([], G2Element()),
+            nft_id_list,
+        )
 
     async def get_coin_records(self, request: dict[str, Any]) -> EndpointResult:
         parsed_request = GetCoinRecords.from_json_dict(request)

@@ -72,6 +72,7 @@ from chia.rpc.wallet_request_types import (
     NFTGetWalletDID,
     NFTGetWalletDIDResponse,
     NFTGetWalletsWithDIDsResponse,
+    NFTMintBulk,
     NFTMintBulkResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
@@ -1081,47 +1082,16 @@ class WalletRpcClient(RpcClient):
 
     async def nft_mint_bulk(
         self,
-        wallet_id: int,
-        metadata_list: list[dict[str, Any]],
-        royalty_percentage: Optional[int],
-        royalty_address: Optional[str],
+        request: NFTMintBulk,
         tx_config: TXConfig,
-        target_list: Optional[list[str]] = None,
-        mint_number_start: Optional[int] = 1,
-        mint_total: Optional[int] = None,
-        xch_coins: Optional[list[dict[str, Any]]] = None,
-        xch_change_target: Optional[str] = None,
-        new_innerpuzhash: Optional[str] = None,
-        did_coin: Optional[dict[str, Any]] = None,
-        did_lineage_parent: Optional[str] = None,
-        mint_from_did: Optional[bool] = False,
-        fee: Optional[int] = 0,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = False,
     ) -> NFTMintBulkResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "metadata_list": metadata_list,
-            "target_list": target_list,
-            "royalty_percentage": royalty_percentage,
-            "royalty_address": royalty_address,
-            "mint_number_start": mint_number_start,
-            "mint_total": mint_total,
-            "xch_coins": xch_coins,
-            "xch_change_target": xch_change_target,
-            "new_innerpuzhash": new_innerpuzhash,
-            "did_coin": did_coin,
-            "did_lineage_parent": did_lineage_parent,
-            "mint_from_did": mint_from_did,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_mint_bulk", request)
-        return json_deserialize_with_clvm_streamable(response, NFTMintBulkResponse)
+        return NFTMintBulkResponse.from_json_dict(
+            await self.fetch(
+                "nft_mint_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def set_nft_did_bulk(
         self,

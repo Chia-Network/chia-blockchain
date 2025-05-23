@@ -4,7 +4,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Optional, TypeVar, final
 
-from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import dataclass_transform
@@ -878,6 +878,46 @@ class NFTAddURIResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
 
 
+# utility for NFTBulkMint
+@streamable
+@dataclass(frozen=True)
+class NFTMintMetadata(Streamable):
+    uris: list[str]
+    hash: bytes32
+    meta_uris: list[str] = field(default_factory=list)
+    license_uris: list[str] = field(default_factory=list)
+    edition_number: uint64 = uint64(1)
+    edition_total: uint64 = uint64(1)
+    meta_hash: Optional[bytes32] = None
+    license_hash: Optional[bytes32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTMintBulk(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    metadata_list: list[NFTMintMetadata] = field(default_factory=default_raise)
+    royalty_address: Optional[str] = None
+    royalty_percentage: Optional[uint16] = None
+    target_list: list[str] = field(default_factory=list)
+    mint_number_start: uint16 = uint16(1)
+    mint_total: Optional[uint16] = None
+    xch_coins: Optional[list[Coin]] = None
+    xch_change_target: Optional[str] = None
+    new_innerpuzhash: Optional[bytes32] = None
+    new_p2_puzhash: Optional[bytes32] = None
+    did_coin: Optional[Coin] = None
+    did_lineage_parent: Optional[bytes32] = None
+    mint_from_did: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTMintBulkResponse(TransactionEndpointResponse):
+    spend_bundle: WalletSpendBundle
+    nft_id_list: list[str]
+
+
 @streamable
 @dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):
@@ -1016,10 +1056,3 @@ class CancelOfferResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class CancelOffersResponse(TransactionEndpointResponse):
     pass
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTMintBulkResponse(TransactionEndpointResponse):
-    spend_bundle: WalletSpendBundle
-    nft_id_list: list[str]
