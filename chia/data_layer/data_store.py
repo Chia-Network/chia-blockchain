@@ -19,6 +19,7 @@ import anyio.to_thread
 import chia_rs.datalayer
 import zstd
 from chia_rs.datalayer import (
+    DeltaFileCache,
     DeltaReader,
     KeyAlreadyPresentError,
     KeyId,
@@ -1600,25 +1601,24 @@ class DataStore:
         store_id: bytes32,
         deltas_only: bool,
         merkle_blob: MerkleBlob,
-        hash_to_index: dict[bytes32, TreeIndex],
-        existing_hashes: set[bytes32],
+        delta_file_cache: DeltaFileCache,
         tree_nodes: list[SerializedNode],
     ) -> None:
         if deltas_only:
-            if node_hash in existing_hashes:
+            if delta_file_cache.seen_previous_hash(node_hash):
                 return
 
-        raw_index = hash_to_index[node_hash]
+        raw_index = delta_file_cache.get_index(node_hash)
         raw_node = merkle_blob.get_raw_node(raw_index)
 
         if isinstance(raw_node, chia_rs.datalayer.InternalNode):
             left_hash = merkle_blob.get_hash_at_index(raw_node.left)
             right_hash = merkle_blob.get_hash_at_index(raw_node.right)
             await self.get_nodes_for_file(
-                root, left_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
+                root, left_hash, store_id, deltas_only, merkle_blob, delta_file_cache, tree_nodes
             )
             await self.get_nodes_for_file(
-                root, right_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
+                root, right_hash, store_id, deltas_only, merkle_blob, delta_file_cache, tree_nodes
             )
             tree_nodes.append(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
         elif isinstance(raw_node, chia_rs.datalayer.LeafNode):
@@ -1667,19 +1667,22 @@ class DataStore:
         if node_hash == bytes32.zeros:
             return
 
+        delta_file_cache = DeltaFileCache()
+        with log_exceptions(log=log, message="Error while getting merkle blob"):
+            root_path = self.get_merkle_path(store_id=store_id, root_hash=root.node_hash)
+        delta_file_cache.load_hash_to_index(root_path)
         merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
-        hash_to_index = merkle_blob.get_hashes_indexes()
-        if root.generation == 0:
-            existing_hashes = set()
-        else:
+
+        if root.generation > 0:
             previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
-            previous_merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=previous_root.node_hash)
-            previous_hashes_indexes = previous_merkle_blob.get_hashes_indexes()
-            existing_hashes = {hash for hash in previous_hashes_indexes.keys()}
+            with log_exceptions(log=log, message="Error while getting previous merkle blob"):
+                previous_root_path = self.get_merkle_path(store_id=store_id, root_hash=previous_root.node_hash)
+            delta_file_cache.load_previous_hashes(previous_root_path)
+
         tree_nodes: list[SerializedNode] = []
 
         await self.get_nodes_for_file(
-            root, node_hash, store_id, deltas_only, merkle_blob, hash_to_index, existing_hashes, tree_nodes
+            root, node_hash, store_id, deltas_only, merkle_blob, delta_file_cache, tree_nodes
         )
         kv_ids = (
             KeyOrValueId.from_bytes(raw_id)
