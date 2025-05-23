@@ -1018,7 +1018,7 @@ class WalletRpcClient(RpcClient):
     ) -> NFTAddURIResponse:
         return NFTAddURIResponse.from_json_dict(
             await self.fetch(
-                "nft_ad_uri", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+                "nft_add_uri", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 
