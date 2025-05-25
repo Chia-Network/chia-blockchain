@@ -20,13 +20,13 @@ from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
+from chia.consensus.condition_tools import conditions_for_solution
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.condition_tools import conditions_for_solution
 from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD

@@ -8,11 +8,11 @@ from chia_puzzles_py.programs import CAT_PUZZLE, CAT_PUZZLE_HASH
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 
+from chia.consensus.condition_tools import conditions_dict_for_solution
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash

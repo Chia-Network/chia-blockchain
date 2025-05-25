@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey
 
 from chia._tests.core.make_block_generator import GROUP_ORDER, int_to_public_key
+from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.simulator.block_tools import test_constants
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 
 
 @dataclass
