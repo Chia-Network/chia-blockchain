@@ -81,6 +81,7 @@ from chia.simulator.ssl_certs import (
     get_next_nodes_certs_and_keys,
     get_next_private_ca_cert_and_key,
 )
+from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
 from chia.ssl.ssl_check import fix_ssl
@@ -113,7 +114,6 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
-from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
