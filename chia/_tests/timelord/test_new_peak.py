@@ -520,6 +520,7 @@ class TestNewPeak:
                     transaction_data=sb,
                     skip_overflow=True,
                 )[-1]
+                assert block_1_diffrent_foliage.header_hash != block_1.header_hash
                 timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
                     block_1_diffrent_foliage.reward_chain_block.get_unfinished(),
                     uint64(block_1_diffrent_foliage.weight - blocks[-1].weight),
