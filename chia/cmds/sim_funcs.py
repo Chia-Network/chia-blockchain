@@ -14,7 +14,6 @@ from chia_rs.sized_ints import uint32
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.start_funcs import async_start
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import set_peer_info
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
@@ -29,6 +28,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
     master_sk_to_wallet_sk_unhardened,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 
 def get_ph_from_fingerprint(fingerprint: int, key_id: int = 1) -> bytes32:
@@ -37,7 +37,7 @@ def get_ph_from_fingerprint(fingerprint: int, key_id: int = 1) -> bytes32:
         raise Exception("Fingerprint not found")
     private_key = priv_key_and_entropy[0]
     sk_for_wallet_id: PrivateKey = master_sk_to_wallet_sk(private_key, uint32(key_id))
-    puzzle_hash: bytes32 = create_puzzlehash_for_pk(sk_for_wallet_id.get_g1())
+    puzzle_hash: bytes32 = puzzle_hash_for_pk(sk_for_wallet_id.get_g1())
     return puzzle_hash
 
 
@@ -154,7 +154,7 @@ def display_key_info(fingerprint: int, prefix: str) -> None:
     print("Farmer public key (m/12381/8444/0/0):", master_sk_to_farmer_sk(sk).get_g1())
     print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
     first_wallet_sk: PrivateKey = master_sk_to_wallet_sk_unhardened(sk, uint32(0))
-    wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
+    wallet_address: str = encode_puzzle_hash(puzzle_hash_for_pk(first_wallet_sk.get_g1()), prefix)
     print(f"First wallet address: {wallet_address}")
     assert seed is not None
     print("Master private key (m):", bytes(sk).hex())
