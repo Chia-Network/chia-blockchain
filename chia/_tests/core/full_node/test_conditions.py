@@ -17,6 +17,7 @@ from clvm_tools.binutils import assemble
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.full_node.ram_db import create_ram_blockchain
+from chia.consensus.condition_tools import agg_sig_additional_data
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.program import Program
@@ -24,7 +25,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.condition_tools import agg_sig_additional_data
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 

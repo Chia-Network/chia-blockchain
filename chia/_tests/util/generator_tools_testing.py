@@ -6,9 +6,9 @@ from chia_rs.sized_ints import uint32
 
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
-from chia.util.generator_tools import tx_removals_and_additions
 
 
 def run_and_get_removals_and_additions(
