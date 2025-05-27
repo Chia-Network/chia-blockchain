@@ -44,7 +44,7 @@ SerializedProgram.from_program = from_program
 
 def uncurry(self) -> tuple[Program, Program]:
     result = self.uncurry_rust()
-    return Program(result[0], result[1])
+    return (Program(result[0]), Program(result[1]))
 
 
 SerializedProgram.uncurry = uncurry
