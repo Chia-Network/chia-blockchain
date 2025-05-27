@@ -13,10 +13,10 @@ from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_util import PluginRemote
 from chia.data_layer.util.plugin import load_plugin_configurations
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.aliases import DataLayerService, WalletService
-from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl

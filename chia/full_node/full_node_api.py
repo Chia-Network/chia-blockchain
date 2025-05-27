@@ -48,6 +48,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
@@ -60,7 +61,6 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
 )
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo

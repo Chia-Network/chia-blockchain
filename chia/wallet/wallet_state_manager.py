@@ -28,8 +28,8 @@ from chia.pools.pool_puzzles import (
     solution_to_pool_state,
 )
 from chia.pools.pool_wallet import PoolWallet
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin

@@ -25,6 +25,7 @@ from chia.protocols.harvester_protocol import (
     SignatureRequestSourceData,
     SigningDataKind,
 )
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.pool_protocol import (
     PoolErrorCode,
     PostPartialPayload,
@@ -33,7 +34,6 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt

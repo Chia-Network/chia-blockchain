@@ -18,9 +18,9 @@ from chia_rs.sized_ints import uint16, uint64
 
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo, UnresolvedPeerInfo

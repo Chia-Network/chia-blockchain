@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.types.peer_info import UnresolvedPeerInfo
 
 log = logging.getLogger(__name__)

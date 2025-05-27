@@ -13,9 +13,9 @@ from chia_rs.sized_ints import uint8, uint16, uint64
 import chia.server.server
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import full_node_protocol
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, Handshake
-from chia.server.outbound_message import Message, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
