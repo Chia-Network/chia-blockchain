@@ -30,6 +30,7 @@ from chia.rpc.wallet_request_types import (
     NFTTransferNFT,
     NFTWalletWithDID,
 )
+from chia.rpc.wallet_rpc_api import MAX_NFT_CHUNK_SIZE
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
@@ -526,6 +527,19 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
+    # Test an error case
+    with pytest.raises(ResponseFailureError, match="The NFT doesn't support setting a DID."):
+        await env_1.rpc_client.set_nft_did(
+            NFTSetNFTDID(
+                wallet_id=uint32(env_1.wallet_aliases["nft"]),
+                did_id=None,
+                nft_coin_id=(await env_1.rpc_client.list_nfts(NFTGetNFTs(uint32(env_1.wallet_aliases["nft"]))))
+                .nft_list[0]
+                .nft_coin_id,
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
@@ -853,6 +867,8 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     assert res["wallet_id"] != nft_wallet.id()
     nft_wallet_p2_puzzle = res["wallet_id"]
 
+    with pytest.raises(ResponseFailureError, match="Cannot find a NFT wallet DID"):
+        await env.rpc_client.get_nft_wallet_by_did(NFTGetByDID(did_id=encode_puzzle_hash(bytes32.zeros, "did")))
     wallet_by_did_response = await env.rpc_client.get_nft_wallet_by_did(NFTGetByDID(did_id=hmr_did_id))
     assert nft_wallet.id() == wallet_by_did_response.wallet_id
 
@@ -1298,6 +1314,16 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     # Transfer NFT, wallet will be deleted
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+    mint_resp_reference = await env_0.rpc_client.transfer_nft(
+        NFTTransferNFT(
+            wallet_id=uint32(env_0.wallet_aliases["nft"]),
+            nft_coin_id=encode_puzzle_hash(coin.launcher_id, "nft"),  # difference
+            target_address=encode_puzzle_hash(wallet_1_ph, "xch"),
+            fee=uint64(fee),
+            push=False,  # difference
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
     mint_resp = await env_0.rpc_client.transfer_nft(
         NFTTransferNFT(
             wallet_id=uint32(env_0.wallet_aliases["nft"]),
@@ -1308,6 +1334,7 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
         ),
         tx_config=wallet_environments.tx_config,
     )
+    assert mint_resp_reference.spend_bundle == mint_resp.spend_bundle
     assert len(compute_memos(mint_resp.spend_bundle)) > 0
 
     await wallet_environments.process_pending_states(
@@ -1850,10 +1877,19 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
     assert nft2.owner_did is None
     nft_coin_list = [
         NFTCoin(wallet_id=uint32(env.wallet_aliases["nft_w_did"]), nft_coin_id=nft1.nft_coin_id.hex()),
-        NFTCoin(wallet_id=uint32(env.wallet_aliases["nft_w_did"]), nft_coin_id=nft12.nft_coin_id.hex()),
+        NFTCoin(
+            wallet_id=uint32(env.wallet_aliases["nft_w_did"]), nft_coin_id=encode_puzzle_hash(nft12.launcher_id, "nft")
+        ),
         NFTCoin(wallet_id=uint32(env.wallet_aliases["nft_no_did"]), nft_coin_id=nft2.nft_coin_id.hex()),
     ]
     fee = uint64(1000)
+    with pytest.raises(ResponseFailureError, match="You can only set"):
+        await env.rpc_client.set_nft_did_bulk(
+            NFTSetDIDBulk(
+                did_id=hmr_did_id, nft_coin_list=[nft_coin_list[0]] * (MAX_NFT_CHUNK_SIZE + 1), fee=fee, push=True
+            ),
+            wallet_environments.tx_config,
+        )
     set_did_bulk_resp = await env.rpc_client.set_nft_did_bulk(
         NFTSetDIDBulk(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=fee, push=True),
         wallet_environments.tx_config,
@@ -2177,7 +2213,10 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
     assert nft2.owner_did is None
     nft_coin_list = [
         NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]), nft_coin_id=nft1.nft_coin_id.hex()),
-        NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]), nft_coin_id=nft12.nft_coin_id.hex()),
+        NFTCoin(
+            wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]),
+            nft_coin_id=encode_puzzle_hash(nft12.launcher_id, "nft"),
+        ),
         NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_no_did"]), nft_coin_id=nft2.nft_coin_id.hex()),
     ]
 
@@ -2185,6 +2224,11 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
         wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     fee = uint64(1000)
     address = encode_puzzle_hash(wallet_1_ph, AddressType.XCH.hrp(env_1.node.config))
+    with pytest.raises(ResponseFailureError, match="You can only transfer"):
+        await env_0.rpc_client.transfer_nft_bulk(
+            NFTTransferBulk(target_address=address, nft_coin_list=[nft_coin_list[0]] * (MAX_NFT_CHUNK_SIZE + 1)),
+            wallet_environments.tx_config,
+        )
     bulk_transfer_resp = await env_0.rpc_client.transfer_nft_bulk(
         NFTTransferBulk(target_address=address, nft_coin_list=nft_coin_list, fee=fee, push=True),
         wallet_environments.tx_config,

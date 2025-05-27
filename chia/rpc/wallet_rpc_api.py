@@ -3034,18 +3034,14 @@ class WalletRpcApi:
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         if request.royalty_amount == 10000:
             raise ValueError("Royalty percentage cannot be 100%")
-        if isinstance(request.royalty_address, str):
+        if request.royalty_address is not None:
             royalty_puzhash = decode_puzzle_hash(request.royalty_address)
-        elif request.royalty_address is None:
+        else:
             royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
-        else:
-            royalty_puzhash = request.royalty_address
-        if isinstance(request.target_address, str):
+        if request.target_address is not None:
             target_puzhash = decode_puzzle_hash(request.target_address)
-        elif request.target_address is None:
-            target_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         else:
-            target_puzhash = request.target_address
+            target_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
         metadata_list = [
             ("u", request.uris),
             ("h", request.hash),

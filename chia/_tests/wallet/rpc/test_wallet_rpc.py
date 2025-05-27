@@ -1651,6 +1651,8 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     # Test with the hex version of nft_id
     nft_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
+    with pytest.raises(ResponseFailureError, match="Invalid Coin ID format for 'coin_id'"):
+        await wallet_1_rpc.get_nft_info(NFTGetInfo("error"))
     nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
     assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
     # Test with the bech32m version of nft_id
@@ -1683,6 +1685,8 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     assert nft_info_1.nft_coin_id == (await nft_wallet_1.get_current_nfts())[0].coin.name()
     # Cross-check NFT
     nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs(nft_wallet_id_1))).nft_list[0]
+    assert nft_info_1 == nft_info_2
+    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs())).nft_list[0]
     assert nft_info_1 == nft_info_2
 
     # Test royalty endpoint
