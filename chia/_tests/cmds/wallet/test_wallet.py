@@ -770,6 +770,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     inst_rpc_client = MakeOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    offer_cat_id = get_bytes32(4)
     request_cat_id = get_bytes32(2)
     request_nft_id = get_bytes32(2)
     request_nft_addr = encode_puzzle_hash(request_nft_id, "nft")
@@ -785,6 +786,8 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "1:10",
         "--offer",
         "3:100",
+        "--offer",
+        f"{offer_cat_id.hex()}:100",
         "--request",
         f"{request_cat_id.hex()}:10",
         "--request",
@@ -795,7 +798,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "150",
     ]
     assert_list = [
-        "OFFERING:\n  - 10 XCH (10000000000000 mojos)\n  - 100 test3 (100000 mojos)",
+        "OFFERING:\n  - 10 XCH (10000000000000 mojos)\n  - 100 test3 (100000 mojos)\n  - 100 test4 (100000 mojos)",
         "REQUESTING:\n  - 10 test2 (10000 mojos)\n"
         "  - 1 nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft (1 mojos)",
         "Including Fees: 0.5 XCH, 500000000000 mojos",
@@ -804,7 +807,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     run_cli_command_and_assert(capsys, root_dir, command_args[:-8], ["without --override"])
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "cat_asset_id_to_name": [(request_cat_id,)],
+        "cat_asset_id_to_name": [(offer_cat_id,), (request_cat_id,)],
         "get_nft_info": [(request_nft_id.hex(), True)],
         "get_cat_name": [(3,)],
         "nft_calculate_royalties": [
@@ -826,6 +829,10 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                             "test3",
                             uint64(100000),
                         ),
+                        FungibleAsset(
+                            "test4",
+                            uint64(100000),
+                        ),
                     ],
                 ),
             )
@@ -835,6 +842,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 {
                     1: -10000000000000,
                     3: -100000,
+                    "0404040404040404040404040404040404040404040404040404040404040404": -100000,
                     "0202020202020202020202020202020202020202020202020202020202020202": 10000,
                     "0101010101010101010101010101010101010101010101010101010101010101": 1,
                 },

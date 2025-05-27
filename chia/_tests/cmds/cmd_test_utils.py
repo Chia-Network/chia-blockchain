@@ -13,7 +13,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
-from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX
+from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX, get_bytes32
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
 from chia.consensus.block_record import BlockRecord
@@ -158,12 +158,10 @@ class TestWalletRpcClient(TestRpcClient):
         if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
         """
         self.add_to_log("cat_asset_id_to_name", (asset_id,))
-        if asset_id == bytes32([1] * 32):
-            return uint32(2), "test1"
-        elif asset_id == bytes32([2] * 32):
-            return uint32(3), "test2"
-        else:
-            return None
+        for i in range(0, 256):
+            if asset_id == get_bytes32(i):
+                return uint32(i + 1), "test" + str(i)
+        return None
 
     async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
         self.add_to_log("get_nft_info", (request.coin_id, request.latest))
