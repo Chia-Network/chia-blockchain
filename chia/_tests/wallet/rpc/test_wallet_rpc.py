@@ -1686,6 +1686,40 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     assert nft_info_1 == nft_info_2
 
     # Test royalty endpoint
+    with pytest.raises(ValueError, match="Multiple royalty assets with same name specified"):
+        await wallet_1_rpc.nft_calculate_royalties(
+            NFTCalculateRoyalties(
+                [
+                    RoyaltyAsset(
+                        "my asset",
+                        "my address",
+                        uint16(10000),
+                    ),
+                    RoyaltyAsset(
+                        "my asset",
+                        "some other address",
+                        uint16(11111),
+                    ),
+                ],
+                [],
+            )
+        )
+    with pytest.raises(ValueError, match="Multiple fungible assets with same name specified"):
+        await wallet_1_rpc.nft_calculate_royalties(
+            NFTCalculateRoyalties(
+                [],
+                [
+                    FungibleAsset(
+                        None,
+                        uint64(10000),
+                    ),
+                    FungibleAsset(
+                        None,
+                        uint64(11111),
+                    ),
+                ],
+            )
+        )
     royalty_summary = await wallet_1_rpc.nft_calculate_royalties(
         NFTCalculateRoyalties(
             [

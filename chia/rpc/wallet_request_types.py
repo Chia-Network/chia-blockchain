@@ -447,7 +447,7 @@ class NFTCalculateRoyalties(Streamable):
     def __post_init__(self) -> None:
         if len(set(a.asset for a in self.royalty_assets)) != len(self.royalty_assets):
             raise ValueError("Multiple royalty assets with same name specified")
-        if len(set(a.asset for a in self.royalty_assets)) != len(self.royalty_assets):
+        if len(set(a.asset for a in self.fungible_assets)) != len(self.fungible_assets):
             raise ValueError("Multiple fungible assets with same name specified")
 
 
