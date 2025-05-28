@@ -53,8 +53,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality_v1,
-    calculate_phase_out,
+    calculate_iterations_quality,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
@@ -83,12 +82,13 @@ from chia.simulator.ssl_certs import (
     get_next_nodes_certs_and_keys,
     get_next_private_ca_cert_and_key,
 )
+from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
 from chia.ssl.ssl_check import fix_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
+from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
@@ -114,7 +114,6 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
-from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
@@ -155,7 +154,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     ret: list[Coin] = []
     for cs in sb.coin_spends:
         parent_id = cs.coin.name()
-        _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
+        _, r = run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)
         for cond in Program.to(r).as_iter():
             atoms = cond.as_iter()
             op = next(atoms).atom
@@ -177,7 +176,7 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
 
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
-        cost, result = generator._run(INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
+        cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -186,13 +185,13 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
             puzzle = spend.at("rf")
             solution = spend.at("rrrf")
 
-            cost, result = puzzle._run(INFINITE_COST, DEFAULT_FLAGS, solution)
+            cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(result)
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
+        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
 
         for res in result.first().as_iter():
             # each condition item is:
@@ -1501,13 +1500,14 @@ class BlockTools:
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
-                    required_iters = calculate_iterations_quality_v1(
+                    required_iters = calculate_iterations_quality(
                         constants,
                         quality_str,
                         plot_info.prover.get_size(),
                         difficulty,
                         signage_point,
-                        calculate_phase_out(constants, sub_slot_iters, prev_transaction_b_height),
+                        sub_slot_iters,
+                        prev_transaction_b_height,
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)

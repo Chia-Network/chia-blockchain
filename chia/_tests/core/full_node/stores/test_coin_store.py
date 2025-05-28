@@ -19,6 +19,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -28,7 +29,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_item import UnspentLineageInfo
-from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 
 constants = test_constants

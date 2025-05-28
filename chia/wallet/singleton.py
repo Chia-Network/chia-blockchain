@@ -12,7 +12,7 @@ from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, uncurry
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.curry_and_treehash import (
@@ -37,7 +37,7 @@ def get_inner_puzzle_from_singleton(puzzle: Union[Program, SerializedProgram]) -
     :param puzzle: Singleton puzzle
     :return: Inner puzzle
     """
-    r = puzzle.uncurry()
+    r = uncurry(puzzle)
     if r is None:
         return None
     inner_f, args = r
@@ -53,7 +53,7 @@ def get_singleton_id_from_puzzle(puzzle: Union[Program, SerializedProgram]) -> O
     :param puzzle: Singleton puzzle
     :return: Inner puzzle
     """
-    r = puzzle.uncurry()
+    r = uncurry(puzzle)
     if r is None:
         return None  # pragma: no cover
     inner_f, args = r

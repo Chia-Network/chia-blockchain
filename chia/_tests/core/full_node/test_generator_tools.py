@@ -4,8 +4,8 @@ from chia_rs import SpendBundleConditions, SpendConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.types.blockchain_format.coin import Coin
-from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]

@@ -15,12 +15,12 @@ from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.condition_tools import conditions_for_solution
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
-from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)

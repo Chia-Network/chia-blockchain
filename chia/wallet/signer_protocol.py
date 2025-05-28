@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin as _Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.streamable import Streamable
 from chia.wallet.util.clvm_streamable import clvm_streamable
 
@@ -39,8 +38,8 @@ class Spend(Streamable):
                 coin_spend.coin.puzzle_hash,
                 uint64(coin_spend.coin.amount),
             ),
-            coin_spend.puzzle_reveal.to_program(),
-            coin_spend.solution.to_program(),
+            Program.from_serialized(coin_spend.puzzle_reveal),
+            Program.from_serialized(coin_spend.solution),
         )
 
     def as_coin_spend(self) -> CoinSpend:
@@ -50,8 +49,8 @@ class Spend(Streamable):
                 self.coin.puzzle_hash,
                 self.coin.amount,
             ),
-            SerializedProgram.from_program(self.puzzle),
-            SerializedProgram.from_program(self.solution),
+            self.puzzle.to_serialized(),
+            self.solution.to_serialized(),
         )
 
 

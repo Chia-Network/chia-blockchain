@@ -42,7 +42,6 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     generate_taproot_sk,
     get_plot_id,
-    get_typed_plot_size,
     verify_and_get_quality_string,
 )
 
@@ -110,10 +109,14 @@ class FarmerAPI:
 
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
+            # TODO: support v2 plots after the hard fork
+            pos_size_v1 = new_proof_of_space.proof.size_v1()
+            assert pos_size_v1 is not None
+
             required_iters: uint64 = calculate_iterations_quality(
                 self.farmer.constants,
                 computed_quality_string,
-                get_typed_plot_size(new_proof_of_space.proof),
+                new_proof_of_space.proof.size(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
                 sp.sub_slot_iters,
@@ -219,10 +222,14 @@ class FarmerAPI:
                     )
                     return
 
+                # TODO: support v2 plots
+                pos_size_v1 = new_proof_of_space.proof.size_v1()
+                assert pos_size_v1 is not None
+
                 required_iters = calculate_iterations_quality(
                     self.farmer.constants,
                     computed_quality_string,
-                    get_typed_plot_size(new_proof_of_space.proof),
+                    new_proof_of_space.proof.size(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
                     sp.sub_slot_iters,

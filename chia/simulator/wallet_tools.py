@@ -7,12 +7,16 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes, int_to_bytes
 
+from chia.consensus.condition_tools import (
+    agg_sig_additional_data,
+    conditions_dict_for_solution,
+    make_aggsig_final_message,
+)
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.condition_tools import agg_sig_additional_data, conditions_dict_for_solution, make_aggsig_final_message
 from chia.util.hash import std_hash
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
@@ -158,19 +162,9 @@ class WalletTool:
                     ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash])
                 )
                 main_solution = self.make_solution(condition_dic)
-                spends.append(
-                    CoinSpend(
-                        coin, SerializedProgram.from_program(puzzle), SerializedProgram.from_program(main_solution)
-                    )
-                )
+                spends.append(make_spend(coin, puzzle, main_solution))
             else:
-                spends.append(
-                    CoinSpend(
-                        coin,
-                        SerializedProgram.from_program(puzzle),
-                        SerializedProgram.from_program(self.make_solution(secondary_coins_cond_dic)),
-                    )
-                )
+                spends.append(make_spend(coin, puzzle, self.make_solution(secondary_coins_cond_dic)))
         return spends
 
     def sign_transaction(self, coin_spends: list[CoinSpend]) -> SpendBundle:

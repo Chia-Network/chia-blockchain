@@ -313,7 +313,7 @@ class CRCAT:
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
         lineage_proof = LineageProof.from_program(
-            spend.solution.to_program().at("rf"),
+            Program.from_serialized(spend.solution).at("rf"),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         )
         return CRCAT(
@@ -339,8 +339,8 @@ class CRCAT:
         as the spend output a remark condition that was (REMARK authorized_providers proofs_checker)
         """
         coin_name: bytes32 = parent_spend.coin.name()
-        puzzle: Program = parent_spend.puzzle_reveal.to_program()
-        solution: Program = parent_spend.solution.to_program()
+        puzzle = Program.from_serialized(parent_spend.puzzle_reveal)
+        solution = Program.from_serialized(parent_spend.solution)
 
         # Get info by uncurrying
         _, tail_hash_as_prog, potential_cr_layer = puzzle.uncurry()[1].as_iter()
@@ -610,16 +610,16 @@ class CRCATSpend:
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:  # pragma: no cover
         inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal))
-        inner_solution: Program = CRCAT.get_inner_solution(spend.solution.to_program())
+        inner_solution: Program = CRCAT.get_inner_solution(Program.from_serialized(spend.solution))
         inner_conditions: Program = inner_puzzle.run(inner_solution)
         return cls(
             CRCAT.get_current_from_coin_spend(spend),
             inner_puzzle,
             inner_solution,
             CRCAT.get_next_from_coin_spend(spend, conditions=inner_conditions),
-            spend.solution.to_program().at("f").at("rrrrf") == Program.to(None),
+            Program.from_serialized(spend.solution).at("f").at("rrrrf") == Program.to(None),
             list(inner_conditions.as_iter()),
-            spend.solution.to_program().at("f").at("f"),
+            Program.from_serialized(spend.solution).at("f").at("f"),
         )
 
 

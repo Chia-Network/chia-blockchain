@@ -1,18 +1,13 @@
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
-from chia_rs import ConsensusConstants, ProofOfSpace
+from chia_rs import ConsensusConstants, PlotSize, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.pos_quality import _expected_plot_size
-from chia.types.blockchain_format.proof_of_space import (
-    PlotSizeV1,
-    PlotSizeV2,
-    get_typed_plot_size,
-    verify_and_get_quality_string,
-)
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.util.hash import std_hash
 
 FADE_OUT_PERIOD = uint32(256)  # TODO: add to chia_rs and get from constants
@@ -70,31 +65,6 @@ def calculate_ip_iters(
     return uint64((sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters)
 
 
-def calculate_iterations_quality_v1(
-    constants: ConsensusConstants,
-    quality_string: bytes32,
-    size: PlotSizeV1,
-    difficulty: uint64,
-    cc_sp_output_hash: bytes32,
-    phase_out: uint64,
-) -> uint64:
-    """
-    Calculates the number of iterations from the quality. This is derives as the difficulty times the constant factor
-    times a random number between 0 and 1 (based on quality string), divided by plot size.
-    """
-    sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
-    iters = uint64(
-        (
-            int(difficulty)
-            * int(constants.DIFFICULTY_CONSTANT_FACTOR)
-            * int.from_bytes(sp_quality_string, "big", signed=False)
-            // (int(pow(2, 256)) * int(_expected_plot_size(size.value)))
-        )
-        + phase_out
-    )
-    return max(iters, uint64(1))
-
-
 def validate_pospace_and_get_reuierd_iters(
     constants: ConsensusConstants,
     proof_of_space: ProofOfSpace,
@@ -114,7 +84,7 @@ def validate_pospace_and_get_reuierd_iters(
     return calculate_iterations_quality(
         constants,
         q_str,
-        get_typed_plot_size(proof_of_space),
+        proof_of_space.size(),
         difficulty,
         cc_sp_hash,
         sub_slot_iters,
@@ -125,7 +95,7 @@ def validate_pospace_and_get_reuierd_iters(
 def calculate_iterations_quality(
     constants: ConsensusConstants,
     quality_string: bytes32,
-    size: Union[PlotSizeV1, PlotSizeV2],
+    size: PlotSize,
     difficulty: uint64,
     cc_sp_output_hash: bytes32,
     ssi: uint64,
@@ -135,15 +105,20 @@ def calculate_iterations_quality(
     Calculates the number of iterations from the quality. This is derives as the difficulty times the constant factor
     times a random number between 0 and 1 (based on quality string), divided by plot size.
     """
-    if isinstance(size, PlotSizeV1):
-        return calculate_iterations_quality_v1(
-            constants=constants,
-            quality_string=quality_string,
-            size=size,
-            difficulty=difficulty,
-            cc_sp_output_hash=cc_sp_output_hash,
-            phase_out=calculate_phase_out(constants, ssi, prev_transaction_block_height),
+    if size.size_v1 is not None:
+        assert size.size_v2 is None
+        sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
+        phase_out = calculate_phase_out(constants, ssi, prev_transaction_block_height)
+        iters = uint64(
+            (
+                int(difficulty)
+                * int(constants.DIFFICULTY_CONSTANT_FACTOR)
+                * int.from_bytes(sp_quality_string, "big", signed=False)
+                // (int(pow(2, 256)) * int(_expected_plot_size(size.size_v1)))
+            )
+            + phase_out
         )
+        return max(iters, uint64(1))
     else:
-        assert isinstance(size, PlotSizeV2)
+        assert size.size_v2 is not None
         assert False, "V2 plots not supported yet"

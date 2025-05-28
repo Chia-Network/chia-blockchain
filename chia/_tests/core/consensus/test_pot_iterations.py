@@ -7,7 +7,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality_v1,
+    calculate_iterations_quality,
     calculate_sp_iters,
     is_overflow_block,
 )
@@ -107,7 +107,7 @@ class TestPotIterations:
                     for farmer_index in range(count):
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
                         # todo: add v2
-                        required_iters = calculate_iterations_quality_v1(
+                        required_iters = calculate_iterations_quality(
                             constants, quality, k, difficulty, sp_hash, uint32(0)
                         )
                         if required_iters < sp_interval_iters:

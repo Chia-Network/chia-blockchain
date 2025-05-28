@@ -27,6 +27,7 @@ from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
 from chia.consensus.get_block_challenge import get_block_challenge, prev_tx_block
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import (
@@ -37,7 +38,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -130,11 +130,10 @@ def _pre_validate_block(
             removals_and_additions = ([], [])
 
         assert conds is None or conds.validated_signature is True
-        header_block = get_block_header(block, removals_and_additions)
         required_iters, error = validate_finished_header_block(
             constants,
             blockchain,
-            header_block,
+            get_block_header(block, removals_and_additions),
             True,  # check_filter
             expected_vs,
         )
