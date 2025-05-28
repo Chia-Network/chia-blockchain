@@ -666,12 +666,14 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
     assert_list = [f"Successfully renamed test1 with wallet_id 2 on key {FINGERPRINT} to examplecat"]
     other_assert_list = [f"Successfully added examplecat with wallet id 3 on key {FINGERPRINT}"]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "--asset-id", get_bytes32(1).hex()], assert_list)
-    run_cli_command_and_assert(capsys, root_dir, [*command_args, "--asset-id", get_bytes32(3).hex()], other_assert_list)
+    run_cli_command_and_assert(
+        capsys, root_dir, [*command_args, "--asset-id", bytes32([1, 2] * 16).hex()], other_assert_list
+    )
     # these are various things that should be in the output
 
     expected_calls: logType = {
-        "cat_asset_id_to_name": [(get_bytes32(1),), (get_bytes32(3),)],
-        "create_wallet_for_existing_cat": [(get_bytes32(3),)],
+        "cat_asset_id_to_name": [(get_bytes32(1),), (bytes32([1, 2] * 16),)],
+        "create_wallet_for_existing_cat": [(bytes32([1, 2] * 16),)],
         "set_cat_name": [(2, "examplecat"), (3, "examplecat")],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
