@@ -1329,7 +1329,7 @@ def _validate_pospace_recent_chain(
         return None
     # TODO: support v2 plots
     pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
-    assert pos_size_v1 is not None
+    assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
     required_iters = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -1383,7 +1383,7 @@ def __validate_pospace(
         return None
     # TODO: support v2 plots
     pos_size_v1 = sub_slot_data.proof_of_space.size_v1()
-    assert pos_size_v1 is not None
+    assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
     return calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,

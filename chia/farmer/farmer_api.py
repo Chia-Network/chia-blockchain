@@ -111,7 +111,7 @@ class FarmerAPI:
 
             # TODO: support v2 plots after the hard fork
             pos_size_v1 = new_proof_of_space.proof.size_v1()
-            assert pos_size_v1 is not None
+            assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
             required_iters: uint64 = calculate_iterations_quality(
                 self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -222,7 +222,7 @@ class FarmerAPI:
 
                 # TODO: support v2 plots
                 pos_size_v1 = new_proof_of_space.proof.size_v1()
-                assert pos_size_v1 is not None
+                assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
                 required_iters = calculate_iterations_quality(
                     self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,

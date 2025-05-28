@@ -37,7 +37,7 @@ class Program(SExp):
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_serialized(cls: type[T_Program], prg: SerializedProgram) -> Program:
+    def from_serialized(cls: type[T_Program], prg: SerializedProgram) -> T_Program:
         """
         Convert the SerializedProgram to a Program object.
         """
