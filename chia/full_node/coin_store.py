@@ -84,10 +84,9 @@ class CoinStore:
         included_reward_coins: Collection[Coin],
         tx_additions: Collection[Coin],
         tx_removals: list[bytes32],
-    ) -> list[CoinRecord]:
+    ) -> None:
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
-        Returns a list of the CoinRecords that were added by this block
         """
 
         start = time.monotonic()
@@ -129,8 +128,6 @@ class CoinStore:
             + f"{len(tx_removals)} removals to the coin store. Make sure "
             + "blockchain database is on a fast drive",
         )
-
-        return additions
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
