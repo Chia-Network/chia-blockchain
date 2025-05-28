@@ -23,7 +23,6 @@ depends_on = [
     "chia.types",
     "chia.util",
     { path = "chia.full_node", deprecated = false },
-    { path = "chia.wallet", deprecated = false },
 ]
 
 [[modules]]
