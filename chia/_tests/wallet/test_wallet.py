@@ -530,7 +530,11 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -663,7 +667,11 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_1.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
