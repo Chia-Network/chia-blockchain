@@ -18,6 +18,7 @@ from chia_rs.sized_ints import uint16
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
@@ -30,7 +31,6 @@ from chia.server.aliases import (
     TimelordService,
     WalletService,
 )
-from chia.server.outbound_message import NodeType
 from chia.server.resolve_peer_info import set_peer_info
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_farmer import create_farmer_service

@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, ClassVar, cast
 from chia_rs import RespondToPhUpdates
 
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
+from chia.protocols.outbound_message import NodeType
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err

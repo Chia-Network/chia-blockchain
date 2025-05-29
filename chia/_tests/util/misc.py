@@ -38,9 +38,9 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
+from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
-from chia.server.outbound_message import Message
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.network import WebServer

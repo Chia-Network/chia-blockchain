@@ -17,10 +17,10 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool import MempoolRemoveReason
 from chia.protocols import wallet_protocol
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.aliases import WalletService
-from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator import simulator_protocol
 from chia.simulator.block_tools import BlockTools

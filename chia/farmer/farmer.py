@@ -23,6 +23,7 @@ from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_url
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
     ErrorResponse,
@@ -36,7 +37,6 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt

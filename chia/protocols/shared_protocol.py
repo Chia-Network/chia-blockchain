@@ -6,7 +6,7 @@ from typing import Optional
 
 from chia_rs.sized_ints import int16, uint8, uint16
 
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.util.streamable import Streamable, streamable
 
 protocol_version = {

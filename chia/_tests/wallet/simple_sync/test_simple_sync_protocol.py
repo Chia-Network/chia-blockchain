@@ -14,9 +14,9 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates
-from chia.server.outbound_message import Message, NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode

@@ -17,7 +17,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
-from chia.server.outbound_message import Message
+from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from chia.util.lru_cache import LRUCache
