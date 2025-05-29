@@ -726,7 +726,9 @@ class FullNodeAPI:
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
-                next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
+                next_sub_slot_iters = self.full_node.blockchain.get_next_sub_slot_iters_and_difficulty(
+                    peak.header_hash, True
+                )[0]
                 sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
                 assert sub_slots_for_peak is not None
                 ip_sub_slot: Optional[EndOfSubSlotBundle] = sub_slots_for_peak[1]
