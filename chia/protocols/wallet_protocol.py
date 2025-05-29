@@ -9,7 +9,7 @@ from chia_rs import HeaderBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia.full_node.fee_estimate import FeeEstimateGroup
+from chia.protocols.fee_estimate import FeeEstimateGroup
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.streamable import Streamable, streamable

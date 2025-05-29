@@ -132,8 +132,16 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 )
                 new_final_bundle = WalletSpendBundle([new_fake_spend, graftroot_spend], G2Element())
                 result = await sim_client.push_tx(new_final_bundle)
-                assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+
+                # TODO: This test probably needs to be updated
+                # The original version of this test made sure we return the
+                # following error. Now that puzzle reveal validation was moved
+                # into chia_rs, this failure will be detected before running
+                # the puzzle. This test probably needs to be updated
+                # assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+
+                assert result == (MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH)
             else:
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
                 with pytest.raises(ValueError, match="clvm raise"):
-                    graftroot_puzzle.run(graftroot_spend.solution.to_program())
+                    graftroot_puzzle.run(Program.from_serialized(graftroot_spend.solution))

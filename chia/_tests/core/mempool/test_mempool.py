@@ -51,9 +51,9 @@ from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.outbound_message import Message
 from chia.protocols.wallet_protocol import TransactionAck
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -2866,7 +2866,7 @@ class TestMaliciousGenerators:
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
         res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
+        assert res == (MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH)
 
 
 coins = make_test_coins()

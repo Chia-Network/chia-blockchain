@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, FeeEstimateV2, fee_estimate_v2_to_v1
 from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.full_node.fee_tracker import (
     BucketResult,
@@ -14,6 +13,7 @@ from chia.full_node.fee_tracker import (
     get_bucket_index,
     get_estimate_time_intervals,
 )
+from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, FeeEstimateV2, fee_estimate_v2_to_v1
 from chia.types.fee_rate import FeeRate, FeeRateV2
 
 

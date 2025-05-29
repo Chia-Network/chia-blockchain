@@ -14,7 +14,6 @@ from chia.pools.pool_puzzles import POOL_MEMBER_MOD
 from chia.pools.pool_puzzles import POOL_WAITING_ROOM_MOD as POOL_WAITINGROOM_MOD
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import AssertCoinAnnouncement
@@ -329,7 +328,7 @@ def launcher_conditions_and_spend_bundle(
         launcher_amount=launcher_amount,
         metadata=metadata,
     )
-    coin_spend = make_spend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
+    coin_spend = make_spend(launcher_coin, launcher_puzzle, solution)
     spend_bundle = WalletSpendBundle([coin_spend], G2Element())
     return launcher_id, expected_conditions, spend_bundle
 
@@ -388,9 +387,7 @@ def claim_p2_singleton(
         singleton_inner_puzzle_hash=inner_puzzle_hash,
         p2_singleton_coin_name=bytes32(p2_singleton_coin_name),
     )
-    p2_singleton_coin_spend = make_spend(
-        p2_singleton_coin, SerializedProgram.from_program(p2_singleton_puzzle), p2_singleton_solution
-    )
+    p2_singleton_coin_spend = make_spend(p2_singleton_coin, p2_singleton_puzzle, p2_singleton_solution)
     expected_p2_singleton_announcement = AssertCoinAnnouncement(
         asserted_id=p2_singleton_coin_name, asserted_msg=b"$"
     ).msg_calc
