@@ -146,3 +146,4 @@ build-backend = "poetry_dynamic_versioning.backend"
 name = "chia-blockchain"
 # This has to match the poetry python entry above
 requires-python = ">=3.9, <4"
+dynamic = ["version"]
