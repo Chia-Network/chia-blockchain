@@ -47,11 +47,11 @@ additional_data: bytes32 = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
 
 coin: Coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 puzzle = SerializedProgram.from_bytes(b"\x01")
-solution_h = SerializedProgram.from_program(
-    Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h_synth, msg2]])
+solution_h = Program.to(
+    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h_synth, msg2]]
 )
-solution_u = SerializedProgram.from_program(
-    Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u_synth, msg2]])
+solution_u = Program.to(
+    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u_synth, msg2]]
 )
 spend_h: CoinSpend = make_spend(
     coin,

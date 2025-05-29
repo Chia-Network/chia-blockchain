@@ -11,7 +11,7 @@ from clvm_tools.clvmc import compile_clvm_text
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator
 
@@ -77,7 +77,7 @@ EXPECTED_OUTPUT = (
 def run_generator(self: BlockGenerator) -> tuple[int, Program]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     args = Program.to([self.generator_refs])
-    return GENERATOR_MOD.run_with_cost(MAX_COST, [self.program, args])
+    return run_with_cost(GENERATOR_MOD, MAX_COST, [self.program, args])
 
 
 def as_atom_list(prg: CLVMStorage) -> list[bytes]:
@@ -110,7 +110,7 @@ class TestROM:
 
         args = Program.to([DESERIALIZE_MOD, [FIRST_GENERATOR, SECOND_GENERATOR]])
         sp = to_sp(COMPILED_GENERATOR_CODE)
-        cost, r = sp.run_with_cost(MAX_COST, args)
+        cost, r = run_with_cost(sp, MAX_COST, args)
         assert cost == EXPECTED_ABBREVIATED_COST
         assert r.as_bin().hex() == EXPECTED_OUTPUT
 

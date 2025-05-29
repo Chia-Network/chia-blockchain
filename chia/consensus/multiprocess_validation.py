@@ -217,10 +217,14 @@ async def pre_validate_block(
     if q_str is None:
         return return_error(Err.INVALID_POSPACE)
 
+    # TODO: support v2 plots
+    pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
+    assert pos_size_v1 is not None, "plot format v2 not supported yet"
+
     required_iters: uint64 = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
-        block.reward_chain_block.proof_of_space.size,
+        pos_size_v1,
         vs.difficulty,
         cc_sp_hash,
     )

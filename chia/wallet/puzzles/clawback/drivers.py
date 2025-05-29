@@ -144,9 +144,9 @@ def match_clawback_puzzle(
     if MOD != uncurried.mod:
         return None
     if not isinstance(inner_puzzle, SerializedProgram):
-        inner_puzzle = SerializedProgram.from_program(inner_puzzle)
+        inner_puzzle = inner_puzzle.to_serialized()
     if not isinstance(inner_solution, SerializedProgram):
-        inner_solution = SerializedProgram.from_program(inner_solution)
+        inner_solution = inner_solution.to_serialized()
     # Fetch Remark condition
     conditions = conditions_for_solution(
         inner_puzzle,

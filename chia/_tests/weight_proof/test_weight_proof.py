@@ -53,10 +53,14 @@ async def load_blocks_dont_validate(
         )
         assert quality_string is not None
 
+        # TODO: support v2 plots
+        pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
+        assert pos_size_v1 is not None, "plot format v2 not supported yet"
+
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_string,
-            block.reward_chain_block.proof_of_space.size,
+            pos_size_v1,
             difficulty,
             cc_sp,
         )
@@ -501,7 +505,7 @@ class TestWeightProof:
 
 @pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
 def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None:
-    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=uint8(3))
+    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
     assert calculate_prefix_bits(constants, height) == expected
 
 

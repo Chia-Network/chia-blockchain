@@ -375,7 +375,7 @@ def prepare_sp_and_pos_for_fee_test(
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=pubkey,
-            size=uint8(len(proof)),
+            version_and_size=uint8(32),
             proof=proof,
         ),
         signage_point_index=uint8(0),

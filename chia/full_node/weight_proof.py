@@ -1327,10 +1327,14 @@ def _validate_pospace_recent_chain(
     if q_str is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
         return None
+    # TODO: support v2 plots
+    pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
+    assert pos_size_v1 is not None, "plot format v2 not supported yet"
+
     required_iters = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
-        block.reward_chain_block.proof_of_space.size,
+        pos_size_v1,
         diff,
         cc_sp_hash,
     )
@@ -1377,10 +1381,14 @@ def __validate_pospace(
     if q_str is None:
         log.error("could not verify proof of space")
         return None
+    # TODO: support v2 plots
+    pos_size_v1 = sub_slot_data.proof_of_space.size_v1()
+    assert pos_size_v1 is not None, "plot format v2 not supported yet"
+
     return calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
-        sub_slot_data.proof_of_space.size,
+        pos_size_v1,
         curr_diff,
         cc_sp_hash,
     )
