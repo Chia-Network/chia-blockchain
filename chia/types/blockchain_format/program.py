@@ -287,20 +287,16 @@ def _run(prg: Union[SerializedProgram, Program], max_cost: int, flags: int, args
     if isinstance(prg, SerializedProgram):
         result = prg.run_rust(max_cost, flags, args)
         return result[0], Program(result[1])  # type: ignore[arg-type]
-    elif isinstance(prg, Program):
+    else:
         return prg._run(max_cost, flags, args)
-    else:  # pragme: no cover
-        assert False
 
 
 def uncurry(prg: Union[SerializedProgram, Program]) -> tuple[Program, Program]:
     if isinstance(prg, SerializedProgram):
         result = prg.uncurry_rust()
         return Program(result[0]), Program(result[1])  # type: ignore[arg-type]
-    elif isinstance(prg, Program):
+    else:
         return prg.uncurry()
-    else:  # pragme: no cover
-        assert False
 
 
 def run(prg: Union[SerializedProgram, Program], args: Any) -> Program:
