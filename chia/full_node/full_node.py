@@ -102,6 +102,9 @@ class PeakPostProcessingResult:
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: list[tuple[bytes32, bytes]]  # The hints added to the DB
     lookup_coin_ids: list[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
+    signage_points_to_broadcast: Optional[
+        list[tuple[RespondSignagePoint, WSChiaConnection, Optional[EndOfSubSlotBundle]]]
+    ] = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1895,6 +1898,7 @@ class FullNode:
             difficulty,
         )
 
+        signage_points_to_broadcast = []
         if fns_peak_result.new_signage_points is not None and peer is not None:
             for index, sp in fns_peak_result.new_signage_points:
                 assert (
@@ -1903,8 +1907,13 @@ class FullNode:
                     and sp.rc_vdf is not None
                     and sp.rc_proof is not None
                 )
-                await self.signage_point_post_processing(
-                    RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
+                # Collect the data for networking outside the mutex
+                signage_points_to_broadcast.append(
+                    (
+                        RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof),
+                        peer,
+                        sub_slots[1],
+                    )
                 )
 
         if sub_slots[1] is None:
@@ -1934,6 +1943,7 @@ class FullNode:
             fns_peak_result,
             hints_to_add,
             lookup_coin_ids,
+            signage_points_to_broadcast=signage_points_to_broadcast if signage_points_to_broadcast else None,
         )
 
     async def peak_post_processing_2(
@@ -2012,6 +2022,10 @@ class FullNode:
         )
 
         self._state_changed("new_peak")
+
+        if ppp_result.signage_points_to_broadcast is not None:
+            for signage_point_args in ppp_result.signage_points_to_broadcast:
+                await self.signage_point_post_processing(*signage_point_args)
 
     async def add_block(
         self,
