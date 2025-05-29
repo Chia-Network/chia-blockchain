@@ -1954,6 +1954,8 @@ class FullNode:
         with peers
         """
         record = state_change_summary.peak
+        for signage_point in ppp_result.signage_points:
+            await self.signage_point_post_processing(*signage_point)
         for new_peak_item in ppp_result.mempool_peak_result:
             self.log.debug(f"Added transaction to mempool: {new_peak_item.transaction_id}")
             mempool_item = self.mempool_manager.get_mempool_item(new_peak_item.transaction_id)
@@ -2018,10 +2020,6 @@ class FullNode:
         )
 
         self._state_changed("new_peak")
-
-        if ppp_result.signage_points is not None:
-            for signage_point in ppp_result.signage_points:
-                await self.signage_point_post_processing(*signage_point)
 
     async def add_block(
         self,
