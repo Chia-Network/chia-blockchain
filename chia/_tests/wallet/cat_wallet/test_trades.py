@@ -17,7 +17,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.rpc.wallet_request_types import VCAddProofs, VCGetList, VCGetProofsForRoot, VCMint, VCSpend
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program, run
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -1913,7 +1913,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
             [
                 c.to_program()
                 for c in parse_conditions_non_consensus(
-                    spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter(), abstractions=False
+                    run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_iter(), abstractions=False
                 )
             ]
         )

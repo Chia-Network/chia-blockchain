@@ -9,6 +9,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import run_mempool_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend, UnspentLineageInfo
@@ -29,7 +30,7 @@ def run_for_cost(
     puzzle_reveal: SerializedProgram, solution: SerializedProgram, additions_count: int, max_cost: int
 ) -> uint64:
     create_coins_cost = additions_count * ConditionCost.CREATE_COIN.value
-    clvm_cost, _ = puzzle_reveal.run_mempool_with_cost(max_cost, solution)
+    clvm_cost, _ = run_mempool_with_cost(puzzle_reveal, max_cost, solution)
     saved_cost = uint64(clvm_cost + create_coins_cost)
     return saved_cost
 

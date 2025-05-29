@@ -9,7 +9,7 @@ from chia_rs.sized_ints import uint64
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -194,7 +194,7 @@ def conditions_for_solution(
 ) -> list[ConditionWithArgs]:
     # get the standard script for a puzzle hash and feed in the solution
     try:
-        _cost, r = puzzle_reveal.run_with_cost(max_cost, solution)
+        _cost, r = run_with_cost(puzzle_reveal, max_cost, solution)
         return parse_sexp_to_conditions(r)
     except Program.EvalError as e:
         raise ConsensusError(Err.SEXP_ERROR, [str(e)]) from e

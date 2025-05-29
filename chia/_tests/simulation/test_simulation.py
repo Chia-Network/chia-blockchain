@@ -22,7 +22,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.daemon.server import WebSocketServer
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -46,7 +46,8 @@ test_constants_modified = test_constants.replace(
     NUM_SPS_SUB_SLOT=uint32(32),  # Must be a power of 2
     EPOCH_BLOCKS=uint32(280),
     SUB_SLOT_ITERS_STARTING=uint64(2**20),
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(5),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(5),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(5),
 )
 
 

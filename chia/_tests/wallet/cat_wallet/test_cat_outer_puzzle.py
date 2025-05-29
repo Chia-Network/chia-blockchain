@@ -9,7 +9,6 @@ from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
@@ -38,7 +37,7 @@ def test_cat_outer_puzzle() -> None:
     # Set up for solve
     parent_coin = Coin(tail, double_cat_puzzle.get_tree_hash(), uint64(100))
     child_coin = Coin(parent_coin.name(), double_cat_puzzle.get_tree_hash(), uint64(100))
-    parent_spend = make_spend(parent_coin, SerializedProgram.from_program(double_cat_puzzle), Program.to([]))
+    parent_spend = make_spend(parent_coin, double_cat_puzzle, Program.to([]))
     child_coin_as_hex: str = (
         "0x"
         + child_coin.parent_coin_info.hex()

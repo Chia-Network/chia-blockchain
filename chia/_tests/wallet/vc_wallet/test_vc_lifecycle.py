@@ -10,7 +10,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
@@ -301,10 +301,10 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
 
         remark_condition: Program = next(
             condition
-            for condition in successful_spend.coin_spends[0]
-            .puzzle_reveal.to_program()
-            .run(successful_spend.coin_spends[0].solution.to_program())
-            .as_iter()
+            for condition in run(
+                successful_spend.coin_spends[0].puzzle_reveal,
+                Program.from_serialized(successful_spend.coin_spends[0].solution),
+            ).as_iter()
             if condition.first() == Program.to(1)
         )
         assert remark_condition == Program.to([1, (MOCK_LAUNCHER_ID, new_metadata), new_tp_hash])

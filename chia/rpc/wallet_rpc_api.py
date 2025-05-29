@@ -17,6 +17,7 @@ from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.rpc.wallet_request_types import (
@@ -73,10 +74,9 @@ from chia.rpc.wallet_request_types import (
     VCSpend,
     VCSpendResponse,
 )
-from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import coin_as_list
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost
 from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -840,7 +840,7 @@ class WalletRpcApi:
                     for tx in interface.side_effects.transactions
                     if tx.spend_bundle is not None
                     for cs in tx.spend_bundle.coin_spends
-                    for condition in cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)[1].as_iter()
+                    for condition in run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)[1].as_iter()
                 ]
                 create_coin_announcement = next(
                     condition
@@ -2569,7 +2569,7 @@ class WalletRpcApi:
             "metadata": did_program_to_metadata(metadata),
             "launcher_id": launcher_id.hex(),
             "full_puzzle": coin_spend.puzzle_reveal,
-            "solution": coin_spend.solution.to_program().as_python(),
+            "solution": Program.from_serialized(coin_spend.solution).as_python(),
             "hints": hints,
         }
 
@@ -3418,7 +3418,7 @@ class WalletRpcApi:
         # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzle_utils.recurry_nft_puzzle(
-                uncurried_nft, coin_spend.solution.to_program(), uncurried_nft.p2_puzzle
+                uncurried_nft, Program.from_serialized(coin_spend.solution), uncurried_nft.p2_puzzle
             )
         else:
             inner_puzzle = uncurried_nft.p2_puzzle

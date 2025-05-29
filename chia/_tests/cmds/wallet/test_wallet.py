@@ -25,6 +25,7 @@ from chia._tests.cmds.wallet.test_consts import (
     get_bytes32,
 )
 from chia.cmds.cmds_util import TransactionBundle
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
@@ -33,7 +34,6 @@ from chia.rpc.wallet_request_types import (
     SendTransactionResponse,
     TakeOfferResponse,
 )
-from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash

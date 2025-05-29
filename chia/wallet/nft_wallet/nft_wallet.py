@@ -211,7 +211,7 @@ class NFTWallet:
         minter_did = None
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzle_utils.recurry_nft_puzzle(
-                uncurried_nft, data.parent_coin_spend.solution.to_program(), p2_puzzle
+                uncurried_nft, Program.from_serialized(data.parent_coin_spend.solution), p2_puzzle
             )
             minter_did = await self.wallet_state_manager.get_minter_did(launcher_coin_states[0].coin, peer)
         else:
@@ -1162,10 +1162,10 @@ class NFTWallet:
         - The launcher coins are then spent along with the created eve spend
           and an xch spend that funds the transactions and pays fees.
         - There is also an option to pass in a list of target puzzlehashes. If
-          provided this method will create an additional transaction transfering
+          provided this method will create an additional transaction transferring
           the minted NFTs to the row-matched target.
         :param metadata_list: A list of dicts containing the metadata for each NFT to be minted
-        :param target_list: [Optional] a list of targets for transfering minted NFTs (aka airdrop)
+        :param target_list: [Optional] a list of targets for transferring minted NFTs (aka airdrop)
         :param mint_number_start: [Optional] The starting point for mint number used in intermediate launcher
         puzzle. Default: 1
         :param mint_total: [Optional] The total number of NFTs being minted
@@ -1328,7 +1328,7 @@ class NFTWallet:
                 tx.spend_bundle for tx in inner_action_scope.side_effects.transactions if tx.spend_bundle is not None
             )
             # Extract Puzzle Announcement from eve spend
-            eve_sol = eve_sb.coin_spends[0].solution.to_program()
+            eve_sol = Program.from_serialized(eve_sb.coin_spends[0].solution)
             conds = eve_fullpuz.run(eve_sol)
             eve_puzzle_announcement = next(x for x in conds.as_python() if int_from_bytes(x[0]) == 62)[1]
             assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
@@ -1438,7 +1438,7 @@ class NFTWallet:
         """
         Minting NFTs from a single XCH spend using intermediate launcher puzzle
         :param metadata_list: A list of dicts containing the metadata for each NFT to be minted
-        :param target_list: [Optional] a list of targets for transfering minted NFTs (aka airdrop)
+        :param target_list: [Optional] a list of targets for transferring minted NFTs (aka airdrop)
         :param mint_number_start: [Optional] The starting point for mint number used in intermediate launcher
         puzzle. Default: 1
         :param mint_total: [Optional] The total number of NFTs being minted
@@ -1575,7 +1575,7 @@ class NFTWallet:
                 tx.spend_bundle for tx in inner_action_scope.side_effects.transactions if tx.spend_bundle is not None
             )
             # Extract Puzzle Announcement from eve spend
-            eve_sol = eve_sb.coin_spends[0].solution.to_program()
+            eve_sol = Program.from_serialized(eve_sb.coin_spends[0].solution)
             conds = eve_fullpuz.run(eve_sol)
             eve_puzzle_announcement = next(x for x in conds.as_python() if int_from_bytes(x[0]) == 62)[1]
             assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)

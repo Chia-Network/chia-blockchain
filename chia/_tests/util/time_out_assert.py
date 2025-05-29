@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar, ca
 import chia
 import chia._tests
 from chia._tests import ether
+from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message
 from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)

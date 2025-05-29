@@ -6,13 +6,13 @@ from chia_rs.sized_ints import uint64
 from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, run_with_cost
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def compute_memos_for_spend(coin_spend: CoinSpend) -> dict[bytes32, list[bytes]]:
-    _, result = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
+    _, result = run_with_cost(coin_spend.puzzle_reveal, INFINITE_COST, coin_spend.solution)
     memos: dict[bytes32, list[bytes]] = {}
     for condition in result.as_python():
         if condition[0] == ConditionOpcode.CREATE_COIN and len(condition) >= 4:

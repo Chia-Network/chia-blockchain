@@ -6,9 +6,9 @@ import time
 from collections import Counter
 from typing import Optional
 
+from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.server.outbound_message import Message
 from chia.server.rate_limit_numbers import RLSettings, Unlimited, get_rate_limits_to_use
 
 log = logging.getLogger(__name__)

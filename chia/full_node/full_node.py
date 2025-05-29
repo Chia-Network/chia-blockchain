@@ -41,6 +41,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
@@ -63,12 +64,12 @@ from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import CoinStateUpdate, RemovedMempoolItem
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.node_discovery import FullNodePeers
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -80,7 +81,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
@@ -2246,7 +2246,8 @@ class FullNode:
 
         state_changed_data: dict[str, Any] = {
             "transaction_block": False,
-            "k_size": block.reward_chain_block.proof_of_space.size,
+            "k_size": block.reward_chain_block.proof_of_space.size_v1(),
+            "k_size2": block.reward_chain_block.proof_of_space.size_v2(),
             "header_hash": block.header_hash,
             "fork_height": None,
             "rolled_back_records": None,

@@ -26,7 +26,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.util.streamable import _T_Streamable
 
 log = logging.getLogger(__name__)

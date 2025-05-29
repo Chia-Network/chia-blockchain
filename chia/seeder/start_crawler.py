@@ -11,11 +11,11 @@ from chia_rs import ConsensusConstants
 from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.aliases import CrawlerService
-from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.util.chia_logging import initialize_service_logging

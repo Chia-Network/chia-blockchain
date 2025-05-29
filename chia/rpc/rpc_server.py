@@ -24,8 +24,8 @@ from chia_rs.sized_ints import uint16
 from typing_extensions import Protocol, final
 
 from chia import __version__
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.util import wrap_http_handler
-from chia.server.outbound_message import NodeType
 from chia.server.server import (
     ChiaServer,
     ssl_context_for_client,

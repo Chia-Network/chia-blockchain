@@ -257,9 +257,9 @@ def make_singleton_coin_spend(
     solution = singleton_top_layer.solution_for_singleton(lineage_proof, uint64(coin_to_spend.amount), inner_solution)
     if is_eve_spend:
         # Parent here is the launcher coin
-        puzzle_reveal = SerializedProgram.from_program(
-            singleton_top_layer.puzzle_for_singleton(parent_coin_spend.coin.name(), inner_puzzle)
-        )
+        puzzle_reveal = singleton_top_layer.puzzle_for_singleton(
+            parent_coin_spend.coin.name(), inner_puzzle
+        ).to_serialized()
     else:
         puzzle_reveal = parent_coin_spend.puzzle_reveal
     return make_spend(coin_to_spend, puzzle_reveal, solution), delegated_puzzle
@@ -413,8 +413,8 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             eve_coin_spend, singleton, inner_puzzle, inner_conditions
         )
         # Spend also a remaining coin
-        remaining_spend_solution = SerializedProgram.from_program(
-            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        remaining_spend_solution = SerializedProgram.to(
+            [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]]
         )
         remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
         await make_and_send_spend_bundle(
@@ -435,8 +435,8 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             coin_id=singleton_child.name(), parent_id=singleton.name(), parent_parent_id=eve_coin_spend.coin.name()
         )
         # Now let's spend the first version again (despite being already spent by now)
-        remaining_spend_solution = SerializedProgram.from_program(
-            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        remaining_spend_solution = SerializedProgram.to(
+            [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]]
         )
         remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
         status, error = await make_and_send_spend_bundle(
@@ -494,8 +494,8 @@ async def test_singleton_fast_forward_same_block() -> None:
         # Spend also a remaining coin. Change amount to create a new coin ID.
         # The test assumes any odd amount is a singleton, so we must keep it
         # even
-        remaining_spend_solution = SerializedProgram.from_program(
-            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount - 2]])
+        remaining_spend_solution = SerializedProgram.to(
+            [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount - 2]]
         )
         remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
         await make_and_send_spend_bundle(sim, sim_client, [remaining_coin_spend, singleton_coin_spend], aggsig=sig)
@@ -567,8 +567,8 @@ async def test_mempool_items_immutability_on_ff() -> None:
         singleton_coin_spend, singleton_signing_puzzle = make_singleton_coin_spend(
             eve_coin_spend, singleton, inner_puzzle, inner_conditions
         )
-        remaining_spend_solution = SerializedProgram.from_program(
-            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        remaining_spend_solution = SerializedProgram.to(
+            [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]]
         )
         remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
         await make_and_send_spend_bundle(
@@ -590,8 +590,8 @@ async def test_mempool_items_immutability_on_ff() -> None:
         )
         # Now let's spend the first version again (despite being already spent
         # by now) to exercise its fast forward.
-        remaining_spend_solution = SerializedProgram.from_program(
-            Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]])
+        remaining_spend_solution = SerializedProgram.to(
+            [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount]]
         )
         remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
         sb = SpendBundle([remaining_coin_spend, singleton_coin_spend], sig)

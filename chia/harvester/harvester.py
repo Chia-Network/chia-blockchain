@@ -36,8 +36,8 @@ from chia.plotting.util import (
     remove_plot_directory,
     update_harvester_config,
 )
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.cpu import available_logical_cores
