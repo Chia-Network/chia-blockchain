@@ -238,7 +238,7 @@ jobs:
           apt-get --yes update
           apt-get install --yes git lsb-release sudo
           MINIMUM=3.9
-          if ! apt satisfy --yes "python3-venv (>= ${MINIMUM})"
+          if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
           then
             apt-get install --yes python${MINIMUM}-venv
           fi
