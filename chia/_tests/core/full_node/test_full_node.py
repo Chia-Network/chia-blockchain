@@ -12,6 +12,7 @@ from typing import Any, Optional
 import pytest
 from chia_rs import (
     AugSchemeMPL,
+    ConsensusConstants,
     Foliage,
     FoliageTransactionBlock,
     FullBlock,
@@ -38,7 +39,11 @@ from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.misc import wallet_height_at_least
-from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
+from chia._tests.util.setup_nodes import (
+    OldSimulatorsAndWallets,
+    SimulatorsAndWalletsServices,
+    setup_simulators_and_wallets,
+)
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
@@ -2912,87 +2917,97 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.parametrize("block_creation", [0, 1, 2])
 @pytest.mark.anyio
 async def test_declare_proof_of_space_no_overflow(
-    wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
-    ],
+    blockchain_constants: ConsensusConstants,
     self_hostname: str,
-    bt: BlockTools,
+    block_creation: int,
 ) -> None:
-    full_node_api, _, server_1, _, _, _, _ = wallet_nodes
-    wallet = WalletTool(test_constants)
-    coinbase_puzzlehash = wallet.get_new_puzzlehash()
-    blocks = bt.get_consecutive_blocks(
-        num_blocks=10,
-        skip_overflow=True,
-        force_overflow=False,
-        farmer_reward_puzzle_hash=coinbase_puzzlehash,
-        guarantee_transaction_block=True,
-    )
-    await add_blocks_in_batches(blocks, full_node_api.full_node)
-    _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
-    dummy_peer = server_1.all_connections[dummy_node_id]
-    assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
-    for i in range(10, 100):
-        sb = await add_tx_to_mempool(
-            full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
-        )
+    async with setup_simulators_and_wallets(
+        1, 1, blockchain_constants, config_overrides={"full_node.block_creation": block_creation}
+    ) as new:
+        full_node_api = new.simulators[0].peer_api
+        server_1 = full_node_api.full_node.server
+        bt = new.bt
+
+        wallet = WalletTool(test_constants)
+        coinbase_puzzlehash = wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            block_list_input=blocks,
-            num_blocks=1,
+            num_blocks=10,
+            skip_overflow=True,
+            force_overflow=False,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_transaction_block=True,
-            transaction_data=sb,
         )
-        block = blocks[-1]
-        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
-        compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
-        await full_node_api.full_node.add_block(block)
-        assert full_node_api.full_node.blockchain.get_peak_height() == block.height
+        await add_blocks_in_batches(blocks, full_node_api.full_node)
+        _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        dummy_peer = server_1.all_connections[dummy_node_id]
+        assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
+        for i in range(10, 100):
+            sb = await add_tx_to_mempool(
+                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+            )
+            blocks = bt.get_consecutive_blocks(
+                block_list_input=blocks,
+                num_blocks=1,
+                farmer_reward_puzzle_hash=coinbase_puzzlehash,
+                guarantee_transaction_block=True,
+                transaction_data=sb,
+            )
+            block = blocks[-1]
+            unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
+            compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
+            await full_node_api.full_node.add_block(block)
+            assert full_node_api.full_node.blockchain.get_peak_height() == block.height
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.parametrize("block_creation", [0, 1, 2])
 @pytest.mark.anyio
 async def test_declare_proof_of_space_overflow(
-    wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
-    ],
+    blockchain_constants: ConsensusConstants,
     self_hostname: str,
-    bt: BlockTools,
+    block_creation: int,
 ) -> None:
-    full_node_api, _, server_1, _, _, _, _ = wallet_nodes
-    wallet = WalletTool(test_constants)
-    coinbase_puzzlehash = wallet.get_new_puzzlehash()
-    blocks = bt.get_consecutive_blocks(
-        num_blocks=10,
-        farmer_reward_puzzle_hash=coinbase_puzzlehash,
-        guarantee_transaction_block=True,
-    )
-    await add_blocks_in_batches(blocks, full_node_api.full_node)
-    _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
-    dummy_peer = server_1.all_connections[dummy_node_id]
-    assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
-    for i in range(10, 100):
-        sb = await add_tx_to_mempool(
-            full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
-        )
+    async with setup_simulators_and_wallets(
+        1, 1, blockchain_constants, config_overrides={"full_node.block_creation": block_creation}
+    ) as new:
+        full_node_api = new.simulators[0].peer_api
+        server_1 = full_node_api.full_node.server
+        bt = new.bt
 
+        wallet = WalletTool(test_constants)
+        coinbase_puzzlehash = wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            block_list_input=blocks,
-            num_blocks=1,
-            skip_overflow=False,
-            force_overflow=(i % 10 == 0),
+            num_blocks=10,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_transaction_block=True,
-            transaction_data=sb,
         )
+        await add_blocks_in_batches(blocks, full_node_api.full_node)
+        _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        dummy_peer = server_1.all_connections[dummy_node_id]
+        assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
+        for i in range(10, 100):
+            sb = await add_tx_to_mempool(
+                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+            )
 
-        block = blocks[-1]
-        unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
-        compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
-        await full_node_api.full_node.add_block(block)
-        assert full_node_api.full_node.blockchain.get_peak_height() == block.height
+            blocks = bt.get_consecutive_blocks(
+                block_list_input=blocks,
+                num_blocks=1,
+                skip_overflow=False,
+                force_overflow=(i % 10 == 0),
+                farmer_reward_puzzle_hash=coinbase_puzzlehash,
+                guarantee_transaction_block=True,
+                transaction_data=sb,
+            )
+
+            block = blocks[-1]
+            unfinised_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, block)
+            compare_unfinished_blocks(unfinished_from_full_block(block), unfinised_block)
+            await full_node_api.full_node.add_block(block)
+            assert full_node_api.full_node.blockchain.get_peak_height() == block.height
 
 
 @pytest.mark.anyio

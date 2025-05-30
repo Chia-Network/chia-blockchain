@@ -305,6 +305,21 @@ full_node:
   #         the particular system we're running on. Defaults to "full".
   db_sync: "auto"
 
+  # Determine which version of block creation function to use:
+  # 0: Original function, first fill a block with transactions, then compress
+  #    it, then run it to compute its cost. The final block may not use all
+  #    available block cost.
+  # 1: Compressed block function. Compress transactions into the block as they
+  #    are added. Use the new, optimized, compression function. This produces
+  #    blocks that fill up the allowed block cost.
+
+  # block_creation: 0
+
+  # If we spend more than this many seconds forming the new transactions block
+  # generator, stop and just go with what we have so far. This is a safety
+  # measure to not spend too much time building the block generator.
+  # block_creation_timeout: 2.0
+
   # the number of threads used to read from the blockchain database
   # concurrently. There's always only 1 writer, but the number of readers is
   # configurable
