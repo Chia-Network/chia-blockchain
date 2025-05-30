@@ -56,10 +56,10 @@ from chia.data_layer.download_data import (
     write_files_for_root,
 )
 from chia.data_layer.singleton_record import SingletonRecord
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.async_pool import Job, QueuedAsyncPool

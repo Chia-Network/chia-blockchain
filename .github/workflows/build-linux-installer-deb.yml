@@ -257,10 +257,6 @@ jobs:
               arm: [linux, arm64]
               intel: [ubuntu-latest]
         distribution:
-          - name: debian:bullseye
-            type: debian
-            # https://packages.debian.org/bullseye/python/python3 (3.9)
-            url: "docker://debian:bullseye"
           - name: debian:bookworm
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)

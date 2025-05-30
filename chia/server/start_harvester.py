@@ -12,9 +12,9 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.harvester_rpc_api import HarvesterRpcApi
 from chia.server.aliases import HarvesterService
-from chia.server.outbound_message import NodeType
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run

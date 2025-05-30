@@ -14,11 +14,11 @@ from typing import Any, Callable, Generic, Optional, TypeVar, cast
 from chia_rs.sized_ints import uint16
 
 from chia.daemon.server import service_launch_lock_path
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths

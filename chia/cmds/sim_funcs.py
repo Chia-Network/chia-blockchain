@@ -15,7 +15,7 @@ from chia_rs.sized_ints import uint32
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.start_funcs import async_start
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import set_peer_info
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.coin_record import CoinRecord

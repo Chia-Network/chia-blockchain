@@ -118,4 +118,4 @@ class CATOuterPuzzle:
                 )
             )
         bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
-        return next(cs.solution.to_program() for cs in bundle.coin_spends if cs.coin == target_coin)
+        return next(Program.from_serialized(cs.solution) for cs in bundle.coin_spends if cs.coin == target_coin)

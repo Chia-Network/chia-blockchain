@@ -26,7 +26,7 @@ async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> Non
 
 
 async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) -> None:
-    from chia.server.outbound_message import NodeType
+    from chia.protocols.outbound_message import NodeType
 
     result_txt = ""
     if len(remove_connection) != 8:
@@ -52,7 +52,7 @@ async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) 
 async def print_connections(rpc_client: RpcClient, trusted_peers: dict[str, Any], trusted_cidrs: list[str]) -> None:
     import time
 
-    from chia.server.outbound_message import NodeType
+    from chia.protocols.outbound_message import NodeType
     from chia.util.network import is_trusted_peer
 
     connections = await rpc_client.get_connections()

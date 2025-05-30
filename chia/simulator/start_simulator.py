@@ -12,7 +12,7 @@ from chia_rs.sized_ints import uint16
 
 from chia.apis import ApiProtocolRegistry
 from chia.full_node.full_node import FullNode
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants

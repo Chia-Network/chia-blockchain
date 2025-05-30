@@ -13,11 +13,11 @@ from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import NewPeak
+from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RequestChildren
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.aliases import CrawlerService
-from chia.server.outbound_message import make_msg
 from chia.types.peer_info import PeerInfo
 
 

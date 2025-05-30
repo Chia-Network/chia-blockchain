@@ -4,9 +4,9 @@ import logging
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.outbound_message import Message
 from chia.seeder.crawler import Crawler
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 

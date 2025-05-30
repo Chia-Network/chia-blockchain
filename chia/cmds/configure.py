@@ -7,7 +7,7 @@ import click
 import yaml
 
 from chia.cmds.cmd_classes import ChiaCliContext
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import set_peer_info
 from chia.util.config import (
     initial_config_file,

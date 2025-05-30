@@ -152,10 +152,6 @@ jobs:
           - name: arch:latest
             type: arch
             url: "docker://archlinux:latest"
-          - name: debian:bullseye
-            type: debian
-            # https://packages.debian.org/bullseye/python/python3 (3.9)
-            url: "docker://debian:bullseye"
           - name: debian:bookworm
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
