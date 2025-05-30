@@ -541,15 +541,15 @@ class VCWallet:
                     spend_to_fix: CoinSpend = spends_to_fix[crcat_spend.crcat.coin.name()]
                     other_spends.append(
                         spend_to_fix.replace(
-                            solution=SerializedProgram.from_program(
-                                spend_to_fix.solution.to_program().replace(
-                                    ff=coin_args[coin_name][0],
-                                    frf=Program.to(None),  # not general
-                                    frrf=bytes32.from_hexstr(coin_args[coin_name][2]),
-                                    frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
-                                    frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
-                                )
-                            ),
+                            solution=Program.from_serialized(spend_to_fix.solution)
+                            .replace(
+                                ff=coin_args[coin_name][0],
+                                frf=Program.to(None),  # not general
+                                frrf=bytes32.from_hexstr(coin_args[coin_name][2]),
+                                frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
+                                frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
+                            )
+                            .to_serialized(),
                         )
                     )
             else:

@@ -2378,7 +2378,7 @@ def make_singleton_spend(
     from chia.wallet.lineage_proof import LineageProof
     from chia.wallet.puzzles.singleton_top_layer_v1_1 import puzzle_for_singleton, solution_for_singleton
 
-    singleton_puzzle = SerializedProgram.from_program(puzzle_for_singleton(launcher_id, Program.to(1)))
+    singleton_puzzle = puzzle_for_singleton(launcher_id, Program.to(1)).to_serialized()
 
     PARENT_COIN = Coin(parent_parent_id, singleton_puzzle.get_tree_hash(), uint64(1))
     COIN = Coin(PARENT_COIN.name(), singleton_puzzle.get_tree_hash(), uint64(1))
@@ -2386,9 +2386,7 @@ def make_singleton_spend(
     lineage_proof = LineageProof(parent_parent_id, IDENTITY_PUZZLE_HASH, uint64(1))
 
     inner_solution = Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(child_amount)]])
-    singleton_solution = SerializedProgram.from_program(
-        solution_for_singleton(lineage_proof, uint64(1), inner_solution)
-    )
+    singleton_solution = solution_for_singleton(lineage_proof, uint64(1), inner_solution).to_serialized()
 
     ret = CoinSpend(COIN, singleton_puzzle, singleton_solution)
 

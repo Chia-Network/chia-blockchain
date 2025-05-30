@@ -550,7 +550,7 @@ class VerifiedCredential(Streamable):
 
         # BEGIN CODE
         parent_coin: Coin = parent_spend.coin
-        solution: Program = parent_spend.solution.to_program()
+        solution = Program.from_serialized(parent_spend.solution)
 
         singleton: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
         launcher_id: bytes32 = bytes32(singleton.args.at("frf").as_atom())

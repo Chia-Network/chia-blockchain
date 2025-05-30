@@ -40,7 +40,7 @@ from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.coin_spend import make_spend
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
@@ -477,9 +477,7 @@ class PoolWallet:
             delayed_seconds,
             delayed_puzhash,
         )
-        new_full_puzzle: SerializedProgram = SerializedProgram.from_program(
-            create_full_puzzle(new_inner_puzzle, pool_wallet_info.launcher_coin.name())
-        )
+        new_full_puzzle = create_full_puzzle(new_inner_puzzle, pool_wallet_info.launcher_coin.name()).to_serialized()
 
         outgoing_coin_spend, inner_puzzle = create_travel_spend(
             last_coin_spend,
@@ -605,10 +603,10 @@ class PoolWallet:
 
         genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])
 
-        launcher_cs: CoinSpend = CoinSpend(
+        launcher_cs: CoinSpend = make_spend(
             launcher_coin,
-            SerializedProgram.from_program(genesis_launcher_puz),
-            SerializedProgram.from_program(genesis_launcher_solution),
+            genesis_launcher_puz,
+            genesis_launcher_solution,
         )
         launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
 

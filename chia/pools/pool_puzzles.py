@@ -22,6 +22,7 @@ from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.coin_spend import make_spend
 from chia.wallet.puzzles.singleton_top_layer import (
     SINGLETON_LAUNCHER_HASH,
     SINGLETON_MOD,
@@ -240,10 +241,10 @@ def create_travel_spend(
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
     return (
-        CoinSpend(
+        make_spend(
             current_singleton,
-            SerializedProgram.from_program(full_puzzle),
-            SerializedProgram.from_program(full_solution),
+            full_puzzle,
+            full_solution,
         ),
         inner_puzzle,
     )
@@ -287,22 +288,16 @@ def create_absorb_spend(
                 last_coin_spend.coin.amount,
             ]
         )
-    full_solution: SerializedProgram = SerializedProgram.from_program(
-        Program.to([parent_info, last_coin_spend.coin.amount, inner_sol])
-    )
-    full_puzzle: SerializedProgram = SerializedProgram.from_program(
-        create_full_puzzle(inner_puzzle, launcher_coin.name())
-    )
+    full_solution: SerializedProgram = SerializedProgram.to([parent_info, last_coin_spend.coin.amount, inner_sol])
+    full_puzzle: SerializedProgram = create_full_puzzle(inner_puzzle, launcher_coin.name()).to_serialized()
     assert coin.puzzle_hash == full_puzzle.get_tree_hash()
 
     reward_parent: bytes32 = pool_parent_id(height, genesis_challenge)
-    p2_singleton_puzzle: SerializedProgram = SerializedProgram.from_program(
-        create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_coin.name(), delay_time, delay_ph)
-    )
+    p2_singleton_puzzle = create_p2_singleton_puzzle(
+        SINGLETON_MOD_HASH, launcher_coin.name(), delay_time, delay_ph
+    ).to_serialized()
     reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
-    p2_singleton_solution: SerializedProgram = SerializedProgram.from_program(
-        Program.to([inner_puzzle.get_tree_hash(), reward_coin.name()])
-    )
+    p2_singleton_solution = SerializedProgram.to([inner_puzzle.get_tree_hash(), reward_coin.name()])
     assert p2_singleton_puzzle.get_tree_hash() == reward_coin.puzzle_hash
     assert full_puzzle.get_tree_hash() == coin.puzzle_hash
     assert get_inner_puzzle_from_puzzle(Program.from_bytes(bytes(full_puzzle))) is not None

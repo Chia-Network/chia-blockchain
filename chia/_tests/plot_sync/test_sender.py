@@ -12,8 +12,8 @@ from chia.plot_sync.sender import ExpectedResponse, Sender
 from chia.plot_sync.util import Constants
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncResponse
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 
 

@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 import dns.asyncresolver
 from chia_rs.sized_ints import uint16, uint64
 
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo

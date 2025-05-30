@@ -10,8 +10,8 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 
 from chia.apis import ApiProtocolRegistry
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import default_capabilities
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection

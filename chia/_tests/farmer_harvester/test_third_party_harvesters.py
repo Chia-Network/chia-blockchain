@@ -37,9 +37,9 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.aliases import FarmerService, FullNodeService, HarvesterService
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
@@ -375,7 +375,7 @@ def prepare_sp_and_pos_for_fee_test(
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=pubkey,
-            size=uint8(len(proof)),
+            version_and_size=uint8(32),
             proof=proof,
         ),
         signage_point_index=uint8(0),

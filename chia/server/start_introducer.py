@@ -8,8 +8,8 @@ from typing import Any, Optional
 from chia.apis import ApiProtocolRegistry
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
+from chia.protocols.outbound_message import NodeType
 from chia.server.aliases import IntroducerService
-from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
 from chia.util.chia_logging import initialize_service_logging

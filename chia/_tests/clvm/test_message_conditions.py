@@ -129,13 +129,13 @@ def test_message_error_conditions() -> None:
             mode_integer=uint8(0b111),
         ).necessary_args
 
-    with pytest.raises(ValueError, match="Must specify either mode_integer or both sender and reciever"):
+    with pytest.raises(ValueError, match="Must specify either mode_integer or both sender and receiver"):
         SendMessage(
             msg=b"foo",
             sender=MessageParticipant(coin_id_committed=test_coin.name()),
         )
 
-    with pytest.raises(ValueError, match="Must specify either mode_integer or both sender and reciever"):
+    with pytest.raises(ValueError, match="Must specify either mode_integer or both sender and receiver"):
         SendMessage(
             msg=b"foo",
             receiver=MessageParticipant(coin_id_committed=test_coin.name()),
