@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import aiosqlite
 import pytest
@@ -13,11 +13,18 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
-from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError, NestedForeignKeyDelayedRequestError
+from chia.util.db_wrapper import (
+    DBWrapper2,
+    ForeignKeyError,
+    InternalError,
+    NestedForeignKeyDelayedRequestError,
+    Reader,
+    Writer,
+)
 from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
-    ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
+    ConnectionContextManager = contextlib.AbstractAsyncContextManager[Reader]
     GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
@@ -78,7 +85,7 @@ async def get_value(cursor: aiosqlite.Cursor) -> int:
     return int(row[0])
 
 
-async def query_value(connection: aiosqlite.Connection) -> int:
+async def query_value(connection: Union[Reader, Writer]) -> int:
     async with connection.execute("SELECT value FROM counter") as cursor:
         return await get_value(cursor=cursor)
 
@@ -222,7 +229,7 @@ async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
 
         async with db_wrapper.writer_maybe_transaction() as conn1:
             async with get_reader_method(db_wrapper)() as conn2:
-                assert conn1 == conn2
+                assert conn1._connection == conn2._connection
                 async with db_wrapper.writer_maybe_transaction() as conn3:
                     assert conn1 == conn3
                     async with conn3.execute("SELECT value FROM counter") as cursor:
@@ -246,7 +253,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
     async def write() -> None:
         try:
             async with db_wrapper.writer() as writer:
-                assert reader is not writer
+                assert reader._connection is not writer._connection
 
                 await writer.execute("UPDATE counter SET value = 1")
         finally:
@@ -298,7 +305,7 @@ async def test_writer_in_reader_works() -> None:
 
         async with db_wrapper.reader() as reader:
             async with db_wrapper.writer() as writer:
-                assert writer is not reader
+                assert writer._connection is not reader._connection
                 await writer.execute("UPDATE counter SET value = 1")
                 assert await query_value(connection=writer) == 1
                 assert await query_value(connection=reader) == 0
@@ -313,7 +320,7 @@ async def test_reader_transaction_is_deferred() -> None:
 
         async with db_wrapper.reader() as reader:
             async with db_wrapper.writer() as writer:
-                assert writer is not reader
+                assert writer._connection is not reader._connection
                 await writer.execute("UPDATE counter SET value = 1")
                 assert await query_value(connection=writer) == 1
 
