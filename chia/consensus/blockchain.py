@@ -613,20 +613,13 @@ class Blockchain:
             [fork_add.coin for fork_add in fork_info.additions_since_fork.values() if fork_add.is_coinbase],
         )
 
-    def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
+    def get_next_sub_slot_iters_and_difficulty(self, header_hash: bytes32, new_slot: bool) -> tuple[uint64, uint64]:
         curr = self.try_block_record(header_hash)
         assert curr is not None
         if curr.height <= 2:
-            return self.constants.DIFFICULTY_STARTING
+            return self.constants.SUB_SLOT_ITERS_STARTING, self.constants.DIFFICULTY_STARTING
 
-        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[1]
-
-    def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        curr = self.try_block_record(header_hash)
-        assert curr is not None
-        if curr.height <= 2:
-            return self.constants.SUB_SLOT_ITERS_STARTING
-        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
+        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)
 
     async def get_sp_and_ip_sub_slots(
         self, header_hash: bytes32
