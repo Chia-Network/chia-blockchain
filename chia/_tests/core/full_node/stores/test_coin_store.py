@@ -178,39 +178,31 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
 
         # Save/get block
         for block in blocks:
-            if block.is_transaction_block():
-                removals: list[bytes32] = []
-                additions: list[Coin] = []
-                async with db_wrapper.writer():
-                    if block.is_transaction_block():
-                        assert block.foliage_transaction_block is not None
-                        await coin_store.new_block(
-                            block.height,
-                            block.foliage_transaction_block.timestamp,
-                            block.get_included_reward_coins(),
-                            additions,
-                            removals,
-                        )
+            if not block.is_transaction_block():
+                continue
+            assert block.foliage_transaction_block is not None
+            await coin_store.new_block(
+                block.height, block.foliage_transaction_block.timestamp, block.get_included_reward_coins(), [], []
+            )
+            coins = block.get_included_reward_coins()
+            records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                    coins = block.get_included_reward_coins()
-                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+            await coin_store._set_spent([r.name for r in records if r is not None], block.height)
 
-                await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+            if len(records) > 0:
+                for r in records:
+                    assert r is not None
+                    assert (await coin_store.get_coin_record(r.name)) is not None
 
-                if len(records) > 0:
-                    for r in records:
-                        assert r is not None
-                        assert (await coin_store.get_coin_record(r.name)) is not None
+                # Check that we can't spend a coin twice in DB
+                with pytest.raises(ValueError, match="Invalid operation to set spent"):
+                    await coin_store._set_spent([r.name for r in records if r is not None], block.height)
 
-                    # Check that we can't spend a coin twice in DB
-                    with pytest.raises(ValueError, match="Invalid operation to set spent"):
-                        await coin_store._set_spent([r.name for r in records if r is not None], block.height)
-
-                records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
-                for record in records:
-                    assert record is not None
-                    assert record.spent
-                    assert record.spent_block_index == block.height
+            records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+            for record in records:
+                assert record is not None
+                assert record.spent
+                assert record.spent_block_index == block.height
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
