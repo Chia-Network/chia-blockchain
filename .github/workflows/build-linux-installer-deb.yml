@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - version
-    container: chianetwork/ubuntu-20.04-builder:latest
+    container: chianetwork/ubuntu-22.04-builder:latest
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -261,10 +261,6 @@ jobs:
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
             url: "docker://debian:bookworm"
-          - name: ubuntu:focal (20.04)
-            type: ubuntu
-            # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-            url: "docker://ubuntu:focal"
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)

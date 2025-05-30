@@ -170,10 +170,6 @@ jobs:
           - name: rockylinux:9
             type: rocky
             url: "docker://rockylinux:9"
-          - name: ubuntu:focal (20.04)
-            type: ubuntu
-            # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-            url: "docker://ubuntu:focal"
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
