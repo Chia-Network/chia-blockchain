@@ -7,7 +7,6 @@ from typing import Optional
 
 from chia_rs.sized_ints import uint8, uint32, uint64
 
-from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator_constants import (
     FEE_ESTIMATOR_VERSION,
@@ -29,6 +28,7 @@ from chia.full_node.fee_estimator_constants import (
     SUFFICIENT_FEE_TXS,
 )
 from chia.full_node.fee_history import FeeStatBackup, FeeTrackerBackup
+from chia.protocols.fee_estimate_store import FeeStore
 
 
 @dataclass
