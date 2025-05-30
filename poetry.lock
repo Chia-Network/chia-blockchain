@@ -832,7 +832,7 @@ typing-extensions = "*"
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
 reference = "fc.add_delta_cache"
-resolved_reference = "f224c7b00c61d1f0be5a2479fcf29d1c83aa1c3e"
+resolved_reference = "ce9a35e9c61fbcbccf6dd2cfc6f010c0b4f2e3a8"
 subdirectory = "wheel/"
 
 [[package]]
