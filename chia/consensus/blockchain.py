@@ -124,7 +124,6 @@ class Blockchain:
         block_store: BlockStore,
         height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
-        height_map: BlockHeightMapABC,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
@@ -132,7 +131,7 @@ class Blockchain:
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
-        validated. Uses the genesis block given in override_constants, or as a fallback,
+        validated. Uses the genesis block given in consensus_constants, or as a fallback,
         in the consensus constants config.
         """
         self = Blockchain()
