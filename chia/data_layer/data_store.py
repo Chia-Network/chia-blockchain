@@ -1681,9 +1681,7 @@ class DataStore:
 
         tree_nodes: list[SerializedNode] = []
 
-        await self.get_nodes_for_file(
-            root, node_hash, store_id, deltas_only, merkle_blob, delta_file_cache, tree_nodes
-        )
+        await self.get_nodes_for_file(root, node_hash, store_id, deltas_only, merkle_blob, delta_file_cache, tree_nodes)
         kv_ids = (
             KeyOrValueId.from_bytes(raw_id)
             for node in tree_nodes
