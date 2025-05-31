@@ -10,7 +10,6 @@ from typing import Any, Optional, Union
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import bech32_encode, convertbits, encode_puzzle_hash
 from chia.util.config import load_config
@@ -31,6 +30,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 
 def unlock_keyring() -> None:
@@ -197,7 +197,7 @@ def show_keys(
             first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.public_key, uint32(0))
 
         if first_wallet_pk is not None:
-            wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_pk), prefix)
+            wallet_address: str = encode_puzzle_hash(puzzle_hash_for_pk(first_wallet_pk), prefix)
             key["wallet_address"] = wallet_address
         else:
             key["wallet_address"] = None
@@ -423,7 +423,7 @@ def _search_derived(
             # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
             assert child_pk is not None
             # TODO: consider generating addresses using other puzzles
-            address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), prefix)
+            address = encode_puzzle_hash(puzzle_hash_for_pk(child_pk), prefix)
 
         for term in remaining_search_terms:
             found_item: Any = None
@@ -682,7 +682,7 @@ def derive_wallet_address(
             pubkey = master_pk_to_wallet_pk_unhardened(pk, uint32(i))
         # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
         # TODO: consider generating addresses using other puzzles
-        address = encode_puzzle_hash(create_puzzlehash_for_pk(pubkey), prefix)
+        address = encode_puzzle_hash(puzzle_hash_for_pk(pubkey), prefix)
         if show_hd_path:
             print(
                 f"Wallet address {i} "

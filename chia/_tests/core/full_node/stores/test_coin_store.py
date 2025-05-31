@@ -20,6 +20,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.generator_tools import tx_removals_and_additions
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -342,7 +343,8 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
         blocks = bt.get_consecutive_blocks(initial_block_count)
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
-        b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, 2)
         try:
             records: list[Optional[CoinRecord]] = []
 
@@ -408,7 +410,8 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
         )
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
-        b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, 2)
         for block in blocks:
             await _validate_and_add_block(b, block)
         peak = b.get_peak()

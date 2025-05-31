@@ -44,7 +44,6 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -58,10 +57,10 @@ from chia.consensus.pot_iterations import (
     calculate_sp_iters,
     is_overflow_block,
 )
+from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
-from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
@@ -120,6 +119,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
@@ -446,10 +446,10 @@ class BlockTools:
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
             if reward_ph is None:
-                self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                self.farmer_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
                 )
-                self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                self.pool_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
                 )
             else:

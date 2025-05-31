@@ -21,7 +21,6 @@ from chia._tests.plot_sync.test_delta import dummy_plot
 from chia._tests.util.misc import assert_rpc_error
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.plotting.util import add_plot_directory
@@ -40,6 +39,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 log = logging.getLogger(__name__)
 
@@ -150,8 +150,8 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment: Harv
     targets_2 = await farmer_rpc_client.get_reward_targets(True, 2)
     assert targets_2["have_pool_sk"] and targets_2["have_farmer_sk"]
 
-    new_ph: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(2)).get_g1())
-    new_ph_2: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.pool_master_sk, uint32(7)).get_g1())
+    new_ph: bytes32 = puzzle_hash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(2)).get_g1())
+    new_ph_2: bytes32 = puzzle_hash_for_pk(master_sk_to_wallet_sk(bt.pool_master_sk, uint32(7)).get_g1())
 
     await farmer_rpc_client.set_reward_targets(encode_puzzle_hash(new_ph, "xch"), encode_puzzle_hash(new_ph_2, "xch"))
     targets_3 = await farmer_rpc_client.get_reward_targets(True, 10)
@@ -164,10 +164,10 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment: Harv
     assert not targets_4["have_pool_sk"] and targets_4["have_farmer_sk"]
 
     # check observer addresses
-    observer_farmer: bytes32 = create_puzzlehash_for_pk(
+    observer_farmer: bytes32 = puzzle_hash_for_pk(
         master_sk_to_wallet_sk_unhardened(bt.farmer_master_sk, uint32(2)).get_g1()
     )
-    observer_pool: bytes32 = create_puzzlehash_for_pk(
+    observer_pool: bytes32 = puzzle_hash_for_pk(
         master_sk_to_wallet_sk_unhardened(bt.pool_master_sk, uint32(7)).get_g1()
     )
     await farmer_rpc_client.set_reward_targets(
