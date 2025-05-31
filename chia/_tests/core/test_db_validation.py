@@ -17,6 +17,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import test_constants
@@ -143,8 +144,9 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
 
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
+        height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, height_map, test_constants, reserved_cores=0)
         sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
             if block.height != 0 and len(block.finished_sub_slots) > 0:
