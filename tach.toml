@@ -4,7 +4,9 @@ source_roots = ["."]
 
 [[modules]]
 path = "chia.protocols"
-depends_on = ["chia.types", "chia.util"]
+depends_on = ["chia.types", "chia.util",
+    { path = "chia.full_node", deprecated = false},
+]
 
 [[modules]]
 path = "chia.pools"
@@ -19,11 +21,7 @@ depends_on = [
 
 [[modules]]
 path = "chia.consensus"
-depends_on = [
-    "chia.types",
-    "chia.util",
-    { path = "chia.full_node", deprecated = false },
-]
+depends_on = ["chia.types", "chia.util"]
 
 [[modules]]
 path = "chia.server"
@@ -158,6 +156,7 @@ path = "chia.timelord"
 depends_on = [
     "chia.types",
     "chia.util",
+    "chia.apis",
     { path = "chia.server", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.consensus", deprecated = false },
