@@ -26,6 +26,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
+from chia.consensus.block_height_map_abc import BlockHeightMapABC
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -33,7 +34,6 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
@@ -100,7 +100,7 @@ class Blockchain:
     __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
-    __height_map: BlockHeightMap
+    __height_map: BlockHeightMapABC
     # Unspent Store
     coin_store: CoinStore
     # Store
@@ -125,6 +125,7 @@ class Blockchain:
         block_store: BlockStore,
         height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
+        height_map: BlockHeightMapABC,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
