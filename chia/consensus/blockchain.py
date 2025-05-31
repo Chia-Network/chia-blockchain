@@ -123,8 +123,8 @@ class Blockchain:
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
-        consensus_constants: ConsensusConstants,
         height_map: BlockHeightMapABC,
+        consensus_constants: ConsensusConstants,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
@@ -132,7 +132,7 @@ class Blockchain:
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
-        validated. Uses the genesis block given in override_constants, or as a fallback,
+        validated. Uses the genesis block given in consensus_constants, or as a fallback,
         in the consensus constants config.
         """
         self = Blockchain()
