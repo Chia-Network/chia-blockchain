@@ -7,7 +7,6 @@ import logging
 import traceback
 from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import (
@@ -27,6 +26,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
+from chia.consensus.block_height_map_abc import BlockHeightMapABC
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -34,7 +34,6 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
@@ -101,7 +100,7 @@ class Blockchain:
     __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
-    __height_map: BlockHeightMap
+    __height_map: BlockHeightMapABC
     # Unspent Store
     coin_store: CoinStore
     # Store
@@ -125,12 +124,11 @@ class Blockchain:
         coin_store: CoinStore,
         block_store: BlockStore,
         consensus_constants: ConsensusConstants,
-        blockchain_dir: Path,
+        height_map: BlockHeightMapABC,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
         log_coins: bool = False,
-        selected_network: Optional[str] = None,
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -158,7 +156,7 @@ class Blockchain:
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
-        await self._load_chain_from_store(blockchain_dir, selected_network)
+        await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()
         return self
 
@@ -166,11 +164,11 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, blockchain_dir: Path, selected_network: Optional[str] = None) -> None:
+    async def _load_chain_from_store(self, height_map: BlockHeightMapABC) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper, selected_network)
+        self.__height_map = height_map
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
