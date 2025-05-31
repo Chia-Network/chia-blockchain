@@ -34,7 +34,6 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
@@ -100,7 +99,7 @@ class Blockchain:
     __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
-    __height_map: BlockHeightMap
+    __height_map: BlockHeightMapABC
     # Unspent Store
     coin_store: CoinStoreProtocol
     # Store
@@ -125,6 +124,7 @@ class Blockchain:
         block_store: BlockStore,
         height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
+        height_map: BlockHeightMapABC,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
