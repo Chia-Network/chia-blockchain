@@ -26,6 +26,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
+from chia.consensus.block_height_map_abc import BlockHeightMapABC
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -34,7 +35,6 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
@@ -100,7 +100,7 @@ class Blockchain:
     __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
-    __height_map: BlockHeightMap
+    __height_map: BlockHeightMapABC
     # Unspent Store
     coin_store: CoinStoreProtocol
     # Store
@@ -123,7 +123,7 @@ class Blockchain:
     async def create(
         coin_store: CoinStoreProtocol,
         block_store: BlockStore,
-        height_map: BlockHeightMap,
+        height_map: BlockHeightMapABC,
         consensus_constants: ConsensusConstants,
         reserved_cores: int,
         *,
@@ -132,7 +132,7 @@ class Blockchain:
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
-        validated. Uses the genesis block given in override_constants, or as a fallback,
+        validated. Uses the genesis block given in consensus_constants, or as a fallback,
         in the consensus constants config.
         """
         self = Blockchain()
@@ -164,7 +164,7 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
+    async def _load_chain_from_store(self, height_map: BlockHeightMapABC) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
