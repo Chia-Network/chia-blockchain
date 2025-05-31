@@ -70,7 +70,7 @@ async def main(db_path: Path) -> None:
         # make configurable
         reserved_cores = 4
         height_map = await BlockHeightMap.create(db_path.parent, db_wrapper)
-        blockchain = await Blockchain.create(coin_store, block_store, DEFAULT_CONSTANTS, height_map, reserved_cores)
+        blockchain = await Blockchain.create(coin_store, block_store, height_map, DEFAULT_CONSTANTS, reserved_cores)
 
         peak = blockchain.get_peak()
         assert peak is not None

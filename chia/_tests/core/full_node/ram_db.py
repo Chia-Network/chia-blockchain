@@ -23,7 +23,7 @@ async def create_ram_blockchain(
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(Path("."), db_wrapper)
-        blockchain = await Blockchain.create(coin_store, block_store, consensus_constants, height_map, 2)
+        blockchain = await Blockchain.create(coin_store, block_store, height_map, consensus_constants, 2)
         try:
             yield db_wrapper, blockchain
         finally:

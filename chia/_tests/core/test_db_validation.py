@@ -146,7 +146,7 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
         coin_store = await CoinStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, test_constants, height_map, reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, height_map, test_constants, reserved_cores=0)
         sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
             if block.height != 0 and len(block.finished_sub_slots) > 0:
