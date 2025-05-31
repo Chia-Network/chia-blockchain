@@ -11,6 +11,7 @@ from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSe
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_store_abc import BlockStoreABC
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
@@ -35,7 +36,7 @@ def decompress_blob(block_bytes: bytes) -> bytes:
 
 @typing_extensions.final
 @dataclasses.dataclass
-class BlockStore:
+class BlockStore(BlockStoreABC):
     block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
     ses_challenge_cache: LRUCache[bytes32, list[SubEpochChallengeSegment]]

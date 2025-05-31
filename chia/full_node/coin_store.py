@@ -13,6 +13,7 @@ from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.coin_store_abc import CoinStoreABC
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
@@ -24,7 +25,7 @@ log = logging.getLogger(__name__)
 
 @typing_extensions.final
 @dataclasses.dataclass
-class CoinStore:
+class CoinStore(CoinStoreABC):
     """
     This object handles CoinRecords in DB.
     """
