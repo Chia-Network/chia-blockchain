@@ -4,7 +4,9 @@ source_roots = ["."]
 
 [[modules]]
 path = "chia.protocols"
-depends_on = ["chia.types", "chia.util"]
+depends_on = ["chia.types", "chia.util",
+    { path = "chia.full_node", deprecated = false},
+]
 
 [[modules]]
 path = "chia.pools"
