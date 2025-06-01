@@ -221,7 +221,14 @@ async def test_missing_signage_point(
     def create_sp(index: int, challenge_hash: bytes32) -> tuple[uint64, farmer_protocol.NewSignagePoint]:
         time = uint64(index + 1)
         sp = farmer_protocol.NewSignagePoint(
-            challenge_hash, std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(index), uint32(1)
+            challenge_hash,
+            std_hash(b"2"),
+            std_hash(b"3"),
+            uint64(1),
+            uint64(1000000),
+            uint8(index),
+            uint32(1),
+            uint32(0),
         )
         return time, sp
 

@@ -98,7 +98,7 @@ class TestPotIterations:
         num_sps = 16
         sp_interval_iters = uint64(100000000 // 32)
         difficulty = uint64(500000000000)
-
+        constants = test_constants.replace(DIFFICULTY_CONSTANT_FACTOR=uint128(2**25))
         for slot_index in range(total_slots):
             total_wins_in_slot = 0
             for sp_index in range(num_sps):
@@ -106,7 +106,10 @@ class TestPotIterations:
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        required_iters = calculate_iterations_quality(uint128(2**25), quality, k, difficulty, sp_hash)
+                        # todo: add v2
+                        required_iters = calculate_iterations_quality(
+                            constants, quality, k, difficulty, sp_hash, uint32(0)
+                        )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1

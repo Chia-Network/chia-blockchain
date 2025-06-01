@@ -57,6 +57,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
+    validate_pospace_and_get_reuierd_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -94,7 +95,6 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     generate_taproot_sk,
     passes_plot_filter,
-    verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -155,6 +155,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     for cs in sb.coin_spends:
         parent_id = cs.coin.name()
         _, r = run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)
+        _, r = run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)
         for cond in Program.to(r).as_iter():
             atoms = cond.as_iter()
             op = next(atoms).atom
@@ -177,6 +178,7 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
         cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
+        cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -186,11 +188,13 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
             solution = spend.at("rrrf")
 
             cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
+            cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(result)
 
     else:
         block_program_args = SerializedProgram.to([[]])
+        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
         clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
 
         for res in result.first().as_iter():
@@ -867,6 +871,7 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
+                        tx_block_heights[-1] if len(tx_block_heights) > 0 else uint32(0),
                         force_plot_id=force_plot_id,
                     )
 
@@ -1168,6 +1173,7 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
+                        tx_block_heights[-1] if len(tx_block_heights) > 0 else uint32(0),
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -1333,6 +1339,7 @@ class BlockTools:
                     constants.DIFFICULTY_STARTING,
                     constants.SUB_SLOT_ITERS_STARTING,
                     uint32(0),
+                    uint32(0),
                 )
 
                 # Try each of the proofs of space
@@ -1481,6 +1488,7 @@ class BlockTools:
         difficulty: uint64,
         sub_slot_iters: uint64,
         height: uint32,
+        prev_transaction_b_height: uint32,
         force_plot_id: Optional[bytes32] = None,
     ) -> list[tuple[uint64, ProofOfSpace]]:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
@@ -1497,11 +1505,13 @@ class BlockTools:
 
                 for proof_index, quality_str in enumerate(qualities):
                     required_iters = calculate_iterations_quality(
-                        constants.DIFFICULTY_CONSTANT_FACTOR,
+                        constants,
                         quality_str,
                         plot_info.prover.get_size(),
                         difficulty,
                         signage_point,
+                        sub_slot_iters,
+                        prev_transaction_b_height,
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
@@ -1752,25 +1762,25 @@ def load_block_list(
             assert full_block.reward_chain_block.challenge_chain_sp_vdf is not None
             challenge = full_block.reward_chain_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-        quality_str = verify_and_get_quality_string(
-            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash, height=full_block.height
-        )
-        assert quality_str is not None
-        # TODO: support v2 plots
-        pos_size_v1 = full_block.reward_chain_block.proof_of_space.size_v1()
-        assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
-        required_iters: uint64 = calculate_iterations_quality(
-            constants.DIFFICULTY_CONSTANT_FACTOR,
-            quality_str,
-            pos_size_v1,
-            uint64(difficulty),
+        cache = BlockCache(blocks)
+        prev_transaction_b_height = uint32(0)  # todo handle hard fork 2
+
+        required_iters = validate_pospace_and_get_reuierd_iters(
+            constants,
+            full_block.reward_chain_block.proof_of_space,
+            challenge,
             sp_hash,
+            full_block.height,
+            uint64(difficulty),
+            sub_slot_iters,
+            prev_transaction_b_height,
         )
+        assert required_iters is not None
 
         blocks[full_block.header_hash] = block_to_block_record(
             constants,
-            BlockCache(blocks),
+            cache,
             required_iters,
             full_block,
             sub_slot_iters,
