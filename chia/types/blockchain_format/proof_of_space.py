@@ -23,7 +23,7 @@ def get_plot_id(pos: ProofOfSpace) -> bytes32:
 
 
 def validate_proof_v2(plot_id: bytes32, size: uint8, challenge: bytes32, proof: bytes) -> Optional[bytes]:
-    assert False  # Not implemented
+    raise NotImplementedError()
 
 
 def verify_and_get_quality_string(
@@ -58,6 +58,7 @@ def verify_and_get_quality_string(
         prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
     else:
         log.error(f"Unknown plot version: {pos.version_and_size:x}")
+        return None
 
     plot_id: bytes32 = get_plot_id(pos)
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
@@ -84,6 +85,7 @@ def get_quality_string(pos: ProofOfSpace, plot_id: bytes32) -> Optional[bytes32]
         if not quality_str:
             return None
     else:
+        log.error(f"Unknown plot version: {pos.version_and_size:x}")
         return None
 
     return bytes32(quality_str)

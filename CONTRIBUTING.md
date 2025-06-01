@@ -57,8 +57,8 @@ to configure how the tests are run. For example, for more logging: change the lo
 ```bash
 sh install.sh -d
 . ./activate
-ruff format && ruff check --fix && mypy
-pytest tests -v --durations 0
+ruff format && ruff check --fix && mypy .
+pytest . -v --durations 0
 ```
 
 The [Mypy library](https://mypy.readthedocs.io/en/stable/) is very useful for ensuring objects are of the correct type, so try to always add the type of the return value, and the type of local variables.

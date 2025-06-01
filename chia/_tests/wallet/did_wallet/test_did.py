@@ -13,6 +13,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.condition_tools import conditions_dict_for_solution
 from chia.rpc.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
@@ -24,7 +25,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -1774,7 +1774,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
     assert response["did_id"] == encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
     assert response["launcher_id"] == did_wallet_1.did_info.origin_coin.name().hex()
     assert did_wallet_1.did_info.current_inner is not None  # mypy
-    assert response["full_puzzle"].to_program() == create_singleton_puzzle(
+    assert Program.from_serialized(response["full_puzzle"]) == create_singleton_puzzle(
         did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
     )
     assert response["metadata"]["twitter"] == "twitter"

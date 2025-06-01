@@ -8,7 +8,7 @@ from chia_puzzles_py.programs import P2_PARENT as P2_PARENT_BYTES
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost, uncurry
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.nft_wallet.nft_puzzle_utils import create_nft_layer_puzzle_with_curry_params
@@ -45,9 +45,9 @@ def match_dl_singleton(puzzle: Union[Program, SerializedProgram]) -> tuple[bool,
     """
     Given a puzzle test if it's a CAT and, if it is, return the curried arguments
     """
-    mod, singleton_curried_args = puzzle.uncurry()
+    mod, singleton_curried_args = uncurry(puzzle)
     if mod == SINGLETON_TOP_LAYER_MOD:
-        mod, dl_curried_args = singleton_curried_args.at("rf").uncurry()
+        mod, dl_curried_args = uncurry(singleton_curried_args.at("rf"))
         if mod == NFT_STATE_LAYER_MOD and dl_curried_args.at("rrf") == ACS_MU_PH:
             launcher_id = singleton_curried_args.at("frf")
             root = dl_curried_args.at("rff")
@@ -99,7 +99,7 @@ def get_mirror_info(
     parent_puzzle: Union[Program, SerializedProgram], parent_solution: Union[Program, SerializedProgram]
 ) -> tuple[bytes32, list[bytes]]:
     assert type(parent_puzzle) is type(parent_solution)
-    _, conditions = parent_puzzle.run_with_cost(INFINITE_COST, parent_solution)
+    _, conditions = run_with_cost(parent_puzzle, INFINITE_COST, parent_solution)
     for condition in conditions.as_iter():
         if (
             condition.first().as_python() == ConditionOpcode.CREATE_COIN

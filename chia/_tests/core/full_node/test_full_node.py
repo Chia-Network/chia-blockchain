@@ -55,12 +55,12 @@ from chia.protocols import full_node_protocol, timelord_protocol, wallet_protoco
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols.farmer_protocol import DeclareProofOfSpace
 from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.node_discovery import FullNodePeers
-from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -75,6 +75,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.program import Program
@@ -98,7 +99,6 @@ from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.task_referencer import create_referenced_task
-from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG

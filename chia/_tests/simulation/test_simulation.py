@@ -22,7 +22,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.daemon.server import WebSocketServer
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator

@@ -27,8 +27,8 @@ from chia.full_node.mempool_check_conditions import (
     get_spends_for_block,
     get_spends_for_block_with_conditions,
 )
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator

@@ -17,8 +17,8 @@ from chia._tests.util.network_protocol_data import (
 )
 from chia.farmer.farmer_api import FarmerAPI
 from chia.protocols import farmer_protocol
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, NodeType
 from chia.util.hash import std_hash
 from chia.util.task_referencer import create_referenced_task
 

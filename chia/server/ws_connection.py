@@ -18,6 +18,7 @@ from packaging.version import Version
 from typing_extensions import Protocol, final
 
 from chia import __version__
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -29,7 +30,6 @@ from chia.protocols.protocol_timing import (
 from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.capabilities import known_active_capabilities
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
