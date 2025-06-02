@@ -1675,9 +1675,10 @@ class DataStore:
 
         if root.generation > 0:
             previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
-            with log_exceptions(log=log, message="Error while getting previous merkle blob"):
-                previous_root_path = self.get_merkle_path(store_id=store_id, root_hash=previous_root.node_hash)
-            delta_file_cache.load_previous_hashes(previous_root_path)
+            if previous_root.node_hash is not None:
+                with log_exceptions(log=log, message="Error while getting previous merkle blob"):
+                    previous_root_path = self.get_merkle_path(store_id=store_id, root_hash=previous_root.node_hash)
+                delta_file_cache.load_previous_hashes(previous_root_path)
 
         tree_nodes: list[SerializedNode] = []
 
