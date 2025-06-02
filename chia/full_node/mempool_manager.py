@@ -612,7 +612,10 @@ class MempoolManager:
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
 
-            supports_dedup = eligibility_info.is_eligible_for_dedup and is_clvm_canonical(bytes(coin_spend.solution))
+            supports_dedup = eligibility_info.is_eligible_for_dedup
+            if supports_dedup and not is_clvm_canonical(bytes(coin_spend.solution)):
+                return Err.INVALID_COIN_SOLUTION, None, []
+
             mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
             lineage_info = None
             if mark_as_fast_forward:
