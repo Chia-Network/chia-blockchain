@@ -91,17 +91,24 @@ class CoinStore:
 
         start = time.monotonic()
 
-        additions = []
+        db_values_to_insert = []
 
         for coin in tx_additions:
-            record: CoinRecord = CoinRecord(
-                coin,
-                height,
-                uint32(0),
-                False,
-                timestamp,
+            db_values_to_insert.append(
+                (
+                    coin.name(),
+                    # confirmed_index
+                    height,
+                    # spent_index
+                    0,
+                    # coinbase
+                    0,
+                    coin.puzzle_hash,
+                    coin.parent_coin_info,
+                    coin.amount.stream_to_bytes(),
+                    timestamp,
+                )
             )
-            additions.append(record)
 
         if height == 0:
             assert len(included_reward_coins) == 0
@@ -109,16 +116,24 @@ class CoinStore:
             assert len(included_reward_coins) >= 2
 
         for coin in included_reward_coins:
-            reward_coin_r: CoinRecord = CoinRecord(
-                coin,
-                height,
-                uint32(0),
-                True,
-                timestamp,
+            db_values_to_insert.append(
+                (
+                    coin.name(),
+                    # confirmed_index
+                    height,
+                    # spent_index
+                    0,
+                    # coinbase
+                    1,
+                    coin.puzzle_hash,
+                    coin.parent_coin_info,
+                    coin.amount.stream_to_bytes(),
+                    timestamp,
+                )
             )
-            additions.append(reward_coin_r)
 
-        await self._add_coin_records(additions)
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.executemany("INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)", db_values_to_insert)
         await self._set_spent(tx_removals, height)
 
         end = time.monotonic()
