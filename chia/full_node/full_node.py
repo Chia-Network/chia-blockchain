@@ -102,6 +102,7 @@ class PeakPostProcessingResult:
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: list[tuple[bytes32, bytes]]  # The hints added to the DB
     lookup_coin_ids: list[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
+    signage_points: list[tuple[RespondSignagePoint, WSChiaConnection, Optional[EndOfSubSlotBundle]]]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -837,7 +838,7 @@ class FullNode:
             peak_block = await self.blockchain.get_full_peak()
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
-            difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
+            difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
@@ -1807,10 +1808,9 @@ class FullNode:
             # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
             assert ip_sub_slot is not None
             if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():
-                next_difficulty = self.blockchain.get_next_difficulty(peak.header_hash, True)
-                next_sub_slot_iters = self.blockchain.get_next_slot_iters(peak.header_hash, True)
-                difficulty = next_difficulty
-                sub_slot_iters = next_sub_slot_iters
+                sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(
+                    peak.header_hash, True
+                )
         else:
             difficulty = self.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
@@ -1845,8 +1845,7 @@ class FullNode:
         """
 
         record = state_change_summary.peak
-        difficulty = self.blockchain.get_next_difficulty(record.header_hash, False)
-        sub_slot_iters = self.blockchain.get_next_slot_iters(record.header_hash, False)
+        sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(record.header_hash, False)
 
         self.log.info(
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
@@ -1895,6 +1894,7 @@ class FullNode:
             difficulty,
         )
 
+        signage_points: list[tuple[RespondSignagePoint, WSChiaConnection, Optional[EndOfSubSlotBundle]]] = []
         if fns_peak_result.new_signage_points is not None and peer is not None:
             for index, sp in fns_peak_result.new_signage_points:
                 assert (
@@ -1903,8 +1903,13 @@ class FullNode:
                     and sp.rc_vdf is not None
                     and sp.rc_proof is not None
                 )
-                await self.signage_point_post_processing(
-                    RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
+                # Collect the data for networking outside the mutex
+                signage_points.append(
+                    (
+                        RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof),
+                        peer,
+                        sub_slots[1],
+                    )
                 )
 
         if sub_slots[1] is None:
@@ -1934,6 +1939,7 @@ class FullNode:
             fns_peak_result,
             hints_to_add,
             lookup_coin_ids,
+            signage_points=signage_points,
         )
 
     async def peak_post_processing_2(
@@ -1948,6 +1954,8 @@ class FullNode:
         with peers
         """
         record = state_change_summary.peak
+        for signage_point in ppp_result.signage_points:
+            await self.signage_point_post_processing(*signage_point)
         for new_peak_item in ppp_result.mempool_peak_result:
             self.log.debug(f"Added transaction to mempool: {new_peak_item.transaction_id}")
             mempool_item = self.mempool_manager.get_mempool_item(new_peak_item.transaction_id)
@@ -2673,8 +2681,9 @@ class FullNode:
 
             peak = self.blockchain.get_peak()
             if peak is not None and peak.height > 2:
-                next_sub_slot_iters = self.blockchain.get_next_slot_iters(peak.header_hash, True)
-                next_difficulty = self.blockchain.get_next_difficulty(peak.header_hash, True)
+                next_sub_slot_iters, next_difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(
+                    peak.header_hash, True
+                )
             else:
                 next_sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
                 next_difficulty = self.constants.DIFFICULTY_STARTING
