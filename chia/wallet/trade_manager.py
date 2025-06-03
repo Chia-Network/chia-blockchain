@@ -862,6 +862,16 @@ class TradeManager:
             complete_offer, valid_spend_solver = await self.check_for_final_modifications(
                 Offer.aggregate([offer, take_offer]), solver, inner_action_scope
             )
+
+        async with action_scope.use() as interface:
+            if interface.side_effects.get_unused_derivation_record_result is not None:
+                # This error is of a protection against potential misues of this band-aid solution.
+                # We should put more thought into how sub-action scopes are generated and what effects
+                # we might want to push. A ticket to this respect can be found [CHIA-2984].
+                raise ValueError("Cannot use `respond_to_offer` with existing puzzle hash generation")
+            interface.side_effects.get_unused_derivation_record_result = (
+                inner_action_scope.side_effects.get_unused_derivation_record_result
+            )
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(
