@@ -575,7 +575,7 @@ class MempoolManager:
             Optional[MempoolItem]: the item to add (to mempool or pending pool)
             list[bytes32]: conflicting mempool items to remove, if no Err
         """
-        start_time = time.time()
+        start_time = time.monotonic()
         if self.peak is None:
             return Err.MEMPOOL_NOT_INITIALIZED, None, []
 
@@ -764,13 +764,17 @@ class MempoolManager:
             if not can_replace(conflicts, removal_names, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
-        duration = time.time() - start_time
+        duration = time.monotonic() - start_time
 
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
             f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
+
+        if duration > 2:
+            log.warning("validating spend took too long, rejecting")
+            return Err.INVALID_SPEND_BUNDLE, None, []
 
         return None, potential, [item.name for item in conflicts]
 
