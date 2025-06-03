@@ -44,7 +44,7 @@ jobs:
 
   build:
     name: Build EXE
-    runs-on: [windows-2019]
+    runs-on: [windows-2022]
     needs:
       - version
     timeout-minutes: 65
@@ -317,14 +317,14 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - name: 2019
-            matrix: 2019
-            runs-on:
-              intel: windows-2019
           - name: 2022
             matrix: 2022
             runs-on:
               intel: windows-2022
+          - name: 2015
+            matrix: 2015
+            runs-on:
+              intel: windows-2015
         arch:
           - name: Intel
             matrix: intel
