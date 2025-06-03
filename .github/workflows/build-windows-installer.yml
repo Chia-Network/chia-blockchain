@@ -321,10 +321,10 @@ jobs:
             matrix: 2022
             runs-on:
               intel: windows-2022
-          - name: 2015
-            matrix: 2015
+          - name: 2025
+            matrix: 2025
             runs-on:
-              intel: windows-2015
+              intel: windows-2025
         arch:
           - name: Intel
             matrix: intel
