@@ -57,7 +57,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
-    validate_pospace_and_get_requierd_iters,
+    validate_pospace_and_get_required_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -1764,7 +1764,7 @@ def load_block_list(
         cache = BlockCache(blocks)
         prev_transaction_b_height = uint32(0)  # TODO: todo_v2_plots
 
-        required_iters = validate_pospace_and_get_requierd_iters(
+        required_iters = validate_pospace_and_get_required_iters(
             constants,
             full_block.reward_chain_block.proof_of_space,
             challenge,

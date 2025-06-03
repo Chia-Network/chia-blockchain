@@ -35,7 +35,7 @@ from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
     is_overflow_block,
-    validate_pospace_and_get_requierd_iters,
+    validate_pospace_and_get_required_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -1322,7 +1322,7 @@ def _validate_pospace_recent_chain(
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
     assert cc_sp_hash is not None
 
-    required_iters = validate_pospace_and_get_requierd_iters(
+    required_iters = validate_pospace_and_get_required_iters(
         constants,
         block.reward_chain_block.proof_of_space,
         challenge if not overflow else prev_challenge,
@@ -1371,7 +1371,7 @@ def __validate_pospace(
     # validate proof of space
     assert sub_slot_data.proof_of_space is not None
 
-    required_iters = validate_pospace_and_get_requierd_iters(
+    required_iters = validate_pospace_and_get_required_iters(
         constants,
         sub_slot_data.proof_of_space,
         challenge,

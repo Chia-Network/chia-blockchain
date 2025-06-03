@@ -9,7 +9,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
-    validate_pospace_and_get_requierd_iters,
+    validate_pospace_and_get_required_iters,
 )
 
 
@@ -27,7 +27,7 @@ def iters_from_block(
     else:
         cc_sp = reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    required_iters = validate_pospace_and_get_requierd_iters(
+    required_iters = validate_pospace_and_get_required_iters(
         constants,
         reward_chain_block.proof_of_space,
         reward_chain_block.pos_ss_cc_challenge_hash,
