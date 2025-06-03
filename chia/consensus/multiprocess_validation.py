@@ -32,7 +32,7 @@ from chia.consensus.get_block_challenge import get_block_challenge, prev_tx_bloc
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import (
     is_overflow_block,
-    validate_pospace_and_get_reuierd_iters,
+    validate_pospace_and_get_requierd_iters,
 )
 from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
@@ -213,7 +213,7 @@ async def pre_validate_block(
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    required_iters = validate_pospace_and_get_reuierd_iters(
+    required_iters = validate_pospace_and_get_requierd_iters(
         constants,
         block.reward_chain_block.proof_of_space,
         challenge,

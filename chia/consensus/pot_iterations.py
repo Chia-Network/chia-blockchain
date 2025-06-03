@@ -65,7 +65,7 @@ def calculate_ip_iters(
     return uint64((sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters)
 
 
-def validate_pospace_and_get_reuierd_iters(
+def validate_pospace_and_get_requierd_iters(
     constants: ConsensusConstants,
     proof_of_space: ProofOfSpace,
     challenge: bytes32,

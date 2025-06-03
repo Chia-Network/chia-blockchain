@@ -9,7 +9,7 @@ from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.pot_iterations import validate_pospace_and_get_reuierd_iters
+from chia.consensus.pot_iterations import validate_pospace_and_get_requierd_iters
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
@@ -42,7 +42,7 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        required_iters = validate_pospace_and_get_reuierd_iters(
+        required_iters = validate_pospace_and_get_requierd_iters(
             constants,
             block.reward_chain_block.proof_of_space,
             block.reward_chain_block.pos_ss_cc_challenge_hash,

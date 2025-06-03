@@ -57,7 +57,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
-    validate_pospace_and_get_reuierd_iters,
+    validate_pospace_and_get_requierd_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -154,7 +154,6 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     ret: list[Coin] = []
     for cs in sb.coin_spends:
         parent_id = cs.coin.name()
-        _, r = run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)
         _, r = run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)
         for cond in Program.to(r).as_iter():
             atoms = cond.as_iter()
@@ -1766,7 +1765,7 @@ def load_block_list(
         cache = BlockCache(blocks)
         prev_transaction_b_height = uint32(0)  # todo handle hard fork 2
 
-        required_iters = validate_pospace_and_get_reuierd_iters(
+        required_iters = validate_pospace_and_get_requierd_iters(
             constants,
             full_block.reward_chain_block.proof_of_space,
             challenge,

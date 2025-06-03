@@ -35,10 +35,12 @@ def verify_and_get_quality_string(
     height: uint32,
 ) -> Optional[bytes32]:
     # todo: use new proof to get format
-    if pos.size_v1 is not None:
+    plot_size = pos.size()
+    if plot_size.size_v1 is not None:
+        assert plot_size.size_v2 is None
         return verify_and_get_quality_string_v1(pos, constants, original_challenge_hash, signage_point, height=height)
     else:
-        assert pos.size_v2 is not None
+        assert plot_size.size_v2 is not None
         return verify_and_get_quality_string_v2(pos, constants, original_challenge_hash, signage_point, height=height)
 
 
@@ -58,9 +60,7 @@ def verify_and_get_quality_string_v1(
         log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
     size = pos.size().size_v1
-    if size is None:
-        log.error("Expected size_v1 but got None")
-        return None
+    assert size is not None
     if size < constants.MIN_PLOT_SIZE:
         log.error("Plot size is lower than the minimum")
         return None
@@ -94,7 +94,7 @@ def verify_and_get_quality_string_v2(
     *,
     height: uint32,
 ) -> Optional[bytes32]:
-    return None
+    raise NotImplementedError()
 
 
 def passes_plot_filter(

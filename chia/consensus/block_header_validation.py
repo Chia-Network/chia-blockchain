@@ -27,7 +27,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
-    validate_pospace_and_get_reuierd_iters,
+    validate_pospace_and_get_requierd_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -496,7 +496,7 @@ def validate_unfinished_header_block(
     else:
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    required_iters = validate_pospace_and_get_reuierd_iters(
+    required_iters = validate_pospace_and_get_requierd_iters(
         constants,
         header_block.reward_chain_block.proof_of_space,
         challenge,
