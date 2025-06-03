@@ -146,7 +146,7 @@ class HarvesterAPI:
 
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):
-                        # todo handlev2 plots
+                        # TODO: todo_v2_plots
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants,
                             quality_str,

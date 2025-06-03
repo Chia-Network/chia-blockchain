@@ -1762,7 +1762,7 @@ def load_block_list(
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
         cache = BlockCache(blocks)
-        prev_transaction_b_height = uint32(0)  # todo handle hard fork 2
+        prev_transaction_b_height = uint32(0)  # TODO: todo_v2_plots
 
         required_iters = validate_pospace_and_get_requierd_iters(
             constants,

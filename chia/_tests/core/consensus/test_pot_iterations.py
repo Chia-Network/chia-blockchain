@@ -106,7 +106,7 @@ class TestPotIterations:
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        # todo: add v2
+                        # TODO: todo_v2_plots
                         required_iters = calculate_iterations_quality(
                             constants, quality, k, difficulty, sp_hash, uint64(100000000), uint32(0)
                         )
