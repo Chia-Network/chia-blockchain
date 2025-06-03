@@ -1383,7 +1383,7 @@ class FullNode:
                     block_rate_height = end_height
 
                 self.log.info(
-                    "Added blocks {start_height} to {end_height} "
+                    f"Added blocks {start_height} to {end_height} "
                     f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
