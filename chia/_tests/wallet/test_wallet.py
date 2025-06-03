@@ -401,7 +401,11 @@ class TestWalletSimulator:
 
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": test_fee}
+            {
+                "coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1

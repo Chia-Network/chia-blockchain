@@ -76,7 +76,6 @@ from chia.wallet.util.clvm_streamable import (
     json_deserialize_with_clvm_streamable,
     json_serialize_with_clvm_streamable,
 )
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -614,7 +613,9 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
     )
 
     AMOUNT = uint64(1)
-    async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, sign=False, push=False) as action_scope:
+    async with wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, sign=False, push=False
+    ) as action_scope:
         await wallet.generate_signed_transaction([AMOUNT], [bytes32.zeros], action_scope)
     [tx] = action_scope.side_effects.transactions
 
