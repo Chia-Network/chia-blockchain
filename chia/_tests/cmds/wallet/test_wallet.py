@@ -1148,14 +1148,13 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
         "150",
     ]
     # these are various things that should be in the output
-    cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
-    cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
+    nft_offered_id = bytes32.from_hexstr("6bc2c2a27c0f04b9e1e57933d2efe08f5b9e156652a374436b70c067b03c444c")
+    cat_offered_id = bytes32.from_hexstr("06e4136cb7295cec5265c5e49cc32fa69aede779532f2b7542a2456589a53f2f")
+    cat_requested_id = bytes32.from_hexstr("13a52e5efb1ee80a24c94b36bbda2b473094353614ced1c2938ba5ef6097431e")
+    nft_requested_id_1 = bytes32.from_hexstr("7657b5f1cdee70459052c314f839bb1b76b8c3f444671da71ad7dfcb6c47f243")
+    nft_requested_id_2 = bytes32.from_hexstr("5f03cdb94c96325f49f4abf1d4d10cabd5ea583632fbf20f251b7fad73645a14")
     assert_list = [
-        f"  OFFERED:\n    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n    - {cat1.hex()}: 100.0 (100000 mojos)",
-        "  REQUESTED:\n"
-        f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"
-        "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",
-        "Cancelled offer with ID dfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839",
+        "Cancelled offer with ID 71fd6de245d896c691b0115cdb9b47904cb60858ae87b86bfd648b23208b6cc1",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
@@ -1164,10 +1163,13 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
             (test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True, True, test_condition_valid_times)
         ],
         "cat_asset_id_to_name": [
-            (cat1,),
-            (cat2,),
-            (bytes32.from_hexstr("accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d"),),
-            (cat1,),
+            (nft_offered_id,),
+            (cat_offered_id,),
+            (nft_requested_id_1,),
+            (nft_requested_id_2,),
+            (cat_requested_id,),
+            (nft_offered_id,),
+            (cat_offered_id,),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
