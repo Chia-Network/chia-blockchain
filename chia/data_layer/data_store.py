@@ -464,7 +464,7 @@ class DataStore:
                         synced_generations += 1
                         log.info(
                             f"Successfully recovered root from {filename}. "
-                            f"Total roots processed: {(synced_generations/total_generations*100):.2f}%"
+                            f"Total roots processed: {(synced_generations / total_generations * 100):.2f}%"
                         )
                     except Exception as e:
                         log.error(f"Cannot recover data from {filename}: {e}")
