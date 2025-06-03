@@ -104,7 +104,6 @@ def get_block_challenge(
 
 
 def prev_tx_block(
-    constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]],
 ) -> uint32:
@@ -128,4 +127,4 @@ def prev_tx_block(
             curr = blocks.block_record(prev_b.header_hash)
     while curr.is_transaction_block is False and curr.height > 0:
         curr = blocks.block_record(curr.prev_hash)
-    return prev_b.height
+    return curr.height

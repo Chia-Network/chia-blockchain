@@ -504,7 +504,7 @@ def validate_unfinished_header_block(
         height,
         expected_vs.difficulty,
         expected_vs.ssi,
-        prev_tx_block(constants, blocks, prev_b),
+        prev_tx_block(blocks, prev_b),
     )
     if required_iters is None:
         return None, ValidationError(Err.INVALID_POSPACE)

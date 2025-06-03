@@ -1330,7 +1330,7 @@ def _validate_pospace_recent_chain(
         block.height,
         diff,
         ssi,
-        prev_tx_block(constants, blocks, blocks.block_record(block.prev_header_hash)),
+        prev_tx_block(blocks, blocks.block_record(block.prev_header_hash)),
     )
     if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")

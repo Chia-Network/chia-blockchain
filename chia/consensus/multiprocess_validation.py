@@ -221,7 +221,7 @@ async def pre_validate_block(
         block.height,
         vs.difficulty,
         vs.ssi,
-        prev_tx_block(constants, blockchain, prev_b),
+        prev_tx_block(blockchain, prev_b),
     )
     if required_iters is None:
         return return_error(Err.INVALID_POSPACE)
