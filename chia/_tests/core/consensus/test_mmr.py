@@ -1,12 +1,16 @@
-import pytest
-from chia.consensus.mmr import MerkleMountainRange, MMRPeak
-from chia_rs.sized_bytes import bytes32
-import os
-from chia_rs import FullBlock
-from typing import List
-import time
-import random
+from __future__ import annotations
+
 import logging
+import os
+import random
+import time
+from typing import List
+
+import pytest
+from chia_rs import FullBlock
+from chia_rs.sized_bytes import bytes32
+
+from chia.consensus.mmr import MerkleMountainRange, MMRPeak
 
 logger = logging.getLogger(__name__)
 
@@ -82,11 +86,11 @@ def test_mmr_peak_validation() -> None:
     # Test height validation
     with pytest.raises(ValueError, match="Height cannot be negative"):
         MMRPeak(-1, [random_bytes32()])
-    
+
     # Test empty elements validation
     with pytest.raises(ValueError, match="Elements list cannot be empty"):
         MMRPeak(0, [])
-    
+
     # Test get_num_leaves
     peak = MMRPeak(1, [random_bytes32(), random_bytes32()])
     assert peak.get_num_leaves() == 2
@@ -94,21 +98,21 @@ def test_mmr_peak_validation() -> None:
 
 def test_mmr_input_validation() -> None:
     mmr = MerkleMountainRange()
-    
+
     # Test invalid leaf type
     with pytest.raises(ValueError, match="Leaf must be bytes32"):
         mmr.append(b"not a bytes32")  # type: ignore
-    
+
     # Test invalid peak index
     leaf = random_bytes32()
     mmr.append(leaf)
     proof = mmr.get_inclusion_proof(leaf)
     assert proof is not None
     peak_index, proof_bytes, other_peaks = proof
-    
+
     with pytest.raises(ValueError, match="Invalid peak index"):
         mmr.verify_inclusion(leaf, -1, proof_bytes, other_peaks)
-    
+
     with pytest.raises(ValueError, match="Invalid peak index"):
         mmr.verify_inclusion(leaf, 1, proof_bytes, other_peaks)
 
@@ -116,11 +120,11 @@ def test_mmr_input_validation() -> None:
 def test_mmr_height() -> None:
     mmr = MerkleMountainRange()
     assert mmr.get_height() == 0
-    
+
     # Add leaves to create peaks of different heights
     leaves = [random_bytes32() for _ in range(5)]
     heights = [0, 1, 2, 0, 1]  # Expected peak heights after each append
-    
+
     for leaf, expected_height in zip(leaves, heights):
         mmr.append(leaf)
         assert mmr.get_height() == expected_height
@@ -131,21 +135,21 @@ def test_batch_verification() -> None:
     leaves = [random_bytes32() for _ in range(10)]
     for leaf in leaves:
         mmr.append(leaf)
-    
+
     # Collect proofs for all leaves
     proofs = []
     for leaf in leaves:
         proof = mmr.get_inclusion_proof(leaf)
         assert proof is not None
         proofs.append(proof)
-    
+
     # Test successful batch verification
     assert mmr.verify_batch_inclusion(leaves, proofs)
-    
+
     # Test mismatched lengths
     with pytest.raises(ValueError, match="Number of leaves must match number of proofs"):
         mmr.verify_batch_inclusion(leaves[:-1], proofs)
-    
+
     # Test failed verification with invalid proof
     invalid_proofs = proofs.copy()
     invalid_proofs[0] = (0, b"invalid proof", [])
@@ -156,11 +160,11 @@ def test_serialization_validation() -> None:
     # Test invalid data type
     with pytest.raises(ValueError, match="Invalid serialized data format"):
         MerkleMountainRange.deserialize([])  # type: ignore
-    
+
     # Test missing required fields
     with pytest.raises(ValueError, match="Missing required fields in serialized data"):
         MerkleMountainRange.deserialize({"peaks": []})  # type: ignore
-    
+
     with pytest.raises(ValueError, match="Missing required fields in serialized data"):
         MerkleMountainRange.deserialize({"size": 0})  # type: ignore
 
@@ -223,4 +227,4 @@ def test_mmr_benchmark_default_10000_blocks(default_10000_blocks: List[FullBlock
         assert mmr.verify_inclusion(hh, peak_index, proof_bytes, other_peaks)
     avg_proof_time = sum(proof_times) / len(proof_times)
     logger.info(f"MMR append time for 10,000 blocks: {append_time:.4f} seconds")
-    logger.info(f"Average proof time for 1,000 random blocks: {avg_proof_time:.6f} seconds") 
+    logger.info(f"Average proof time for 1,000 random blocks: {avg_proof_time:.6f} seconds")

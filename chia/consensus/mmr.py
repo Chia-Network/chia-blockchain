@@ -1,10 +1,15 @@
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict, List, Optional, Tuple, Type
+
 from chia_rs import MerkleSet
 from chia_rs.sized_bytes import bytes32
+
 from chia.util.hash import std_hash
-from typing import List, Tuple, Optional, Dict, Any, Type
-import logging
 
 log = logging.getLogger(__name__)
+
 
 class MMRPeak:
     def __init__(self, height: int, elements: List[bytes32]) -> None:
@@ -12,7 +17,7 @@ class MMRPeak:
             raise ValueError("Height cannot be negative")
         if not elements:
             raise ValueError("Elements list cannot be empty")
-            
+
         self.height: int = height
         self.elements: List[bytes32] = elements
         self.merkle_set: MerkleSet = MerkleSet(elements)
@@ -26,6 +31,7 @@ class MMRPeak:
     def get_num_leaves(self) -> int:
         return len(self.elements)
 
+
 class MerkleMountainRange:
     def __init__(self) -> None:
         self.peaks: List[MMRPeak] = []
@@ -35,7 +41,7 @@ class MerkleMountainRange:
     def append(self, leaf: bytes32) -> None:
         if not isinstance(leaf, bytes32):
             raise ValueError("Leaf must be bytes32")
-            
+
         carry: MMRPeak = MMRPeak(0, [leaf])
         new_peaks: List[MMRPeak] = []
         i: int = 0
@@ -59,7 +65,7 @@ class MerkleMountainRange:
         if not self.peaks:
             return bytes32([0] * 32)
         # Hash all peak roots together, order matters for consistency
-        peak_roots: bytes = b''.join(peak.root for peak in self.peaks)
+        peak_roots: bytes = b"".join(peak.root for peak in self.peaks)
         return std_hash(peak_roots)
 
     def get_inclusion_proof(self, leaf: bytes32) -> Optional[Tuple[int, bytes, List[bytes32]]]:
@@ -71,7 +77,7 @@ class MerkleMountainRange:
         """
         if not isinstance(leaf, bytes32):
             raise ValueError("Leaf must be bytes32")
-            
+
         for idx, peak in enumerate(self.peaks):
             included, proof = peak.get_proof(leaf)
             if included:
@@ -86,14 +92,14 @@ class MerkleMountainRange:
             raise ValueError("Leaf must be bytes32")
         if peak_index < 0 or peak_index >= len(self.peaks):
             raise ValueError("Invalid peak index")
-            
+
         # Verify Merkle proof in the peak
         peak: MMRPeak = self.peaks[peak_index]
         included, _ = peak.get_proof(leaf)
         if not included:
             log.debug(f"Leaf verification failed: not included in peak {peak_index}")
             return False
-            
+
         # Recompute the MMR root
         roots: List[bytes32] = []
         for i, p in enumerate(self.peaks):
@@ -101,7 +107,7 @@ class MerkleMountainRange:
                 roots.append(peak.root)
             else:
                 roots.append(p.root)
-        mmr_root: bytes32 = std_hash(b''.join(roots))
+        mmr_root: bytes32 = std_hash(b"".join(roots))
         result = mmr_root == self.get_root()
         log.debug(f"Leaf verification {'succeeded' if result else 'failed'}: MMR root comparison")
         return result
@@ -119,7 +125,7 @@ class MerkleMountainRange:
         """
         if len(leaves) != len(proofs):
             raise ValueError("Number of leaves must match number of proofs")
-            
+
         for leaf, (peak_index, proof, other_peak_roots) in zip(leaves, proofs):
             if not self.verify_inclusion(leaf, peak_index, proof, other_peak_roots):
                 log.debug(f"Batch verification failed for leaf {leaf.hex()[:8]}...")
@@ -130,22 +136,18 @@ class MerkleMountainRange:
     def serialize(self) -> Dict[str, Any]:
         return {
             "peaks": [
-                {
-                    "height": peak.height,
-                    "elements": [bytes(e).hex() for e in peak.elements]
-                }
-                for peak in self.peaks
+                {"height": peak.height, "elements": [bytes(e).hex() for e in peak.elements]} for peak in self.peaks
             ],
-            "size": self.size
+            "size": self.size,
         }
 
     @classmethod
-    def deserialize(cls: Type["MerkleMountainRange"], data: Dict[str, Any]) -> "MerkleMountainRange":
+    def deserialize(cls: Type[MerkleMountainRange], data: Dict[str, Any]) -> MerkleMountainRange:
         if not isinstance(data, dict):
             raise ValueError("Invalid serialized data format")
         if "peaks" not in data or "size" not in data:
             raise ValueError("Missing required fields in serialized data")
-            
+
         mmr = cls()
         mmr.peaks = [
             MMRPeak(peak_data["height"], [bytes32(bytes.fromhex(e)) for e in peak_data["elements"]])
