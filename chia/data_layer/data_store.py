@@ -427,11 +427,17 @@ class DataStore:
             await writer.execute("INSERT INTO schema (version_id) VALUES (?)", (version,))
             log.info(f"Initialized new DB schema {version}.")
 
+            total_generations = 0
+            synced_generations = 0
             for roots in all_roots:
                 assert len(roots) > 0
+                total_generations += len(roots)
+
+            for roots in all_roots:
                 store_id = roots[0].store_id
                 await self.create_tree(store_id=store_id, status=Status.COMMITTED)
 
+                expected_synced_generations = synced_generations + len(roots)
                 for root in roots:
                     recovery_filename: Optional[Path] = None
 
@@ -455,9 +461,22 @@ class DataStore:
 
                     try:
                         await self.insert_into_data_store_from_file(store_id, root.node_hash, recovery_filename)
+                        synced_generations += 1
+                        log.info(
+                            f"Successfully recovered root from {filename}. "
+                            f"Total roots processed: {(synced_generations/total_generations*100):.2f}%"
+                        )
                     except Exception as e:
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
+
+                if synced_generations < expected_synced_generations:
+                    log.error(
+                        f"Could not recover {expected_synced_generations - synced_generations} generations. "
+                        f"Consider resyncing the store {store_id} once the migration is complete."
+                    )
+                    # Reset the counter as if we synced correctly, so the percentages add to 100% at the end.
+                    synced_generations = expected_synced_generations
 
     async def get_merkle_blob(
         self,
