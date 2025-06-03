@@ -177,7 +177,6 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
         cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
-        cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
