@@ -52,6 +52,8 @@ from chia.rpc.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    PWJoinPool,
+    PWJoinPoolResponse,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -3810,15 +3812,14 @@ class WalletRpcApi:
     # Pool Wallet
     ##########################################################################################
     @tx_endpoint(push=True)
+    @marshal
     async def pw_join_pool(
         self,
-        request: dict[str, Any],
+        request: PWJoinPool,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        fee = uint64(request.get("fee", 0))
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+    ) -> PWJoinPoolResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
@@ -3826,32 +3827,28 @@ class WalletRpcApi:
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         if (
             pool_wallet_info.current.state == FARMING_TO_POOL.value
-            and pool_wallet_info.current.pool_url == request["pool_url"]
+            and pool_wallet_info.current.pool_url == request.pool_url
         ):
             raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
 
         owner_pubkey = pool_wallet_info.current.owner_pubkey
-        target_puzzlehash = None
-
-        if "target_puzzlehash" in request:
-            target_puzzlehash = bytes32.from_hexstr(request["target_puzzlehash"])
-        assert target_puzzlehash is not None
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
-            target_puzzlehash,
+            request.target_puzzlehash,
             owner_pubkey,
-            request["pool_url"],
-            uint32(request["relative_lock_height"]),
+            request.pool_url,
+            request.relative_lock_height,
         )
 
-        async with self.service.wallet_state_manager.lock:
-            total_fee = await wallet.join_pool(new_target_state, fee, action_scope)
-            return {
-                "total_fee": total_fee,
-                "transaction": None,  # tx_endpoint wrapper will take care of this
-                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+        total_fee = await wallet.join_pool(new_target_state, request.fee, action_scope)
+        # tx_endpoint will take care of filling in these default values
+        return PWJoinPoolResponse(
+            [],
+            [],
+            total_fee=total_fee,
+            transaction=None,  # type: ignore
+            fee_transaction=None,  # type: ignore
+        )
 
     @tx_endpoint(push=True)
     async def pw_self_pool(

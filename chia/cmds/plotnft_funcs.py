@@ -32,6 +32,7 @@ from chia.pools.pool_config import (
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.rpc.wallet_request_types import PWJoinPool, TransactionEndpointResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -40,6 +41,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 
 
@@ -279,6 +281,35 @@ async def submit_tx_with_confirmation(
         print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
 
 
+# Scaffolding during WIP
+async def submit_tx_with_confirmation2(
+    message: str,
+    prompt: bool,
+    func: Callable[[], Awaitable[TransactionEndpointResponse]],
+    wallet_client: WalletRpcClient,
+    fingerprint: int,
+    wallet_id: int,
+) -> None:
+    print(message)
+    if prompt:
+        cli_confirm("Confirm (y/n): ", "Aborting.")
+    try:
+        result = await func()
+        start = time.time()
+        for tx_record in result.transactions:
+            if tx_record.spend_bundle is None:
+                continue
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(tx_record.name)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_record.name))
+                    return None
+    except Exception as e:
+        print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
+
+
 async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: Optional[int]) -> int:
     selected_wallet_id: int
 
@@ -349,15 +380,23 @@ async def join_pool(
     msg = f"\nWill join pool: {pool_url} with Plot NFT {wallet_info.fingerprint}."
     func = functools.partial(
         wallet_info.client.pw_join_pool,
-        selected_wallet_id,
-        bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
-        pool_url,
-        json_dict["relative_lock_height"],
-        fee,
+        PWJoinPool(
+            wallet_id=uint32(selected_wallet_id),
+            target_puzzlehash=bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
+            pool_url=pool_url,
+            relative_lock_height=json_dict["relative_lock_height"],
+            fee=fee,
+        ),
+        DEFAULT_TX_CONFIG,
     )
 
-    await submit_tx_with_confirmation(
-        msg, prompt, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id
+    await submit_tx_with_confirmation2(
+        msg,
+        prompt,
+        func,
+        wallet_info.client,
+        wallet_info.fingerprint,
+        selected_wallet_id,
     )
 
 

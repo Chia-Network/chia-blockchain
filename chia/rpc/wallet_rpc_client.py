@@ -73,6 +73,8 @@ from chia.rpc.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    PWJoinPool,
+    PWJoinPoolResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -698,18 +700,17 @@ class WalletRpcClient(RpcClient):
         return reply
 
     async def pw_join_pool(
-        self, wallet_id: int, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
-    ) -> dict[str, Any]:
-        request = {
-            "wallet_id": int(wallet_id),
-            "target_puzzlehash": target_puzzlehash.hex(),
-            "relative_lock_height": relative_lock_height,
-            "pool_url": pool_url,
-            "fee": fee,
-        }
-        reply = await self.fetch("pw_join_pool", request)
-        reply = parse_result_transactions(reply)
-        return reply
+        self,
+        request: PWJoinPool,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWJoinPoolResponse:
+        return PWJoinPoolResponse.from_json_dict(
+            await self.fetch(
+                "pw_join_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def pw_absorb_rewards(
         self, wallet_id: int, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None

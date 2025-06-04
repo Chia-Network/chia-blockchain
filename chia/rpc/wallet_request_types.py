@@ -670,6 +670,23 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
 
 @streamable
 @dataclass(frozen=True)
+class PWJoinPool(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    pool_url: str = field(default_factory=default_raise)
+    target_puzzlehash: bytes32 = field(default_factory=default_raise)
+    relative_lock_height: uint32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class PWJoinPoolResponse(TransactionEndpointResponse):
+    total_fee: uint64
+    transaction: TransactionRecord
+    fee_transaction: TransactionRecord
+
+
+@streamable
+@dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str = field(default_factory=default_raise)
     target_address: Optional[str] = None

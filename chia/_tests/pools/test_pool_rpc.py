@@ -24,6 +24,7 @@ from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.rpc_client import ResponseFailureError
+from chia.rpc.wallet_request_types import PWJoinPool
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.aliases import WalletService
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -820,23 +821,32 @@ class TestPoolWalletRpc:
         assert status_2.target is None
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        join_pool: dict[str, Any] = await client.pw_join_pool(
-            wallet_id,
-            pool_ph,
-            "https://pool.example.com",
-            uint32(10),
-            uint64(fee),
+        join_pool = await client.pw_join_pool(
+            PWJoinPool(
+                wallet_id=uint32(wallet_id),
+                target_puzzlehash=pool_ph,
+                pool_url="https://pool.example.com",
+                relative_lock_height=uint32(10),
+                fee=uint64(fee),
+                push=True,
+            ),
+            DEFAULT_TX_CONFIG,
         )
-        assert join_pool["success"]
-        join_pool_tx: TransactionRecord = join_pool["transaction"]
+        join_pool_tx: TransactionRecord = join_pool.transaction
         assert join_pool_tx is not None
         await full_node_api.wait_transaction_records_entered_mempool(records=[join_pool_tx])
 
-        join_pool_2: dict[str, Any] = await client.pw_join_pool(
-            wallet_id_2, pool_ph, "https://pool.example.com", uint32(10), uint64(fee)
+        join_pool_2 = await client.pw_join_pool(
+            PWJoinPool(
+                wallet_id=uint32(wallet_id_2),
+                target_puzzlehash=pool_ph,
+                pool_url="https://pool.example.com",
+                relative_lock_height=uint32(10),
+                fee=uint64(fee),
+            ),
+            DEFAULT_TX_CONFIG,
         )
-        assert join_pool_2["success"]
-        join_pool_tx_2: TransactionRecord = join_pool_2["transaction"]
+        join_pool_tx_2: TransactionRecord = join_pool_2.transaction
         for r in join_pool_tx.removals:
             assert r not in join_pool_tx_2.removals
         assert join_pool_tx_2 is not None
@@ -891,16 +901,18 @@ class TestPoolWalletRpc:
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
         assert status.target is None
 
-        join_pool_tx: TransactionRecord = (
+        (
             await client.pw_join_pool(
-                wallet_id,
-                pool_ph,
-                "https://pool.example.com",
-                uint32(5),
-                fee,
+                PWJoinPool(
+                    wallet_id=uint32(wallet_id),
+                    target_puzzlehash=pool_ph,
+                    pool_url="https://pool.example.com",
+                    relative_lock_height=uint32(5),
+                    fee=fee,
+                ),
+                DEFAULT_TX_CONFIG,
             )
-        )["transaction"]
-        assert join_pool_tx is not None
+        ).transaction
 
         status = (await client.pw_status(wallet_id))[0]
 
@@ -990,16 +1002,18 @@ class TestPoolWalletRpc:
         wallet_id = await create_new_plotnft(wallet_environments)
 
         # Join a different pool
-        join_pool_tx: TransactionRecord = (
+        (
             await wallet_rpc.pw_join_pool(
-                wallet_id,
-                bytes32.zeros,
-                "https://pool-b.org",
-                LOCK_HEIGHT,
-                uint64(fee),
+                PWJoinPool(
+                    wallet_id=uint32(wallet_id),
+                    target_puzzlehash=bytes32.zeros,
+                    pool_url="https://pool-b.org",
+                    relative_lock_height=LOCK_HEIGHT,
+                    fee=uint64(fee),
+                ),
+                DEFAULT_TX_CONFIG,
             )
-        )["transaction"]
-        assert join_pool_tx is not None
+        ).transaction
 
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
@@ -1085,15 +1099,18 @@ class TestPoolWalletRpc:
         assert pw_info.current.pool_url == "https://pool-a.org"
         assert pw_info.current.relative_lock_height == 5
 
-        join_pool_txs: list[TransactionRecord] = (
+        join_pool_txs = (
             await client.pw_join_pool(
-                wallet_id,
-                pool_b_ph,
-                "https://pool-b.org",
-                uint32(10),
-                uint64(fee),
+                PWJoinPool(
+                    wallet_id=uint32(wallet_id),
+                    target_puzzlehash=pool_b_ph,
+                    pool_url="https://pool-b.org",
+                    relative_lock_height=uint32(10),
+                    fee=uint64(fee),
+                ),
+                DEFAULT_TX_CONFIG,
             )
-        )["transactions"]
+        ).transactions
         await full_node_api.wait_transaction_records_entered_mempool(records=join_pool_txs)
         await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=our_ph, guarantee_transaction_blocks=True)
 
@@ -1157,11 +1174,14 @@ class TestPoolWalletRpc:
         # Test joining the same pool via the RPC client
         with pytest.raises(ResponseFailureError, match="Already farming to pool"):
             await wallet_rpc.pw_join_pool(
-                wallet_id=wallet_id,
-                target_puzzlehash=bytes32.zeros,
-                pool_url="http://pool.example.com",
-                relative_lock_height=uint32(10),
-                fee=uint64(0),
+                PWJoinPool(
+                    wallet_id=uint32(wallet_id),
+                    target_puzzlehash=bytes32.zeros,
+                    pool_url="http://pool.example.com",
+                    relative_lock_height=uint32(10),
+                    fee=uint64(0),
+                ),
+                DEFAULT_TX_CONFIG,
             )
 
     @pytest.mark.parametrize(
@@ -1199,9 +1219,12 @@ class TestPoolWalletRpc:
         # Test joining the same pool via the RPC client
         with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced."):
             await wallet_rpc.pw_join_pool(
-                wallet_id=wallet_id,
-                target_puzzlehash=bytes32.zeros,
-                pool_url="http://pool.example.com",
-                relative_lock_height=uint32(10),
-                fee=uint64(0),
+                PWJoinPool(
+                    wallet_id=uint32(wallet_id),
+                    target_puzzlehash=bytes32.zeros,
+                    pool_url="http://pool.example.com",
+                    relative_lock_height=uint32(10),
+                    fee=uint64(0),
+                ),
+                DEFAULT_TX_CONFIG,
             )
