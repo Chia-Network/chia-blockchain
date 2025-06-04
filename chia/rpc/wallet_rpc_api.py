@@ -360,6 +360,27 @@ def tx_endpoint(
     return _inner
 
 
+REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
+    confirmed_at_height=uint32(0),
+    created_at_time=uint64(0),
+    to_puzzle_hash=bytes32.zeros,
+    amount=uint64(0),
+    fee_amount=uint64(0),
+    confirmed=False,
+    sent=uint32(0),
+    spend_bundle=WalletSpendBundle([], G2Element()),
+    additions=[],
+    removals=[],
+    wallet_id=uint32(0),
+    sent_to=[],
+    trade_id=None,
+    type=uint32(0),
+    name=bytes32.zeros,
+    memos=[],
+    valid_times=ConditionValidTimes(),
+)
+
+
 class WalletRpcApi:
     if TYPE_CHECKING:
         from chia.rpc.rpc_server import RpcApiProtocol
@@ -3846,8 +3867,8 @@ class WalletRpcApi:
             [],
             [],
             total_fee=total_fee,
-            transaction=None,  # type: ignore
-            fee_transaction=None,  # type: ignore
+            transaction=REPLACEABLE_TRANSACTION_RECORD,
+            fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
         )
 
     @tx_endpoint(push=True)

@@ -843,6 +843,7 @@ class TestPoolWalletRpc:
                 pool_url="https://pool.example.com",
                 relative_lock_height=uint32(10),
                 fee=uint64(fee),
+                push=True,
             ),
             DEFAULT_TX_CONFIG,
         )
@@ -909,6 +910,7 @@ class TestPoolWalletRpc:
                     pool_url="https://pool.example.com",
                     relative_lock_height=uint32(5),
                     fee=fee,
+                    push=True,
                 ),
                 DEFAULT_TX_CONFIG,
             )
@@ -1010,6 +1012,7 @@ class TestPoolWalletRpc:
                     pool_url="https://pool-b.org",
                     relative_lock_height=LOCK_HEIGHT,
                     fee=uint64(fee),
+                    push=True,
                 ),
                 DEFAULT_TX_CONFIG,
             )
@@ -1107,6 +1110,7 @@ class TestPoolWalletRpc:
                     pool_url="https://pool-b.org",
                     relative_lock_height=uint32(10),
                     fee=uint64(fee),
+                    push=True,
                 ),
                 DEFAULT_TX_CONFIG,
             )
@@ -1180,6 +1184,7 @@ class TestPoolWalletRpc:
                     pool_url="http://pool.example.com",
                     relative_lock_height=uint32(10),
                     fee=uint64(0),
+                    push=True,
                 ),
                 DEFAULT_TX_CONFIG,
             )
@@ -1225,6 +1230,7 @@ class TestPoolWalletRpc:
                     pool_url="http://pool.example.com",
                     relative_lock_height=uint32(10),
                     fee=uint64(0),
+                    push=True,
                 ),
                 DEFAULT_TX_CONFIG,
             )

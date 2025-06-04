@@ -386,6 +386,7 @@ async def join_pool(
             pool_url=pool_url,
             relative_lock_height=json_dict["relative_lock_height"],
             fee=fee,
+            push=True,
         ),
         DEFAULT_TX_CONFIG,
     )
