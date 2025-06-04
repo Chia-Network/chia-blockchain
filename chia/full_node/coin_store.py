@@ -529,32 +529,32 @@ class CoinStore:
         coin_changes: dict[bytes32, CoinRecord] = {}
         # Add coins that are confirmed in the reverted blocks to the list of updated coins.
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            async with conn.execute(
+            rows = await conn.execute_fetchall(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp, coin_name FROM coin_record WHERE confirmed_index>?",
                 (block_index,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, uint32(0), row[1], row[2], uint64(0))
-                    coin_name = bytes32(row[7])
-                    coin_changes[coin_name] = record
+            )
+            for row in rows:
+                coin = self.row_to_coin(row)
+                record = CoinRecord(coin, uint32(0), row[1], row[2], uint64(0))
+                coin_name = bytes32(row[7])
+                coin_changes[coin_name] = record
 
             # Delete reverted blocks from storage
             await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
 
             # Add coins that are confirmed in the reverted blocks to the list of changed coins.
-            async with conn.execute(
+            rows = await conn.execute_fetchall(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp, coin_name FROM coin_record WHERE spent_index>?",
                 (block_index,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, row[0], uint32(0), row[2], row[6])
-                    coin_name = bytes32(row[7])
-                    if coin_name not in coin_changes:
-                        coin_changes[coin_name] = record
+            )
+            for row in rows:
+                coin = self.row_to_coin(row)
+                record = CoinRecord(coin, row[0], uint32(0), row[2], row[6])
+                coin_name = bytes32(row[7])
+                if coin_name not in coin_changes:
+                    coin_changes[coin_name] = record
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
         return list(coin_changes.values())
