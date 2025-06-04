@@ -12,6 +12,7 @@ import statistics
 import time
 from collections.abc import Awaitable
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from random import Random
 from typing import Any, BinaryIO, Callable, Optional
@@ -2173,3 +2174,58 @@ async def test_get_existing_hashes(
     not_existing_hashes = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_keys)]
     result = await data_store.get_existing_hashes(existing_hashes + not_existing_hashes, store_id)
     assert result == set(existing_hashes)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(argnames="size_offset", argvalues=[-1, 0, 1])
+async def test_basic_key_value_db_vs_disk_cutoff(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+    size_offset: int,
+) -> None:
+    size = data_store.prefer_file_kv_blob_length + size_offset
+
+    blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
+    blob_hash = bytes32(sha256(blob).digest())
+    async with data_store.db_wrapper.writer() as writer:
+        await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
+
+    file_exists = data_store.get_key_value_path(store_id=store_id, blob_hash=blob_hash).exists()
+    async with data_store.db_wrapper.writer() as writer:
+        async with writer.execute(
+            "SELECT blob FROM ids WHERE hash = :blob_hash",
+            {"blob_hash": blob_hash},
+        ) as cursor:
+            row = await cursor.fetchone()
+            assert row is not None
+            db_blob: Optional[bytes] = row["blob"]
+
+    if size_offset <= 0:
+        assert not file_exists
+        assert db_blob == blob
+    else:
+        assert file_exists
+        assert db_blob is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(argnames="size_offset", argvalues=[-1, 0, 1])
+@pytest.mark.parametrize(argnames="limit_change", argvalues=[-2, -1, 1, 2])
+async def test_changing_key_value_db_vs_disk_cutoff(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+    size_offset: int,
+    limit_change: int,
+) -> None:
+    size = data_store.prefer_file_kv_blob_length + size_offset
+
+    blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
+    async with data_store.db_wrapper.writer() as writer:
+        kv_id = await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
+
+    data_store.prefer_file_kv_blob_length += limit_change
+    retrieved_blob = await data_store.get_blob_from_kvid(kv_id=kv_id, store_id=store_id)
+
+    assert blob == retrieved_blob
