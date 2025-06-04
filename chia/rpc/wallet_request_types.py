@@ -682,7 +682,7 @@ class PWJoinPool(TransactionEndpointRequest):
 class PWJoinPoolResponse(TransactionEndpointResponse):
     total_fee: uint64
     transaction: TransactionRecord
-    fee_transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
 
 
 @streamable
