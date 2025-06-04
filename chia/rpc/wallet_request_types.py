@@ -687,6 +687,20 @@ class PWJoinPoolResponse(TransactionEndpointResponse):
 
 @streamable
 @dataclass(frozen=True)
+class PWSelfPool(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class PWSelfPoolResponse(TransactionEndpointResponse):
+    total_fee: uint64
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str = field(default_factory=default_raise)
     target_address: Optional[str] = None

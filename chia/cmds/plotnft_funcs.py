@@ -32,7 +32,7 @@ from chia.pools.pool_config import (
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.wallet_request_types import PWJoinPool, TransactionEndpointResponse
+from chia.rpc.wallet_request_types import PWJoinPool, PWSelfPool, TransactionEndpointResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -407,8 +407,12 @@ async def self_pool(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Op
         "Will start self-farming with Plot NFT on wallet id "
         f"{selected_wallet_id} fingerprint {wallet_info.fingerprint}."
     )
-    func = functools.partial(wallet_info.client.pw_self_pool, selected_wallet_id, fee)
-    await submit_tx_with_confirmation(
+    func = functools.partial(
+        wallet_info.client.pw_self_pool,
+        PWSelfPool(wallet_id=uint32(selected_wallet_id), fee=fee, push=True),
+        DEFAULT_TX_CONFIG,
+    )
+    await submit_tx_with_confirmation2(
         msg, prompt, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id
     )
 

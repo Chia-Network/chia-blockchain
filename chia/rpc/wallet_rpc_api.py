@@ -54,6 +54,8 @@ from chia.rpc.wallet_request_types import (
     PushTX,
     PWJoinPool,
     PWJoinPoolResponse,
+    PWSelfPool,
+    PWSelfPoolResponse,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -3872,30 +3874,30 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def pw_self_pool(
         self,
-        request: dict[str, Any],
+        request: PWSelfPool,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> PWSelfPoolResponse:
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
-        fee = uint64(request.get("fee", 0))
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
 
-        async with self.service.wallet_state_manager.lock:
-            total_fee = await wallet.self_pool(fee, action_scope)
-            return {
-                "total_fee": total_fee,
-                "transaction": None,  # tx_endpoint wrapper will take care of this
-                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+        total_fee = await wallet.self_pool(request.fee, action_scope)
+        # tx_endpoint will take care of filling in these default values
+        return PWSelfPoolResponse(
+            [],
+            [],
+            total_fee=total_fee,
+            transaction=REPLACEABLE_TRANSACTION_RECORD,
+            fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
+        )
 
     @tx_endpoint(push=True)
     async def pw_absorb_rewards(

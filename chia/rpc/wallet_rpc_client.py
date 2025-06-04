@@ -75,6 +75,8 @@ from chia.rpc.wallet_request_types import (
     PushTX,
     PWJoinPool,
     PWJoinPoolResponse,
+    PWSelfPool,
+    PWSelfPoolResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -694,10 +696,18 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def pw_self_pool(self, wallet_id: int, fee: uint64) -> dict[str, Any]:
-        reply = await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee})
-        reply = parse_result_transactions(reply)
-        return reply
+    async def pw_self_pool(
+        self,
+        request: PWSelfPool,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWSelfPoolResponse:
+        return PWSelfPoolResponse.from_json_dict(
+            await self.fetch(
+                "pw_self_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def pw_join_pool(
         self,

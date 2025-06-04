@@ -24,7 +24,7 @@ from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import PWJoinPool
+from chia.rpc.wallet_request_types import PWJoinPool, PWSelfPool
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.aliases import WalletService
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -939,10 +939,12 @@ class TestPoolWalletRpc:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        leave_pool_tx: dict[str, Any] = await client.pw_self_pool(wallet_id, uint64(fee))
-        assert leave_pool_tx["transaction"].wallet_id == wallet_id
-        assert leave_pool_tx["transaction"].amount == 1
-        await full_node_api.wait_transaction_records_entered_mempool(records=leave_pool_tx["transactions"])
+        leave_pool_tx = await client.pw_self_pool(
+            PWSelfPool(wallet_id=uint32(wallet_id), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+        )
+        assert leave_pool_tx.transaction.wallet_id == wallet_id
+        assert leave_pool_tx.transaction.amount == 1
+        await full_node_api.wait_transaction_records_entered_mempool(records=leave_pool_tx.transactions)
 
         await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=our_ph, guarantee_transaction_blocks=True)
 
