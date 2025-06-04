@@ -66,6 +66,7 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
                 raise ValueError("Internal Error. Marshalled endpoint was made with clvm_streamable.")
             return response_dict
 
+    rpc_endpoint.__name__ = func.__name__
     return rpc_endpoint
 
 
