@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from chia_rs import BlockRecord
 from chia_rs.sized_ints import uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 
 

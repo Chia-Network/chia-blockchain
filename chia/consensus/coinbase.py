@@ -1,15 +1,9 @@
 from __future__ import annotations
 
-from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
-
-
-def create_puzzlehash_for_pk(pub_key: G1Element) -> bytes32:
-    return puzzle_hash_for_pk(pub_key)
 
 
 def pool_parent_id(block_height: uint32, genesis_challenge: bytes32) -> bytes32:

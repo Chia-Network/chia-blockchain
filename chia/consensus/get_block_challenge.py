@@ -3,11 +3,10 @@ from __future__ import annotations
 import logging
 from typing import Union
 
-from chia_rs import ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 

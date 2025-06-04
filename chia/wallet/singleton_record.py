@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
+from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_spend import CoinSpend
 from chia.wallet.lineage_proof import LineageProof
 
 

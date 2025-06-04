@@ -6,16 +6,15 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Literal
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
-from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
-from chia.types.spend_bundle import estimate_fees
+from chia.types.blockchain_format.program import Program, run
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -29,6 +28,7 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
+from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
@@ -122,7 +122,7 @@ class TradeManager:
     ) -> set[bytes32]:
         """
         Returns list of coins we want to check if they are included in filter,
-        These will include coins that belong to us and coins that that on other side of treade
+        These will include coins that belong to us and coins that on other side of trade
         """
         coin_ids = await self.trade_store.get_coin_ids_of_interest_with_trade_statuses(
             trade_statuses=[TradeStatus.PENDING_ACCEPT, TradeStatus.PENDING_CONFIRM, TradeStatus.PENDING_CANCEL]
@@ -704,7 +704,7 @@ class TradeManager:
             parse_conditions_non_consensus(
                 condition
                 for spend in final_spend_bundle.coin_spends
-                for condition in spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter()
+                for condition in run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_iter()
             )
         )
         # this executes the puzzles again

@@ -20,6 +20,7 @@ import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
     ChallengeChainSubSlot,
     ConsensusConstants,
     EndOfSubSlotBundle,
@@ -29,7 +30,9 @@ from chia_rs import (
     InfusedChallengeChainSubSlot,
     PoolTarget,
     PrivateKey,
+    ProofOfSpace,
     RewardChainSubSlot,
+    SpendBundle,
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
@@ -39,9 +42,8 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
-from chia.consensus.block_record import BlockRecord, BlockRecordProtocol
+from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -78,13 +80,14 @@ from chia.simulator.ssl_certs import (
     get_next_nodes_certs_and_keys,
     get_next_private_ca_cert_and_key,
 )
+from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
+from chia.ssl.ssl_check import fix_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
+from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     calculate_pos_challenge,
     calculate_prefix_bits,
     generate_plot_public_key,
@@ -96,7 +99,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import NewBlockGenerator
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
 from chia.util.config import (
@@ -110,15 +112,14 @@ from chia.util.config import (
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, bytes_to_mnemonic
-from chia.util.ssl_check import fix_ssl
 from chia.util.timing import adjusted_timeout, backoff_times
-from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
@@ -142,7 +143,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     BLOCKS_CACHE_SIZE=uint32(340 * 3),  # Coordinate with the above values
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
@@ -153,7 +154,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     ret: list[Coin] = []
     for cs in sb.coin_spends:
         parent_id = cs.coin.name()
-        _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
+        _, r = run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)
         for cond in Program.to(r).as_iter():
             atoms = cond.as_iter()
             op = next(atoms).atom
@@ -175,7 +176,7 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
 
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
-        cost, result = generator._run(INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
+        cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -184,13 +185,13 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
             puzzle = spend.at("rf")
             solution = spend.at("rrrf")
 
-            cost, result = puzzle._run(INFINITE_COST, DEFAULT_FLAGS, solution)
+            cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(result)
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
+        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
 
         for res in result.first().as_iter():
             # each condition item is:
@@ -445,10 +446,10 @@ class BlockTools:
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
             if reward_ph is None:
-                self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                self.farmer_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
                 )
-                self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                self.pool_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
                 )
             else:
@@ -1755,10 +1756,14 @@ def load_block_list(
             full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash, height=full_block.height
         )
         assert quality_str is not None
+        # TODO: support v2 plots
+        pos_size_v1 = full_block.reward_chain_block.proof_of_space.size_v1()
+        assert pos_size_v1 is not None, "plot format v2 not supported yet"
+
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_str,
-            full_block.reward_chain_block.proof_of_space.size,
+            pos_size_v1,
             uint64(difficulty),
             sp_hash,
         )

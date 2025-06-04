@@ -1,14 +1,22 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import FullBlock, SpendBundleConditions
+from chia_rs import (
+    MEMPOOL_MODE,
+    BlockRecord,
+    CoinSpend,
+    FullBlock,
+    SpendBundle,
+    SpendBundleConditions,
+    run_block_generator2,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
@@ -19,14 +27,12 @@ from chia.full_node.mempool_check_conditions import (
     get_spends_for_block,
     get_spends_for_block_with_conditions,
 )
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.log_exceptions import log_exceptions
@@ -863,7 +869,7 @@ class FullNodeRpcApi:
             start_time = time.monotonic()
 
             try:
-                maybe_gen = await self.service.mempool_manager.create_block_generator2(curr_l_tb.header_hash)
+                maybe_gen = self.service.mempool_manager.create_block_generator2(curr_l_tb.header_hash, 2.0)
                 if maybe_gen is None:
                     self.service.log.error(f"failed to create block generator, peak: {peak}")
                 else:
@@ -871,6 +877,31 @@ class FullNodeRpcApi:
             except Exception:
                 self.service.log.exception(f"Error creating block generator, peak: {peak}")
             self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time:0.2f} seconds")
+
+            if maybe_gen is not None:
+                # this also validates the signature
+                err, conds = await asyncio.get_running_loop().run_in_executor(
+                    self.service.blockchain.pool,
+                    run_block_generator2,
+                    bytes(gen.program),
+                    gen.generator_refs,
+                    self.service.constants.MAX_BLOCK_COST_CLVM,
+                    MEMPOOL_MODE,
+                    gen.signature,
+                    None,
+                    self.service.constants,
+                )
+                if err is not None:
+                    self.service.log.error(f"failed to validate block: {err}")
+                else:
+                    assert conds is not None
+                    if conds.cost != gen.cost:
+                        self.service.log.error(
+                            f"invalid cost of generated block: {conds.cost} expected {gen.cost}"
+                            f" exe-cost: {conds.execution_cost}"
+                            f" cond-cost: {conds.condition_cost}"
+                        )
+                    # TODO: maybe validate additions and removals too
 
         return {
             "generator": gen.program,

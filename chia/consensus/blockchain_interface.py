@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import Optional, Protocol
 
-from chia_rs import HeaderBlock, SubEpochChallengeSegment, SubEpochSummary
+from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
-
-from chia.consensus.block_record import BlockRecord
 
 
 class BlockRecordsProtocol(Protocol):

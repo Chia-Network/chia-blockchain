@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from chia_rs import (
+    BlockRecord,
     ConsensusConstants,
     FullBlock,
     SpendBundleConditions,
@@ -22,10 +23,11 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
@@ -33,9 +35,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -217,10 +217,14 @@ async def pre_validate_block(
     if q_str is None:
         return return_error(Err.INVALID_POSPACE)
 
+    # TODO: support v2 plots
+    pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
+    assert pos_size_v1 is not None, "plot format v2 not supported yet"
+
     required_iters: uint64 = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
-        block.reward_chain_block.proof_of_space.size,
+        pos_size_v1,
         vs.difficulty,
         cc_sp_hash,
     )

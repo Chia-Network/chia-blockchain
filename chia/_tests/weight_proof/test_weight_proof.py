@@ -3,19 +3,18 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
-from chia_rs import ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.blockchain_mock import BlockchainMock
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_tools import get_block_header
 from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, verify_and_get_quality_string
-from chia.util.generator_tools import get_block_header
 
 
 async def load_blocks_dont_validate(
@@ -54,10 +53,14 @@ async def load_blocks_dont_validate(
         )
         assert quality_string is not None
 
+        # TODO: support v2 plots
+        pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
+        assert pos_size_v1 is not None, "plot format v2 not supported yet"
+
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_string,
-            block.reward_chain_block.proof_of_space.size,
+            pos_size_v1,
             difficulty,
             cc_sp,
         )
@@ -502,7 +505,7 @@ class TestWeightProof:
 
 @pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
 def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None:
-    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=uint8(3))
+    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
     assert calculate_prefix_bits(constants, height) == expected
 
 

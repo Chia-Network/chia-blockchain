@@ -7,27 +7,25 @@ from collections.abc import Collection
 from typing import Any, Optional, Union
 
 import anyio
-from chia_rs import FullBlock
+from chia_rs import BlockRecord, FullBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import default_get_connections
-from chia.server.outbound_message import NodeType
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.conditions import CreateCoin
@@ -205,7 +203,7 @@ class FullNodeSimulator(FullNodeAPI):
                     await asyncio.sleep(1)
                 else:
                     current_time = False
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+            mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
             else:
@@ -258,7 +256,7 @@ class FullNodeSimulator(FullNodeAPI):
                     await asyncio.sleep(1)
                 else:
                     current_time = False
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+            mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
             else:

@@ -7,12 +7,13 @@ from typing import Callable, Optional
 
 import pytest
 from chia_rs import (
-    ELIGIBLE_FOR_FF,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
+    CoinSpend,
     FullBlock,
     G1Element,
     G2Element,
+    SpendBundle,
     SpendBundleConditions,
     run_block_generator2,
 )
@@ -42,6 +43,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.eligible_coin_spends import run_for_cost
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
@@ -49,9 +51,9 @@ from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.outbound_message import Message
 from chia.protocols.wallet_protocol import TransactionAck
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -63,19 +65,18 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.eligible_coin_spends import UnspentLineageInfo, run_for_cost
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
+from chia.wallet.estimate_fees import estimate_fees
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
@@ -2865,7 +2866,7 @@ class TestMaliciousGenerators:
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
         res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
+        assert res == (MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH)
 
 
 coins = make_test_coins()
@@ -2930,45 +2931,8 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
         last_fpc = mi.fee_per_cost
 
 
-# make sure that after failing to pick 3 fast-forward spends, we skip
-# FF spends. create_block_generator2() does not stop trying FF spends after 3
-# failures, it keeps going. The new function (create_block_generator2()) does
-# not have a limit on FF and dedup spends so it tries all 5. make_test_coins()
-# only returns 5 coins
-@pytest.mark.anyio
-@pytest.mark.parametrize("old, expected", [(True, 3), (False, 5)])
-async def test_skip_error_items(old: bool, expected: int) -> None:
-    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
-    )
-    mempool = Mempool(mempool_info, fee_estimator)
-
-    # all 5 items support fast forward
-    for i in range(5):
-        item = mk_item(coins[i : i + 1], flags=[ELIGIBLE_FOR_FF], fee=0, cost=50)
-        add_info = mempool.add_to_pool(item)
-        assert add_info.error is None
-
-    called = 0
-
-    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:
-        nonlocal called
-        called += 1
-        raise RuntimeError("failed to find fast forward coin")
-
-    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 10.0)
-    assert generator is None
-
-    assert called == expected
-
-
-@pytest.mark.anyio
 @pytest.mark.parametrize("old", [True, False])
-async def test_timeout(old: bool) -> None:
+def test_timeout(old: bool) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
@@ -2982,13 +2946,10 @@ async def test_timeout(old: bool) -> None:
         add_info = mempool.add_to_pool(item)
         assert add_info.error is None
 
-    async def local_get_unspent_lineage_info(ph: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
 
     # the timeout is set to 0, we should *always* fail with a timeout
-    generator = await create_block(local_get_unspent_lineage_info, DEFAULT_CONSTANTS, uint32(10), 0.0)
+    generator = create_block(DEFAULT_CONSTANTS, uint32(10), 0.0)
     assert generator is None
 
 
@@ -3173,11 +3134,7 @@ def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = 
     return sb
 
 
-@pytest.mark.anyio
-async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
+def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
     def agg_and_add_sb_returning_cost_info(mempool: Mempool, spend_bundles: list[SpendBundle]) -> uint64:
         sb = SpendBundle.aggregate(spend_bundles)
         mi = mempool_item_from_spendbundle(sb)
@@ -3208,9 +3165,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
     saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
-    result = await mempool.create_bundle_from_mempool_items(
-        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
-    )
+    result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
     assert result is not None
     agg, _ = result
     # Make sure both items would be processed
@@ -3229,9 +3184,7 @@ async def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -
     # If we process everything now, the 3 x ~3 FPC items get skipped because
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
-    result = await mempool.create_bundle_from_mempool_items(
-        get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0)
-    )
+    result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
     assert result is not None
     agg, _ = result
     # The 3 items got skipped here
@@ -3248,12 +3201,8 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
         get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram.to(None), []), TEST_COIN, 0, test_constants)
 
 
-@pytest.mark.anyio
 @pytest.mark.parametrize("old", [True, False])
-async def test_create_block_generator(old: bool) -> None:
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
-        assert False  # pragma: no cover
-
+def test_create_block_generator(old: bool) -> None:
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
         FeeRate(uint64(1000000)),
@@ -3276,7 +3225,7 @@ async def test_create_block_generator(old: bool) -> None:
         invariant_check_mempool(mempool)
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = await create_block(get_unspent_lineage_info_for_puzzle_hash, test_constants, uint32(0), 10.0)
+    generator = create_block(test_constants, uint32(0), 10.0)
     assert generator is not None
 
     assert set(generator.additions) == expected_additions

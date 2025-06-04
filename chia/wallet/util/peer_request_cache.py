@@ -3,11 +3,10 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Optional
 
-from chia_rs import HeaderBlock
+from chia_rs import CoinState, HeaderBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.protocols.wallet_protocol import CoinState
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 

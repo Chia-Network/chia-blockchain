@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import aiosqlite
 import pytest
-from chia_rs import G1Element, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
@@ -49,7 +49,6 @@ from chia._tests.wallet.test_wallet_coin_store import (
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.wallet_request_types import (
@@ -80,14 +79,14 @@ from chia.rpc.wallet_request_types import (
 )
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.aliases import WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.aliases import WalletService
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -109,6 +108,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -1761,11 +1761,11 @@ async def _check_delete_key(
 
     sk = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
     assert sk is not None
-    farmer_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    farmer_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
     sk = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
     assert sk is not None
-    pool_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    pool_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(farmer_ph, "txch")

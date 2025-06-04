@@ -46,7 +46,7 @@ class StreamableCreateMorePuzzleHashesResult(Streamable):
 class CreateMorePuzzleHashesResult:
     derivation_paths: list[DerivationRecord]
     mark_existing_as_used: bool
-    unused: int  # The first unusued puzzle hash
+    unused: int  # The first unused puzzle hash
     new_unhardened_keys: bool
     last_index: int  # The index we derived up to
 

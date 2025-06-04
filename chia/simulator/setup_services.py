@@ -18,10 +18,20 @@ from chia_rs.sized_ints import uint16
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
-from chia.server.outbound_message import NodeType
+from chia.server.aliases import (
+    CrawlerService,
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    IntroducerService,
+    TimelordService,
+    WalletService,
+)
+from chia.server.resolve_peer_info import set_peer_info
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
@@ -35,18 +45,9 @@ from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_pri
 from chia.simulator.start_simulator import SimulatorFullNodeService, create_full_node_simulator_service
 from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
-from chia.types.aliases import (
-    CrawlerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    IntroducerService,
-    TimelordService,
-    WalletService,
-)
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile

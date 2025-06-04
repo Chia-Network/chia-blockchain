@@ -12,8 +12,10 @@ from typing import Any, Optional, TypeVar
 import anyio
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    CoinSpend,
     ConsensusConstants,
     G2Element,
+    SpendBundle,
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
@@ -32,16 +34,15 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle, T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
+from chia.wallet.wallet_spend_bundle import T_SpendBundle
 
 """
 The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.
@@ -270,7 +271,7 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = await self.mempool_manager.create_bundle_from_mempool(last_tb_header_hash=peak.header_hash)
+                result = self.mempool_manager.create_bundle_from_mempool(last_tb_header_hash=peak.header_hash)
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle

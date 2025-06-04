@@ -12,12 +12,14 @@ from typing import Optional
 import pytest
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
     ConsensusConstants,
     EndOfSubSlotBundle,
     FullBlock,
     G2Element,
     InfusedChallengeChainSubSlot,
     MerkleSet,
+    SpendBundle,
     TransactionsInfo,
     UnfinishedBlock,
 )
@@ -35,19 +37,21 @@ from chia._tests.blockchain.blockchain_test_utils import (
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
+from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
@@ -56,15 +60,11 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.recursive_replace import recursive_replace
-from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -1156,7 +1156,7 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
+        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.version_and_size", 62)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
         block_bad = recursive_replace(
@@ -1167,14 +1167,14 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
-            "reward_chain_block.proof_of_space.size",
+            "reward_chain_block.proof_of_space.version_and_size",
             32,
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.proof_of_space.proof",
-            bytes([1] * int(blocks[-1].reward_chain_block.proof_of_space.size * 64 / 8)),
+            bytes([1] * int((blocks[-1].reward_chain_block.proof_of_space.version_and_size & 0x7F) * 64 / 8)),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 

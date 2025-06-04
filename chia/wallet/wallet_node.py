@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast, overload
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, HeaderBlock, PrivateKey
+from chia_rs import AugSchemeMPL, CoinState, ConsensusConstants, G1Element, G2Element, HeaderBlock, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from packaging.version import Version
@@ -23,9 +23,9 @@ from chia.consensus.blockchain import AddBlockResult
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
-    CoinState,
     CoinStateUpdate,
     NewPeakWallet,
     RegisterForCoinUpdates,
@@ -38,7 +38,6 @@ from chia.protocols.wallet_protocol import (
 )
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin

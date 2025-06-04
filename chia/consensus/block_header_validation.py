@@ -6,6 +6,7 @@ from typing import Optional
 
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
     ChallengeChainSubSlot,
     ConsensusConstants,
     EndOfSubSlotBundle,
@@ -16,7 +17,6 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
@@ -503,10 +503,15 @@ def validate_unfinished_header_block(
         return None, ValidationError(Err.INVALID_SP_INDEX)
 
     # Note that required iters might be from the previous slot (if we are in an overflow block)
+    pos_size_v1 = header_block.reward_chain_block.proof_of_space.size_v1()
+    if pos_size_v1 is None:
+        # TODO: support v2 plots after the hard fork
+        return None, ValidationError(Err.INVALID_POSPACE)
+
     required_iters: uint64 = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
-        header_block.reward_chain_block.proof_of_space.size,
+        pos_size_v1,
         expected_vs.difficulty,
         cc_sp_hash,
     )

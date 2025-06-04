@@ -4,8 +4,8 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from clvm_tools import binutils
 
+from chia.consensus.condition_tools import parse_sexp_to_conditions
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.wallet.conditions import AssertPuzzleAnnouncement
 from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_MOD, SINGLETON_MOD, SINGLETON_MOD_HASH
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH as LAUNCHER_PUZZLE_HASH

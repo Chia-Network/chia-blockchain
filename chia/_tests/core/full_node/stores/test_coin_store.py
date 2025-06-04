@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
-from chia_rs import FullBlock
+from chia_rs import CoinState, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
@@ -19,17 +19,16 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
-from chia.protocols.wallet_protocol import CoinState
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.generator_types import BlockGenerator
-from chia.util.generator_tools import tx_removals_and_additions
+from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.hash import std_hash
 
 constants = test_constants
@@ -179,39 +178,31 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
 
         # Save/get block
         for block in blocks:
-            if block.is_transaction_block():
-                removals: list[bytes32] = []
-                additions: list[Coin] = []
-                async with db_wrapper.writer():
-                    if block.is_transaction_block():
-                        assert block.foliage_transaction_block is not None
-                        await coin_store.new_block(
-                            block.height,
-                            block.foliage_transaction_block.timestamp,
-                            block.get_included_reward_coins(),
-                            additions,
-                            removals,
-                        )
+            if not block.is_transaction_block():
+                continue
+            assert block.foliage_transaction_block is not None
+            await coin_store.new_block(
+                block.height, block.foliage_transaction_block.timestamp, block.get_included_reward_coins(), [], []
+            )
+            coins = block.get_included_reward_coins()
+            records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                    coins = block.get_included_reward_coins()
-                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+            await coin_store._set_spent([r.name for r in records if r is not None], block.height)
 
-                await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+            if len(records) > 0:
+                for r in records:
+                    assert r is not None
+                    assert (await coin_store.get_coin_record(r.name)) is not None
 
-                if len(records) > 0:
-                    for r in records:
-                        assert r is not None
-                        assert (await coin_store.get_coin_record(r.name)) is not None
+                # Check that we can't spend a coin twice in DB
+                with pytest.raises(ValueError, match="Invalid operation to set spent"):
+                    await coin_store._set_spent([r.name for r in records if r is not None], block.height)
 
-                    # Check that we can't spend a coin twice in DB
-                    with pytest.raises(ValueError, match="Invalid operation to set spent"):
-                        await coin_store._set_spent([r.name for r in records if r is not None], block.height)
-
-                records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
-                for record in records:
-                    assert record is not None
-                    assert record.spent
-                    assert record.spent_block_index == block.height
+            records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+            for record in records:
+                assert record is not None
+                assert record.spent
+                assert record.spent_block_index == block.height
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")

@@ -13,12 +13,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, cast
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
+from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.data_layer.singleton_record import SingletonRecord
@@ -27,18 +28,15 @@ from chia.pools.pool_puzzles import (
     solution_to_pool_state,
 )
 from chia.pools.pool_wallet import PoolWallet
-from chia.protocols.wallet_protocol import CoinState
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import NIL, Program
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2, PurposefulAbort
 from chia.util.errors import Err
@@ -101,6 +99,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
@@ -877,7 +876,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.as_atom()),
+                bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -1268,10 +1267,22 @@ class WalletStateManager:
                 parent_data.singleton_struct,
                 parent_data.metadata,
             )
+            alt_did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle,
+                NIL,
+                uint64(0),
+                parent_data.singleton_struct,
+                parent_data.metadata,
+            )
+
             full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launch_id)
+            alt_full_puzzle_empty_recovery = create_singleton_puzzle(alt_did_puzzle_empty_recovery, launch_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
+                    self.log.info("DID recovery list was reset by the previous owner.")
+                elif alt_full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = alt_did_puzzle_empty_recovery
                     self.log.info("DID recovery list was reset by the previous owner.")
                 else:
                     self.log.error("DID puzzle hash doesn't match, please check curried parameters.")
@@ -1326,7 +1337,7 @@ class WalletStateManager:
             raise ValueError("Couldn't get minter DID for NFT")
         if not eve_uncurried_nft.supports_did:
             return None
-        minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
+        minter_did = get_new_owner_did(eve_uncurried_nft, Program.from_serialized(eve_coin_spend.solution))
         if minter_did == b"":
             minter_did = None
         if minter_did is None:
@@ -1377,7 +1388,7 @@ class WalletStateManager:
             nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            _new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
+            _new_did_id = get_new_owner_did(uncurried_nft, Program.from_serialized(nft_data.parent_coin_spend.solution))
             old_did_id = uncurried_nft.owner_did
             if _new_did_id is None:
                 new_did_id = old_did_id
@@ -2561,8 +2572,8 @@ class WalletStateManager:
             _coin_spend = coin_spend.as_coin_spend()
             # Get AGG_SIG conditions
             conditions_dict = conditions_dict_for_solution(
-                _coin_spend.puzzle_reveal.to_program(),
-                _coin_spend.solution.to_program(),
+                Program.from_serialized(_coin_spend.puzzle_reveal),
+                Program.from_serialized(_coin_spend.solution),
                 self.constants.MAX_BLOCK_COST_CLVM,
             )
             # Create signature

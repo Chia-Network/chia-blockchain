@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 import anyio
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
+    CoinState,
     EndOfSubSlotBundle,
     FoliageBlockData,
     FoliageTransactionBlock,
@@ -20,7 +22,9 @@ from chia_rs import (
     G2Element,
     MerkleSet,
     PoolTarget,
+    RespondToPhUpdates,
     RewardChainBlockUnfinished,
+    SpendBundle,
     SubEpochSummary,
     UnfinishedBlock,
     additions_and_removals,
@@ -31,23 +35,24 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
+from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
-from chia.full_node.tx_processing_queue import TransactionQueueFull
+from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
+from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
-    CoinState,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
@@ -56,7 +61,6 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
 )
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
@@ -66,12 +70,8 @@ from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
-from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
-from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
@@ -717,14 +717,18 @@ class FullNodeAPI:
                 request.reward_chain_vdf.challenge,
             ):
                 return None
-            existing_sp = self.full_node.full_node_store.get_signage_point(
-                request.challenge_chain_vdf.output.get_hash()
+            existing_sp = self.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+                request.challenge_chain_vdf.output.get_hash(),
+                request.challenge_chain_vdf.challenge,
+                request.index_from_challenge,
             )
             if existing_sp is not None and existing_sp.rc_vdf == request.reward_chain_vdf:
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
-                next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
+                next_sub_slot_iters = self.full_node.blockchain.get_next_sub_slot_iters_and_difficulty(
+                    peak.header_hash, True
+                )[0]
                 sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
                 assert sub_slots_for_peak is not None
                 ip_sub_slot: Optional[EndOfSubSlotBundle] = sub_slots_for_peak[1]
@@ -795,8 +799,8 @@ class FullNodeAPI:
             return None
 
         async with self.full_node.timelord_lock:
-            sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point(
-                request.challenge_chain_sp
+            sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
+                request.challenge_chain_sp, request.challenge_hash, request.signage_point_index
             )
 
             if sp_vdfs is None:
@@ -861,13 +865,23 @@ class FullNodeAPI:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         # TODO: once we're confident in the new block creation,
-                        # switch to it by default
-                        if self.full_node.config.get("original_block_creation", True):
+                        # make it default to 1
+                        block_version = self.full_node.config.get("block_creation", 0)
+                        block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
+                        if block_version == 0:
                             create_block = self.full_node.mempool_manager.create_block_generator
-                        else:
+                        elif block_version == 1:
                             create_block = self.full_node.mempool_manager.create_block_generator2
+                        else:
+                            self.log.warning(f"Unknown 'block_creation' config: {block_version}")
+                            create_block = self.full_node.mempool_manager.create_block_generator
 
-                        new_block_gen = await create_block(curr_l_tb.header_hash)
+                        new_block_gen = create_block(curr_l_tb.header_hash, block_timeout)
+
+                        if (
+                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
+                        ):  # pragma: no cover
+                            self.log.error("Cannot farm blocks pre-hard fork")
 
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
@@ -968,10 +982,14 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
+            # TODO: support v2 plots after the hard fork
+            pos_size_v1 = request.proof_of_space.size_v1()
+            assert pos_size_v1
+
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
                 quality_string,
-                request.proof_of_space.size,
+                pos_size_v1,
                 difficulty,
                 request.challenge_chain_sp,
             )
@@ -1652,7 +1670,7 @@ class FullNodeAPI:
                 end_time - start_time,
             )
 
-        response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
+        response = RespondToPhUpdates(request.puzzle_hashes, request.min_height, list(states))
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 

@@ -5,9 +5,10 @@ import traceback
 from pathlib import Path
 from typing import Any, Optional
 
+from chia_rs import BlockRecord
+
 from chia.cmds.cmds_util import format_bytes, format_minutes, get_any_service_client
 from chia.cmds.units import units
-from chia.consensus.block_record import BlockRecord
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
