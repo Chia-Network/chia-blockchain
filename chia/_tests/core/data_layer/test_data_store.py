@@ -2229,3 +2229,23 @@ async def test_changing_key_value_db_vs_disk_cutoff(
     retrieved_blob = await data_store.get_blob_from_kvid(kv_id=kv_id, store_id=store_id)
 
     assert blob == retrieved_blob
+
+
+@pytest.mark.anyio
+async def test_get_keys_both_disk_and_db(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+) -> None:
+    inserted_keys: set[bytes] = set()
+
+    for size_offset in [-1, 0, 1]:
+        size = data_store.prefer_file_kv_blob_length + size_offset
+
+        blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
+        await data_store.insert(key=blob, value=b"", store_id=store_id, status=Status.COMMITTED)
+        inserted_keys.add(blob)
+
+    retrieved_keys = set(await data_store.get_keys(store_id=store_id))
+
+    assert retrieved_keys == inserted_keys
