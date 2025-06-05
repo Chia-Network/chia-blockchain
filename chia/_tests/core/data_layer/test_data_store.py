@@ -2249,3 +2249,25 @@ async def test_get_keys_both_disk_and_db(
     retrieved_keys = set(await data_store.get_keys(store_id=store_id))
 
     assert retrieved_keys == inserted_keys
+
+
+@pytest.mark.anyio
+async def test_get_keys_values_both_disk_and_db(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+) -> None:
+    inserted_keys_values: dict[bytes, bytes] = {}
+
+    for size_offset in [-1, 0, 1]:
+        size = data_store.prefer_file_kv_blob_length + size_offset
+
+        key = bytes(seeded_random.getrandbits(8) for _ in range(size))
+        value = bytes(seeded_random.getrandbits(8) for _ in range(size))
+        await data_store.insert(key=key, value=value, store_id=store_id, status=Status.COMMITTED)
+        inserted_keys_values[key] = value
+
+    terminal_nodes = await data_store.get_keys_values(store_id=store_id)
+    retrieved_keys_values = {node.key: node.value for node in terminal_nodes}
+
+    assert retrieved_keys_values == inserted_keys_values
