@@ -878,7 +878,7 @@ def mk_coin_spend(coin: Coin, solution: Optional[str] = None) -> CoinSpend:
     return make_spend(
         coin,
         SerializedProgram.to(None),
-        SerializedProgram.to(bytes.fromhex(solution) if solution is not None else None),
+        SerializedProgram.fromhex(solution if solution is not None else "80"),
     )
 
 
@@ -2979,7 +2979,7 @@ async def test_check_removals_with_block_creation(flags: int, old: bool) -> None
     assert bundle_add_info2.status == MempoolInclusionStatus.SUCCESS
     assert mempool_manager.peak is not None
     create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
-    new_block_gen = create_block(mempool_manager.peak.header_hash)
+    new_block_gen = create_block(mempool_manager.peak.header_hash, 10.0)
     assert new_block_gen is not None
     assert len(new_block_gen.additions) == 1
     assert set(new_block_gen.additions) == {
@@ -2991,14 +2991,15 @@ async def test_check_removals_with_block_creation(flags: int, old: bool) -> None
 
 @pytest.mark.anyio
 async def test_dedup_not_canonical() -> None:
-    # this is 1, but with a non-canonical encoding
-    coin_spend = mk_coin_spend(TEST_COIN, solution="c00101")
-    coins = TestCoins(coins=[], lineage={})
+    # this is ((1)), but with a non-canonical encoding
+    coin_spend = mk_coin_spend(TEST_COIN, solution="ffffc001018080")
+    coins = TestCoins([TEST_COIN], lineage={})
     mempool_manager = await setup_mempool(coins)
     sb = SpendBundle([coin_spend], G2Element())
     sb_conds = make_test_conds(spend_ids=[(TEST_COIN, ELIGIBLE_FOR_DEDUP)])
     bundle_add_info = await mempool_manager.add_spend_bundle(sb, sb_conds, sb.name(), uint32(1))
     assert bundle_add_info.status == MempoolInclusionStatus.FAILED
+    assert bundle_add_info.error == Err.INVALID_COIN_SOLUTION
 
 
 def make_coin_record(coin: Coin, spent_block_index: int = 0) -> CoinRecord:

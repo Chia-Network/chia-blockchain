@@ -6,7 +6,7 @@ from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 # EIP 2334 bls key derivation
 # https://eips.ethereum.org/EIPS/eip-2334
@@ -131,8 +131,8 @@ def match_address_to_sk(
 
     for i in range(max_ph_to_search):
         phs = [
-            create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
-            create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()),
+            puzzle_hash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
+            puzzle_hash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()),
         ]
 
         for address in search_list:

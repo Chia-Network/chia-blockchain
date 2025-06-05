@@ -370,7 +370,7 @@ class MempoolManager:
             return None
         return self.mempool.create_bundle_from_mempool_items(self.constants, self.peak.height)
 
-    def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float = 2.0) -> Optional[NewBlockGenerator]:
+    def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions and removals, for a new block
         """
@@ -378,9 +378,7 @@ class MempoolManager:
             return None
         return self.mempool.create_block_generator(self.constants, self.peak.height, timeout)
 
-    def create_block_generator2(
-        self, last_tb_header_hash: bytes32, timeout: float = 2.0
-    ) -> Optional[NewBlockGenerator]:
+    def create_block_generator2(self, last_tb_header_hash: bytes32, timeout: float) -> Optional[NewBlockGenerator]:
         """
         Returns a block generator program, the aggregate signature and all additions, for a new block
         """
@@ -560,12 +558,13 @@ class MempoolManager:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
     ) -> tuple[Optional[Err], Optional[MempoolItem], list[bytes32]]:
         """
-        Validates new_spend with the given NPCResult, and spend_name, and the current mempool. The mempool should
+        Validates new_spend with the given SpendBundleConditions, and
+        spend_name, and the current mempool. The mempool should
         be locked during this call (blockchain lock).
 
         Args:
             new_spend: spend bundle to validate
-            conds: result of running the clvm transaction in a fake block
+            conds: result of running the clvm transaction
             spend_name: hash of the spend bundle data, passed in as an optimization
             first_added_height: The block height that `new_spend`  first entered this node's mempool.
                 Used to estimate how long a spend has taken to be included on the chain.
@@ -576,7 +575,7 @@ class MempoolManager:
             Optional[MempoolItem]: the item to add (to mempool or pending pool)
             list[bytes32]: conflicting mempool items to remove, if no Err
         """
-        start_time = time.time()
+        start_time = time.monotonic()
         if self.peak is None:
             return Err.MEMPOOL_NOT_INITIALIZED, None, []
 
@@ -613,7 +612,10 @@ class MempoolManager:
                 EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
             )
 
-            supports_dedup = eligibility_info.is_eligible_for_dedup and is_clvm_canonical(bytes(coin_spend.solution))
+            supports_dedup = eligibility_info.is_eligible_for_dedup
+            if supports_dedup and not is_clvm_canonical(bytes(coin_spend.solution)):
+                return Err.INVALID_COIN_SOLUTION, None, []
+
             mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
             lineage_info = None
             if mark_as_fast_forward:
@@ -762,13 +764,17 @@ class MempoolManager:
             if not can_replace(conflicts, removal_names, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
-        duration = time.time() - start_time
+        duration = time.monotonic() - start_time
 
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
             f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
+
+        if duration > 2:
+            log.warning("validating spend took too long, rejecting")
+            return Err.INVALID_SPEND_BUNDLE, None, []
 
         return None, potential, [item.name for item in conflicts]
 
