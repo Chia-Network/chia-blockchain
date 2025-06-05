@@ -140,6 +140,14 @@ async def print_block_from_hash(
             if full_block.reward_chain_block.proof_of_space.pool_public_key is not None
             else "Pay to pool puzzle hash"
         )
+        pos_size = full_block.reward_chain_block.proof_of_space.size()
+        if pos_size.size_v1 is not None:
+            size = pos_size.size_v1
+            version = "(v1)"
+        else:
+            assert pos_size.size_v2 is not None
+            size = pos_size.size_v2
+            version = "(v2)"
         print(
             f"Block Height           {block.height}\n"
             f"Header Hash            0x{block.header_hash.hex()}\n"
@@ -152,8 +160,7 @@ async def print_block_from_hash(
             f"Total VDF Iterations   {block.total_iters}\n"
             f"Is a Transaction Block?{block.is_transaction_block}\n"
             f"Deficit                {block.deficit}\n"
-            f"PoSpace 'k' Size (v1)  {full_block.reward_chain_block.proof_of_space.size().size_v1}\n"
-            f"PoSpace 'k' Size (v2)  {full_block.reward_chain_block.proof_of_space.size().size_v2}\n"
+            f"PoSpace 'k' Size {version}  {size}\n"
             f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
             f"Pool Public Key        {pool_pk}\n"
             f"Tx Filter Hash         {tx_filter_hash}\n"
