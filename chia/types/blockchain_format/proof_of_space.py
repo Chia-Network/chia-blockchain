@@ -41,8 +41,8 @@ def verify_and_get_quality_string(
     if (pos.pool_public_key is not None) and (pos.pool_contract_puzzle_hash is not None):
         log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
-    size_v1 = pos.size_v1()
-    size_v2 = pos.size_v2()
+    size_v1 = pos.size().size_v1
+    size_v2 = pos.size().size_v2
     if size_v1 is not None:
         if size_v1 < constants.MIN_PLOT_SIZE:
             log.error(f"Plot size is lower than the minimum: {size_v1}")
@@ -74,8 +74,8 @@ def verify_and_get_quality_string(
 
 
 def get_quality_string(pos: ProofOfSpace, plot_id: bytes32) -> Optional[bytes32]:
-    size_v1 = pos.size_v1()
-    size_v2 = pos.size_v2()
+    size_v1 = pos.size().size_v1
+    size_v2 = pos.size().size_v2
     if size_v1 is not None:
         quality_str = Verifier().validate_proof(plot_id, size_v1, pos.challenge, bytes(pos.proof))
         if not quality_str:

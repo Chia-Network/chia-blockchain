@@ -1757,7 +1757,7 @@ def load_block_list(
         )
         assert quality_str is not None
         # TODO: support v2 plots
-        pos_size_v1 = full_block.reward_chain_block.proof_of_space.size_v1()
+        pos_size_v1 = full_block.reward_chain_block.proof_of_space.size().size_v1
         assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
         required_iters: uint64 = calculate_iterations_quality(

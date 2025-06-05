@@ -54,7 +54,7 @@ async def load_blocks_dont_validate(
         assert quality_string is not None
 
         # TODO: support v2 plots
-        pos_size_v1 = block.reward_chain_block.proof_of_space.size_v1()
+        pos_size_v1 = block.reward_chain_block.proof_of_space.size().size_v1
         assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
         required_iters: uint64 = calculate_iterations_quality(
