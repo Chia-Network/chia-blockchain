@@ -79,7 +79,6 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     CS = len(mnemonic_bytes) // 4
 
     checksum = BitArray(bytes(std_hash(mnemonic_bytes)))[:CS]
-
     bitarray = BitArray(mnemonic_bytes) + checksum
     mnemonics = []
     assert len(bitarray) % 11 == 0

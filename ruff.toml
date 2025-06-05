@@ -12,8 +12,32 @@ select = [
 	"ASYNC",  # Flake8 async
 	"ISC",  # flake8-implicit-str-concat
     "TID",  # flake8-tidy-imports
+    "T10", # Debug statements
+    "EXE", # shebang usage
+    "ICN", # Import name conventions (i.e. import pandas as pd)
+    "INP", # Missing __init__.py
+    "Q",  # quotes
+    "SLOT",  # __slots__ usage
+    "TID",  # Tidy imports
+    "FLY",  # .join -> f-string
+    # pycodestyle
 	"E",
 	"W",
+	# Trailing commas
+	# "COM812" # missing-trailing-comma (5105 errors)
+	"COM818",
+	"COM819",
+	# WIP: Will enable as separate commits
+	# "PIE",
+	# "PYI",
+	# "RSE",
+	# Libraries we don't use so might as well enable
+	"INT",
+	"AIR",
+	"FAST",
+	"DJ",
+	"NPY",
+	"PD",
 ]
 explicit-preview-rules = false
 ignore = [
