@@ -16,7 +16,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 from chia_rs import ConsensusConstants, G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 from pytest_mock import MockerFixture
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -24,7 +24,7 @@ from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import PWJoinPool, PWSelfPool
+from chia.rpc.wallet_request_types import PWAbsorbRewards, PWJoinPool, PWSelfPool
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.aliases import WalletService
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -535,7 +535,11 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 2 * 1_750_000_000_000
 
             # Claim 2 * 1.75, and farm a new 1.75
-            absorb_txs: list[TransactionRecord] = (await client.pw_absorb_rewards(2, uint64(fee)))["transactions"]
+            absorb_txs = (
+                await client.pw_absorb_rewards(
+                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                )
+            ).transactions
             await full_node_api.wait_transaction_records_entered_mempool(records=absorb_txs)
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -557,7 +561,11 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 1 * 1_750_000_000_000
 
             # Claim another 1.75
-            absorb_txs1: list[TransactionRecord] = (await client.pw_absorb_rewards(2, uint64(fee)))["transactions"]
+            absorb_txs1 = (
+                await client.pw_absorb_rewards(
+                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                )
+            ).transactions
 
             await full_node_api.wait_transaction_records_entered_mempool(records=absorb_txs1)
 
@@ -582,7 +590,9 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 0
 
             with pytest.raises(ValueError):
-                await client.pw_absorb_rewards(2, uint64(fee))
+                await client.pw_absorb_rewards(
+                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                )
 
             tx1 = await client.get_transactions(1)
             assert (250_000_000_000 + fee) in [tx.amount for tx in tx1]
@@ -641,7 +651,12 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == pool_expected_confirmed_balance
 
             # Claim
-            absorb_txs: list[TransactionRecord] = (await client.pw_absorb_rewards(2, uint64(fee), 1))["transactions"]
+            absorb_txs = (
+                await client.pw_absorb_rewards(
+                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), max_spends_in_tx=uint16(1), push=True),
+                    DEFAULT_TX_CONFIG,
+                )
+            ).transactions
             await full_node_api.process_transaction_records(records=absorb_txs)
             main_expected_confirmed_balance -= fee
             main_expected_confirmed_balance += 1_750_000_000_000
@@ -709,12 +724,15 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 0
 
             # Claim block_count * 1.75
-            ret = await client.pw_absorb_rewards(2, uint64(fee))
-            absorb_txs: list[TransactionRecord] = ret["transactions"]
+            ret = await client.pw_absorb_rewards(
+                PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+            )
+            absorb_txs = ret.transactions
             if fee == 0:
-                assert ret["fee_transaction"] is None
+                assert ret.fee_transaction is None
             else:
-                assert ret["fee_transaction"].fee_amount == fee
+                assert ret.fee_transaction is not None
+                assert ret.fee_transaction.fee_amount == fee
             for tx in absorb_txs:
                 assert tx.fee_amount == fee
             await full_node_api.process_transaction_records(records=absorb_txs)
@@ -763,14 +781,16 @@ class TestPoolWalletRpc:
                     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
                     # Absorb the farmed reward
-                    ret = await client.pw_absorb_rewards(2, fee)
-                    absorb_tx = ret["transaction"]
+                    ret = await client.pw_absorb_rewards(
+                        PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                    )
+                    absorb_tx = ret.transaction
                     await full_node_api.process_transaction_records(records=[absorb_tx])
 
                     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
                     await time_out_assert(20, status_updated)
                     status = (await client.pw_status(2))[0]
-                    assert ret["fee_transaction"] is None
+                    assert ret.fee_transaction is None
 
             bal2 = await client.get_wallet_balance(2)
             assert bal2["confirmed_wallet_balance"] == 0

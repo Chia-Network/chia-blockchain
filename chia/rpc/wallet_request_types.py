@@ -9,6 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import dataclass_transform
 
+from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -695,6 +696,21 @@ class PWSelfPool(TransactionEndpointRequest):
 @dataclass(frozen=True)
 class PWSelfPoolResponse(TransactionEndpointResponse):
     total_fee: uint64
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class PWAbsorbRewards(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    max_spends_in_tx: Optional[uint16] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class PWAbsorbRewardsResponse(TransactionEndpointResponse):
+    state: PoolWalletInfo
     transaction: TransactionRecord
     fee_transaction: Optional[TransactionRecord]
 

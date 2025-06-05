@@ -52,6 +52,8 @@ from chia.rpc.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    PWAbsorbRewards,
+    PWAbsorbRewardsResponse,
     PWJoinPool,
     PWJoinPoolResponse,
     PWSelfPool,
@@ -3900,30 +3902,29 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def pw_absorb_rewards(
         self,
-        request: dict[str, Any],
+        request: PWAbsorbRewards,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> PWAbsorbRewardsResponse:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
-        fee = uint64(request.get("fee", 0))
-        max_spends_in_tx = request.get("max_spends_in_tx", None)
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)
         async with self.service.wallet_state_manager.lock:
-            await wallet.claim_pool_rewards(fee, max_spends_in_tx, action_scope)
+            await wallet.claim_pool_rewards(request.fee, request.max_spends_in_tx, action_scope)
             state: PoolWalletInfo = await wallet.get_current_state()
-            return {
-                "state": state.to_json_dict(),
-                "transaction": None,  # tx_endpoint wrapper will take care of this
-                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+            return PWAbsorbRewardsResponse(
+                [],
+                [],
+                state=state,
+                transaction=REPLACEABLE_TRANSACTION_RECORD,
+                fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
+            )
 
     async def pw_status(self, request: dict[str, Any]) -> EndpointResult:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
