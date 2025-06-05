@@ -983,7 +983,7 @@ class FullNodeAPI:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
             # TODO: support v2 plots after the hard fork
-            pos_size_v1 = request.proof_of_space.size_v1()
+            pos_size_v1 = request.proof_of_space.size().size_v1
             assert pos_size_v1
 
             required_iters: uint64 = calculate_iterations_quality(
