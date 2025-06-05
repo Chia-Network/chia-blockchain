@@ -26,9 +26,9 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
+from chia.consensus.block_height_map_protocol import BlockHeightMapProtocol
+from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
-from chia.consensus.block_height_map_abc import BlockHeightMapABC
-from chia.consensus.block_store_abc import BlockStoreABC
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -101,11 +101,11 @@ class Blockchain:
     __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
-    __height_map: BlockHeightMapABC
+    __height_map: BlockHeightMapProtocol
     # Unspent Store
     coin_store: CoinStoreProtocol
     # Store
-    block_store: BlockStoreABC
+    block_store: BlockStoreProtocol
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
@@ -123,8 +123,8 @@ class Blockchain:
     @staticmethod
     async def create(
         coin_store: CoinStoreProtocol,
-        block_store: BlockStoreABC,
-        height_map: BlockHeightMapABC,
+        block_store: BlockStoreProtocol,
+        height_map: BlockHeightMapProtocol,
         consensus_constants: ConsensusConstants,
         reserved_cores: int,
         *,
@@ -165,7 +165,7 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
+    async def _load_chain_from_store(self, height_map: BlockHeightMapProtocol) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
