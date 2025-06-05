@@ -38,7 +38,7 @@ NIL_PH = Program.to(None).get_tree_hash()
 async def test_graftroot(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Create the coin we're testing
-        all_values: list[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
+        all_values: list[bytes32] = [bytes32([x] * 32) for x in range(100)]
         root, proofs = build_merkle_tree(all_values)
         p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
         desired_key_values = ((bytes32.zeros, bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))

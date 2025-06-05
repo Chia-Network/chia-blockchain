@@ -2055,7 +2055,7 @@ class WalletStateManager:
         ):
             # Optimization to avoid the computation below. Any coin that has a different amount is not a pool reward
             return False
-        for i in range(0, 30):
+        for i in range(30):
             try_height = created_height - i
             if try_height < 0:
                 break
@@ -2068,7 +2068,7 @@ class WalletStateManager:
         if coin.amount < calculate_base_farmer_reward(created_height):
             # Optimization to avoid the computation below. Any coin less than this base amount cannot be farmer reward
             return False
-        for i in range(0, 30):
+        for i in range(30):
             try_height = created_height - i
             if try_height < 0:
                 break

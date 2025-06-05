@@ -91,7 +91,7 @@ async def test_duplicates(db_version: int) -> None:
         hint_0 = 32 * b"\0"
         coin_id_0 = bytes32(32 * b"\4")
 
-        for i in range(0, 2):
+        for i in range(2):
             hints = [(coin_id_0, hint_0), (coin_id_0, hint_0)]
             await hint_store.add_hints(hints)
         coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)

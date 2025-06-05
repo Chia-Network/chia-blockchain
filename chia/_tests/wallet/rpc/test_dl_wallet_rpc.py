@@ -51,7 +51,7 @@ class TestWalletRpc:
         await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
         await server_3.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-        for i in range(0, num_blocks):
+        for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         initial_funds = sum(
@@ -87,7 +87,7 @@ class TestWalletRpc:
             merkle_root: bytes32 = bytes32.zeros
             txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
 
-            for i in range(0, 5):
+            for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
@@ -105,7 +105,7 @@ class TestWalletRpc:
             new_root: bytes32 = bytes32([1] * 32)
             await client.dl_update_root(launcher_id, new_root, uint64(100))
 
-            for i in range(0, 5):
+            for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
@@ -169,7 +169,7 @@ class TestWalletRpc:
             txs, launcher_id_2 = await client.create_new_dl(merkle_root, uint64(50))
             txs, launcher_id_3 = await client.create_new_dl(merkle_root, uint64(50))
 
-            for i in range(0, 5):
+            for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
@@ -186,7 +186,7 @@ class TestWalletRpc:
                 uint64(0),
             )
 
-            for i in range(0, 5):
+            for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
@@ -210,7 +210,7 @@ class TestWalletRpc:
             await full_node_api.wait_transaction_records_entered_mempool(txs)
             height = full_node_api.full_node.blockchain.get_peak_height()
             assert height is not None
-            for i in range(0, 5):
+            for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             additions = []
@@ -228,7 +228,7 @@ class TestWalletRpc:
             )
             await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
             await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
-            for i in range(0, 5):
+            for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)

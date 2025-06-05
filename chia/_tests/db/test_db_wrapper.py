@@ -24,8 +24,6 @@ if TYPE_CHECKING:
 class UniqueError(Exception):
     """Used to uniquely trigger the exception path out of the context managers."""
 
-    pass
-
 
 async def increment_counter(db_wrapper: DBWrapper2) -> None:
     async with db_wrapper.writer_maybe_transaction() as connection:

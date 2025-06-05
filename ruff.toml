@@ -20,6 +20,7 @@ select = [
     "SLOT",  # __slots__ usage
     "TID",  # Tidy imports
     "FLY",  # .join -> f-string
+    "PIE",  # flake8 plugin for extra lints
     # pycodestyle
 	"E",
 	"W",
@@ -28,7 +29,6 @@ select = [
 	"COM818",
 	"COM819",
 	# WIP: Will enable as separate commits
-	# "PIE",
 	# "PYI",
 	# "RSE",
 	# Libraries we don't use so might as well enable

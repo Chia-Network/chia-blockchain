@@ -49,10 +49,10 @@ from chia.wallet.wallet_node import WalletNode
 
 
 class GcMode(enum.Enum):
-    nothing = enum.auto
-    precollect = enum.auto
-    disable = enum.auto
-    enable = enum.auto
+    nothing = enum.auto()
+    precollect = enum.auto()
+    disable = enum.auto()
+    enable = enum.auto()
 
 
 @contextlib.contextmanager

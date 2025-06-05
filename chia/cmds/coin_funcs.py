@@ -92,7 +92,7 @@ def print_coins(
         return
     num_per_screen = 5 if paginate else len(coins)
     for i in range(0, len(coins), num_per_screen):
-        for j in range(0, num_per_screen):
+        for j in range(num_per_screen):
             if i + j >= len(coins):
                 break
             coin, conf_height = coins[i + j]
