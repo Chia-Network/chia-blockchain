@@ -56,6 +56,7 @@ class NewSignagePoint(Streamable):
     sub_slot_iters: uint64
     signage_point_index: uint8
     peak_height: uint32
+    last_tx_height: uint32
     sp_source_data: Optional[SignagePointSourceData] = None
 
 

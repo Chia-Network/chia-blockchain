@@ -134,6 +134,7 @@ class TimelordAPI:
                     self.timelord.last_state.get_sub_slot_iters(),
                     self.timelord.last_state.get_difficulty(),
                     self.timelord.get_height(),
+                    self.timelord.last_state.get_last_tx_height(),
                 )
             except Exception:
                 return None

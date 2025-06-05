@@ -1815,6 +1815,7 @@ class FullNode:
             difficulty = self.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
 
+        tx_peak = self.blockchain.get_tx_peak()
         # Notify farmers of the new signage point
         broadcast_farmer = farmer_protocol.NewSignagePoint(
             request.challenge_chain_vdf.challenge,
@@ -1824,6 +1825,7 @@ class FullNode:
             sub_slot_iters,
             request.index_from_challenge,
             uint32(0) if peak is None else peak.height,
+            tx_peak.height if tx_peak is not None else uint32(0),
             sp_source_data=SignagePointSourceData(
                 vdf_data=SPVDFSourceData(request.challenge_chain_vdf.output, request.reward_chain_vdf.output)
             ),
@@ -2720,7 +2722,7 @@ class FullNode:
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
-
+                tx_peak = self.blockchain.get_tx_peak()
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
                     end_of_slot_bundle.challenge_chain.get_hash(),
@@ -2730,6 +2732,7 @@ class FullNode:
                     next_sub_slot_iters,
                     uint8(0),
                     uint32(0) if peak is None else peak.height,
+                    tx_peak.height if tx_peak is not None else uint32(0),
                     sp_source_data=SignagePointSourceData(
                         sub_slot_data=SPSubSlotSourceData(
                             end_of_slot_bundle.challenge_chain, end_of_slot_bundle.reward_chain

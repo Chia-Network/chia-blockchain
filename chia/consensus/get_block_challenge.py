@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import Optional, Union
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -101,3 +101,30 @@ def get_block_challenge(
                 curr = blocks.block_record(curr.prev_hash)
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     return challenge
+
+
+def prev_tx_block(
+    blocks: BlockRecordsProtocol,
+    prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]],
+) -> uint32:
+    # todo add check to make sure we dont return tx block from same sp as block we are validating
+    if prev_b is None:
+        return uint32(0)
+    if isinstance(prev_b, BlockRecord):
+        if prev_b.prev_transaction_block_hash is not None:
+            return prev_b.height
+        else:
+            curr = prev_b
+    elif isinstance(prev_b, FullBlock):
+        if prev_b.foliage_transaction_block is not None:
+            return prev_b.height
+        else:
+            curr = blocks.block_record(prev_b.header_hash)
+    elif isinstance(prev_b, HeaderBlock):
+        if prev_b.foliage_transaction_block is not None:
+            return prev_b.height
+        else:
+            curr = blocks.block_record(prev_b.header_hash)
+    while curr.is_transaction_block is False and curr.height > 0:
+        curr = blocks.block_record(curr.prev_hash)
+    return curr.height

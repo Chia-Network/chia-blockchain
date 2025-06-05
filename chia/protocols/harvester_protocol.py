@@ -41,6 +41,7 @@ class NewSignagePointHarvester(Streamable):
     sp_hash: bytes32
     pool_difficulties: list[PoolDifficulty]
     filter_prefix_bits: uint8
+    last_tx_height: uint32
 
 
 @streamable

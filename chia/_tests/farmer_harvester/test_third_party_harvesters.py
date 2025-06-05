@@ -77,7 +77,6 @@ async def test_harvester_receive_source_signing_data(
         full_node_service_2,
         _,
     ) = farmer_harvester_2_simulators_zero_bits_plot_filter
-
     farmer: Farmer = farmer_service._node
     harvester: Harvester = harvester_service._node
     full_node_1: FullNode = full_node_service_1._node
@@ -106,6 +105,7 @@ async def test_harvester_receive_source_signing_data(
     # so that we have blocks generated that have our farmer reward address, instead
     # of the GENESIS_PRE_FARM_FARMER_PUZZLE_HASH.
     await add_test_blocks_into_full_node(blocks, full_node_2)
+    await time_out_assert(60, full_node_2.blockchain.get_peak_height, blocks[-1].height)
 
     validated_foliage_data = False
     validated_foliage_transaction = False
@@ -364,6 +364,7 @@ def prepare_sp_and_pos_for_fee_test(
         sub_slot_iters=uint64(0),
         signage_point_index=uint8(0),
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
 
     pos = harvester_protocol.NewProofOfSpace(
