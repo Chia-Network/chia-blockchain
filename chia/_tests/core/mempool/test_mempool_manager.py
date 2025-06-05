@@ -28,6 +28,7 @@ from clvm.casts import int_to_bytes
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import Marks, datacases, invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
+from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.eligible_coin_spends import (
@@ -38,7 +39,6 @@ from chia.full_node.eligible_coin_spends import (
     run_for_cost,
 )
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
-from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
     QUOTE_BYTES,
@@ -431,7 +431,7 @@ class TestCheckTimeLocks:
         expected: Optional[Err],
     ) -> None:
         assert (
-            mempool_check_time_locks(
+            check_time_locks(
                 dict(self.REMOVALS),
                 conds,
                 self.PREV_BLOCK_HEIGHT,
