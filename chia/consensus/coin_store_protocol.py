@@ -1,26 +1,21 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Collection
-from typing import Optional
+from typing import Optional, Protocol
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.util.db_wrapper import DBWrapper2
 
 
-class CoinStoreABC(ABC):
+class CoinStoreProtocol(Protocol):
     """
-    Abstract class defining the interface for CoinStore.
+    Protocol defining the interface for CoinStore.
     This is a substitute for importing from chia.full_node.coin_store directly.
     """
 
-    db_wrapper: DBWrapper2
-
-    @abstractmethod
     async def new_block(
         self,
         height: uint32,
@@ -34,35 +29,30 @@ class CoinStoreABC(ABC):
         """
         pass
 
-    @abstractmethod
     async def get_coin_record(self, coin_id: bytes32) -> Optional[CoinRecord]:
         """
         Returns the coin record for the specified coin id
         """
         pass
 
-    @abstractmethod
     async def get_coin_records(self, coin_ids: Collection[bytes32]) -> list[CoinRecord]:
         """
         Returns the coin records for the specified coin ids
         """
         pass
 
-    @abstractmethod
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
         """
         Returns the coins added at a specific height
         """
         pass
 
-    @abstractmethod
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
         """
         Returns the coins removed at a specific height
         """
         pass
 
-    @abstractmethod
     async def get_coin_records_by_puzzle_hash(
         self,
         include_spent_coins: bool,
@@ -75,7 +65,6 @@ class CoinStoreABC(ABC):
         """
         pass
 
-    @abstractmethod
     async def get_coin_records_by_puzzle_hashes(
         self,
         coins: bool,
@@ -88,7 +77,6 @@ class CoinStoreABC(ABC):
         """
         pass
 
-    @abstractmethod
     async def get_coin_records_by_names(
         self,
         include_spent_coins: bool,
@@ -101,7 +89,6 @@ class CoinStoreABC(ABC):
         """
         pass
 
-    @abstractmethod
     async def get_coin_records_by_parent_ids(
         self,
         include_spent_coins: bool,
@@ -114,7 +101,6 @@ class CoinStoreABC(ABC):
         """
         pass
 
-    @abstractmethod
     async def rollback_to_block(self, block_index: int) -> list[CoinRecord]:
         """
         Rolls back the blockchain to the specified block index
