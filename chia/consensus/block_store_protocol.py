@@ -8,6 +8,10 @@ from chia_rs.sized_ints import uint32
 
 
 class BlockStoreProtocol(Protocol):
+    async def start_transaction(self):
+        """Context manager for a database transaction."""
+        pass
+
     """
     Protocol defining the interface for BlockStore.
     This is a substitute for importing from chia.full_node.block_store directly.
