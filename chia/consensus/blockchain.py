@@ -422,7 +422,7 @@ class Blockchain:
 
         try:
             # Always add the block to the database
-            async with self.block_store.db_wrapper.writer():
+            async with self.block_store.start_transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
@@ -884,7 +884,7 @@ class Blockchain:
 
         blocks: list[FullBlock] = []
         for hash in hashes.copy():
-            block = self.block_store.block_cache.get(hash)
+            block = await self.block_store.get_full_block(hash)
             if block is not None:
                 blocks.append(block)
                 hashes.remove(hash)
@@ -933,7 +933,6 @@ class Blockchain:
         """
         records: list[BlockRecord] = []
         hashes: list[bytes32] = []
-        assert batch_size < self.block_store.db_wrapper.host_parameter_limit
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
             if header_hash is None:
