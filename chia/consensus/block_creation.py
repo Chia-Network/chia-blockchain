@@ -32,7 +32,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
-from chia.full_node.signage_point import SignagePoint
+from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.generator_types import NewBlockGenerator

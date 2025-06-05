@@ -12,6 +12,7 @@ from chia.cmds.db_upgrade_func import convert_v1_to_v2
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -67,7 +68,8 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                 for h in hints:
                     await hint_store1.add_hints([(h[0], h[1])])
 
-            bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
+            height_map = await BlockHeightMap.create(Path("."), db_wrapper1)
+            bc = await Blockchain.create(coin_store1, block_store1, height_map, test_constants, reserved_cores=0)
             sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
             for block in blocks:
                 if block.height != 0 and len(block.finished_sub_slots) > 0:
