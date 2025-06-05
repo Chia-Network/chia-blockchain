@@ -26,7 +26,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.coin_store import CoinStore
+from chia.full_node.coin_store import CoinStore, add_coin_records_to_db
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
@@ -259,8 +259,8 @@ class SpendSim:
             uint64(calculate_base_farmer_reward(next_block_height) + fees),
             self.defaults.GENESIS_CHALLENGE,
         )
-        await self.coin_store._add_coin_records(
-            [self.new_coin_record(pool_coin, True), self.new_coin_record(farmer_coin, True)]
+        await add_coin_records_to_db(
+            self.coin_store.db_wrapper, [self.new_coin_record(pool_coin, True), self.new_coin_record(farmer_coin, True)]
         )
 
         # Coin store gets updated
@@ -286,7 +286,9 @@ class SpendSim:
                     return_additions = additions
                     return_removals = bundle.removals()
                     spent_coins_ids = [r.name() for r in return_removals]
-                    await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
+                    await add_coin_records_to_db(
+                        self.coin_store.db_wrapper, [self.new_coin_record(addition) for addition in additions]
+                    )
                     await self.coin_store._set_spent(spent_coins_ids, uint32(self.block_height + 1))
 
         # SimBlockRecord is created

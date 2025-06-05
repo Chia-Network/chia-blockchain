@@ -21,7 +21,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
+from chia.full_node.coin_store import CoinStore, add_coin_records_to_db
 from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
@@ -440,7 +440,7 @@ async def test_get_coin_states(db_version: int) -> None:
             for i in range(1, 301)
         ]
         coin_store = await CoinStore.create(db_wrapper)
-        await coin_store._add_coin_records(crs)
+        await add_coin_records_to_db(coin_store.db_wrapper, crs)
 
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, {std_hash(b"2")}, uint32(0))) == 0
@@ -568,7 +568,7 @@ async def test_coin_state_batches(
         coin_store = await CoinStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
 
-        await coin_store._add_coin_records(random_coin_records.items)
+        await add_coin_records_to_db(coin_store.db_wrapper, random_coin_records.items)
         await hint_store.add_hints(random_coin_records.hints)
 
         # Make sure all of the coin states are found when batching.
@@ -662,7 +662,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
         coin_store = await CoinStore.create(db_wrapper)
         await HintStore.create(db_wrapper)
 
-        await coin_store._add_coin_records(coin_records)
+        await add_coin_records_to_db(coin_store.db_wrapper, coin_records)
 
         # Make sure all of the coin states are found.
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
@@ -675,7 +675,8 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
             assert coin_records[i].coin.name().hex() == all_coin_states[i].coin.name().hex(), i
 
         # For the middle case, insert a coin record between the two heights 10 and 12.
-        await coin_store._add_coin_records(
+        await add_coin_records_to_db(
+            coin_store.db_wrapper,
             [
                 CoinRecord(
                     coin=Coin(std_hash(b"extra coin"), ph, uint64(0)),
@@ -686,7 +687,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
                     coinbase=False,
                     timestamp=uint64(0),
                 )
-            ]
+            ],
         )
 
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
@@ -723,7 +724,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
             uint64(12321312),
         )
 
-        await coin_store._add_coin_records([cr])
+        await add_coin_records_to_db(coin_store.db_wrapper, [cr])
         await hint_store.add_hints([(cr.coin.name(), cr.coin.puzzle_hash)])
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
