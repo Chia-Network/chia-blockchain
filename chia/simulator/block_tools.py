@@ -28,6 +28,7 @@ from chia_rs import (
     G1Element,
     G2Element,
     InfusedChallengeChainSubSlot,
+    PlotSize,
     PoolTarget,
     PrivateKey,
     ProofOfSpace,
@@ -1499,7 +1500,7 @@ class BlockTools:
                     required_iters = calculate_iterations_quality(
                         constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,
-                        plot_info.prover.get_size(),
+                        PlotSize.make_v1(plot_info.prover.get_size()),
                         difficulty,
                         signage_point,
                     )
