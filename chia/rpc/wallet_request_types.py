@@ -378,6 +378,19 @@ class NFTCoin(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class PWStatus(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class PWStatusResponse(Streamable):
+    state: PoolWalletInfo
+    unconfirmed_transactions: list[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 

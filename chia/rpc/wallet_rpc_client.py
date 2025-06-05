@@ -9,7 +9,6 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
-from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import (
     AddKey,
@@ -79,6 +78,8 @@ from chia.rpc.wallet_request_types import (
     PWJoinPoolResponse,
     PWSelfPool,
     PWSelfPoolResponse,
+    PWStatus,
+    PWStatusResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -737,12 +738,8 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def pw_status(self, wallet_id: int) -> tuple[PoolWalletInfo, list[TransactionRecord]]:
-        json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})
-        return (
-            PoolWalletInfo.from_json_dict(json_dict["state"]),
-            [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
-        )
+    async def pw_status(self, request: PWStatus) -> PWStatusResponse:
+        return PWStatusResponse.from_json_dict(await self.fetch("pw_status", request.to_json_dict()))
 
     # CATS
     async def create_new_cat_and_wallet(

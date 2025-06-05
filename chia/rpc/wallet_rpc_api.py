@@ -58,6 +58,8 @@ from chia.rpc.wallet_request_types import (
     PWJoinPoolResponse,
     PWSelfPool,
     PWSelfPoolResponse,
+    PWStatus,
+    PWStatusResponse,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -3926,18 +3928,18 @@ class WalletRpcApi:
                 fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
             )
 
-    async def pw_status(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def pw_status(self, request: PWStatus) -> PWStatusResponse:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)
         state: PoolWalletInfo = await wallet.get_current_state()
         unconfirmed_transactions: list[TransactionRecord] = await wallet.get_unconfirmed_transactions()
-        return {
-            "state": state.to_json_dict(),
-            "unconfirmed_transactions": unconfirmed_transactions,
-        }
+        return PWStatusResponse(
+            state=state,
+            unconfirmed_transactions=unconfirmed_transactions,
+        )
 
     ##########################################################################################
     # DataLayer Wallet

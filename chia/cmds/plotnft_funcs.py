@@ -32,7 +32,7 @@ from chia.pools.pool_config import (
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.wallet_request_types import PWAbsorbRewards, PWJoinPool, PWSelfPool, TransactionEndpointResponse
+from chia.rpc.wallet_request_types import PWAbsorbRewards, PWJoinPool, PWSelfPool, PWStatus, TransactionEndpointResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -197,7 +197,7 @@ async def pprint_all_pool_wallet_state(
         pool_wallet_id = wallet_info["id"]
         typ = WalletType(int(wallet_info["type"]))
         if typ == WalletType.POOLING_WALLET:
-            pool_wallet_info, _ = await wallet_client.pw_status(pool_wallet_id)
+            pool_wallet_info = (await wallet_client.pw_status(PWStatus(uint32(pool_wallet_id)))).state
             await pprint_pool_wallet_state(
                 wallet_client,
                 pool_wallet_id,
@@ -230,7 +230,7 @@ async def show(
                 for pool_state_item in pool_state_list
             }
             if wallet_id_passed_in is not None:
-                pool_wallet_info, _ = await wallet_info.client.pw_status(wallet_id_passed_in)
+                pool_wallet_info = (await wallet_info.client.pw_status(PWStatus(uint32(wallet_id_passed_in)))).state
                 await pprint_pool_wallet_state(
                     wallet_info.client,
                     wallet_id_passed_in,
@@ -320,7 +320,7 @@ async def join_pool(
     if not sync_status.synced:
         raise click.ClickException("Wallet must be synced before joining a pool.")
 
-    pool_wallet_info, _ = await wallet_info.client.pw_status(selected_wallet_id)
+    pool_wallet_info = (await wallet_info.client.pw_status(PWStatus(uint32(selected_wallet_id)))).state
     if (
         pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
         and pool_wallet_info.current.pool_url == pool_url
@@ -392,13 +392,13 @@ async def self_pool(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Op
 
 async def inspect_cmd(wallet_info: WalletClientInfo, wallet_id: Optional[int]) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
-    pool_wallet_info, unconfirmed_transactions = await wallet_info.client.pw_status(selected_wallet_id)
+    res = await wallet_info.client.pw_status(PWStatus(uint32(selected_wallet_id)))
     print(
         json.dumps(
             {
-                "pool_wallet_info": pool_wallet_info.to_json_dict(),
+                "pool_wallet_info": res.state.to_json_dict(),
                 "unconfirmed_transactions": [
-                    {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in unconfirmed_transactions
+                    {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in res.unconfirmed_transactions
                 ],
             }
         )
