@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from collections.abc import Coroutine
+from typing import Any, Optional, Protocol
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment
 from chia_rs.sized_bytes import bytes32
@@ -12,6 +13,10 @@ class BlockStoreProtocol(Protocol):
     Protocol defining the interface for BlockStore.
     This is a substitute for importing from chia.full_node.block_store directly.
     """
+
+    async def start_transaction(self) -> Coroutine[Any, None, None]:
+        """Context manager for a database transaction."""
+        pass
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         """
