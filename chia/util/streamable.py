@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Callable, ClassVar, Optional, T
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from typing_extensions import Literal, get_args, get_origin
+from typing_extensions import Literal, Self, get_args, get_origin
 
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
@@ -575,9 +575,9 @@ class Streamable:
             raise
 
     @classmethod
-    def parse(cls: type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
+    def parse(cls, f: BinaryIO) -> Self:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj: _T_Streamable = object.__new__(cls)
+        obj: Self = object.__new__(cls)
         for field in cls._streamable_fields:
             object.__setattr__(obj, field.name, field.parse_function(f))
         return obj
@@ -590,7 +590,7 @@ class Streamable:
         return std_hash(bytes(self), skip_bytes_conversion=True)
 
     @classmethod
-    def from_bytes(cls: type[_T_Streamable], blob: bytes) -> _T_Streamable:
+    def from_bytes(cls, blob: bytes) -> Self:
         f = io.BytesIO(blob)
         parsed = cls.parse(f)
         assert f.read() == b""
@@ -617,7 +617,7 @@ class Streamable:
         return ret
 
     @classmethod
-    def from_json_dict(cls: type[_T_Streamable], json_dict: dict[str, Any]) -> _T_Streamable:
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         return streamable_from_dict(cls, json_dict)
 
 

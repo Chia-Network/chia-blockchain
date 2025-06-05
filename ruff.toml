@@ -21,6 +21,7 @@ select = [
     "TID",  # Tidy imports
     "FLY",  # .join -> f-string
     "PIE",  # flake8 plugin for extra lints
+    "PYI",  # type stubs linting
     # pycodestyle
 	"E",
 	"W",
@@ -29,7 +30,6 @@ select = [
 	"COM818",
 	"COM819",
 	# WIP: Will enable as separate commits
-	# "PYI",
 	# "RSE",
 	# Libraries we don't use so might as well enable
 	"INT",
