@@ -23,6 +23,7 @@ select = [
     "PIE",  # flake8 plugin for extra lints
     "PYI",  # type stubs linting
     "RSE",  # Linting raises
+    "S",  # Potential security issues
     # pycodestyle
 	"E",
 	"W",
@@ -95,6 +96,24 @@ ignore = [
     "RUF043", # pytest-raises-ambiguous-pattern
     "RUF046", # unnecessary-cast-to-int
     "RUF052", # used-dummy-variable
+
+    # Security linter
+    "S101",
+    "S110",
+    "S404",
+    "S311",
+    "S602",
+    "S607",
+    "S603",
+    "S608",
+    "S112",
+    "S105",
+    "S104",
+    "S323",
+    "S605",
+    "S301",
+    "S403",
+    "S106",
 ]
 
 
