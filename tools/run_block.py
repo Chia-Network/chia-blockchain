@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 run_block: Convert an encoded FullBlock from the Chia blockchain into a list of transactions
 
