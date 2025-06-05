@@ -28,7 +28,6 @@ from chia_rs import (
     G1Element,
     G2Element,
     InfusedChallengeChainSubSlot,
-    PlotSize,
     PoolTarget,
     PrivateKey,
     ProofOfSpace,
