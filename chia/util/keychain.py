@@ -263,24 +263,24 @@ class KeyData(Streamable):
     @property
     def mnemonic(self) -> list[str]:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.mnemonic
 
     def mnemonic_str(self) -> str:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.mnemonic_str()
 
     @property
     def entropy(self) -> bytes:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.entropy
 
     @property
     def private_key(self) -> PrivateKey:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.private_key
 
 

@@ -226,7 +226,7 @@ class Farmer:
             else:
                 self.keychain_proxy = await connect_to_keychain_and_validate(self._root_path, self.log)
                 if not self.keychain_proxy:
-                    raise KeychainProxyConnectionFailure()
+                    raise KeychainProxyConnectionFailure
         return self.keychain_proxy
 
     async def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:

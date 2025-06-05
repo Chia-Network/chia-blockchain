@@ -425,7 +425,7 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
 
             with pytest.raises(UniqueError):
                 async with db_wrapper.reader() as _:
-                    raise UniqueError()
+                    raise UniqueError
 
             assert await query_value(connection=writer) == 1
 

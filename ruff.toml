@@ -22,6 +22,7 @@ select = [
     "FLY",  # .join -> f-string
     "PIE",  # flake8 plugin for extra lints
     "PYI",  # type stubs linting
+    "RSE",  # Linting raises
     # pycodestyle
 	"E",
 	"W",
@@ -29,8 +30,6 @@ select = [
 	# "COM812" # missing-trailing-comma (5105 errors)
 	"COM818",
 	"COM819",
-	# WIP: Will enable as separate commits
-	# "RSE",
 	# Libraries we don't use so might as well enable
 	"INT",
 	"AIR",

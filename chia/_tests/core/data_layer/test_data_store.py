@@ -1361,7 +1361,7 @@ async def test_server_http_ban(
         log: logging.Logger,
     ) -> None:
         if error:
-            raise aiohttp.ClientConnectionError()
+            raise aiohttp.ClientConnectionError
 
     start_timestamp = int(time.time())
     with monkeypatch.context() as m:
