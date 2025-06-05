@@ -1500,7 +1500,7 @@ class BlockTools:
                     required_iters = calculate_iterations_quality(
                         constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,
-                        PlotSize.make_v1(plot_info.prover.get_size()),
+                        plot_info.prover.get_size(),
                         difficulty,
                         signage_point,
                     )

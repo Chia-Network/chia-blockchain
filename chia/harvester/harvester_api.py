@@ -146,7 +146,7 @@ class HarvesterAPI:
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants.DIFFICULTY_CONSTANT_FACTOR,
                             quality_str,
-                            PlotSize.make_v1(plot_info.prover.get_size()),
+                            plot_info.prover.get_size(),
                             difficulty,
                             new_challenge.sp_hash,
                         )
