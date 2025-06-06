@@ -157,7 +157,7 @@ class DataStore:
                     """
                     CREATE TABLE IF NOT EXISTS ids(
                         kv_id INTEGER PRIMARY KEY,
-                        hash BLOB NOT NULL,
+                        hash BLOB NOT NULL CHECK(length(store_id) == 32),
                         blob BLOB,
                         store_id BLOB NOT NULL CHECK(length(store_id) == 32)
                     )
@@ -177,7 +177,7 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE UNIQUE INDEX IF NOT EXISTS ids_blob_index ON ids(blob, store_id)
+                    CREATE UNIQUE INDEX IF NOT EXISTS ids_hash_index ON ids(hash, store_id)
                     """
                 )
                 await writer.execute(
