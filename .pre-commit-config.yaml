@@ -8,6 +8,13 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: init_py_files
+        name: __init__.py files
+        entry: ./activated.py python chia/_tests/build-init-files.py -v --root .
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: ruff_format
         name: ruff format
         entry: ./activated.py ruff format
