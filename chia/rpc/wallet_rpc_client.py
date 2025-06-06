@@ -23,6 +23,8 @@ from chia.rpc.wallet_request_types import (
     CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CreateNewDL,
+    CreateNewDLResponse,
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
@@ -1221,21 +1223,16 @@ class WalletRpcClient(RpcClient):
     # DataLayer
     async def create_new_dl(
         self,
-        root: bytes32,
-        fee: uint64,
+        request: CreateNewDL,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> tuple[list[TransactionRecord], bytes32]:
-        request = {
-            "root": root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("create_new_dl", request)
-        txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
-        launcher_id = bytes32.from_hexstr(response["launcher_id"])
-        return txs, launcher_id
+    ) -> CreateNewDLResponse:
+        return CreateNewDLResponse.from_json_dict(
+            await self.fetch(
+                "create_new_dl", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def dl_track_new(self, launcher_id: bytes32) -> None:
         request = {"launcher_id": launcher_id.hex()}

@@ -661,6 +661,18 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
 
 
 @streamable
+@kw_only_dataclass
+class CreateNewDL(TransactionEndpointRequest):
+    root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class CreateNewDLResponse(TransactionEndpointResponse):
+    launcher_id: bytes32
+
+
+@streamable
 @dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str = field(default_factory=default_raise)

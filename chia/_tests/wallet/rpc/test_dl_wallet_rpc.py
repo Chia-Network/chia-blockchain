@@ -14,6 +14,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
+from chia.rpc.wallet_request_types import CreateNewDL
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
@@ -85,7 +86,9 @@ class TestWalletRpc:
             await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
 
             merkle_root: bytes32 = bytes32.zeros
-            txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
+            launcher_id = (
+                await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
+            ).launcher_id
 
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
@@ -166,8 +169,12 @@ class TestWalletRpc:
 
             assert await client.dl_singletons_by_root(launcher_id, new_root) == [new_singleton_record]
 
-            txs, launcher_id_2 = await client.create_new_dl(merkle_root, uint64(50))
-            txs, launcher_id_3 = await client.create_new_dl(merkle_root, uint64(50))
+            launcher_id_2 = (
+                await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
+            ).launcher_id
+            launcher_id_3 = (
+                await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
+            ).launcher_id
 
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
