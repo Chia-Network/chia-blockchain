@@ -671,7 +671,7 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
 @streamable
 @kw_only_dataclass
 class CreateNewDL(TransactionEndpointRequest):
-    root: bytes32
+    root: bytes32 = field(default_factory=default_raise)
 
 
 @streamable
