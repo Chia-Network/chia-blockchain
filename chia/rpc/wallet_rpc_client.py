@@ -38,6 +38,7 @@ from chia.rpc.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
+    DLStopTracking,
     DLTrackNew,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -1238,9 +1239,8 @@ class WalletRpcClient(RpcClient):
     async def dl_track_new(self, request: DLTrackNew) -> None:
         await self.fetch("dl_track_new", request.to_json_dict())
 
-    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
-        await self.fetch("dl_stop_tracking", request)
+    async def dl_stop_tracking(self, request: DLStopTracking) -> None:
+        await self.fetch("dl_stop_tracking", request.to_json_dict())
 
     async def dl_latest_singleton(
         self, launcher_id: bytes32, only_confirmed: bool = False
