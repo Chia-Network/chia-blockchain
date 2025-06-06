@@ -401,6 +401,19 @@ class DLLatestSingletonResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DLSingletonsByRoot(Streamable):
+    launcher_id: bytes32
+    root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLSingletonsByRootResponse(Streamable):
+    singletons: list[SingletonRecord]
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 
