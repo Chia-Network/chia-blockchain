@@ -381,6 +381,12 @@ class DLTrackNew(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DLStopTracking(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 

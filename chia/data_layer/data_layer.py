@@ -58,7 +58,7 @@ from chia.data_layer.download_data import (
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import CreateNewDL, DLTrackNew, LogIn
+from chia.rpc.wallet_request_types import CreateNewDL, DLStopTracking, DLTrackNew, LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -843,7 +843,7 @@ class DataLayer:
                     )
 
         # stop tracking first, then unsubscribe from the data store
-        await self.wallet_rpc.dl_stop_tracking(store_id)
+        await self.wallet_rpc.dl_stop_tracking(DLStopTracking(store_id))
         await self.data_store.unsubscribe(store_id)
         if not retain_data:
             await self.data_store.delete_store_data(store_id)

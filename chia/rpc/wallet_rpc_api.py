@@ -32,6 +32,7 @@ from chia.rpc.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DLStopTracking,
     DLTrackNew,
     Empty,
     ExecuteSigningInstructions,
@@ -3979,14 +3980,15 @@ class WalletRpcApi:
                 continue  # try some other peers, maybe someone has it
         return Empty()
 
-    async def dl_stop_tracking(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_stop_tracking(self, request: DLStopTracking) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-        await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
-        return {}
+        await dl_wallet.stop_tracking_singleton(request.launcher_id)
+        return Empty()
 
     async def dl_latest_singleton(self, request: dict[str, Any]) -> EndpointResult:
         """Get the singleton record for the latest singleton of a launcher ID"""

@@ -14,7 +14,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
-from chia.rpc.wallet_request_types import CreateNewDL, DLTrackNew
+from chia.rpc.wallet_request_types import CreateNewDL, DLStopTracking, DLTrackNew
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
@@ -206,7 +206,7 @@ class TestWalletRpc:
                 assert rec is not None
                 assert rec.root == next_root
 
-            await client_2.dl_stop_tracking(launcher_id)
+            await client_2.dl_stop_tracking(DLStopTracking(launcher_id))
             assert await client_2.dl_latest_singleton(lid) is None
 
             owned_singletons = await client.dl_owned_singletons()
