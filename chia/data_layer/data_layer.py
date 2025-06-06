@@ -58,7 +58,7 @@ from chia.data_layer.download_data import (
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import CreateNewDL, DLStopTracking, DLTrackNew, LogIn
+from chia.rpc.wallet_request_types import CreateNewDL, DLLatestSingleton, DLStopTracking, DLTrackNew, LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -463,7 +463,7 @@ class DataLayer:
         return res
 
     async def get_root(self, store_id: bytes32) -> Optional[SingletonRecord]:
-        latest = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        latest = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if latest is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return latest
@@ -495,7 +495,7 @@ class DataLayer:
                 root = await self.data_store.get_tree_root(store_id=store_id)
             except Exception:
                 root = None
-            singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+            singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
             if singleton_record is None:
                 return
             if root is None:
@@ -546,7 +546,7 @@ class DataLayer:
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {store_id}.")
             return
@@ -661,7 +661,7 @@ class DataLayer:
         return None
 
     async def clean_old_full_tree_files(self, store_id: bytes32) -> None:
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             return
         await self._update_confirmation_status(store_id=store_id)
@@ -679,7 +679,7 @@ class DataLayer:
 
     async def upload_files(self, store_id: bytes32) -> None:
         uploaders = await self.get_uploaders(store_id)
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {store_id}.")
             return
@@ -746,7 +746,7 @@ class DataLayer:
         root = await self.data_store.get_tree_root(store_id=store_id)
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
             return
@@ -1256,7 +1256,7 @@ class DataLayer:
         if not await self.data_store.store_id_exists(store_id=store_id):
             raise Exception(f"No store id stored in the local database for {store_id}")
         root = await self.data_store.get_tree_root(store_id=store_id)
-        singleton_record = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             raise Exception(f"No singleton found for {store_id}")
 

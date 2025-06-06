@@ -32,6 +32,8 @@ from chia.rpc.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DLLatestSingleton,
+    DLLatestSingletonResponse,
     DLStopTracking,
     DLTrackNew,
     Empty,
@@ -3990,17 +3992,15 @@ class WalletRpcApi:
         await dl_wallet.stop_tracking_singleton(request.launcher_id)
         return Empty()
 
-    async def dl_latest_singleton(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        only_confirmed = request.get("only_confirmed")
-        if only_confirmed is None:
-            only_confirmed = False
         wallet = self.service.wallet_state_manager.get_dl_wallet()
-        record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
-        return {"singleton": None if record is None else record.to_json_dict()}
+        record = await wallet.get_latest_singleton(request.launcher_id, request.only_confirmed)
+        return DLLatestSingletonResponse(record)
 
     async def dl_singletons_by_root(self, request: dict[str, Any]) -> EndpointResult:
         """Get the singleton records that contain the specified root"""
