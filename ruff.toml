@@ -3,14 +3,14 @@ line-length = 120
 [lint]
 preview = true
 select = [
-	"PL",  # Pylint
-	"I",  # Isort
-	"FA",  # Flake8: future-annotations
-	"UP",  # Pyupgrade
-	"RUF",  # Ruff specific
-	"F",  # Flake8 core
-	"ASYNC",  # Flake8 async
-	"ISC",  # flake8-implicit-str-concat
+    "PL",  # Pylint
+    "I",  # Isort
+    "FA",  # Flake8: future-annotations
+    "UP",  # Pyupgrade
+    "RUF",  # Ruff specific
+    "F",  # Flake8 core
+    "ASYNC",  # Flake8 async
+    "ISC",  # flake8-implicit-str-concat
     "TID",  # flake8-tidy-imports
     "T10", # Debug statements
     "EXE", # shebang usage
@@ -25,19 +25,19 @@ select = [
     "RSE",  # Linting raises
     "S",  # Potential security issues
     # pycodestyle
-	"E",
-	"W",
-	# Trailing commas
-	# "COM812" # missing-trailing-comma (5105 errors)
-	"COM818",
-	"COM819",
-	# Libraries we don't use so might as well enable
-	"INT",
-	"AIR",
-	"FAST",
-	"DJ",
-	"NPY",
-	"PD",
+    "E",
+    "W",
+    # Trailing commas
+    # "COM812" # missing-trailing-comma (5105 errors)
+    "COM818",
+    "COM819",
+    # Libraries we don't use so might as well enable
+    "INT",
+    "AIR",
+    "FAST",
+    "DJ",
+    "NPY",
+    "PD",
 ]
 explicit-preview-rules = false
 ignore = [
