@@ -14,7 +14,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
-from chia.rpc.wallet_request_types import CreateNewDL, DLLatestSingleton, DLStopTracking, DLTrackNew
+from chia.rpc.wallet_request_types import CreateNewDL, DLLatestSingleton, DLSingletonsByRoot, DLStopTracking, DLTrackNew
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
@@ -167,7 +167,9 @@ class TestWalletRpc:
                 num_results=uint32(1),
             ) == [new_singleton_record]
 
-            assert await client.dl_singletons_by_root(launcher_id, new_root) == [new_singleton_record]
+            assert (await client.dl_singletons_by_root(DLSingletonsByRoot(launcher_id, new_root))).singletons == [
+                new_singleton_record
+            ]
 
             launcher_id_2 = (
                 await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)

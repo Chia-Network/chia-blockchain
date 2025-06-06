@@ -40,6 +40,8 @@ from chia.rpc.wallet_request_types import (
     DIDUpdateRecoveryIDsResponse,
     DLLatestSingleton,
     DLLatestSingletonResponse,
+    DLSingletonsByRoot,
+    DLSingletonsByRootResponse,
     DLStopTracking,
     DLTrackNew,
     ExecuteSigningInstructions,
@@ -1247,10 +1249,10 @@ class WalletRpcClient(RpcClient):
     async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
         return DLLatestSingletonResponse.from_json_dict(await self.fetch("dl_latest_singleton", request.to_json_dict()))
 
-    async def dl_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> list[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "root": root.hex()}
-        response = await self.fetch("dl_singletons_by_root", request)
-        return [SingletonRecord.from_json_dict(single) for single in response["singletons"]]
+    async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
+        return DLSingletonsByRootResponse.from_json_dict(
+            await self.fetch("dl_singletons_by_root", request.to_json_dict())
+        )
 
     async def dl_update_root(
         self,
