@@ -29,6 +29,8 @@ from chia.rpc.wallet_request_types import (
     CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CreateNewDL,
+    CreateNewDLResponse,
     DeleteKey,
     Empty,
     ExecuteSigningInstructions,
@@ -3922,12 +3924,13 @@ class WalletRpcApi:
     # DataLayer Wallet
     ##########################################################################################
     @tx_endpoint(push=True)
+    @marshal
     async def create_new_dl(
         self,
-        request: dict[str, Any],
+        request: CreateNewDL,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> CreateNewDLResponse:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -3938,22 +3941,16 @@ class WalletRpcApi:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(self.service.wallet_state_manager)
 
-        try:
-            async with self.service.wallet_state_manager.lock:
-                launcher_id = await dl_wallet.generate_new_reporter(
-                    bytes32.from_hexstr(request["root"]),
-                    action_scope,
-                    fee=request.get("fee", uint64(0)),
-                    extra_conditions=extra_conditions,
-                )
-        except ValueError as e:
-            log.error(f"Error while generating new reporter {e}")
-            return {"success": False, "error": str(e)}
+        async with self.service.wallet_state_manager.lock:
+            launcher_id = await dl_wallet.generate_new_reporter(
+                request.root,
+                action_scope,
+                fee=request.fee,
+                extra_conditions=extra_conditions,
+            )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "launcher_id": launcher_id,
-        }
+        # tx_endpoint will take care of these default values
+        return CreateNewDLResponse([], [], launcher_id=launcher_id)
 
     async def dl_track_new(self, request: dict[str, Any]) -> EndpointResult:
         """Initialize the DataLayer Wallet (only one can exist)"""

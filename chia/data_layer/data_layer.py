@@ -58,7 +58,7 @@ from chia.data_layer.download_data import (
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import LogIn
+from chia.rpc.wallet_request_types import CreateNewDL, LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -248,12 +248,12 @@ class DataLayer:
         return result.fingerprint
 
     async def create_store(self, fee: uint64, root: bytes32 = bytes32.zeros) -> tuple[list[TransactionRecord], bytes32]:
-        txs, store_id = await self.wallet_rpc.create_new_dl(root, fee)
-        res = await self.data_store.create_tree(store_id=store_id)
+        create_res = await self.wallet_rpc.create_new_dl(CreateNewDL(root=root, fee=fee), DEFAULT_TX_CONFIG)
+        res = await self.data_store.create_tree(store_id=create_res.launcher_id)
         if res is None:
             self.log.fatal("failed creating store")
         self.initialized = True
-        return txs, store_id
+        return create_res.transactions, create_res.launcher_id
 
     async def batch_update(
         self,
