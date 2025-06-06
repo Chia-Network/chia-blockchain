@@ -248,7 +248,7 @@ class DataLayer:
         return result.fingerprint
 
     async def create_store(self, fee: uint64, root: bytes32 = bytes32.zeros) -> tuple[list[TransactionRecord], bytes32]:
-        create_res = await self.wallet_rpc.create_new_dl(CreateNewDL(root=root, fee=fee), DEFAULT_TX_CONFIG)
+        create_res = await self.wallet_rpc.create_new_dl(CreateNewDL(root=root, fee=fee, push=True), DEFAULT_TX_CONFIG)
         res = await self.data_store.create_tree(store_id=create_res.launcher_id)
         if res is None:
             self.log.fatal("failed creating store")
