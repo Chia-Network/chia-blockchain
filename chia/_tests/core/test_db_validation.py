@@ -116,7 +116,7 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool, default_config: dict[
             make_block_table(conn)
 
             prev = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
-            for height in range(0, 100):
+            for height in range(100):
                 header_hash = rand_hash()
                 add_block(conn, header_hash, prev, height, True)
                 if height % 4 == 0:

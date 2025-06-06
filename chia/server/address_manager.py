@@ -313,7 +313,7 @@ class AddressManager:
         # deserialize new_table
         new_table_count = uint32.parse(data)
         new_table_nodes: list[tuple[uint64, uint64]] = []
-        for i in range(0, new_table_count):
+        for i in range(new_table_count):
             node_id = uint64.parse(data)
             bucket = uint64.parse(data)
             new_table_nodes.append((node_id, bucket))

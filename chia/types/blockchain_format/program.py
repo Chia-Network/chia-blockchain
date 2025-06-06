@@ -10,6 +10,7 @@ from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm.SExp import SExp
+from typing_extensions import Self
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.tree_hash import sha256_treehash
@@ -30,14 +31,14 @@ class Program(SExp):
     """
 
     @classmethod
-    def parse(cls: type[T_Program], f) -> T_Program:
+    def parse(cls, f) -> Self:
         return sexp_from_stream(f, cls.to)
 
     def stream(self, f) -> None:
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_serialized(cls: type[T_Program], prg: SerializedProgram) -> T_Program:
+    def from_serialized(cls, prg: SerializedProgram) -> Self:
         """
         Convert the SerializedProgram to a Program object.
         """
@@ -50,7 +51,7 @@ class Program(SExp):
         return SerializedProgram.from_bytes(bytes(self))
 
     @classmethod
-    def from_bytes(cls: type[T_Program], blob: bytes) -> T_Program:
+    def from_bytes(cls, blob: bytes) -> Self:
         # this runs the program "1", which just returns the first argument.
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
@@ -64,7 +65,7 @@ class Program(SExp):
         return cls.to(ret)
 
     @classmethod
-    def fromhex(cls: type[T_Program], hexstr: str) -> T_Program:
+    def fromhex(cls, hexstr: str) -> Self:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
     @classmethod
@@ -104,7 +105,7 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
-    def replace(self: T_Program, **kwargs: Any) -> T_Program:
+    def replace(self, **kwargs: Any) -> Self:
         """
         Create a new program replacing the given paths (using `at` syntax).
         Example:

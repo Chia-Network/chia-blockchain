@@ -384,7 +384,6 @@ def read_store_ids_from_config(config: dict[str, Any]) -> list[StoreConfig]:
             else:
                 bad_store_id = "<missing>"
             log.info(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
-            pass
 
     return stores
 

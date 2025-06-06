@@ -112,7 +112,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
 
         time.sleep(FAILED_ATTEMPT_DELAY)
         print("Incorrect passphrase\n")
-    raise KeychainMaxUnlockAttempts()
+    raise KeychainMaxUnlockAttempts
 
 
 class KeyringWrapper:
@@ -254,7 +254,7 @@ class KeyringWrapper:
             and current_passphrase is not None
             and not self.master_passphrase_is_valid(current_passphrase)
         ):
-            raise KeychainCurrentPassphraseIsInvalid()
+            raise KeychainCurrentPassphraseIsInvalid
 
         self.set_cached_master_passphrase(new_passphrase, validated=True)
 

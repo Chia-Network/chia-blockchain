@@ -74,7 +74,7 @@ async def test_fee_increase() -> None:
         for i in range(300, 700):
             i = uint32(i)
             items = []
-            for _ in range(0, 20):
+            for _ in range(20):
                 fee = uint64(0)
                 included_height = uint32(random.randint(i - 60, i - 1))
                 cost = uint64(5000000)

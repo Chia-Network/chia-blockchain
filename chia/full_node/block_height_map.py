@@ -94,7 +94,6 @@ class BlockHeightMap:
         except Exception as e:
             # it's OK if this file doesn't exist, we can rebuild it
             log.info(f"Failed to load height-to-hash: {e}")
-            pass
 
         try:
             async with aiofiles.open(self.__ses_filename, "rb") as f:
@@ -102,7 +101,6 @@ class BlockHeightMap:
         except Exception as e:
             # it's OK if this file doesn't exist, we can rebuild it
             log.info(f"Failed to load sub-epoch-summaries: {e}")
-            pass
 
         peak: bytes32 = row[0]
         prev_hash: bytes32 = row[1]

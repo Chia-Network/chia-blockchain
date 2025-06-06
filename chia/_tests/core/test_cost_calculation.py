@@ -275,7 +275,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
 
     with benchmark_runner.assert_runtime(seconds=0.1):
         total_cost = 0
-        for i in range(0, 1000):
+        for i in range(1000):
             cost, _result = run_with_cost(puzzle_program, test_constants.MAX_BLOCK_COST_CLVM, solution_program)
             total_cost += cost
 

@@ -355,7 +355,7 @@ async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     expected_keys = []
     # Add 10 keys and validate the result `get_key` for each of them after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:
@@ -385,7 +385,7 @@ async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     assert keychain.get_keys(include_secrets) == []
     expected_keys = []
     # Add 10 keys and validate the result of `get_keys` after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:

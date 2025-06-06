@@ -398,7 +398,7 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Test transactionality
     previous_result = None
-    for _ in range(0, wsm.initial_num_public_keys):  # all currently unused
+    for _ in range(wsm.initial_num_public_keys):  # all currently unused
         previous_result = await wsm._get_unused_derivation_record(wsm.main_wallet.id(), previous_result=previous_result)
     assert previous_result is not None
     await previous_result.commit(wsm)

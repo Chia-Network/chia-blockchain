@@ -94,7 +94,7 @@ class WalletBlockTools(BlockTools):
             latest_block = None
             last_timestamp = uint64((int(time.time()) if genesis_timestamp is None else genesis_timestamp) - 20)
 
-        for _ in range(0, num_blocks):
+        for _ in range(num_blocks):
             additions = []
             removals = []
             block_generator: Optional[BlockGenerator] = None

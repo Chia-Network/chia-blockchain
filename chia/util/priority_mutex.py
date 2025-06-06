@@ -66,7 +66,7 @@ class PriorityMutex(Generic[_T_Priority]):
         if task is None:
             raise Exception(f"unable to check current task, got: {task!r}")
         if self._active is not None and self._active.task is task:
-            raise NestedLockUnsupportedError()
+            raise NestedLockUnsupportedError
 
         element = _Element(task=task)
 

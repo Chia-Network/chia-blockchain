@@ -61,8 +61,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     await env_maker.change_balances({"dl": {"init": True}})
     await env_taker.change_balances({"dl": {"init": True}})
 
-    MAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
-    TAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
+    MAKER_ROWS = [bytes32([i] * 32) for i in range(10)]
+    TAKER_ROWS = [bytes32([i] * 32) for i in range(10)]
     maker_root, _ = build_merkle_tree(MAKER_ROWS)
     taker_root, _ = build_merkle_tree(TAKER_ROWS)
 
@@ -364,7 +364,7 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
     dl_wallet = await DataLayerWallet.create_new_dl_wallet(env_maker.wallet_state_manager)
     await env_maker.change_balances({"dl": {"init": True}})
 
-    ROWS = [bytes32([i] * 32) for i in range(0, 10)]
+    ROWS = [bytes32([i] * 32) for i in range(10)]
     root, _ = build_merkle_tree(ROWS)
 
     async with dl_wallet.wallet_state_manager.new_action_scope(
@@ -535,7 +535,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
     await env_maker.change_balances({"dl": {"init": True}})
     await env_taker.change_balances({"dl": {"init": True}})
 
-    MAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
+    MAKER_ROWS = [bytes32([i] * 32) for i in range(10)]
     TAKER_ROWS = [bytes32([i] * 32) for i in range(10, 20)]
     maker_root, _ = build_merkle_tree(MAKER_ROWS)
     taker_root, _ = build_merkle_tree(TAKER_ROWS)

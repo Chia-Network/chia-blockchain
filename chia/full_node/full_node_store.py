@@ -882,7 +882,7 @@ class FullNodeStore:
 
             if cc_hash == challenge_hash:
                 found_rc_hash = False
-                for i in range(0, index):
+                for i in range(index):
                     sp: Optional[SignagePoint] = sps[i]
                     if sp is not None and sp.rc_vdf is not None and sp.rc_vdf.challenge == last_rc_infusion:
                         found_rc_hash = True

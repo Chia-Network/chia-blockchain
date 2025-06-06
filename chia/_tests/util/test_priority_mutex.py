@@ -128,7 +128,7 @@ class Request:
 
     def __lt__(self, other: Request) -> bool:
         if self.acquisition_order is None or other.acquisition_order is None:
-            raise RequestNotCompleteError()
+            raise RequestNotCompleteError
 
         return self.acquisition_order < other.acquisition_order
 
@@ -152,7 +152,7 @@ class Request:
 
     def before(self, other: Request) -> bool:
         if self.release_order is None or other.acquisition_order is None:
-            raise RequestNotCompleteError()
+            raise RequestNotCompleteError
 
         return self.release_order < other.acquisition_order
 

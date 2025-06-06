@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Optional, TypeVar
+from typing import Optional
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -23,6 +23,7 @@ from chia_puzzles_py.programs import STD_PARENT_MORPHER_HASH as STD_PARENT_MORPH
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -290,7 +291,6 @@ OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
 ########################
 # Verified Credentials #
 ########################
-_T_VerifiedCredential = TypeVar("_T_VerifiedCredential", bound="VerifiedCredential")
 
 
 @streamable
@@ -312,14 +312,14 @@ class VerifiedCredential(Streamable):
 
     @classmethod
     def launch(
-        cls: type[_T_VerifiedCredential],
+        cls,
         origin_coins: list[Coin],
         provider_id: bytes32,
         new_inner_puzzle_hash: bytes32,
         memos: list[bytes32],
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> tuple[list[Program], list[CoinSpend], _T_VerifiedCredential]:
+    ) -> tuple[list[Program], list[CoinSpend], Self]:
         """
         Launch a VC.
 
@@ -539,7 +539,7 @@ class VerifiedCredential(Streamable):
         return True, ""
 
     @classmethod
-    def get_next_from_coin_spend(cls: type[_T_VerifiedCredential], parent_spend: CoinSpend) -> _T_VerifiedCredential:
+    def get_next_from_coin_spend(cls, parent_spend: CoinSpend) -> Self:
         """
         Given a coin spend, this will return the next VC that was create as an output of that spend. This is the main
         method to use when syncing. If a spend has been identified as having a VC puzzle reveal, running this method
@@ -608,7 +608,7 @@ class VerifiedCredential(Streamable):
                 parent_proof_hash=None if parent_proof_hash == Program.to(None) else parent_proof_hash,
             )
 
-        new_vc: _T_VerifiedCredential = cls(
+        new_vc: Self = cls(
             coin,
             singleton_lineage_proof,
             eml_lineage_proof,

@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import Optional, TypeVar, Union
+from typing import Optional, Union
 
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_from_bytes
+from typing_extensions import Self
 
 from chia.consensus.condition_tools import conditions_dict_for_solution
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -22,14 +23,13 @@ from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton
 from chia.wallet.singleton_record import SingletonRecord
 
 log = logging.getLogger(__name__)
-_T_WalletSingletonStore = TypeVar("_T_WalletSingletonStore", bound="WalletSingletonStore")
 
 
 class WalletSingletonStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: type[_T_WalletSingletonStore], wrapper: DBWrapper2) -> _T_WalletSingletonStore:
+    async def create(cls, wrapper: DBWrapper2) -> Self:
         self = cls()
         self.db_wrapper = wrapper
 

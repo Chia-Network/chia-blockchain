@@ -81,7 +81,7 @@ def cli(
             if Keychain.master_passphrase_is_valid(passphrase):
                 cache_passphrase(passphrase)
             else:
-                raise KeychainCurrentPassphraseIsInvalid()
+                raise KeychainCurrentPassphraseIsInvalid
         except KeychainCurrentPassphraseIsInvalid:
             if Path(passphrase_file.name).is_file():
                 print(f'Invalid passphrase found in "{passphrase_file.name}"')

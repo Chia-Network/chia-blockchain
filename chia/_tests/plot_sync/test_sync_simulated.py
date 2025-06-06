@@ -291,7 +291,7 @@ def create_example_plots(count: int, seeded_random: random.Random) -> list[PlotI
             file_size=uint64(0),
             time_modified=time.time(),
         )
-        for x in range(0, count)
+        for x in range(count)
     ]
 
 

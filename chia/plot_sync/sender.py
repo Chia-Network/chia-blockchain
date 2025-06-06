@@ -125,7 +125,7 @@ class Sender:
             if not self._plot_manager.initial_refresh() or self._sync_id != 0:
                 self._reset()
         else:
-            raise AlreadyStartedError()
+            raise AlreadyStartedError
 
     def stop(self) -> None:
         self._stop_requested = True

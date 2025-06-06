@@ -191,7 +191,7 @@ class TestWalletSimulator:
             normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
         # Transfer to normal wallet
-        for _ in range(0, number_of_coins):
+        for _ in range(number_of_coins):
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
                     [uint64(tx_amount)],

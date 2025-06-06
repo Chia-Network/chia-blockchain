@@ -317,7 +317,6 @@ async def setup_wallet_node(
                         # filesystem operations are async on windows
                         # [WinError 32] The process cannot access the file because it is
                         # being used by another process
-                        pass
             keychain.delete_all_keys()
 
 

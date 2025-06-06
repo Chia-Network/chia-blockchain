@@ -1495,7 +1495,7 @@ async def test_did_auto_transfer_limit(
     await full_node_api.farm_blocks_to_wallet(1, wallet)
 
     # Check that we cap out at 10 DID Wallets automatically created upon transfer received
-    for i in range(0, 14):
+    for i in range(14):
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager,
@@ -2389,7 +2389,7 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, use_al
         ]
     )
 
-    for _ in range(0, 2):
+    for _ in range(2):
         async with did_wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:

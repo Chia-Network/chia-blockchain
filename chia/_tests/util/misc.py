@@ -31,6 +31,7 @@ from aiohttp import web
 from chia_rs import Coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
+from typing_extensions import Self
 
 import chia
 import chia._tests
@@ -49,10 +50,10 @@ from chia.wallet.wallet_node import WalletNode
 
 
 class GcMode(enum.Enum):
-    nothing = enum.auto
-    precollect = enum.auto
-    disable = enum.auto
-    enable = enum.auto
+    nothing = enum.auto()
+    precollect = enum.auto()
+    disable = enum.auto()
+    enable = enum.auto()
 
 
 @contextlib.contextmanager
@@ -613,37 +614,37 @@ T_ComparableEnum = TypeVar("T_ComparableEnum", bound="ComparableEnum")
 
 
 class ComparableEnum(Enum):
-    def __lt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __lt__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__lt__(other.value)
 
-    def __le__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __le__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__le__(other.value)
 
-    def __eq__(self: T_ComparableEnum, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         if self.__class__ is not other.__class__:
             return False
 
-        return cast(bool, self.value.__eq__(cast(T_ComparableEnum, other).value))
+        return cast(bool, self.value.__eq__(cast(Self, other).value))
 
-    def __ne__(self: T_ComparableEnum, other: object) -> bool:
+    def __ne__(self, other: object) -> bool:
         if self.__class__ is not other.__class__:
             return True
 
-        return cast(bool, self.value.__ne__(cast(T_ComparableEnum, other).value))
+        return cast(bool, self.value.__ne__(cast(Self, other).value))
 
-    def __gt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __gt__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__gt__(other.value)
 
-    def __ge__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __ge__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 

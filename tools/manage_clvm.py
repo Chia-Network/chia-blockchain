@@ -88,7 +88,7 @@ def load_cache(file: typing.IO[str]) -> Cache:
     try:
         loaded_version = loaded_cache["version"]
     except KeyError as e:
-        raise NoCacheVersionError() from e
+        raise NoCacheVersionError from e
 
     if loaded_version != current_cache_version:
         raise WrongCacheVersionError(found_version=loaded_version, expected_version=current_cache_version)

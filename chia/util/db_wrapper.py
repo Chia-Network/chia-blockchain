@@ -314,7 +314,7 @@ class DBWrapper2:
                 #       probably skip the nested foreign key check when exiting since
                 #       we don't have many foreign key errors and so it is likely ok
                 #       to save the extra time checking twice.
-                raise NestedForeignKeyDelayedRequestError()
+                raise NestedForeignKeyDelayedRequestError
             async with self._savepoint_ctx():
                 yield self._write_connection
             return

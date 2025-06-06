@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import Any
 
-from typing_extensions import Protocol
-
-_T = TypeVar("_T")
-
+from typing_extensions import Protocol, Self
 
 # If accepted for general use then this should be moved to a common location
 # and probably implemented by the framework instead of manual decoration.
@@ -13,7 +10,7 @@ _T = TypeVar("_T")
 
 class MarshallableProtocol(Protocol):
     @classmethod
-    def unmarshal(cls: type[_T], marshalled: dict[str, Any]) -> _T: ...
+    def unmarshal(cls, marshalled: dict[str, Any]) -> Self: ...
 
     def marshal(self) -> dict[str, Any]: ...
 

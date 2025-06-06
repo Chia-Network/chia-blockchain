@@ -683,7 +683,7 @@ async def test_respond_end_of_sub_slot_no_reorg(
     # First get two blocks in the same sub slot
     blocks = await full_node_1.get_all_full_blocks()
 
-    for i in range(0, 9999999):
+    for i in range(9999999):
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, skip_slots=1, seed=i.to_bytes(4, "big"))
         if len(blocks[-1].finished_sub_slots) == 0:
             break
@@ -1468,7 +1468,7 @@ async def test_new_unfinished_block2_forward_limit(
     unf_blocks: list[UnfinishedBlock] = []
 
     last_reward_hash: Optional[bytes32] = None
-    for idx in range(0, 6):
+    for idx in range(6):
         # we include a different transaction in each block. This makes the
         # foliage different in each of them, but the reward block (plot) the same
         tx = wallet_a.generate_signed_transaction(uint64(100 * (idx + 1)), puzzle_hash, coin)
@@ -1765,7 +1765,7 @@ async def test_request_unfinished_block2(
     # deterministically
     best_unf: Optional[UnfinishedBlock] = None
 
-    for idx in range(0, 6):
+    for idx in range(6):
         # we include a different transaction in each block. This makes the
         # foliage different in each of them, but the reward block (plot) the same
         tx = wallet_a.generate_signed_transaction(uint64(100 * (idx + 1)), puzzle_hash, coin)

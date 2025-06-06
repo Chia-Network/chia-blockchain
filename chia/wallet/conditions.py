@@ -9,6 +9,7 @@ from chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm.casts import int_from_bytes, int_to_bytes
+from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
@@ -237,7 +238,7 @@ class CreateCoin(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: type[_T_CreateCoin], program: Program) -> _T_CreateCoin:
+    def from_program(cls, program: Program) -> Self:
         potential_memos: Program = program.at("rrr")
         return cls(
             bytes32(program.at("rf").as_atom()),
@@ -251,9 +252,6 @@ class CreateCoin(Condition):
 
     def as_condition_args(self) -> list[Union[bytes32, uint64, Optional[list[bytes]]]]:
         return [self.puzzle_hash, self.amount, self.memos]
-
-
-_T_CreateCoin = TypeVar("_T_CreateCoin", bound=CreateCoin)
 
 
 @final
@@ -541,9 +539,6 @@ class MessageParticipant(Streamable):
         )
 
 
-_T_MessageCondition = TypeVar("_T_MessageCondition", bound="SendMessage")
-
-
 @streamable
 @dataclass(frozen=True)
 class SendMessage(Condition):
@@ -607,7 +602,7 @@ class SendMessage(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: type[_T_MessageCondition], program: Program) -> _T_MessageCondition:
+    def from_program(cls, program: Program) -> Self:
         full_mode = uint8(program.at("rf").as_int())
         var_args = list(program.at("rrr").as_iter())
         return cls(

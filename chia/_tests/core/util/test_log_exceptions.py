@@ -41,7 +41,7 @@ def test_consumes_exception(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     with log_exceptions(log=logger, consume=True):
-        raise Exception()
+        raise Exception
 
 
 def test_propagates_exception(
@@ -67,7 +67,7 @@ def test_passed_message_is_used(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     with log_exceptions(log=logger, consume=True, message=log_message):
-        raise Exception()
+        raise Exception
 
     assert len(caplog.records) == 1, caplog.records
 
@@ -87,7 +87,7 @@ def test_specified_level_is_used(
 ) -> None:
     caplog.set_level(min(all_levels.values()))
     with log_exceptions(level=level, log=logger, consume=True):
-        raise Exception()
+        raise Exception
 
     assert len(caplog.records) == 1, caplog.records
 
@@ -100,7 +100,7 @@ def test_traceback_is_logged(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     with log_exceptions(log=logger, consume=True, show_traceback=True):
-        raise Exception()
+        raise Exception
 
     assert len(caplog.records) == 1, caplog.records
 
@@ -113,7 +113,7 @@ def test_traceback_is_not_logged(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     with log_exceptions(log=logger, consume=True, show_traceback=False):
-        raise Exception()
+        raise Exception
 
     assert len(caplog.records) == 1, caplog.records
 

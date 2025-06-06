@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Generic, Optional, Protocol, TypeVar
 
 import aiosqlite
+from typing_extensions import Self
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 
@@ -80,7 +81,7 @@ class SideEffects(Protocol):
     def __bytes__(self) -> bytes: ...
 
     @classmethod
-    def from_bytes(cls: type[_T_SideEffects], blob: bytes) -> _T_SideEffects: ...
+    def from_bytes(cls, blob: bytes) -> Self: ...
 
 
 _T_SideEffects = TypeVar("_T_SideEffects", bound=SideEffects)

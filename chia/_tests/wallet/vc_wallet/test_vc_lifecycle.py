@@ -399,7 +399,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
 @pytest.mark.parametrize("num_proofs", range(1, 6))
 async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
     async with sim_and_client() as (sim, client):
-        flags: list[str] = [str(i) for i in range(0, num_proofs)]
+        flags: list[str] = [str(i) for i in range(num_proofs)]
         proofs_checker: ProofsChecker = ProofsChecker(flags)
 
         # (mod (PROOFS_CHECKER proofs) (if (a PROOFS_CHECKER (list proofs)) () (x)))

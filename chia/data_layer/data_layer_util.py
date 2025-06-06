@@ -392,7 +392,7 @@ class Root:
         }
 
 
-node_type_to_class: dict[NodeType, Union[type[InternalNode], type[TerminalNode]]] = {
+node_type_to_class: dict[NodeType, type[Union[InternalNode, TerminalNode]]] = {
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }

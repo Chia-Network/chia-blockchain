@@ -250,10 +250,10 @@ async def setup_simulators_and_wallets_inner(
     async with AsyncExitStack() as async_exit_stack:
         bt_tools: list[BlockTools] = [
             await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
-            for _ in range(0, simulator_count)
+            for _ in range(simulator_count)
         ]
         if wallet_count > simulator_count:
-            for _ in range(0, wallet_count - simulator_count):
+            for _ in range(wallet_count - simulator_count):
                 bt_tools.append(
                     await create_block_tools_async(
                         consensus_constants, keychain=keychain2, config_overrides=config_overrides
@@ -273,7 +273,7 @@ async def setup_simulators_and_wallets_inner(
                     disable_capabilities=disable_capabilities,
                 )
             )
-            for index in range(0, simulator_count)
+            for index in range(simulator_count)
         ]
 
         wallets: list[WalletService] = [
@@ -289,7 +289,7 @@ async def setup_simulators_and_wallets_inner(
                     initial_num_public_keys=initial_num_public_keys,
                 )
             )
-            for index in range(0, wallet_count)
+            for index in range(wallet_count)
         ]
 
         yield bt_tools, simulators, wallets
@@ -329,7 +329,7 @@ async def setup_farmer_multi_harvester(
                     start_service=start_services,
                 )
             )
-            for i in range(0, harvester_count)
+            for i in range(harvester_count)
         ]
 
         yield harvester_services, farmer_service, block_tools

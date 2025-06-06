@@ -39,14 +39,12 @@ class WalletNodeAPI:
         """
         The full node has rejected our request for removals.
         """
-        pass
 
     @metadata.request()
     async def reject_additions_request(self, response: wallet_protocol.RejectAdditionsRequest):
         """
         The full node has rejected our request for additions.
         """
-        pass
 
     @metadata.request(peer_required=True, execute_task=True)
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
@@ -83,7 +81,6 @@ class WalletNodeAPI:
         """
         The full node has rejected our request for a header.
         """
-        pass
 
     @metadata.request()
     async def respond_block_header(self, response: wallet_protocol.RespondBlockHeader):

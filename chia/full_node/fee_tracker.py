@@ -107,8 +107,8 @@ class FeeStat:  # TxConfirmStats
         my_type: str,
     ):
         self.buckets = buckets
-        self.confirmed_average = [[] for _ in range(0, max_periods)]
-        self.failed_average = [[] for _ in range(0, max_periods)]
+        self.confirmed_average = [[] for _ in range(max_periods)]
+        self.failed_average = [[] for _ in range(max_periods)]
         self.decay = decay
         self.scale = scale
         self.max_confirms = self.scale * len(self.confirmed_average)
@@ -117,18 +117,18 @@ class FeeStat:  # TxConfirmStats
         self.type = my_type
         self.max_periods = max_periods
 
-        for i in range(0, max_periods):
-            self.confirmed_average[i] = [0 for _ in range(0, len(buckets))]
-            self.failed_average[i] = [0 for _ in range(0, len(buckets))]
+        for i in range(max_periods):
+            self.confirmed_average[i] = [0 for _ in range(len(buckets))]
+            self.failed_average[i] = [0 for _ in range(len(buckets))]
 
-        self.tx_ct_avg = [0 for _ in range(0, len(buckets))]
-        self.m_fee_rate_avg = [0 for _ in range(0, len(buckets))]
+        self.tx_ct_avg = [0 for _ in range(len(buckets))]
+        self.m_fee_rate_avg = [0 for _ in range(len(buckets))]
 
-        self.unconfirmed_txs = [[] for _ in range(0, self.max_confirms)]
-        for i in range(0, self.max_confirms):
-            self.unconfirmed_txs[i] = [0 for _ in range(0, len(buckets))]
+        self.unconfirmed_txs = [[] for _ in range(self.max_confirms)]
+        for i in range(self.max_confirms):
+            self.unconfirmed_txs[i] = [0 for _ in range(len(buckets))]
 
-        self.old_unconfirmed_txs = [0 for _ in range(0, len(buckets))]
+        self.old_unconfirmed_txs = [0 for _ in range(len(buckets))]
 
     def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItemInfo) -> None:
         if blocks_to_confirm < 1:
@@ -147,8 +147,8 @@ class FeeStat:  # TxConfirmStats
         self.m_fee_rate_avg[bucket_index] += fee_rate
 
     def update_moving_averages(self) -> None:
-        for j in range(0, len(self.buckets)):
-            for i in range(0, len(self.confirmed_average)):
+        for j in range(len(self.buckets)):
+            for i in range(len(self.confirmed_average)):
                 self.confirmed_average[i][j] *= self.decay
                 self.failed_average[i][j] *= self.decay
 
@@ -156,7 +156,7 @@ class FeeStat:  # TxConfirmStats
             self.m_fee_rate_avg[j] *= self.decay
 
     def clear_current(self, block_height: uint32) -> None:
-        for i in range(0, len(self.buckets)):
+        for i in range(len(self.buckets)):
             self.old_unconfirmed_txs[i] += self.unconfirmed_txs[block_height % len(self.unconfirmed_txs)][i]
             self.unconfirmed_txs[block_height % len(self.unconfirmed_txs)][i] = 0
 
@@ -186,7 +186,7 @@ class FeeStat:  # TxConfirmStats
 
         if block_ago >= self.scale:
             periods_ago = block_ago / self.scale
-            for i in range(0, len(self.failed_average)):
+            for i in range(len(self.failed_average)):
                 if i >= periods_ago:
                     break
                 self.failed_average[i][bucket_index] += 1
@@ -196,38 +196,38 @@ class FeeStat:  # TxConfirmStats
         str_confirmed_average: list[list[str]] = []
         str_failed_average: list[list[str]] = []
         str_m_fee_rate_avg: list[str] = []
-        for i in range(0, self.max_periods):
+        for i in range(self.max_periods):
             str_i_list_conf = []
-            for j in range(0, len(self.confirmed_average[i])):
+            for j in range(len(self.confirmed_average[i])):
                 str_i_list_conf.append(float.hex(float(self.confirmed_average[i][j])))
 
             str_confirmed_average.append(str_i_list_conf)
 
             str_i_list_fail = []
-            for j in range(0, len(self.failed_average[i])):
+            for j in range(len(self.failed_average[i])):
                 str_i_list_fail.append(float.hex(float(self.failed_average[i][j])))
 
             str_failed_average.append(str_i_list_fail)
 
-        for i in range(0, len(self.tx_ct_avg)):
+        for i in range(len(self.tx_ct_avg)):
             str_tx_ct_abg.append(float.hex(float(self.tx_ct_avg[i])))
 
-        for i in range(0, len(self.m_fee_rate_avg)):
+        for i in range(len(self.m_fee_rate_avg)):
             str_m_fee_rate_avg.append(float.hex(float(self.m_fee_rate_avg[i])))
 
         return FeeStatBackup(self.type, str_tx_ct_abg, str_confirmed_average, str_failed_average, str_m_fee_rate_avg)
 
     def import_backup(self, backup: FeeStatBackup) -> None:
-        for i in range(0, self.max_periods):
-            for j in range(0, len(self.confirmed_average[i])):
+        for i in range(self.max_periods):
+            for j in range(len(self.confirmed_average[i])):
                 self.confirmed_average[i][j] = float.fromhex(backup.confirmed_average[i][j])
-            for j in range(0, len(self.failed_average[i])):
+            for j in range(len(self.failed_average[i])):
                 self.failed_average[i][j] = float.fromhex(backup.failed_average[i][j])
 
-        for i in range(0, len(self.tx_ct_avg)):
+        for i in range(len(self.tx_ct_avg)):
             self.tx_ct_avg[i] = float.fromhex(backup.tx_ct_avg[i])
 
-        for i in range(0, len(self.m_fee_rate_avg)):
+        for i in range(len(self.m_fee_rate_avg)):
             self.m_fee_rate_avg[i] = float.fromhex(backup.m_fee_rate_avg[i])
 
     # See TxConfirmStats::EstimateMedianVal in https://github.com/bitcoin/bitcoin/blob/master/src/policy/fees.cpp

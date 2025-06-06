@@ -301,7 +301,7 @@ class FullNodeAPI:
 
         if len(tips) > 4:
             # Remove old from cache
-            for i in range(0, 4):
+            for i in range(4):
                 self.full_node.pow_creation.pop(tips[i])
 
         if wp is None:

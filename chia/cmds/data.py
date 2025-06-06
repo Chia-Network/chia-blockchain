@@ -13,8 +13,6 @@ from chia_rs.sized_ints import uint64
 from chia.cmds import options
 from chia.cmds.param_types import Bytes32ParamType
 
-_T = TypeVar("_T")
-
 FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
 
 logger = logging.getLogger(__name__)

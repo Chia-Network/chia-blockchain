@@ -200,7 +200,7 @@ class WalletNode:
             else:
                 self._keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
                 if not self._keychain_proxy:
-                    raise KeychainProxyConnectionFailure()
+                    raise KeychainProxyConnectionFailure
         return self._keychain_proxy
 
     def get_cache_for_peer(self, peer: WSChiaConnection) -> PeerRequestCache:

@@ -8,7 +8,7 @@ import uuid
 import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Callable, ClassVar, Literal, Optional, Union, overload
+from typing import Callable, ClassVar, Literal, Optional, overload
 
 import anyio
 import click
@@ -21,9 +21,9 @@ class UnexpectedFormError(Exception):
     pass
 
 
-Oses = Union[Literal["linux"], Literal["macos-arm"], Literal["macos-intel"], Literal["windows"]]
-Method = Union[Literal["GET"], Literal["POST"]]
-Per = Union[Literal["directory"], Literal["file"]]
+Oses = Literal["linux", "macos-arm", "macos-intel", "windows"]
+Method = Literal["GET", "POST"]
+Per = Literal["directory", "file"]
 
 all_oses: Sequence[Oses] = ("linux", "macos-arm", "macos-intel", "windows")
 

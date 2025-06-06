@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional
 
 import anyio
 from chia_rs import (
@@ -21,6 +21,7 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import Self
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -106,9 +107,6 @@ class SimFullBlock(Streamable):
     height: uint32  # Note that height is not on a regular FullBlock
 
 
-_T_SimBlockRecord = TypeVar("_T_SimBlockRecord", bound="SimBlockRecord")
-
-
 @streamable
 @dataclass(frozen=True)
 class SimBlockRecord(Streamable):
@@ -121,7 +119,7 @@ class SimBlockRecord(Streamable):
     prev_transaction_block_hash: bytes32
 
     @classmethod
-    def create(cls: type[_T_SimBlockRecord], rci: list[Coin], height: uint32, timestamp: uint64) -> _T_SimBlockRecord:
+    def create(cls, rci: list[Coin], height: uint32, timestamp: uint64) -> Self:
         prev_transaction_block_height = uint32(height - 1 if height > 0 else 0)
         return cls(
             rci,
@@ -143,9 +141,6 @@ class SimStore(Streamable):
     blocks: list[SimFullBlock]
 
 
-_T_SpendSim = TypeVar("_T_SpendSim", bound="SpendSim")
-
-
 class SpendSim:
     db_wrapper: DBWrapper2
     coin_store: CoinStore
@@ -160,8 +155,8 @@ class SpendSim:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls: type[_T_SpendSim], db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
-    ) -> AsyncIterator[_T_SpendSim]:
+        cls, db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
+    ) -> AsyncIterator[Self]:
         self = cls()
         if db_path is None:
             uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
