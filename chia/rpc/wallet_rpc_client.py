@@ -23,6 +23,8 @@ from chia.rpc.wallet_request_types import (
     CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CreateNewDL,
+    CreateNewDLResponse,
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
@@ -36,6 +38,14 @@ from chia.rpc.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
+    DLLatestSingleton,
+    DLLatestSingletonResponse,
+    DLSingletonsByRoot,
+    DLSingletonsByRootResponse,
+    DLStopTracking,
+    DLTrackNew,
+    DLUpdateRoot,
+    DLUpdateRootResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
@@ -1221,59 +1231,43 @@ class WalletRpcClient(RpcClient):
     # DataLayer
     async def create_new_dl(
         self,
-        root: bytes32,
-        fee: uint64,
+        request: CreateNewDL,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> tuple[list[TransactionRecord], bytes32]:
-        request = {
-            "root": root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("create_new_dl", request)
-        txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
-        launcher_id = bytes32.from_hexstr(response["launcher_id"])
-        return txs, launcher_id
+    ) -> CreateNewDLResponse:
+        return CreateNewDLResponse.from_json_dict(
+            await self.fetch(
+                "create_new_dl", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def dl_track_new(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
-        await self.fetch("dl_track_new", request)
+    async def dl_track_new(self, request: DLTrackNew) -> None:
+        await self.fetch("dl_track_new", request.to_json_dict())
 
-    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
-        await self.fetch("dl_stop_tracking", request)
+    async def dl_stop_tracking(self, request: DLStopTracking) -> None:
+        await self.fetch("dl_stop_tracking", request.to_json_dict())
 
-    async def dl_latest_singleton(
-        self, launcher_id: bytes32, only_confirmed: bool = False
-    ) -> Optional[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "only_confirmed": only_confirmed}
-        response = await self.fetch("dl_latest_singleton", request)
-        return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
+    async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
+        return DLLatestSingletonResponse.from_json_dict(await self.fetch("dl_latest_singleton", request.to_json_dict()))
 
-    async def dl_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> list[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "root": root.hex()}
-        response = await self.fetch("dl_singletons_by_root", request)
-        return [SingletonRecord.from_json_dict(single) for single in response["singletons"]]
+    async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
+        return DLSingletonsByRootResponse.from_json_dict(
+            await self.fetch("dl_singletons_by_root", request.to_json_dict())
+        )
 
     async def dl_update_root(
         self,
-        launcher_id: bytes32,
-        new_root: bytes32,
-        fee: uint64,
+        request: DLUpdateRoot,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> TransactionRecord:
-        request = {
-            "launcher_id": launcher_id.hex(),
-            "new_root": new_root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("dl_update_root", request)
-        return TransactionRecord.from_json_dict_convenience(response["tx_record"])
+    ) -> DLUpdateRootResponse:
+        return DLUpdateRootResponse.from_json_dict(
+            await self.fetch(
+                "dl_update_root", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def dl_update_multiple(
         self,

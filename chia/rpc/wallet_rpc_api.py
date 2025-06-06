@@ -29,7 +29,17 @@ from chia.rpc.wallet_request_types import (
     CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CreateNewDL,
+    CreateNewDLResponse,
     DeleteKey,
+    DLLatestSingleton,
+    DLLatestSingletonResponse,
+    DLSingletonsByRoot,
+    DLSingletonsByRootResponse,
+    DLStopTracking,
+    DLTrackNew,
+    DLUpdateRoot,
+    DLUpdateRootResponse,
     Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -356,6 +366,27 @@ def tx_endpoint(
         return rpc_endpoint
 
     return _inner
+
+
+REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
+    confirmed_at_height=uint32(0),
+    created_at_time=uint64(0),
+    to_puzzle_hash=bytes32.zeros,
+    amount=uint64(0),
+    fee_amount=uint64(0),
+    confirmed=False,
+    sent=uint32(0),
+    spend_bundle=WalletSpendBundle([], G2Element()),
+    additions=[],
+    removals=[],
+    wallet_id=uint32(0),
+    sent_to=[],
+    trade_id=None,
+    type=uint32(0),
+    name=bytes32.zeros,
+    memos=[],
+    valid_times=ConditionValidTimes(),
+)
 
 
 class WalletRpcApi:
@@ -3922,12 +3953,13 @@ class WalletRpcApi:
     # DataLayer Wallet
     ##########################################################################################
     @tx_endpoint(push=True)
+    @marshal
     async def create_new_dl(
         self,
-        request: dict[str, Any],
+        request: CreateNewDL,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> CreateNewDLResponse:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -3938,24 +3970,19 @@ class WalletRpcApi:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(self.service.wallet_state_manager)
 
-        try:
-            async with self.service.wallet_state_manager.lock:
-                launcher_id = await dl_wallet.generate_new_reporter(
-                    bytes32.from_hexstr(request["root"]),
-                    action_scope,
-                    fee=request.get("fee", uint64(0)),
-                    extra_conditions=extra_conditions,
-                )
-        except ValueError as e:
-            log.error(f"Error while generating new reporter {e}")
-            return {"success": False, "error": str(e)}
+        async with self.service.wallet_state_manager.lock:
+            launcher_id = await dl_wallet.generate_new_reporter(
+                request.root,
+                action_scope,
+                fee=request.fee,
+                extra_conditions=extra_conditions,
+            )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "launcher_id": launcher_id,
-        }
+        # tx_endpoint will take care of these default values
+        return CreateNewDLResponse([], [], launcher_id=launcher_id)
 
-    async def dl_track_new(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_track_new(self, request: DLTrackNew) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -3971,55 +3998,53 @@ class WalletRpcApi:
         for i, peer in enumerate(peer_list):
             try:
                 await dl_wallet.track_new_launcher_id(
-                    bytes32.from_hexstr(request["launcher_id"]),
+                    request.launcher_id,
                     peer,
                 )
             except LauncherCoinNotFoundError as e:
                 if i == peer_length - 1:
                     raise e  # raise the error if we've tried all peers
                 continue  # try some other peers, maybe someone has it
-        return {}
+        return Empty()
 
-    async def dl_stop_tracking(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_stop_tracking(self, request: DLStopTracking) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-        await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
-        return {}
+        await dl_wallet.stop_tracking_singleton(request.launcher_id)
+        return Empty()
 
-    async def dl_latest_singleton(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        only_confirmed = request.get("only_confirmed")
-        if only_confirmed is None:
-            only_confirmed = False
         wallet = self.service.wallet_state_manager.get_dl_wallet()
-        record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
-        return {"singleton": None if record is None else record.to_json_dict()}
+        record = await wallet.get_latest_singleton(request.launcher_id, request.only_confirmed)
+        return DLLatestSingletonResponse(record)
 
-    async def dl_singletons_by_root(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
         """Get the singleton records that contain the specified root"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
         wallet = self.service.wallet_state_manager.get_dl_wallet()
-        records = await wallet.get_singletons_by_root(
-            bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
-        )
-        records_json = [rec.to_json_dict() for rec in records]
-        return {"singletons": records_json}
+        records = await wallet.get_singletons_by_root(request.launcher_id, request.root)
+        return DLSingletonsByRootResponse(records)
 
     @tx_endpoint(push=True)
+    @marshal
     async def dl_update_root(
         self,
-        request: dict[str, Any],
+        request: DLUpdateRoot,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> DLUpdateRootResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -4027,17 +4052,19 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             await wallet.create_update_state_spend(
-                bytes32.from_hexstr(request["launcher_id"]),
-                bytes32.from_hexstr(request["new_root"]),
+                request.launcher_id,
+                request.new_root,
                 action_scope,
-                fee=uint64(request.get("fee", 0)),
+                fee=request.fee,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "tx_record": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will take care of default values here
+        return DLUpdateRootResponse(
+            [],
+            [],
+            REPLACEABLE_TRANSACTION_RECORD,
+        )
 
     @tx_endpoint(push=True)
     async def dl_update_multiple(

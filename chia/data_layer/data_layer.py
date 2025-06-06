@@ -58,7 +58,14 @@ from chia.data_layer.download_data import (
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import LogIn
+from chia.rpc.wallet_request_types import (
+    CreateNewDL,
+    DLLatestSingleton,
+    DLStopTracking,
+    DLTrackNew,
+    DLUpdateRoot,
+    LogIn,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -248,12 +255,12 @@ class DataLayer:
         return result.fingerprint
 
     async def create_store(self, fee: uint64, root: bytes32 = bytes32.zeros) -> tuple[list[TransactionRecord], bytes32]:
-        txs, store_id = await self.wallet_rpc.create_new_dl(root, fee)
-        res = await self.data_store.create_tree(store_id=store_id)
+        create_res = await self.wallet_rpc.create_new_dl(CreateNewDL(root=root, fee=fee, push=True), DEFAULT_TX_CONFIG)
+        res = await self.data_store.create_tree(store_id=create_res.launcher_id)
         if res is None:
             self.log.fatal("failed creating store")
         self.initialized = True
-        return txs, store_id
+        return create_res.transactions, create_res.launcher_id
 
     async def batch_update(
         self,
@@ -379,11 +386,17 @@ class DataLayer:
     ) -> TransactionRecord:
         await self._update_confirmation_status(store_id=store_id)
         root_hash = await self._get_publishable_root_hash(store_id=store_id)
-        transaction_record = await self.wallet_rpc.dl_update_root(
-            launcher_id=store_id,
-            new_root=root_hash,
-            fee=fee,
-        )
+        transaction_record = (
+            await self.wallet_rpc.dl_update_root(
+                DLUpdateRoot(
+                    launcher_id=store_id,
+                    new_root=root_hash,
+                    fee=fee,
+                    push=True,
+                ),
+                DEFAULT_TX_CONFIG,
+            )
+        ).tx_record
         return transaction_record
 
     async def get_key_value_hash(
@@ -463,7 +476,7 @@ class DataLayer:
         return res
 
     async def get_root(self, store_id: bytes32) -> Optional[SingletonRecord]:
-        latest = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        latest = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if latest is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return latest
@@ -495,7 +508,7 @@ class DataLayer:
                 root = await self.data_store.get_tree_root(store_id=store_id)
             except Exception:
                 root = None
-            singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+            singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
             if singleton_record is None:
                 return
             if root is None:
@@ -546,7 +559,7 @@ class DataLayer:
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {store_id}.")
             return
@@ -661,7 +674,7 @@ class DataLayer:
         return None
 
     async def clean_old_full_tree_files(self, store_id: bytes32) -> None:
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             return
         await self._update_confirmation_status(store_id=store_id)
@@ -679,7 +692,7 @@ class DataLayer:
 
     async def upload_files(self, store_id: bytes32) -> None:
         uploaders = await self.get_uploaders(store_id)
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {store_id}.")
             return
@@ -746,7 +759,7 @@ class DataLayer:
         root = await self.data_store.get_tree_root(store_id=store_id)
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
-        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
             return
@@ -791,7 +804,7 @@ class DataLayer:
     async def subscribe(self, store_id: bytes32, urls: list[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
-        await self.wallet_rpc.dl_track_new(subscription.store_id)
+        await self.wallet_rpc.dl_track_new(DLTrackNew(subscription.store_id))
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.store_id}")
@@ -843,7 +856,7 @@ class DataLayer:
                     )
 
         # stop tracking first, then unsubscribe from the data store
-        await self.wallet_rpc.dl_stop_tracking(store_id)
+        await self.wallet_rpc.dl_stop_tracking(DLStopTracking(store_id))
         await self.data_store.unsubscribe(store_id)
         if not retain_data:
             await self.data_store.delete_store_data(store_id)
@@ -906,7 +919,7 @@ class DataLayer:
                 try:
                     subscriptions = await self.data_store.get_subscriptions()
                     for subscription in subscriptions:
-                        await self.wallet_rpc.dl_track_new(subscription.store_id)
+                        await self.wallet_rpc.dl_track_new(DLTrackNew(subscription.store_id))
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
@@ -1256,7 +1269,7 @@ class DataLayer:
         if not await self.data_store.store_id_exists(store_id=store_id):
             raise Exception(f"No store id stored in the local database for {store_id}")
         root = await self.data_store.get_tree_root(store_id=store_id)
-        singleton_record = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if singleton_record is None:
             raise Exception(f"No singleton found for {store_id}")
 

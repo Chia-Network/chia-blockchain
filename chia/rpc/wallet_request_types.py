@@ -9,6 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import dataclass_transform
 
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -377,6 +378,44 @@ class NFTCoin(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DLTrackNew(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLStopTracking(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLLatestSingleton(Streamable):
+    launcher_id: bytes32
+    only_confirmed: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class DLLatestSingletonResponse(Streamable):
+    singleton: Optional[SingletonRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class DLSingletonsByRoot(Streamable):
+    launcher_id: bytes32
+    root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLSingletonsByRootResponse(Streamable):
+    singletons: list[SingletonRecord]
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 
@@ -666,6 +705,31 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
     tx_num: uint16
     spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
+class CreateNewDL(TransactionEndpointRequest):
+    root: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class CreateNewDLResponse(TransactionEndpointResponse):
+    launcher_id: bytes32
+
+
+@streamable
+@kw_only_dataclass
+class DLUpdateRoot(TransactionEndpointRequest):
+    launcher_id: bytes32 = field(default_factory=default_raise)
+    new_root: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateRootResponse(TransactionEndpointResponse):
+    tx_record: TransactionRecord
 
 
 @streamable
