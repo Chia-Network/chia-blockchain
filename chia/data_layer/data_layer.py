@@ -58,7 +58,7 @@ from chia.data_layer.download_data import (
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import CreateNewDL, LogIn
+from chia.rpc.wallet_request_types import CreateNewDL, DLTrackNew, LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -791,7 +791,7 @@ class DataLayer:
     async def subscribe(self, store_id: bytes32, urls: list[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
-        await self.wallet_rpc.dl_track_new(subscription.store_id)
+        await self.wallet_rpc.dl_track_new(DLTrackNew(subscription.store_id))
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.store_id}")
@@ -906,7 +906,7 @@ class DataLayer:
                 try:
                     subscriptions = await self.data_store.get_subscriptions()
                     for subscription in subscriptions:
-                        await self.wallet_rpc.dl_track_new(subscription.store_id)
+                        await self.wallet_rpc.dl_track_new(DLTrackNew(subscription.store_id))
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass

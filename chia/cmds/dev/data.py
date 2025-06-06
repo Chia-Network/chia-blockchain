@@ -25,6 +25,7 @@ from chia.data_layer.data_layer import server_files_path_from_config
 from chia.data_layer.data_layer_util import ServerInfo, Status, Subscription
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file
+from chia.rpc.wallet_request_types import DLTrackNew
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.task_referencer import create_referenced_task
@@ -108,7 +109,7 @@ class SyncTimeCommand:
 
                 wallet_client_info = await exit_stack.enter_async_context(self.wallet_rpc_info.wallet_rpc())
                 wallet_rpc = wallet_client_info.client
-                await wallet_rpc.dl_track_new(launcher_id=self.store_id)
+                await wallet_rpc.dl_track_new(DLTrackNew(launcher_id=self.store_id))
 
                 data_store = await exit_stack.enter_async_context(DataStore.managed(database=database_path))
 

@@ -375,6 +375,12 @@ class NFTCoin(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DLTrackNew(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 
