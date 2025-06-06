@@ -14,7 +14,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
-from chia.rpc.wallet_request_types import CreateNewDL, DLStopTracking, DLTrackNew
+from chia.rpc.wallet_request_types import CreateNewDL, DLLatestSingleton, DLStopTracking, DLTrackNew
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
@@ -95,13 +95,13 @@ class TestWalletRpc:
                 await asyncio.sleep(0.5)
 
             async def is_singleton_confirmed(rpc_client: WalletRpcClient, lid: bytes32) -> bool:
-                rec = await rpc_client.dl_latest_singleton(lid)
+                rec = (await rpc_client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
                 if rec is None:
                     return False
                 return rec.confirmed
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
-            singleton_record = await client.dl_latest_singleton(launcher_id)
+            singleton_record = (await client.dl_latest_singleton(DLLatestSingleton(launcher_id))).singleton
             assert singleton_record is not None
             assert singleton_record.root == merkle_root
 
@@ -112,7 +112,7 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
-            new_singleton_record = await client.dl_latest_singleton(launcher_id)
+            new_singleton_record = (await client.dl_latest_singleton(DLLatestSingleton(launcher_id))).singleton
             assert new_singleton_record is not None
             assert new_singleton_record.root == new_root
             assert new_singleton_record.confirmed
@@ -127,7 +127,7 @@ class TestWalletRpc:
 
             async def is_singleton_generation(rpc_client: WalletRpcClient, lid: bytes32, generation: int) -> bool:
                 if await is_singleton_confirmed(rpc_client, lid):
-                    rec = await rpc_client.dl_latest_singleton(lid)
+                    rec = (await rpc_client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
                     if rec is None:
                         raise Exception(f"No latest singleton for: {lid!r}")
                     return rec.generation == generation
@@ -202,12 +202,12 @@ class TestWalletRpc:
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
 
             for lid in [launcher_id, launcher_id_2, launcher_id_3]:
-                rec = await client.dl_latest_singleton(lid)
+                rec = (await client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
                 assert rec is not None
                 assert rec.root == next_root
 
             await client_2.dl_stop_tracking(DLStopTracking(launcher_id))
-            assert await client_2.dl_latest_singleton(lid) is None
+            assert (await client_2.dl_latest_singleton(DLLatestSingleton(lid))).singleton is None
 
             owned_singletons = await client.dl_owned_singletons()
             owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
