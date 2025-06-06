@@ -58,7 +58,14 @@ from chia.data_layer.download_data import (
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import CreateNewDL, DLLatestSingleton, DLStopTracking, DLTrackNew, LogIn
+from chia.rpc.wallet_request_types import (
+    CreateNewDL,
+    DLLatestSingleton,
+    DLStopTracking,
+    DLTrackNew,
+    DLUpdateRoot,
+    LogIn,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -379,11 +386,17 @@ class DataLayer:
     ) -> TransactionRecord:
         await self._update_confirmation_status(store_id=store_id)
         root_hash = await self._get_publishable_root_hash(store_id=store_id)
-        transaction_record = await self.wallet_rpc.dl_update_root(
-            launcher_id=store_id,
-            new_root=root_hash,
-            fee=fee,
-        )
+        transaction_record = (
+            await self.wallet_rpc.dl_update_root(
+                DLUpdateRoot(
+                    launcher_id=store_id,
+                    new_root=root_hash,
+                    fee=fee,
+                    push=True,
+                ),
+                DEFAULT_TX_CONFIG,
+            )
+        ).tx_record
         return transaction_record
 
     async def get_key_value_hash(

@@ -44,6 +44,8 @@ from chia.rpc.wallet_request_types import (
     DLSingletonsByRootResponse,
     DLStopTracking,
     DLTrackNew,
+    DLUpdateRoot,
+    DLUpdateRootResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
@@ -1256,21 +1258,16 @@ class WalletRpcClient(RpcClient):
 
     async def dl_update_root(
         self,
-        launcher_id: bytes32,
-        new_root: bytes32,
-        fee: uint64,
+        request: DLUpdateRoot,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> TransactionRecord:
-        request = {
-            "launcher_id": launcher_id.hex(),
-            "new_root": new_root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("dl_update_root", request)
-        return TransactionRecord.from_json_dict_convenience(response["tx_record"])
+    ) -> DLUpdateRootResponse:
+        return DLUpdateRootResponse.from_json_dict(
+            await self.fetch(
+                "dl_update_root", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def dl_update_multiple(
         self,

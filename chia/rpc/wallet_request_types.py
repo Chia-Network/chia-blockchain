@@ -712,6 +712,19 @@ class CreateNewDLResponse(TransactionEndpointResponse):
 
 
 @streamable
+@kw_only_dataclass
+class DLUpdateRoot(TransactionEndpointRequest):
+    launcher_id: bytes32 = field(default_factory=default_raise)
+    new_root: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateRootResponse(TransactionEndpointResponse):
+    tx_record: TransactionRecord
+
+
+@streamable
 @dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str = field(default_factory=default_raise)

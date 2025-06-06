@@ -38,6 +38,8 @@ from chia.rpc.wallet_request_types import (
     DLSingletonsByRootResponse,
     DLStopTracking,
     DLTrackNew,
+    DLUpdateRoot,
+    DLUpdateRootResponse,
     Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -364,6 +366,27 @@ def tx_endpoint(
         return rpc_endpoint
 
     return _inner
+
+
+REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
+    confirmed_at_height=uint32(0),
+    created_at_time=uint64(0),
+    to_puzzle_hash=bytes32.zeros,
+    amount=uint64(0),
+    fee_amount=uint64(0),
+    confirmed=False,
+    sent=uint32(0),
+    spend_bundle=WalletSpendBundle([], G2Element()),
+    additions=[],
+    removals=[],
+    wallet_id=uint32(0),
+    sent_to=[],
+    trade_id=None,
+    type=uint32(0),
+    name=bytes32.zeros,
+    memos=[],
+    valid_times=ConditionValidTimes(),
+)
 
 
 class WalletRpcApi:
@@ -4015,12 +4038,13 @@ class WalletRpcApi:
         return DLSingletonsByRootResponse(records)
 
     @tx_endpoint(push=True)
+    @marshal
     async def dl_update_root(
         self,
-        request: dict[str, Any],
+        request: DLUpdateRoot,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> DLUpdateRootResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -4028,17 +4052,19 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             await wallet.create_update_state_spend(
-                bytes32.from_hexstr(request["launcher_id"]),
-                bytes32.from_hexstr(request["new_root"]),
+                request.launcher_id,
+                request.new_root,
                 action_scope,
-                fee=uint64(request.get("fee", 0)),
+                fee=request.fee,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "tx_record": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will take care of default values here
+        return DLUpdateRootResponse(
+            [],
+            [],
+            REPLACEABLE_TRANSACTION_RECORD,
+        )
 
     @tx_endpoint(push=True)
     async def dl_update_multiple(
