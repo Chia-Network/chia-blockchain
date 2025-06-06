@@ -98,6 +98,7 @@ ignore = [
     "RUF052", # used-dummy-variable
 
     # Security linter
+    # Need review on which of these we can/should fix
     "S101",
     "S110",
     "S404",
