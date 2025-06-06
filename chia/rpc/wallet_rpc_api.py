@@ -32,6 +32,7 @@ from chia.rpc.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DLTrackNew,
     Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -3952,7 +3953,8 @@ class WalletRpcApi:
         # tx_endpoint will take care of these default values
         return CreateNewDLResponse([], [], launcher_id=launcher_id)
 
-    async def dl_track_new(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_track_new(self, request: DLTrackNew) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -3968,14 +3970,14 @@ class WalletRpcApi:
         for i, peer in enumerate(peer_list):
             try:
                 await dl_wallet.track_new_launcher_id(
-                    bytes32.from_hexstr(request["launcher_id"]),
+                    request.launcher_id,
                     peer,
                 )
             except LauncherCoinNotFoundError as e:
                 if i == peer_length - 1:
                     raise e  # raise the error if we've tried all peers
                 continue  # try some other peers, maybe someone has it
-        return {}
+        return Empty()
 
     async def dl_stop_tracking(self, request: dict[str, Any]) -> EndpointResult:
         """Initialize the DataLayer Wallet (only one can exist)"""
