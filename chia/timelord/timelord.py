@@ -1170,6 +1170,7 @@ class Timelord:
                     t1 = time.time()
                     log.info(
                         f"Working on compact proof for height: {picked_info.height}. "
+                        f"VDF: {picked_info.field_vdf}. "
                         f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
                     )
                     bluebox_process_data = BlueboxProcessData(
