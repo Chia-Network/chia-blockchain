@@ -1383,7 +1383,7 @@ class FullNode:
                     block_rate_height = end_height
 
                 self.log.info(
-                    "Added blocks {start_height} to {end_height} "
+                    f"Added blocks {start_height} to {end_height} "
                     f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -2256,8 +2256,8 @@ class FullNode:
 
         state_changed_data: dict[str, Any] = {
             "transaction_block": False,
-            "k_size": block.reward_chain_block.proof_of_space.size_v1(),
-            "k_size2": block.reward_chain_block.proof_of_space.size_v2(),
+            "k_size": block.reward_chain_block.proof_of_space.size().size_v1,
+            "k_size2": block.reward_chain_block.proof_of_space.size().size_v2,
             "header_hash": block.header_hash,
             "fork_height": None,
             "rolled_back_records": None,

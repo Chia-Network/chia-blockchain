@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotSize, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -150,7 +150,7 @@ class HarvesterAPI:
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants,
                             quality_str,
-                            plot_info.prover.get_size(),
+                            PlotSize.make_v1(plot_info.prover.get_size()),
                             difficulty,
                             new_challenge.sp_hash,
                             sub_slot_iters,

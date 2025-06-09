@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from chia_rs import PlotSize
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
 
@@ -108,7 +109,7 @@ class TestPotIterations:
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
                         # TODO: todo_v2_plots
                         required_iters = calculate_iterations_quality(
-                            constants, quality, k, difficulty, sp_hash, uint64(100000000), uint32(0)
+                            constants, quality, PlotSize.make_v1(k), difficulty, sp_hash, uint64(100000000), uint32(0)
                         )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1

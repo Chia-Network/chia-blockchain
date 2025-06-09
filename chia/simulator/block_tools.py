@@ -28,6 +28,7 @@ from chia_rs import (
     G1Element,
     G2Element,
     InfusedChallengeChainSubSlot,
+    PlotSize,
     PoolTarget,
     PrivateKey,
     ProofOfSpace,
@@ -44,7 +45,6 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -120,6 +120,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
@@ -448,10 +449,10 @@ class BlockTools:
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
             if reward_ph is None:
-                self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                self.farmer_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
                 )
-                self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                self.pool_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
                 )
             else:
@@ -1505,7 +1506,7 @@ class BlockTools:
                     required_iters = calculate_iterations_quality(
                         constants,
                         quality_str,
-                        plot_info.prover.get_size(),
+                        PlotSize.make_v1(plot_info.prover.get_size()),
                         difficulty,
                         signage_point,
                         sub_slot_iters,
