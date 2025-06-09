@@ -71,6 +71,8 @@ log = logging.getLogger(__name__)
 
 KeyOrValueId = int64
 
+default_prefer_file_kv_blob_length: int = 4096
+
 
 @dataclass
 class DataStore:
@@ -80,7 +82,7 @@ class DataStore:
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
-    prefer_file_kv_blob_length: int = 4096
+    prefer_file_kv_blob_length: int = default_prefer_file_kv_blob_length
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -92,6 +94,7 @@ class DataStore:
         uri: bool = False,
         sql_log_path: Optional[Path] = None,
         cache_capacity: int = 1,
+        prefer_db_kv_blob_length: int = default_prefer_file_kv_blob_length,
     ) -> AsyncIterator[DataStore]:
         async with DBWrapper2.managed(
             database=database,
@@ -112,6 +115,7 @@ class DataStore:
                 recent_merkle_blobs=recent_merkle_blobs,
                 merkle_blobs_path=merkle_blobs_path,
                 key_value_blobs_path=key_value_blobs_path,
+                prefer_file_kv_blob_length=prefer_db_kv_blob_length,
             )
 
             async with db_wrapper.writer() as writer:
