@@ -1701,7 +1701,6 @@ class DataStore:
         with log_exceptions(log=log, message="Error while getting merkle blob"):
             root_path = self.get_merkle_path(store_id=store_id, root_hash=root.node_hash)
         delta_file_cache = DeltaFileCache(root_path)
-        delta_file_cache.load_hash_to_index()
 
         if root.generation > 0:
             previous_root = await self.get_tree_root(store_id=store_id, generation=root.generation - 1)
