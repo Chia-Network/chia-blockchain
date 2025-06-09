@@ -832,7 +832,7 @@ typing-extensions = "*"
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
 reference = "long_lived/initial_datalayer"
-resolved_reference = "151269e9f85bd2c87640dab05c9778e20ee19a56"
+resolved_reference = "281ec6467174896e6a0b1909378c5975ed5a02bb"
 subdirectory = "wheel/"
 
 [[package]]

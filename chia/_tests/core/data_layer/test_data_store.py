@@ -2184,7 +2184,7 @@ async def test_basic_key_value_db_vs_disk_cutoff(
     seeded_random: random.Random,
     size_offset: int,
 ) -> None:
-    size = data_store.prefer_file_kv_blob_length + size_offset
+    size = data_store.prefer_db_kv_blob_length + size_offset
 
     blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
     blob_hash = bytes32(sha256(blob).digest())
@@ -2219,13 +2219,13 @@ async def test_changing_key_value_db_vs_disk_cutoff(
     size_offset: int,
     limit_change: int,
 ) -> None:
-    size = data_store.prefer_file_kv_blob_length + size_offset
+    size = data_store.prefer_db_kv_blob_length + size_offset
 
     blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
     async with data_store.db_wrapper.writer() as writer:
         kv_id = await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
 
-    data_store.prefer_file_kv_blob_length += limit_change
+    data_store.prefer_db_kv_blob_length += limit_change
     retrieved_blob = await data_store.get_blob_from_kvid(kv_id=kv_id, store_id=store_id)
 
     assert blob == retrieved_blob
@@ -2240,7 +2240,7 @@ async def test_get_keys_both_disk_and_db(
     inserted_keys: set[bytes] = set()
 
     for size_offset in [-1, 0, 1]:
-        size = data_store.prefer_file_kv_blob_length + size_offset
+        size = data_store.prefer_db_kv_blob_length + size_offset
 
         blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
         await data_store.insert(key=blob, value=b"", store_id=store_id, status=Status.COMMITTED)
@@ -2260,7 +2260,7 @@ async def test_get_keys_values_both_disk_and_db(
     inserted_keys_values: dict[bytes, bytes] = {}
 
     for size_offset in [-1, 0, 1]:
-        size = data_store.prefer_file_kv_blob_length + size_offset
+        size = data_store.prefer_db_kv_blob_length + size_offset
 
         key = bytes(seeded_random.getrandbits(8) for _ in range(size))
         value = bytes(seeded_random.getrandbits(8) for _ in range(size))
