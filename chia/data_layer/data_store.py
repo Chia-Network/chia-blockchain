@@ -81,7 +81,7 @@ class DataStore:
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
-    prefer_file_kv_blob_length: int = 4096
+    prefer_db_kv_blob_length: int = 4096
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -566,7 +566,7 @@ class DataStore:
         return await self._insert_root(store_id, root_hash, status)
 
     def _use_file_for_new_kv_blob(self, blob: bytes) -> bool:
-        return len(blob) > self.prefer_file_kv_blob_length
+        return len(blob) > self.prefer_db_kv_blob_length
 
     async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
         blob_hash = bytes32(sha256(blob).digest())
