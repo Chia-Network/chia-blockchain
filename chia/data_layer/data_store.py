@@ -81,6 +81,7 @@ class DataStore:
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
+    prefer_file_kv_blob_length: int = 4096
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -157,6 +158,7 @@ class DataStore:
                     """
                     CREATE TABLE IF NOT EXISTS ids(
                         kv_id INTEGER PRIMARY KEY,
+                        hash BLOB NOT NULL CHECK(length(store_id) == 32),
                         blob BLOB,
                         store_id BLOB NOT NULL CHECK(length(store_id) == 32)
                     )
@@ -176,7 +178,7 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE UNIQUE INDEX IF NOT EXISTS ids_blob_index ON ids(blob, store_id)
+                    CREATE UNIQUE INDEX IF NOT EXISTS ids_hash_index ON ids(hash, store_id)
                     """
                 )
                 await writer.execute(
@@ -428,11 +430,17 @@ class DataStore:
             await writer.execute("INSERT INTO schema (version_id) VALUES (?)", (version,))
             log.info(f"Initialized new DB schema {version}.")
 
+            total_generations = 0
+            synced_generations = 0
             for roots in all_roots:
                 assert len(roots) > 0
+                total_generations += len(roots)
+
+            for roots in all_roots:
                 store_id = roots[0].store_id
                 await self.create_tree(store_id=store_id, status=Status.COMMITTED)
 
+                expected_synced_generations = synced_generations + len(roots)
                 for root in roots:
                     recovery_filename: Optional[Path] = None
 
@@ -456,9 +464,22 @@ class DataStore:
 
                     try:
                         await self.insert_into_data_store_from_file(store_id, root.node_hash, recovery_filename)
+                        synced_generations += 1
+                        log.info(
+                            f"Successfully recovered root from {filename}. "
+                            f"Total roots processed: {(synced_generations / total_generations * 100):.2f}%"
+                        )
                     except Exception as e:
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
+
+                if synced_generations < expected_synced_generations:
+                    log.error(
+                        f"Could not recover {expected_synced_generations - synced_generations} generations. "
+                        f"Consider resyncing the store {store_id} once the migration is complete."
+                    )
+                    # Reset the counter as if we synced correctly, so the percentages add to 100% at the end.
+                    synced_generations = expected_synced_generations
 
     async def get_merkle_blob(
         self,
@@ -544,20 +565,17 @@ class DataStore:
 
         return await self._insert_root(store_id, root_hash, status)
 
-    def _kvid_blob_is_file(self, blob: bytes) -> bool:
-        return len(blob) >= len(bytes32.zeros)
+    def _use_file_for_new_kv_blob(self, blob: bytes) -> bool:
+        return len(blob) > self.prefer_file_kv_blob_length
 
     async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
-        if self._kvid_blob_is_file(blob):
-            table_blob = sha256(blob).digest()
-        else:
-            table_blob = blob
+        blob_hash = bytes32(sha256(blob).digest())
 
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT kv_id FROM ids WHERE blob = ? AND store_id = ?",
+                "SELECT kv_id FROM ids WHERE hash = ? AND store_id = ?",
                 (
-                    table_blob,
+                    blob_hash,
                     store_id,
                 ),
             )
@@ -568,11 +586,7 @@ class DataStore:
 
             return KeyOrValueId(row[0])
 
-    def get_blob_from_table_blob(self, table_blob: bytes, store_id: bytes32) -> bytes:
-        if not self._kvid_blob_is_file(table_blob):
-            return table_blob
-
-        blob_hash = bytes32(table_blob)
+    def get_blob_from_file(self, blob_hash: bytes32, store_id: bytes32) -> bytes:
         # TODO: seems that zstd needs hinting
         # TODO: consider file-system based locking of either the file or the store directory
         return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
@@ -580,7 +594,7 @@ class DataStore:
     async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT blob FROM ids WHERE kv_id = ? AND store_id = ?",
+                "SELECT hash, blob FROM ids WHERE kv_id = ? AND store_id = ?",
                 (
                     kv_id,
                     store_id,
@@ -591,7 +605,12 @@ class DataStore:
             if row is None:
                 return None
 
-        return self.get_blob_from_table_blob(bytes(row[0]), store_id)
+        blob: bytes = row["blob"]
+        if blob is not None:
+            return blob
+
+        blob_hash = bytes32(row["hash"])
+        return self.get_blob_from_file(blob_hash, store_id)
 
     async def get_terminal_node(self, kid: KeyId, vid: ValueId, store_id: bytes32) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid.raw, store_id)
@@ -602,15 +621,17 @@ class DataStore:
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
     async def add_kvid(self, blob: bytes, store_id: bytes32, writer: aiosqlite.Connection) -> KeyOrValueId:
-        is_file = self._kvid_blob_is_file(blob)
-        if is_file:
-            table_blob = sha256(blob).digest()
+        use_file = self._use_file_for_new_kv_blob(blob)
+        blob_hash = bytes32(sha256(blob).digest())
+        if use_file:
+            table_blob = None
         else:
             table_blob = blob
         try:
             row = await writer.execute_insert(
-                "INSERT INTO ids (blob, store_id) VALUES (?, ?)",
+                "INSERT INTO ids (hash, blob, store_id) VALUES (?, ?, ?)",
                 (
+                    blob_hash,
                     table_blob,
                     store_id,
                 ),
@@ -626,14 +647,12 @@ class DataStore:
 
         if row is None:
             raise Exception("Internal error")
-        kv_id = KeyOrValueId(row[0])
-        if is_file:
-            blob_hash = bytes32(table_blob)
+        if use_file:
             path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
             path.parent.mkdir(parents=True, exist_ok=True)
             # TODO: consider file-system based locking of either the file or the store directory
             path.write_bytes(zstd.compress(blob))
-        return kv_id
+        return KeyOrValueId(row[0])
 
     async def add_key_value(
         self, key: bytes, value: bytes, store_id: bytes32, writer: aiosqlite.Connection
@@ -1032,10 +1051,22 @@ class DataStore:
         return internal_nodes
 
     def get_terminal_node_from_table_blobs(
-        self, kid: KeyId, vid: ValueId, table_blobs: dict[KeyOrValueId, bytes], store_id: bytes32
+        self,
+        kid: KeyId,
+        vid: ValueId,
+        table_blobs: dict[KeyOrValueId, tuple[bytes32, Optional[bytes]]],
+        store_id: bytes32,
     ) -> TerminalNode:
-        key = self.get_blob_from_table_blob(table_blobs[KeyOrValueId(kid.raw)], store_id)
-        value = self.get_blob_from_table_blob(table_blobs[KeyOrValueId(vid.raw)], store_id)
+        key = table_blobs[KeyOrValueId(kid.raw)][1]
+        if key is None:
+            key_hash = table_blobs[KeyOrValueId(kid.raw)][0]
+            key = self.get_blob_from_file(key_hash, store_id)
+
+        value = table_blobs[KeyOrValueId(vid.raw)][1]
+        if value is None:
+            value_hash = table_blobs[KeyOrValueId(vid.raw)][0]
+            value = self.get_blob_from_file(value_hash, store_id)
+
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
     async def get_keys_values(
@@ -1259,8 +1290,10 @@ class DataStore:
             table_blobs = await self.get_table_blobs(raw_key_ids, store_id)
             keys: list[bytes] = []
             for kid in kv_ids.keys():
-                key = self.get_blob_from_table_blob(table_blobs[KeyOrValueId(kid.raw)], store_id)
-                keys.append(key)
+                blob_hash, blob = table_blobs[KeyOrValueId(kid.raw)]
+                if blob is None:
+                    blob = self.get_blob_from_file(blob_hash, store_id)
+                keys.append(blob)
 
         return keys
 
@@ -1629,8 +1662,8 @@ class DataStore:
 
     async def get_table_blobs(
         self, kv_ids_iter: Iterable[KeyOrValueId], store_id: bytes32
-    ) -> dict[KeyOrValueId, bytes]:
-        result: dict[KeyOrValueId, bytes] = {}
+    ) -> dict[KeyOrValueId, tuple[bytes32, Optional[bytes]]]:
+        result: dict[KeyOrValueId, tuple[bytes32, Optional[bytes]]] = {}
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
         kv_ids = list(dict.fromkeys(kv_ids_iter))
 
@@ -1638,13 +1671,16 @@ class DataStore:
             for i in range(0, len(kv_ids), batch_size):
                 chunk = kv_ids[i : i + batch_size]
                 placeholders = ",".join(["?"] * len(chunk))
-                query = (
-                    f"SELECT blob, kv_id FROM ids WHERE store_id = ? AND kv_id IN ({placeholders}) LIMIT {len(chunk)}"
-                )
+                query = f"""
+                    SELECT hash, blob, kv_id
+                    FROM ids
+                    WHERE store_id = ? AND kv_id IN ({placeholders})
+                    LIMIT {len(chunk)}
+                """
 
                 async with reader.execute(query, (store_id, *chunk)) as cursor:
                     rows = await cursor.fetchall()
-                    result.update({row["kv_id"]: row["blob"] for row in rows})
+                    result.update({row["kv_id"]: (row["hash"], row["blob"]) for row in rows})
 
         if len(result) != len(kv_ids):
             raise Exception("Cannot retrieve all the requested kv_ids")
@@ -1690,8 +1726,10 @@ class DataStore:
                 blobs = []
                 for raw_id in (node.value1, node.value2):
                     id = KeyOrValueId.from_bytes(raw_id)
-                    id_table_blob = table_blobs[id]
-                    blobs.append(self.get_blob_from_table_blob(id_table_blob, store_id))
+                    blob_hash, blob = table_blobs[id]
+                    if blob is None:
+                        blob = self.get_blob_from_file(blob_hash, store_id)
+                    blobs.append(blob)
                 to_write = bytes(SerializedNode(True, blobs[0], blobs[1]))
             else:
                 to_write = bytes(node)

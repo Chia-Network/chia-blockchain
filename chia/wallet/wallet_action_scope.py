@@ -165,5 +165,5 @@ async def new_wallet_action_scope(
         extra_spends=self.side_effects.extra_spends,
         singleton_records=self.side_effects.singleton_records,
     )
-    if self.side_effects.get_unused_derivation_record_result is not None:
+    if push and self.side_effects.get_unused_derivation_record_result is not None:
         await self.side_effects.get_unused_derivation_record_result.to_standard().commit(wallet_state_manager)

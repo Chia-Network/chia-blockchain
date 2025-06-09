@@ -1,16 +1,22 @@
-[tool.poetry]
+[project]
 name = "chia-blockchain"
-# see [tool.poetry-dynamic-versioning]
-version = "0.0.0"
+dynamic = [ "dependencies", "version" ]
 description = "Chia blockchain full node, farmer, timelord, and wallet."
-authors = ["Mariano Sorgente <mariano@chia.net>"]
-license = "Apache-2.0"
-readme = "README.md"
+requires-python = ">=3.9, <4"
+authors = [
+    {name="Mariano Sorgente", email="mariano@chia.net"}
+]
+license = {text="Apache-2.0"}
+readme = {file = "README.md", content-type = "text/markdown"}
 keywords= ["chia", "blockchain", "node"]
 homepage = "https://chia.net/"
-packages = [{ include = "chia"}, { include = "mozilla-ca/cacert.pem" }]
 
-[tool.poetry.scripts]
+[tool.poetry]
+# see [tool.poetry-dynamic-versioning]
+packages = [{ include = "chia"}, { include = "mozilla-ca/cacert.pem" }]
+version = "0.0.0"
+
+[project.scripts]
 chia = "chia.cmds.chia:main"
 chia_daemon = "chia.daemon.server:main"
 chia_wallet = "chia.server.start_wallet:main"
@@ -32,12 +38,11 @@ name = "chia"
 url = "https://pypi.chia.net/simple/"
 priority = "supplemental"
 
-[tool.poetry.urls]
-"Source" = "https://github.com/Chia-Network/chia-blockchain/"
-"Changelog" = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG.md"
+[project.urls]
+source = "https://github.com/Chia-Network/chia-blockchain/"
+changelog = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9, <4"
 aiofiles = ">=24.1.0"  # Async IO for files
 aiohttp = ">=3.10.4"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
@@ -140,10 +145,3 @@ bump = true
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry_dynamic_versioning.backend"
-
-[project]
-# duplicating until poetry v2, then revisit https://github.com/Chia-Network/chia-blockchain/pull/18797
-name = "chia-blockchain"
-# This has to match the poetry python entry above
-requires-python = ">=3.9, <4"
-dynamic = ["version"]

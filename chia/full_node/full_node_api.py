@@ -726,7 +726,9 @@ class FullNodeAPI:
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
-                next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
+                next_sub_slot_iters = self.full_node.blockchain.get_next_sub_slot_iters_and_difficulty(
+                    peak.header_hash, True
+                )[0]
                 sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
                 assert sub_slots_for_peak is not None
                 ip_sub_slot: Optional[EndOfSubSlotBundle] = sub_slots_for_peak[1]
@@ -863,13 +865,18 @@ class FullNodeAPI:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         # TODO: once we're confident in the new block creation,
-                        # switch to it by default
-                        if self.full_node.config.get("original_block_creation", True):
+                        # make it default to 1
+                        block_version = self.full_node.config.get("block_creation", 0)
+                        block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
+                        if block_version == 0:
                             create_block = self.full_node.mempool_manager.create_block_generator
-                        else:
+                        elif block_version == 1:
                             create_block = self.full_node.mempool_manager.create_block_generator2
+                        else:
+                            self.log.warning(f"Unknown 'block_creation' config: {block_version}")
+                            create_block = self.full_node.mempool_manager.create_block_generator
 
-                        new_block_gen = create_block(curr_l_tb.header_hash)
+                        new_block_gen = create_block(curr_l_tb.header_hash, block_timeout)
 
                         if (
                             new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT

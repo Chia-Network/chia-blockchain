@@ -368,6 +368,16 @@ class WalletStateManager:
 
         return wallet
 
+    @asynccontextmanager
+    async def puzzle_hash_db_writer(self) -> AsyncIterator[None]:
+        async with self.db_wrapper.writer():
+            old_cache = self.puzzle_store.last_wallet_derivation_index.copy()
+            try:
+                yield
+            except Exception:
+                self.puzzle_store.last_wallet_derivation_index = old_cache
+                raise
+
     async def create_more_puzzle_hashes(
         self,
         from_zero: bool = False,
@@ -382,7 +392,7 @@ class WalletStateManager:
         that we can restore the wallet from only the private keys.
         """
         try:
-            async with self.db_wrapper.writer():
+            async with self.puzzle_hash_db_writer():
                 if previous_result is not None:
                     if previous_result.mark_existing_as_used is not mark_existing_as_used:
                         raise ValueError(
@@ -562,7 +572,7 @@ class WalletStateManager:
         same public key more than once (for privacy).
         """
         try:
-            async with self.db_wrapper.writer():
+            async with self.puzzle_hash_db_writer():
                 if previous_result is not None:
                     await previous_result.commit(self)
                     create_more_puzzle_hashes_result: Optional[CreateMorePuzzleHashesResult] = (

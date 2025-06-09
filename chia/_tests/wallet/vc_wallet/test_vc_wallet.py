@@ -25,7 +25,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
@@ -41,11 +41,12 @@ async def mint_cr_cat(
     wallet_node_0: WalletNode,
     client_0: WalletRpcClient,
     full_node_api: FullNodeSimulator,
+    tx_config: TXConfig,
     authorized_providers: list[bytes32] = [],
     tail: Program = Program.to(None),
     proofs_checker: ProofsChecker = ProofsChecker(["foo", "bar"]),
 ) -> None:
-    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
         our_puzzle = await action_scope.get_puzzle(wallet_0.wallet_state_manager)
     cat_puzzle: Program = construct_cat_puzzle(
         CAT_MOD,
@@ -63,7 +64,7 @@ async def mint_cr_cat(
                     "amount": CAT_AMOUNT_0,
                 }
             ],
-            DEFAULT_TX_CONFIG,
+            tx_config,
             wallet_id=1,
         )
     ).signed_tx
@@ -314,7 +315,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert get_list_reponse.proof_dict[proof_root] == proofs.key_value_pairs
 
     # Mint CR-CAT
-    await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
+    await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, wallet_environments.tx_config, [did_id])
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -823,7 +824,7 @@ async def test_cat_wallet_conversion(
     )
 
     did_id = bytes32.zeros
-    await mint_cr_cat(num_blocks, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
+    await mint_cr_cat(num_blocks, wallet_0, wallet_node_0, client_0, full_node_api, DEFAULT_TX_CONFIG, [did_id])
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 

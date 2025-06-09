@@ -27,7 +27,6 @@ from typing_extensions import Protocol
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
@@ -55,6 +54,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -669,7 +669,7 @@ class WebSocketServer:
                     pk = sk.get_g1()
                 else:
                     pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
-                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
+                wallet_address = encode_puzzle_hash(puzzle_hash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
                 else:

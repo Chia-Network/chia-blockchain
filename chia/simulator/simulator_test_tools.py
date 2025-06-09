@@ -9,7 +9,6 @@ from chia_rs import PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.server.signal_handlers import SignalHandlers
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -29,6 +28,7 @@ from chia.util.errors import KeychainFingerprintExists
 from chia.util.keychain import Keychain
 from chia.util.lock import Lockfile
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 """
 These functions are used to test the simulator.
@@ -56,7 +56,7 @@ def get_puzzle_hash_from_key(keychain: Keychain, fingerprint: int, key_id: int =
         raise Exception("Fingerprint not found")
     private_key = priv_key_and_entropy[0]
     sk_for_wallet_id: PrivateKey = master_sk_to_wallet_sk(private_key, uint32(key_id))
-    puzzle_hash: bytes32 = create_puzzlehash_for_pk(sk_for_wallet_id.get_g1())
+    puzzle_hash: bytes32 = puzzle_hash_for_pk(sk_for_wallet_id.get_g1())
     return puzzle_hash
 
 

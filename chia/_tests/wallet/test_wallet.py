@@ -401,7 +401,11 @@ class TestWalletSimulator:
 
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": test_fee}
+            {
+                "coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -530,7 +534,11 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -663,7 +671,11 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_1.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -2132,6 +2144,24 @@ class TestWalletSimulator:
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         assert len(list(set(coin.puzzle_hash for coin in tx.spend_bundle.additions()))) == 2
+
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes
+    @pytest.mark.anyio
+    async def test_puzzle_hashes_not_committed(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
+
+        # Our framework
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config,
+            push=False,
+        ) as action_scope:
+            await action_scope.get_puzzle_hash(wallet.wallet_state_manager, override_reuse_puzhash_with=False)
 
 
 def test_get_wallet_db_path_v2_r1() -> None:

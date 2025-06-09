@@ -12,6 +12,7 @@ import statistics
 import time
 from collections.abc import Awaitable
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from random import Random
 from typing import Any, BinaryIO, Callable, Optional
@@ -60,7 +61,7 @@ table_columns: dict[str, list[str]] = {
     "root": ["tree_id", "generation", "node_hash", "status"],
     "subscriptions": ["tree_id", "url", "ignore_till", "num_consecutive_failures", "from_wallet"],
     "schema": ["version_id", "applied_at"],
-    "ids": ["kv_id", "blob", "store_id"],
+    "ids": ["kv_id", "hash", "blob", "store_id"],
     "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
 
@@ -2173,3 +2174,100 @@ async def test_get_existing_hashes(
     not_existing_hashes = [bytes32(i.to_bytes(32, byteorder="big")) for i in range(num_keys)]
     result = await data_store.get_existing_hashes(existing_hashes + not_existing_hashes, store_id)
     assert result == set(existing_hashes)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(argnames="size_offset", argvalues=[-1, 0, 1])
+async def test_basic_key_value_db_vs_disk_cutoff(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+    size_offset: int,
+) -> None:
+    size = data_store.prefer_file_kv_blob_length + size_offset
+
+    blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
+    blob_hash = bytes32(sha256(blob).digest())
+    async with data_store.db_wrapper.writer() as writer:
+        await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
+
+    file_exists = data_store.get_key_value_path(store_id=store_id, blob_hash=blob_hash).exists()
+    async with data_store.db_wrapper.writer() as writer:
+        async with writer.execute(
+            "SELECT blob FROM ids WHERE hash = :blob_hash",
+            {"blob_hash": blob_hash},
+        ) as cursor:
+            row = await cursor.fetchone()
+            assert row is not None
+            db_blob: Optional[bytes] = row["blob"]
+
+    if size_offset <= 0:
+        assert not file_exists
+        assert db_blob == blob
+    else:
+        assert file_exists
+        assert db_blob is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(argnames="size_offset", argvalues=[-1, 0, 1])
+@pytest.mark.parametrize(argnames="limit_change", argvalues=[-2, -1, 1, 2])
+async def test_changing_key_value_db_vs_disk_cutoff(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+    size_offset: int,
+    limit_change: int,
+) -> None:
+    size = data_store.prefer_file_kv_blob_length + size_offset
+
+    blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
+    async with data_store.db_wrapper.writer() as writer:
+        kv_id = await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
+
+    data_store.prefer_file_kv_blob_length += limit_change
+    retrieved_blob = await data_store.get_blob_from_kvid(kv_id=kv_id, store_id=store_id)
+
+    assert blob == retrieved_blob
+
+
+@pytest.mark.anyio
+async def test_get_keys_both_disk_and_db(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+) -> None:
+    inserted_keys: set[bytes] = set()
+
+    for size_offset in [-1, 0, 1]:
+        size = data_store.prefer_file_kv_blob_length + size_offset
+
+        blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
+        await data_store.insert(key=blob, value=b"", store_id=store_id, status=Status.COMMITTED)
+        inserted_keys.add(blob)
+
+    retrieved_keys = set(await data_store.get_keys(store_id=store_id))
+
+    assert retrieved_keys == inserted_keys
+
+
+@pytest.mark.anyio
+async def test_get_keys_values_both_disk_and_db(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+) -> None:
+    inserted_keys_values: dict[bytes, bytes] = {}
+
+    for size_offset in [-1, 0, 1]:
+        size = data_store.prefer_file_kv_blob_length + size_offset
+
+        key = bytes(seeded_random.getrandbits(8) for _ in range(size))
+        value = bytes(seeded_random.getrandbits(8) for _ in range(size))
+        await data_store.insert(key=key, value=value, store_id=store_id, status=Status.COMMITTED)
+        inserted_keys_values[key] = value
+
+    terminal_nodes = await data_store.get_keys_values(store_id=store_id)
+    retrieved_keys_values = {node.key: node.value for node in terminal_nodes}
+
+    assert retrieved_keys_values == inserted_keys_values
