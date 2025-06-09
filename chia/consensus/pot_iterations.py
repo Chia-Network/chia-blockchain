@@ -120,5 +120,4 @@ def calculate_iterations_quality(
         )
         return max(iters, uint64(1))
     else:
-        assert size.size_v2 is not None
-        assert False, "V2 plots not supported yet"
+        raise NotImplementedError()

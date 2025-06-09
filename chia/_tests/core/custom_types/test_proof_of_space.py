@@ -27,7 +27,7 @@ class ProofOfSpaceCase:
     marks: Marks = ()
 
 
-# TODO: test v2 plots
+# TODO: todo_v2_plots
 @datacases(
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
@@ -125,7 +125,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
 
 
-# TODO: test v2 plots
+# TODO: todo_v2_plots
 @datacases(
     ProofOfSpaceCase(
         id="v2 plot size 0",
