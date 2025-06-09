@@ -187,13 +187,11 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
             solution = spend.at("rrrf")
 
             cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
-            cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(result)
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
         clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
 
         for res in result.first().as_iter():
