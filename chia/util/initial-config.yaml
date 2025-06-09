@@ -202,9 +202,14 @@ farmer:
   # The farmer server (if run) will run on this port
   port: 8447
   # The farmer will attempt to connect to these full nodes
-  full_node_peers:
-    - host: *self_hostname
-      port: 8444
+  full_node_peers: []
+  introducer_peer:
+    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
+    port: 8444
+    enable_private_networks: False
+  peer_connect_interval: 60
+  target_peer_count: 1
+  testing: false
 
   pool_public_keys: !!set {}
 

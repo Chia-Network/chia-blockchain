@@ -37,6 +37,7 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.server.node_discovery import WalletPeers
 from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -129,6 +130,9 @@ class Farmer:
         consensus_constants: ConsensusConstants,
         local_keychain: Optional[Keychain] = None,
     ):
+        self.wallet_peers: Optional[WalletPeers] = None
+        local_node_synced: bool = False
+
         self.keychain_proxy: Optional[KeychainProxy] = None
         self.local_keychain = local_keychain
         self._root_path = root_path
@@ -179,6 +183,30 @@ class Farmer:
         # Use to find missing signage points. (new_signage_point, time)
         self.prev_signage_point: Optional[tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
+    def initialize_wallet_peers(self) -> None:
+        network_name = self.config["selected_network"]
+        try:
+            default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
+        except KeyError:
+            self.log.info("Default port field not found in config.")
+            default_port = None
+        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
+        testing = self.config.get("testing", False)
+        if self.wallet_peers is None and connect_to_unknown_peers and not testing:
+            self.wallet_peers = WalletPeers(
+                server=self.server,
+                target_outbound_count=self.config["target_peer_count"],
+                peers_file_path=self._root_path
+                / Path(self.config.get("farmer_peers_file_path", "wallet/db/farmer_peers.dat")),
+                introducer_info=self.config["introducer_peer"],
+                dns_servers=self.config.get("dns_servers", ["dns-introducer.chia.net"]),
+                peer_connect_interval=self.config["peer_connect_interval"],
+                selected_network=network_name,
+                default_port=default_port,
+                log=self.log,
+            )
+            create_referenced_task(self.wallet_peers.start())
+
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
         async def start_task() -> None:
@@ -189,6 +217,9 @@ class Farmer:
                     self.update_pool_state_task = create_referenced_task(self._periodically_update_pool_state_task())
                     self.cache_clear_task = create_referenced_task(self._periodically_clear_cache_and_refresh_task())
                     log.debug("start_task: initialized")
+                    if self.wallet_peers is None:
+                        self.initialize_wallet_peers()
+
                     self.started = True
                     return
                 await asyncio.sleep(1)
@@ -312,8 +343,17 @@ class Farmer:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
             self.harvester_handshake_task = create_referenced_task(handshake_task())
 
+        if peer.connection_type is NodeType.FULL_NODE:
+            # trusted = self.is_trusted(peer)
+            # if not trusted and self.local_node_synced:
+            #     await peer.close()
+            if self.wallet_peers is not None:
+                await self.wallet_peers.on_connect(peer)
+
+
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
+        self.initialize_wallet_peers()
 
     def state_changed(self, change: str, data: dict[str, Any]) -> None:
         if self.state_changed_callback is not None:
@@ -330,6 +370,10 @@ class Farmer:
         )
 
     async def on_disconnect(self, connection: WSChiaConnection) -> None:
+        # if self.is_trusted(peer):
+        #    self.local_node_synced = False
+        #    self.initialize_wallet_peers()
+
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:
