@@ -831,7 +831,7 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
-reference = "fc.add_delta_cache"
+reference = "long_lived/initial_datalayer"
 resolved_reference = "f7417324609bfa6de32692bd51a068a9cf610fdb"
 subdirectory = "wheel/"
 
