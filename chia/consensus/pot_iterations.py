@@ -10,7 +10,7 @@ from chia.consensus.pos_quality import _expected_plot_size
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.util.hash import std_hash
 
-FADE_OUT_PERIOD = uint32(256)  # TODO: add to chia_rs and get from constants
+PHASE_OUT_PERIOD = uint32(100000000)  # TODO: add to chia_rs and get from constants
 
 
 def is_overflow_block(constants: ConsensusConstants, signage_point_index: uint8) -> bool:
@@ -38,7 +38,7 @@ def calculate_phase_out(
     if prev_transaction_block_height <= constants.HARD_FORK2_HEIGHT:
         return uint64(0)
     phase_out = uint64(
-        (uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) / FADE_OUT_PERIOD)
+        (uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) / PHASE_OUT_PERIOD)
         * calculate_sp_interval_iters(constants, sub_slot_iters)
     )
     return phase_out

@@ -7,8 +7,11 @@ from pytest import raises
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
+    PHASE_OUT_PERIOD,
     calculate_ip_iters,
     calculate_iterations_quality,
+    calculate_phase_out,
+    calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
 )
@@ -119,3 +122,22 @@ class TestPotIterations:
         for k in farmer_ks.keys():
             # Win rate is proportional to percentage of space
             assert abs(win_percentage[k] - percentage_space[k]) < 0.01
+
+    def test_calculate_phase_out(self):
+        constants = test_constants
+        sub_slot_iters = uint64(1000000)
+        sp_interval = calculate_sp_interval_iters(constants, sub_slot_iters)
+        # Before or at HARD_FORK2_HEIGHT, should return 0
+        assert calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT - 1) == 0
+        assert calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT) == 0
+        # after HARD_FORK2_HEIGHT, should return value = delta/phase_out_period * sp_interval
+        assert (
+            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + 1)
+            == sp_interval // PHASE_OUT_PERIOD
+        )
+        # at phase_out_period, should return sp_interval
+        height = constants.HARD_FORK2_HEIGHT + PHASE_OUT_PERIOD
+        assert calculate_phase_out(constants, sub_slot_iters, height) == sp_interval
+        height += 1
+        # at phase_out_period + 1, should return value > sp_interval
+        assert calculate_phase_out(constants, sub_slot_iters, height) >= sp_interval
