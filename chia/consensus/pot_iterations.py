@@ -37,11 +37,16 @@ def calculate_phase_out(
 ) -> uint64:
     if prev_transaction_block_height <= constants.HARD_FORK2_HEIGHT:
         return uint64(0)
-    phase_out = uint64(
-        (uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) / PHASE_OUT_PERIOD)
-        * calculate_sp_interval_iters(constants, sub_slot_iters)
+    elif uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) >= PHASE_OUT_PERIOD:
+        return uint64(calculate_sp_interval_iters(constants, sub_slot_iters))
+
+    return uint64(
+        (
+            uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT)
+            * calculate_sp_interval_iters(constants, sub_slot_iters)
+        )
+        // PHASE_OUT_PERIOD
     )
-    return phase_out
 
 
 def calculate_ip_iters(
