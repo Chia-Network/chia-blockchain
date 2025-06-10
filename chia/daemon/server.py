@@ -59,7 +59,7 @@ from chia.wallet.derive_keys import (
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import WSMsgType, web
+    from aiohttp import WSMessage, WSMsgType, web
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
@@ -267,7 +267,6 @@ class WebSocketServer:
 
         while True:
             msg = await ws.receive()
-            self.log.debug("Received message: %s", msg)
             decoded: WsRpcMessage = {
                 "command": "",
                 "ack": False,
@@ -281,6 +280,16 @@ class WebSocketServer:
                     decoded = json.loads(msg.data)
                     if "data" not in decoded:
                         decoded["data"] = {}
+
+                    redaction_triggers = ["pass", "key", "secret"]
+                    redacted_data = {
+                        key: "***<redacted>***"
+                        if any(trigger in key.casefold() for trigger in redaction_triggers)
+                        else value
+                        for key, value in decoded.items()
+                    }
+                    redacted_message = WSMessage(msg.type, redacted_data, msg.extra)
+                    self.log.debug("Received message: %s", redacted_message)
 
                     maybe_response = await self.handle_message(ws, decoded)
                     if maybe_response is None:
@@ -297,6 +306,7 @@ class WebSocketServer:
 
                 await self.send_all_responses(connections, response)
             else:
+                self.log.debug("Received non-text message")
                 service_names = self.remove_connection(ws)
 
                 if len(service_names) == 0:
