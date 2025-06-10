@@ -63,6 +63,9 @@ def validate_unfinished_header_block(
     and lead to other small tweaks in validation.
     """
 
+    # some of the checks numbers may be out of order this is because all
+    # checks need to be valid regardless of order and the numbers are reflecting the numbers as written in the chia docs
+
     # 6. check signage point index
     # no need to check negative values as this is uint 8
     if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:

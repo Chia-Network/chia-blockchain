@@ -17,7 +17,9 @@ from chia.consensus.pot_iterations import (
 )
 from chia.util.hash import std_hash
 
-test_constants = DEFAULT_CONSTANTS.replace(NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=uint16(300))
+test_constants = DEFAULT_CONSTANTS.replace(
+    NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=uint16(300), HARD_FORK2_HEIGHT=uint32(100000000)
+)
 
 
 class TestPotIterations:
@@ -125,7 +127,7 @@ class TestPotIterations:
 
     def test_calculate_phase_out(self):
         constants = test_constants
-        sub_slot_iters = uint64(1000000)
+        sub_slot_iters = uint64(100000000000)
         sp_interval = calculate_sp_interval_iters(constants, sub_slot_iters)
         # Before or at HARD_FORK2_HEIGHT, should return 0
         assert calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT - 1) == 0
@@ -135,9 +137,16 @@ class TestPotIterations:
             calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + 1)
             == sp_interval // PHASE_OUT_PERIOD
         )
-        # at phase_out_period, should return sp_interval
-        height = constants.HARD_FORK2_HEIGHT + PHASE_OUT_PERIOD
-        assert calculate_phase_out(constants, sub_slot_iters, height) == sp_interval
-        height += 1
-        # at phase_out_period + 1, should return value > sp_interval
-        assert calculate_phase_out(constants, sub_slot_iters, height) >= sp_interval
+        assert (
+            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + PHASE_OUT_PERIOD // 2)
+            == sp_interval // 2
+        )
+        assert (
+            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + PHASE_OUT_PERIOD)
+            == sp_interval
+        )
+
+        # Test with maximum uint32 height to ensure no overflow
+        max_uint32_height = uint32(0xFFFFFFFF)
+        result_max_height = calculate_phase_out(constants, sub_slot_iters, max_uint32_height)
+        assert result_max_height == sp_interval  # Should cap at sp_interval
