@@ -17,7 +17,6 @@ from chia_rs import (
     run_block_generator,
     run_block_generator2,
 )
-from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
@@ -121,7 +120,7 @@ async def ignore_block_validation(
         "chia.consensus.multiprocess_validation.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
     )
     monkeypatch.setattr(
-        "chia.consensus.multiprocess_validation.verify_and_get_quality_string", lambda *_, **__: bytes32.zeros
+        "chia.consensus.multiprocess_validation.validate_pospace_and_get_required_iters", lambda *_, **__: uint64(0)
     )
     monkeypatch.setattr("chia_rs.BlockRecord.sp_total_iters", lambda *_: uint128(0))
     monkeypatch.setattr("chia_rs.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))

@@ -20,18 +20,17 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
+from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge, prev_tx_block
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
+    validate_pospace_and_get_required_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
@@ -63,6 +62,15 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation must be set to True. This will skip validation of end of slots, sub-epochs,
     and lead to other small tweaks in validation.
     """
+
+    # some of the checks numbers may be out of order this is because all
+    # checks need to be valid regardless of order and the numbers are reflecting the numbers as written in the chia docs
+
+    # 6. check signage point index
+    # no need to check negative values as this is uint 8
+    if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
+        return None, ValidationError(Err.INVALID_SP_INDEX)
+
     # 1. Check that the previous block exists in the blockchain, or that it is correct
 
     prev_b = blocks.try_block_record(header_block.prev_header_hash)
@@ -491,30 +499,18 @@ def validate_unfinished_header_block(
     else:
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    q_str: Optional[bytes32] = verify_and_get_quality_string(
-        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=height
-    )
-    if q_str is None:
-        return None, ValidationError(Err.INVALID_POSPACE)
-
-    # 6. check signage point index
-    # no need to check negative values as this is uint 8
-    if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
-        return None, ValidationError(Err.INVALID_SP_INDEX)
-
-    # Note that required iters might be from the previous slot (if we are in an overflow block)
-    pos_size_v1 = header_block.reward_chain_block.proof_of_space.size().size_v1
-    if pos_size_v1 is None:
-        # TODO: support v2 plots after the hard fork
-        return None, ValidationError(Err.INVALID_POSPACE)
-
-    required_iters: uint64 = calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        pos_size_v1,
-        expected_vs.difficulty,
+    required_iters = validate_pospace_and_get_required_iters(
+        constants,
+        header_block.reward_chain_block.proof_of_space,
+        challenge,
         cc_sp_hash,
+        height,
+        expected_vs.difficulty,
+        expected_vs.ssi,
+        prev_tx_block(blocks, prev_b),
     )
+    if required_iters is None:
+        return None, ValidationError(Err.INVALID_POSPACE)
 
     # 7. check required iters
     if required_iters >= calculate_sp_interval_iters(constants, expected_vs.ssi):
@@ -834,7 +830,7 @@ def validate_unfinished_header_block(
             assert prev_transaction_b.timestamp is not None
             if header_block.foliage_transaction_block.timestamp <= prev_transaction_b.timestamp:
                 return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
-    return required_iters, None  # Valid unfinished header block
+    return required_iters, None
 
 
 def validate_finished_header_block(

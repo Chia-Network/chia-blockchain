@@ -30,15 +30,15 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
+from chia.consensus.get_block_challenge import prev_tx_block
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality,
     calculate_sp_iters,
     is_overflow_block,
+    validate_pospace_and_get_required_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import (
@@ -1001,7 +1001,7 @@ def _validate_segment(
         if sampled and sub_slot_data.is_challenge():
             after_challenge = True
             required_iters = __validate_pospace(
-                constants, segment, idx, curr_difficulty, ses, first_segment_in_se, height
+                constants, segment, idx, curr_difficulty, curr_ssi, ses, first_segment_in_se, height
             )
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0), []
@@ -1246,7 +1246,7 @@ def validate_recent_blocks(
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
 
-        if (challenge is not None) and (prev_challenge is not None):
+        if (challenge is not None) and (prev_challenge is not None) and transaction_blocks > 1:
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
                 assert prev_block_record is not None
@@ -1267,7 +1267,9 @@ def validate_recent_blocks(
                 assert caluclated_required_iters is not None
                 required_iters = caluclated_required_iters
             else:
-                ret = _validate_pospace_recent_chain(constants, block, challenge, diff, overflow, prev_challenge)
+                ret = _validate_pospace_recent_chain(
+                    constants, sub_blocks, block, challenge, diff, ssi, overflow, prev_challenge
+                )
                 if ret is None:
                     return False, []
                 required_iters = ret
@@ -1305,9 +1307,11 @@ def validate_recent_blocks(
 
 def _validate_pospace_recent_chain(
     constants: ConsensusConstants,
+    blocks: BlockCache,
     block: HeaderBlock,
     challenge: bytes32,
     diff: uint64,
+    ssi: uint64,
     overflow: bool,
     prev_challenge: bytes32,
 ) -> Optional[uint64]:
@@ -1317,27 +1321,21 @@ def _validate_pospace_recent_chain(
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
     assert cc_sp_hash is not None
-    q_str = verify_and_get_quality_string(
-        block.reward_chain_block.proof_of_space,
+
+    required_iters = validate_pospace_and_get_required_iters(
         constants,
+        block.reward_chain_block.proof_of_space,
         challenge if not overflow else prev_challenge,
         cc_sp_hash,
-        height=block.height,
+        block.height,
+        diff,
+        ssi,
+        prev_tx_block(blocks, blocks.block_record(block.prev_header_hash)),
     )
-    if q_str is None:
+    if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
         return None
-    # TODO: support v2 plots
-    pos_size_v1 = block.reward_chain_block.proof_of_space.size().size_v1
-    assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
-    required_iters = calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        pos_size_v1,
-        diff,
-        cc_sp_hash,
-    )
     return required_iters
 
 
@@ -1346,6 +1344,7 @@ def __validate_pospace(
     segment: SubEpochChallengeSegment,
     idx: int,
     curr_diff: uint64,
+    curr_sub_slot_iters: uint64,
     ses: Optional[SubEpochSummary],
     first_in_sub_epoch: bool,
     height: uint32,
@@ -1371,27 +1370,22 @@ def __validate_pospace(
 
     # validate proof of space
     assert sub_slot_data.proof_of_space is not None
-    q_str = verify_and_get_quality_string(
-        sub_slot_data.proof_of_space,
+
+    required_iters = validate_pospace_and_get_required_iters(
         constants,
+        sub_slot_data.proof_of_space,
         challenge,
         cc_sp_hash,
-        height=height,
+        height,
+        curr_diff,
+        curr_sub_slot_iters,
+        uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
     )
-    if q_str is None:
+    if required_iters is None:
         log.error("could not verify proof of space")
         return None
-    # TODO: support v2 plots
-    pos_size_v1 = sub_slot_data.proof_of_space.size().size_v1
-    assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
-    return calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        pos_size_v1,
-        curr_diff,
-        cc_sp_hash,
-    )
+    return required_iters
 
 
 def __get_rc_sub_slot(
