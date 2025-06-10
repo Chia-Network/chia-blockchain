@@ -11,7 +11,6 @@ from operator import attrgetter
 from typing import Any, Optional, cast
 from unittest.mock import patch
 
-import aiosqlite
 import pytest
 from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -2520,7 +2519,6 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
         "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
     )
     dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
-    conn: aiosqlite.Connection
     async with dbw.writer() as conn:
         await conn.execute("CREATE TABLE blah(temp int)")
     await wallet_node.reset_sync_db(db_path, fingerprint)

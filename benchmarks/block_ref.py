@@ -20,7 +20,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.db_version import lookup_db_version
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, Writer
 
 # the first transaction block. Each byte in transaction_height_delta is the
 # number of blocks to skip forward to get to the next transaction block
@@ -59,7 +59,7 @@ async def main(db_path: Path) -> None:
         await connection.execute("pragma query_only=ON")
         db_version: int = await lookup_db_version(connection)
 
-        db_wrapper = DBWrapper2(connection, db_version=db_version)
+        db_wrapper = DBWrapper2(Writer(_connection=connection), db_version=db_version)
         await db_wrapper.add_connection(await aiosqlite.connect(db_path))
 
         block_store = await BlockStore.create(db_wrapper)
