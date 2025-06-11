@@ -200,7 +200,7 @@ class DataStore:
         root_hash: Optional[bytes32],
         filename: Path,
         delta_reader: Optional[DeltaReader] = None,
-    ) -> None:
+    ) -> Optional[DeltaReader]:
         if root_hash is None:
             merkle_blob = MerkleBlob(b"")
         else:
@@ -233,6 +233,7 @@ class DataStore:
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
+        return delta_reader
 
     async def build_merkle_blob_queries_for_missing_hashes(
         self,

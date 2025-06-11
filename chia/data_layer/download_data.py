@@ -177,7 +177,7 @@ async def insert_from_delta_file(
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
-    delta_reader = DeltaReader(internal_nodes={}, leaf_nodes={})
+    delta_reader: Optional[DeltaReader] = None
 
     for root_hash in root_hashes:
         timestamp = int(time.time())
@@ -218,7 +218,7 @@ async def insert_from_delta_file(
                     existing_generation,
                     group_files_by_store,
                 )
-                await data_store.insert_into_data_store_from_file(
+                delta_reader = await data_store.insert_into_data_store_from_file(
                     store_id,
                     None if root_hash == bytes32.zeros else root_hash,
                     target_filename_path,
