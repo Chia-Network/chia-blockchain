@@ -1294,7 +1294,7 @@ class WalletRpcClient(RpcClient):
         return DLOwnedSingletonsResponse.from_json_dict(await self.fetch("dl_owned_singletons", {}))
 
     async def dl_get_mirrors(self, request: DLGetMirrors) -> DLGetMirrorsResponse:
-        return DLGetMirrorsResponse.from_json_dict(await self.fetch("dl_get_mirrors", {}))
+        return DLGetMirrorsResponse.from_json_dict(await self.fetch("dl_get_mirrors", request.to_json_dict()))
 
     async def dl_new_mirror(
         self,

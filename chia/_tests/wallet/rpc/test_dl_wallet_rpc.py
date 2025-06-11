@@ -16,6 +16,8 @@ from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_request_types import (
     CreateNewDL,
+    DLGetMirrors,
+    DLGetMirrorsResponse,
     DLHistory,
     DLLatestSingleton,
     DLSingletonsByRoot,
@@ -274,16 +276,16 @@ class TestWalletRpc:
                 mirror_coin.name(),
                 launcher_id,
                 uint64(1000),
-                [b"foo", b"bar"],
+                ["foo", "bar"],
                 True,
                 uint32(height + 1),
             )
-            await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
+            await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([mirror]), DLGetMirrors(launcher_id))
             await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
-            await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)
+            await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([]), DLGetMirrors(launcher_id))
 
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio

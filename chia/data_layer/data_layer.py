@@ -906,7 +906,7 @@ class DataLayer:
         mirrors: list[Mirror] = (await self.wallet_rpc.dl_get_mirrors(DLGetMirrors(store_id))).mirrors
         urls: list[str] = []
         for mirror in mirrors:
-            urls += [url.decode("utf8") for url in mirror.urls]
+            urls += mirror.urls
         urls = [url.rstrip("/") for url in urls]
         await self.data_store.update_subscriptions_from_wallet(store_id, urls)
 
