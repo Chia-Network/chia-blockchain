@@ -741,10 +741,7 @@ class DLUpdateMultipleUpdates(Streamable):
         if len(set(pair.launcher_id for pair in self.launcher_root_pairs)) < len(self.launcher_root_pairs):
             raise ValueError("Multiple updates specified for a single launcher in `DLUpdateMultiple`")
 
-    # TODO: deprecate the kinda silly format of this RPC and delete these functions
-    def to_json_dict(self) -> dict[str, Any]:
-        return {pair.launcher_id.hex(): pair.new_root.hex() for pair in self.launcher_root_pairs}
-
+    # TODO: deprecate the kinda silly format of this RPC and delete this function
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         return cls(
@@ -761,7 +758,11 @@ class DLUpdateMultipleUpdates(Streamable):
 @streamable
 @kw_only_dataclass
 class DLUpdateMultiple(TransactionEndpointRequest):
-    updates: DLUpdateMultipleUpdates
+    updates: DLUpdateMultipleUpdates = field(default_factory=default_raise)
+
+    # TODO: deprecate the kinda silly format of this RPC and delete this function
+    def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
+        return {"updates": {pair.launcher_id.hex(): pair.new_root.hex() for pair in self.updates.launcher_root_pairs}}
 
 
 @streamable
