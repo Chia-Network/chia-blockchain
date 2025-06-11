@@ -254,7 +254,7 @@ class TestWalletRpc:
             await client_2.dl_stop_tracking(DLStopTracking(launcher_id))
             assert (await client_2.dl_latest_singleton(DLLatestSingleton(lid))).singleton is None
 
-            owned_singletons = await client.dl_owned_singletons()
+            owned_singletons = (await client.dl_owned_singletons()).singletons
             owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
             assert owned_launcher_ids == sorted([launcher_id, launcher_id_2, launcher_id_3])
 

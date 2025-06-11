@@ -36,6 +36,7 @@ from chia.rpc.wallet_request_types import (
     DLHistoryResponse,
     DLLatestSingleton,
     DLLatestSingletonResponse,
+    DLOwnedSingletonsResponse,
     DLSingletonsByRoot,
     DLSingletonsByRootResponse,
     DLStopTracking,
@@ -4122,20 +4123,16 @@ class WalletRpcApi:
         history = await wallet.get_history(request.launcher_id, **additional_kwargs)
         return DLHistoryResponse(history, uint32(len(history)))
 
-    async def dl_owned_singletons(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_owned_singletons(self, request: Empty) -> DLOwnedSingletonsResponse:
         """Get all owned singleton records"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        try:
-            wallet = self.service.wallet_state_manager.get_dl_wallet()
-        except ValueError:
-            return {"success": False, "error": "no DataLayer wallet available"}
-
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
         singletons = await wallet.get_owned_singletons()
-        singletons_json = [singleton.to_json_dict() for singleton in singletons]
 
-        return {"singletons": singletons_json, "count": len(singletons_json)}
+        return DLOwnedSingletonsResponse(singletons, uint32(len(singletons)))
 
     async def dl_get_mirrors(self, request: dict[str, Any]) -> EndpointResult:
         """Get all of the mirrors for a specific singleton"""

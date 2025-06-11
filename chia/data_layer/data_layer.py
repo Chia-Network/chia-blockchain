@@ -910,7 +910,7 @@ class DataLayer:
         await self.data_store.update_subscriptions_from_wallet(store_id, urls)
 
     async def get_owned_stores(self) -> list[SingletonRecord]:
-        return await self.wallet_rpc.dl_owned_singletons()
+        return (await self.wallet_rpc.dl_owned_singletons()).singletons
 
     async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> set[DiffData]:
         return await self.data_store.get_kv_diff(store_id, hash_1, hash_2)

@@ -430,6 +430,13 @@ class DLHistoryResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DLOwnedSingletonsResponse(Streamable):
+    singletons: list[SingletonRecord]
+    count: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 

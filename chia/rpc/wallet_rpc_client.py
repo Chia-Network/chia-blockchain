@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror
-from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import (
@@ -42,6 +41,7 @@ from chia.rpc.wallet_request_types import (
     DLHistoryResponse,
     DLLatestSingleton,
     DLLatestSingletonResponse,
+    DLOwnedSingletonsResponse,
     DLSingletonsByRoot,
     DLSingletonsByRootResponse,
     DLStopTracking,
@@ -1289,9 +1289,8 @@ class WalletRpcClient(RpcClient):
     async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
         return DLHistoryResponse.from_json_dict(await self.fetch("dl_history", request.to_json_dict()))
 
-    async def dl_owned_singletons(self) -> list[SingletonRecord]:
-        response = await self.fetch(path="dl_owned_singletons", request_json={})
-        return [SingletonRecord.from_json_dict(singleton) for singleton in response["singletons"]]
+    async def dl_owned_singletons(self) -> DLOwnedSingletonsResponse:
+        return DLOwnedSingletonsResponse.from_json_dict(await self.fetch("dl_owned_singletons", {}))
 
     async def dl_get_mirrors(self, launcher_id: bytes32) -> list[Mirror]:
         response = await self.fetch(path="dl_get_mirrors", request_json={"launcher_id": launcher_id.hex()})
