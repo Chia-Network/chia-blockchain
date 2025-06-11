@@ -66,7 +66,7 @@ except ModuleNotFoundError:
     sys.exit()
 
 
-def redact_sensitive_data(obj: Any, redaction_triggers: Collection[str] = ("pass", "key", "secret")) -> Any:
+def redact_sensitive_data(obj: Any, redaction_triggers: Collection[str] = ("pass", "key", "secret", "mnemonic")) -> Any:
     """Recursively redact sensitive data from nested dictionaries."""
     if isinstance(obj, dict):
         return {

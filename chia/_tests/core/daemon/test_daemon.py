@@ -2143,10 +2143,12 @@ async def test_message_logging_redaction(
                 "password": "secret_password",
                 "private_key": "sensitive_key_data",
                 "secret_value": "very_secret",
+                "mnemonic": "test_mnemonic_phrase",
                 "normal_field": "normal_value",
                 "nested_object": {
                     "passphrase": "nested_secret",
                     "api_key": "nested_api_key",
+                    "seed_mnemonic": "nested_mnemonic",
                     "safe_field": "safe_value",
                 },
             },
@@ -2168,10 +2170,12 @@ async def test_message_logging_redaction(
             "ack": False,
             "command": "test_command",
             "data": {
+                "mnemonic": "***<redacted>***",
                 "nested_object": {
                     "api_key": "***<redacted>***",
                     "passphrase": "***<redacted>***",
                     "safe_field": "safe_value",
+                    "seed_mnemonic": "***<redacted>***",
                 },
                 "normal_field": "normal_value",
                 "password": "***<redacted>***",
