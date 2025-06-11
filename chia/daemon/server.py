@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Collection
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
@@ -64,6 +64,19 @@ try:
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     sys.exit()
+
+
+def redact_sensitive_data(obj: Any, redaction_triggers: Collection[str] = ("pass", "key", "secret")) -> Any:
+    """Recursively redact sensitive data from nested dictionaries."""
+    if isinstance(obj, dict):
+        return {
+            key: "***<redacted>***"
+            if any(trigger in key.casefold() for trigger in redaction_triggers)
+            else redact_sensitive_data(value, redaction_triggers)
+            for key, value in obj.items()
+        }
+    else:
+        return obj
 
 
 log = logging.getLogger(__name__)
@@ -281,13 +294,7 @@ class WebSocketServer:
                     if "data" not in decoded:
                         decoded["data"] = {}
 
-                    redaction_triggers = ["pass", "key", "secret"]
-                    redacted_data = {
-                        key: "***<redacted>***"
-                        if any(trigger in key.casefold() for trigger in redaction_triggers)
-                        else value
-                        for key, value in decoded.items()
-                    }
+                    redacted_data = redact_sensitive_data(decoded)
                     redacted_message = WSMessage(msg.type, redacted_data, msg.extra)
                     self.log.debug("Received message: %s", redacted_message)
 
