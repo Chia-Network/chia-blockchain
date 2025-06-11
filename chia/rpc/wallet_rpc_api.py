@@ -32,6 +32,8 @@ from chia.rpc.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DLHistory,
+    DLHistoryResponse,
     DLLatestSingleton,
     DLLatestSingletonResponse,
     DLSingletonsByRoot,
@@ -4101,7 +4103,8 @@ class WalletRpcApi:
                 [],
             )
 
-    async def dl_history(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -4109,16 +4112,15 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.get_dl_wallet()
         additional_kwargs = {}
 
-        if "min_generation" in request:
-            additional_kwargs["min_generation"] = uint32(request["min_generation"])
-        if "max_generation" in request:
-            additional_kwargs["max_generation"] = uint32(request["max_generation"])
-        if "num_results" in request:
-            additional_kwargs["num_results"] = uint32(request["num_results"])
+        if request.min_generation is not None:
+            additional_kwargs["min_generation"] = uint32(request.min_generation)
+        if request.max_generation is not None:
+            additional_kwargs["max_generation"] = uint32(request.max_generation)
+        if request.num_results is not None:
+            additional_kwargs["num_results"] = uint32(request.num_results)
 
-        history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]), **additional_kwargs)
-        history_json = [rec.to_json_dict() for rec in history]
-        return {"history": history_json, "count": len(history_json)}
+        history = await wallet.get_history(request.launcher_id, **additional_kwargs)
+        return DLHistoryResponse(history, uint32(len(history)))
 
     async def dl_owned_singletons(self, request: dict[str, Any]) -> EndpointResult:
         """Get all owned singleton records"""

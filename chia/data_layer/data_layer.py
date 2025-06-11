@@ -60,6 +60,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_request_types import (
     CreateNewDL,
+    DLHistory,
     DLLatestSingleton,
     DLStopTracking,
     DLTrackNew,
@@ -498,7 +499,7 @@ class DataLayer:
         return res.node_hash
 
     async def get_root_history(self, store_id: bytes32) -> list[SingletonRecord]:
-        records = await self.wallet_rpc.dl_history(store_id)
+        records = (await self.wallet_rpc.dl_history(DLHistory(store_id))).history
         if records is None:
             self.log.error(f"Failed to get root history for {store_id.hex()}")
         root_history = []
@@ -538,11 +539,15 @@ class DataLayer:
                     "Maybe we're doing a batch update."
                 )
                 return
-            wallet_history = await self.wallet_rpc.dl_history(
-                launcher_id=store_id,
-                min_generation=uint32(root.generation + 1),
-                max_generation=singleton_record.generation,
-            )
+            wallet_history = (
+                await self.wallet_rpc.dl_history(
+                    DLHistory(
+                        launcher_id=store_id,
+                        min_generation=uint32(root.generation + 1),
+                        max_generation=singleton_record.generation,
+                    )
+                )
+            ).history
             new_hashes = [record.root for record in reversed(wallet_history)]
             root_hash = self.none_bytes if root.node_hash is None else root.node_hash
             generation_shift = 0
@@ -605,11 +610,15 @@ class DataLayer:
                 f"Server used: {url}."
             )
 
-            to_download = await self.wallet_rpc.dl_history(
-                launcher_id=store_id,
-                min_generation=uint32(root.generation + 1),
-                max_generation=singleton_record.generation,
-            )
+            to_download = (
+                await self.wallet_rpc.dl_history(
+                    DLHistory(
+                        launcher_id=store_id,
+                        min_generation=uint32(root.generation + 1),
+                        max_generation=singleton_record.generation,
+                    )
+                )
+            ).history
             try:
                 proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(

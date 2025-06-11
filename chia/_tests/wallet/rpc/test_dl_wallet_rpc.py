@@ -16,6 +16,7 @@ from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_request_types import (
     CreateNewDL,
+    DLHistory,
     DLLatestSingleton,
     DLSingletonsByRoot,
     DLStopTracking,
@@ -129,7 +130,7 @@ class TestWalletRpc:
             assert new_singleton_record.root == new_root
             assert new_singleton_record.confirmed
 
-            assert await client.dl_history(launcher_id) == [new_singleton_record, singleton_record]
+            assert (await client.dl_history(DLHistory(launcher_id))).history == [new_singleton_record, singleton_record]
 
             # Test tracking a launcher id that does not exist
             with pytest.raises(ValueError):
@@ -148,36 +149,61 @@ class TestWalletRpc:
 
             await time_out_assert(15, is_singleton_generation, True, client_2, launcher_id, 1)
 
-            assert await client_2.dl_history(launcher_id) == [new_singleton_record, singleton_record]
-
-            assert await client.dl_history(launcher_id, min_generation=uint32(1)) == [new_singleton_record]
-            assert await client.dl_history(launcher_id, max_generation=uint32(0)) == [singleton_record]
-            assert await client.dl_history(launcher_id, num_results=uint32(1)) == [new_singleton_record]
-            assert await client.dl_history(launcher_id, num_results=uint32(2)) == [
+            assert (await client_2.dl_history(DLHistory(launcher_id))).history == [
                 new_singleton_record,
                 singleton_record,
             ]
-            assert await client.dl_history(
-                launcher_id,
-                min_generation=uint32(1),
-                max_generation=uint32(1),
-            ) == [new_singleton_record]
-            assert await client.dl_history(
-                launcher_id,
-                max_generation=uint32(0),
-                num_results=uint32(1),
-            ) == [singleton_record]
-            assert await client.dl_history(
-                launcher_id,
-                min_generation=uint32(1),
-                num_results=uint32(1),
-            ) == [new_singleton_record]
-            assert await client.dl_history(
-                launcher_id,
-                min_generation=uint32(1),
-                max_generation=uint32(1),
-                num_results=uint32(1),
-            ) == [new_singleton_record]
+
+            assert (await client.dl_history(DLHistory(launcher_id, min_generation=uint32(1)))).history == [
+                new_singleton_record
+            ]
+            assert (await client.dl_history(DLHistory(launcher_id, max_generation=uint32(0)))).history == [
+                singleton_record
+            ]
+            assert (await client.dl_history(DLHistory(launcher_id, num_results=uint32(1)))).history == [
+                new_singleton_record
+            ]
+            assert (await client.dl_history(DLHistory(launcher_id, num_results=uint32(2)))).history == [
+                new_singleton_record,
+                singleton_record,
+            ]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        min_generation=uint32(1),
+                        max_generation=uint32(1),
+                    )
+                )
+            ).history == [new_singleton_record]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        max_generation=uint32(0),
+                        num_results=uint32(1),
+                    )
+                )
+            ).history == [singleton_record]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        min_generation=uint32(1),
+                        num_results=uint32(1),
+                    )
+                )
+            ).history == [new_singleton_record]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        min_generation=uint32(1),
+                        max_generation=uint32(1),
+                        num_results=uint32(1),
+                    )
+                )
+            ).history == [new_singleton_record]
 
             assert (await client.dl_singletons_by_root(DLSingletonsByRoot(launcher_id, new_root))).singletons == [
                 new_singleton_record

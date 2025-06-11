@@ -414,6 +414,22 @@ class DLSingletonsByRootResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DLHistory(Streamable):
+    launcher_id: bytes32
+    min_generation: Optional[uint32] = None
+    max_generation: Optional[uint32] = None
+    num_results: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DLHistoryResponse(Streamable):
+    history: list[SingletonRecord]
+    count: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 

@@ -38,6 +38,8 @@ from chia.rpc.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
+    DLHistory,
+    DLHistoryResponse,
     DLLatestSingleton,
     DLLatestSingletonResponse,
     DLSingletonsByRoot,
@@ -1284,24 +1286,8 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def dl_history(
-        self,
-        launcher_id: bytes32,
-        min_generation: Optional[uint32] = None,
-        max_generation: Optional[uint32] = None,
-        num_results: Optional[uint32] = None,
-    ) -> list[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex()}
-
-        if min_generation is not None:
-            request["min_generation"] = str(min_generation)
-        if max_generation is not None:
-            request["max_generation"] = str(max_generation)
-        if num_results is not None:
-            request["num_results"] = str(num_results)
-
-        response = await self.fetch("dl_history", request)
-        return [SingletonRecord.from_json_dict(single) for single in response["history"]]
+    async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
+        return DLHistoryResponse.from_json_dict(await self.fetch("dl_history", request.to_json_dict()))
 
     async def dl_owned_singletons(self) -> list[SingletonRecord]:
         response = await self.fetch(path="dl_owned_singletons", request_json={})
