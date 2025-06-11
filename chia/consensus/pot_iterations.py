@@ -125,4 +125,4 @@ def calculate_iterations_quality(
         )
         return max(iters, uint64(1))
     else:
-        raise NotImplementedError()
+        raise NotImplementedError

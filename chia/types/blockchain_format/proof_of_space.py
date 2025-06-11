@@ -94,7 +94,7 @@ def verify_and_get_quality_string_v2(
     *,
     height: uint32,
 ) -> Optional[bytes32]:
-    raise NotImplementedError()
+    raise NotImplementedError
 
 
 def passes_plot_filter(
