@@ -23,7 +23,7 @@ from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
 from chia.cmds.cmd_helpers import NeedsWalletRPC
 from chia.data_layer.data_layer import server_files_path_from_config
 from chia.data_layer.data_layer_util import ServerInfo, Status, Subscription
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, default_prefer_file_kv_blob_length
 from chia.data_layer.download_data import insert_from_delta_file
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
@@ -77,6 +77,11 @@ class SyncTimeCommand:
     profile_tasks: bool = option("--profile-tasks/--no-profile-tasks")
     restart_all: bool = option("--restart-all/--no-restart-all")
     working_path: Optional[Path] = option("--working-path", default=None)
+    prefer_db_kv_blob_length: int = option(
+        "--prefer-db-kv-blob-length",
+        default=default_prefer_file_kv_blob_length,
+        type=int,
+    )
 
     async def run(self) -> None:
         config = load_config(self.context.root_path, "config.yaml", "data_layer", fill_missing_services=True)
@@ -122,6 +127,7 @@ class SyncTimeCommand:
                         database=database_path,
                         merkle_blobs_path=merkle_blob_path,
                         key_value_blobs_path=key_value_blob_path,
+                        prefer_db_kv_blob_length=self.prefer_db_kv_blob_length,
                     )
                 )
 
