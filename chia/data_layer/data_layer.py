@@ -63,7 +63,10 @@ from chia.rpc.wallet_request_types import (
     DLLatestSingleton,
     DLStopTracking,
     DLTrackNew,
+    DLUpdateMultiple,
+    DLUpdateMultipleUpdates,
     DLUpdateRoot,
+    LauncherRootPair,
     LogIn,
 )
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -308,13 +311,15 @@ class DataLayer:
         await self.data_store.clean_node_table()
 
         if submit_on_chain:
-            update_dictionary: dict[bytes32, bytes32] = {}
+            updates: list[LauncherRootPair] = []
             for store_id in store_ids:
                 await self._update_confirmation_status(store_id=store_id)
                 root_hash = await self._get_publishable_root_hash(store_id=store_id)
-                update_dictionary[store_id] = root_hash
-            transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
-            return transaction_records
+                updates.append(LauncherRootPair(store_id, root_hash))
+            response = await self.wallet_rpc.dl_update_multiple(
+                DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee), DEFAULT_TX_CONFIG
+            )
+            return response.transactions
         else:
             return []
 
@@ -336,15 +341,17 @@ class DataLayer:
 
     async def submit_all_pending_roots(self, fee: uint64) -> list[TransactionRecord]:
         pending_roots = await self.data_store.get_all_pending_batches_roots()
-        update_dictionary: dict[bytes32, bytes32] = {}
+        updates: list[LauncherRootPair] = []
         if len(pending_roots) == 0:
             raise Exception("No pending roots found to submit")
         for pending_root in pending_roots:
             root_hash = pending_root.node_hash if pending_root.node_hash is not None else self.none_bytes
-            update_dictionary[pending_root.store_id] = root_hash
+            updates.append(LauncherRootPair(pending_root.store_id, root_hash))
             await self.data_store.change_root_status(pending_root, Status.PENDING)
-        transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
-        return transaction_records
+        response = await self.wallet_rpc.dl_update_multiple(
+            DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee), DEFAULT_TX_CONFIG
+        )
+        return response.transactions
 
     async def batch_insert(
         self,

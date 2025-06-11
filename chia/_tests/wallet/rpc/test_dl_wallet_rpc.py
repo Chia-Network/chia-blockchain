@@ -20,7 +20,10 @@ from chia.rpc.wallet_request_types import (
     DLSingletonsByRoot,
     DLStopTracking,
     DLTrackNew,
+    DLUpdateMultiple,
+    DLUpdateMultipleUpdates,
     DLUpdateRoot,
+    LauncherRootPair,
 )
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -196,12 +199,17 @@ class TestWalletRpc:
 
             next_root = bytes32([2] * 32)
             await client.dl_update_multiple(
-                {
-                    launcher_id: next_root,
-                    launcher_id_2: next_root,
-                    launcher_id_3: next_root,
-                },
-                uint64(0),
+                DLUpdateMultiple(
+                    updates=DLUpdateMultipleUpdates(
+                        [
+                            LauncherRootPair(launcher_id, next_root),
+                            LauncherRootPair(launcher_id_2, next_root),
+                            LauncherRootPair(launcher_id_3, next_root),
+                        ]
+                    ),
+                    fee=uint64(0),
+                ),
+                DEFAULT_TX_CONFIG,
             )
 
             for i in range(5):

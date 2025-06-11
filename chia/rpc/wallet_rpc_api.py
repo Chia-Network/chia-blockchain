@@ -38,6 +38,8 @@ from chia.rpc.wallet_request_types import (
     DLSingletonsByRootResponse,
     DLStopTracking,
     DLTrackNew,
+    DLUpdateMultiple,
+    DLUpdateMultipleResponse,
     DLUpdateRoot,
     DLUpdateRootResponse,
     Empty,
@@ -4067,33 +4069,37 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def dl_update_multiple(
         self,
-        request: dict[str, Any],
+        request: DLUpdateMultiple,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> DLUpdateMultipleResponse:
         """Update multiple singletons with new merkle roots"""
         if self.service.wallet_state_manager is None:
-            return {"success": False, "error": "not_initialized"}
+            raise RuntimeError("not initialized")
 
         wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             # TODO: This method should optionally link the singletons with announcements.
             #       Otherwise spends are vulnerable to signature subtraction.
-            fee_per_launcher = uint64(request.get("fee", 0) // len(request["updates"]))
-            for launcher, root in request["updates"].items():
+            # TODO: This method should natively support spending many and attaching one fee
+            fee_per_launcher = uint64(request.fee // len(request.updates.launcher_root_pairs))
+            for launcher_root_pair in request.updates.launcher_root_pairs:
                 await wallet.create_update_state_spend(
-                    bytes32.from_hexstr(launcher),
-                    bytes32.from_hexstr(root),
+                    launcher_root_pair.launcher_id,
+                    launcher_root_pair.new_root,
                     action_scope,
                     fee=fee_per_launcher,
                     extra_conditions=extra_conditions,
                 )
 
-            return {
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+            # tx_endpoint will take care of default values here
+            return DLUpdateMultipleResponse(
+                [],
+                [],
+            )
 
     async def dl_history(self, request: dict[str, Any]) -> EndpointResult:
         """Get the singleton record for the latest singleton of a launcher ID"""

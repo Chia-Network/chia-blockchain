@@ -724,6 +724,52 @@ class DLUpdateRootResponse(TransactionEndpointResponse):
     tx_record: TransactionRecord
 
 
+# utilities for DLUpdateMultiple
+@streamable
+@dataclass(frozen=True)
+class LauncherRootPair(Streamable):
+    launcher_id: bytes32
+    new_root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateMultipleUpdates(Streamable):
+    launcher_root_pairs: list[LauncherRootPair]
+
+    def __post_init__(self) -> None:
+        if len(set(pair.launcher_id for pair in self.launcher_root_pairs)) < len(self.launcher_root_pairs):
+            raise ValueError("Multiple updates specified for a single launcher in `DLUpdateMultiple`")
+
+    # TODO: deprecate the kinda silly format of this RPC and delete these functions
+    def to_json_dict(self) -> dict[str, Any]:
+        return {pair.launcher_id.hex(): pair.new_root.hex() for pair in self.launcher_root_pairs}
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            [
+                LauncherRootPair(
+                    bytes32.from_hexstr(key),
+                    bytes32.from_hexstr(value),
+                )
+                for key, value in json_dict.items()
+            ]
+        )
+
+
+@streamable
+@kw_only_dataclass
+class DLUpdateMultiple(TransactionEndpointRequest):
+    updates: DLUpdateMultipleUpdates
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateMultipleResponse(TransactionEndpointResponse):
+    pass
+
+
 @streamable
 @dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):

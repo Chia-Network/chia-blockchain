@@ -44,6 +44,8 @@ from chia.rpc.wallet_request_types import (
     DLSingletonsByRootResponse,
     DLStopTracking,
     DLTrackNew,
+    DLUpdateMultiple,
+    DLUpdateMultipleResponse,
     DLUpdateRoot,
     DLUpdateRootResponse,
     ExecuteSigningInstructions,
@@ -1271,20 +1273,16 @@ class WalletRpcClient(RpcClient):
 
     async def dl_update_multiple(
         self,
-        update_dictionary: dict[bytes32, bytes32],
-        fee: uint64,
+        request: DLUpdateMultiple,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        updates_as_strings = {str(lid): str(root) for lid, root in update_dictionary.items()}
-        request = {
-            "updates": updates_as_strings,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("dl_update_multiple", request)
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+    ) -> DLUpdateMultipleResponse:
+        return DLUpdateMultipleResponse.from_json_dict(
+            await self.fetch(
+                "dl_update_multiple", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def dl_history(
         self,
