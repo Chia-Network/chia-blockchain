@@ -1383,7 +1383,7 @@ class FullNode:
                     block_rate_height = end_height
 
                 self.log.info(
-                    "Added blocks {start_height} to {end_height} "
+                    f"Added blocks {start_height} to {end_height} "
                     f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1815,6 +1815,7 @@ class FullNode:
             difficulty = self.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
 
+        tx_peak = self.blockchain.get_tx_peak()
         # Notify farmers of the new signage point
         broadcast_farmer = farmer_protocol.NewSignagePoint(
             request.challenge_chain_vdf.challenge,
@@ -1824,6 +1825,7 @@ class FullNode:
             sub_slot_iters,
             request.index_from_challenge,
             uint32(0) if peak is None else peak.height,
+            tx_peak.height if tx_peak is not None else uint32(0),
             sp_source_data=SignagePointSourceData(
                 vdf_data=SPVDFSourceData(request.challenge_chain_vdf.output, request.reward_chain_vdf.output)
             ),
@@ -2254,8 +2256,8 @@ class FullNode:
 
         state_changed_data: dict[str, Any] = {
             "transaction_block": False,
-            "k_size": block.reward_chain_block.proof_of_space.size_v1(),
-            "k_size2": block.reward_chain_block.proof_of_space.size_v2(),
+            "k_size": block.reward_chain_block.proof_of_space.size().size_v1,
+            "k_size2": block.reward_chain_block.proof_of_space.size().size_v2,
             "header_hash": block.header_hash,
             "fork_height": None,
             "rolled_back_records": None,
@@ -2720,7 +2722,7 @@ class FullNode:
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
-
+                tx_peak = self.blockchain.get_tx_peak()
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
                     end_of_slot_bundle.challenge_chain.get_hash(),
@@ -2730,6 +2732,7 @@ class FullNode:
                     next_sub_slot_iters,
                     uint8(0),
                     uint32(0) if peak is None else peak.height,
+                    tx_peak.height if tx_peak is not None else uint32(0),
                     sp_source_data=SignagePointSourceData(
                         sub_slot_data=SPSubSlotSourceData(
                             end_of_slot_bundle.challenge_chain, end_of_slot_bundle.reward_chain

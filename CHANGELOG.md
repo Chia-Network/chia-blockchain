@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.5.4 Chia blockchain 2025-05-28
+
+## What's Changed
+
+### Added
+
+- Enabled Keccak support in the wallet
+- Improved logging and timing around block validation
+- Improved logging of block creation
+
+### Changed
+
+- Mempool: Optimized removal checking
+- Mempool: Optimized and hardened dedup logic
+- Mempool: Reject transactions that take too long to validate (2 seconds)
+
+### Fixed
+
+- Tighten chia_rs version to `>=0.21, <0.22` (Fixes #19613)
+- Fixed timelord peak selection to match the full node
+- Used monotonic clock for timing functions in harvester (Fixes "does not fit into uint" log errors)
+
 ## 2.5.3 Chia blockchain 2025-03-25
 
 ## What's Changed

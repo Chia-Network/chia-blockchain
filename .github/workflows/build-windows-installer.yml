@@ -44,7 +44,7 @@ jobs:
 
   build:
     name: Build EXE
-    runs-on: [windows-2019]
+    runs-on: [windows-2022]
     needs:
       - version
     timeout-minutes: 65
@@ -228,7 +228,7 @@ jobs:
         env:
           HAS_SIGNING_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
         run: |
-          $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
+          $env:path="C:\Program` Files\Microsoft` Visual` Studio\2022\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
           cd .\build_scripts
           .\build_windows-2-installer.ps1
@@ -317,14 +317,14 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - name: 2019
-            matrix: 2019
-            runs-on:
-              intel: windows-2019
           - name: 2022
             matrix: 2022
             runs-on:
               intel: windows-2022
+          - name: 2025
+            matrix: 2025
+            runs-on:
+              intel: windows-2025
         arch:
           - name: Intel
             matrix: intel
