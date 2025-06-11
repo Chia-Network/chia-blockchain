@@ -60,6 +60,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_request_types import (
     CreateNewDL,
+    DLGetMirrors,
     DLHistory,
     DLLatestSingleton,
     DLStopTracking,
@@ -898,11 +899,11 @@ class DataLayer:
         await self.wallet_rpc.dl_delete_mirror(coin_id, fee)
 
     async def get_mirrors(self, store_id: bytes32) -> list[Mirror]:
-        mirrors: list[Mirror] = await self.wallet_rpc.dl_get_mirrors(store_id)
+        mirrors: list[Mirror] = (await self.wallet_rpc.dl_get_mirrors(DLGetMirrors(store_id))).mirrors
         return [mirror for mirror in mirrors if mirror.urls]
 
     async def update_subscriptions_from_wallet(self, store_id: bytes32) -> None:
-        mirrors: list[Mirror] = await self.wallet_rpc.dl_get_mirrors(store_id)
+        mirrors: list[Mirror] = (await self.wallet_rpc.dl_get_mirrors(DLGetMirrors(store_id))).mirrors
         urls: list[str] = []
         for mirror in mirrors:
             urls += [url.decode("utf8") for url in mirror.urls]

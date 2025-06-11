@@ -32,6 +32,8 @@ from chia.rpc.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DLGetMirrors,
+    DLGetMirrorsResponse,
     DLHistory,
     DLHistoryResponse,
     DLLatestSingleton,
@@ -4134,17 +4136,14 @@ class WalletRpcApi:
 
         return DLOwnedSingletonsResponse(singletons, uint32(len(singletons)))
 
-    async def dl_get_mirrors(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def dl_get_mirrors(self, request: DLGetMirrors) -> DLGetMirrorsResponse:
         """Get all of the mirrors for a specific singleton"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
         wallet = self.service.wallet_state_manager.get_dl_wallet()
-        mirrors_json = []
-        for mirror in await wallet.get_mirrors_for_launcher(bytes32.from_hexstr(request["launcher_id"])):
-            mirrors_json.append(mirror.to_json_dict())
-
-        return {"mirrors": mirrors_json}
+        return DLGetMirrorsResponse(await wallet.get_mirrors_for_launcher(request.launcher_id))
 
     @tx_endpoint(push=True)
     async def dl_new_mirror(

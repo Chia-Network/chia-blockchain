@@ -9,6 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import Self, dataclass_transform
 
+from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
@@ -433,6 +434,18 @@ class DLHistoryResponse(Streamable):
 class DLOwnedSingletonsResponse(Streamable):
     singletons: list[SingletonRecord]
     count: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLGetMirrors(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLGetMirrorsResponse(Streamable):
+    mirrors: list[Mirror]
 
 
 @streamable
