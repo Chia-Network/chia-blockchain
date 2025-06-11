@@ -71,7 +71,7 @@ def redact_sensitive_data(obj: Any, redaction_triggers: Collection[str] = ("pass
     if isinstance(obj, dict):
         return {
             key: "***<redacted>***"
-            if any(trigger in key.casefold() for trigger in redaction_triggers)
+            if any(trigger.casefold() in key.casefold() for trigger in redaction_triggers)
             else redact_sensitive_data(value, redaction_triggers)
             for key, value in obj.items()
         }
