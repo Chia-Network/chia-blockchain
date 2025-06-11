@@ -234,7 +234,7 @@ async def get_transactions(
         skipped = 0
         num_per_screen = 5 if paginate else len(txs)
         for i in range(0, len(txs), num_per_screen):
-            for j in range(0, num_per_screen):
+            for j in range(num_per_screen):
                 if i + j + skipped >= len(txs):
                     break
                 coin_record: Optional[dict[str, Any]] = None

@@ -97,7 +97,7 @@ class KeychainProxy(DaemonProxy):
             self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
         except asyncio.TimeoutError:
-            raise KeychainProxyConnectionTimeout()
+            raise KeychainProxyConnectionTimeout
 
     async def start(self, wait_for_start: bool = False) -> None:
         self.keychain_connection_task = create_referenced_task(self.connect_to_keychain())
@@ -156,11 +156,11 @@ class KeychainProxy(DaemonProxy):
         if error:
             error_details = response["data"].get("error_details", {})
             if error == KEYCHAIN_ERR_LOCKED:
-                raise KeychainIsLocked()
+                raise KeychainIsLocked
             elif error == KEYCHAIN_ERR_NO_KEYS:
-                raise KeychainIsEmpty()
+                raise KeychainIsEmpty
             elif error == KEYCHAIN_ERR_KEY_NOT_FOUND:
-                raise KeychainKeyNotFound()
+                raise KeychainKeyNotFound
             elif error == KEYCHAIN_ERR_MALFORMED_REQUEST:
                 message = error_details.get("message", "")
                 raise KeychainMalformedRequest(message)
@@ -356,7 +356,7 @@ class KeychainProxy(DaemonProxy):
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets=private)
             if len(keys) == 0:
-                raise KeychainIsEmpty()
+                raise KeychainIsEmpty
             else:
                 selected_key = keys[0]
                 if fingerprint is not None:

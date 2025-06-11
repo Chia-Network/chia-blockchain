@@ -5,7 +5,7 @@ import unittest
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import AsyncExitStack
 from dataclasses import replace
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import (
@@ -64,7 +64,7 @@ async def ignore_block_validation(
     if "standard_block_tools" in request.keywords:
         return None
 
-    async def validate_block_body(*args: Any, **kwargs: Any) -> Literal[None]:
+    async def validate_block_body(*args: Any, **kwargs: Any) -> None:
         return None
 
     def create_wrapper(original_create: Any) -> Any:

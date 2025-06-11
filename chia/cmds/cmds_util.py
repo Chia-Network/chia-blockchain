@@ -267,7 +267,7 @@ def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Abort
     response = input(input_message).lower()
     if response not in {"y", "yes"}:
         print(abort_message)
-        raise click.Abort()
+        raise click.Abort
 
 
 def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:

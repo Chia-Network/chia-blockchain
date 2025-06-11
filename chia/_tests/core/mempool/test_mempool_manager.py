@@ -1205,7 +1205,7 @@ async def test_total_mempool_fees() -> None:
 async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     async def make_coin_spends(coins: list[Coin], *, high_fees: bool = True) -> list[CoinSpend]:
         spends_list = []
-        for i in range(0, len(coins)):
+        for i in range(len(coins)):
             coin_spend = make_spend(
                 coins[i],
                 IDENTITY_PUZZLE,

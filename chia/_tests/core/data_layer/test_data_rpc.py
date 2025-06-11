@@ -734,7 +734,7 @@ async def test_get_owned_stores(
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
-    for i in range(0, num_blocks):
+    for i in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = sum(
         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
@@ -752,7 +752,7 @@ async def test_get_owned_stores(
             expected_store_ids.append(launcher_id)
 
         await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 3)
-        for i in range(0, num_blocks):
+        for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.5)
 

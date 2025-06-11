@@ -2154,7 +2154,7 @@ class FullNode:
                         added = AddBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     elif Err(pre_validation_result.error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
-                        raise TimestampError()
+                        raise TimestampError
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
@@ -2369,7 +2369,7 @@ class FullNode:
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
                 if header_error == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
-                    raise TimestampError()
+                    raise TimestampError
                 else:
                     raise ConsensusError(header_error)
             validate_time = time.monotonic() - start_header_time

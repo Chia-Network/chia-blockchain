@@ -35,8 +35,8 @@ def test_constructor_invalid_inputs(page_size: int, page_size_limit: int, except
 
 def test_page_count() -> None:
     for page_size in range(1, 10):
-        for i in range(0, 10):
-            assert Paginator.create(range(0, i), page_size).page_count() == max(1, ceil(i / page_size))
+        for i in range(10):
+            assert Paginator.create(range(i), page_size).page_count() == max(1, ceil(i / page_size))
 
 
 @pytest.mark.parametrize(
@@ -62,10 +62,10 @@ def test_page_count() -> None:
     ],
 )
 def test_get_page_valid(length: int, page: int, page_size: int, expected_data: list[int]) -> None:
-    assert Paginator.create(list(range(0, length)), page_size).get_page(page) == expected_data
+    assert Paginator.create(list(range(length)), page_size).get_page(page) == expected_data
 
 
 @pytest.mark.parametrize("page", [-1000, -10, -1, 5, 10, 1000])
 def test_get_page_invalid(page: int) -> None:
     with pytest.raises(PageOutOfBoundsError):
-        Paginator.create(range(0, 17), 5).get_page(page)
+        Paginator.create(range(17), 5).get_page(page)

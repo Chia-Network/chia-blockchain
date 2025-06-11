@@ -824,7 +824,7 @@ class BlockTools:
                 num_empty_slots_added += 1
             else:
                 # Loop over every signage point (Except for the last ones, which are used for overflows)
-                for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
+                for signage_point_index in range(constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
                     curr = latest_block
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
                         constants, sub_slot_iters, uint8(signage_point_index)
@@ -1310,7 +1310,7 @@ class BlockTools:
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             cc_challenge, rc_challenge = get_challenges(constants, {}, finished_sub_slots, None)
-            for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
+            for signage_point_index in range(constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
                     BlockCache({}),

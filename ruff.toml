@@ -3,17 +3,41 @@ line-length = 120
 [lint]
 preview = true
 select = [
-	"PL",  # Pylint
-	"I",  # Isort
-	"FA",  # Flake8: future-annotations
-	"UP",  # Pyupgrade
-	"RUF",  # Ruff specific
-	"F",  # Flake8 core
-	"ASYNC",  # Flake8 async
-	"ISC",  # flake8-implicit-str-concat
+    "PL",  # Pylint
+    "I",  # Isort
+    "FA",  # Flake8: future-annotations
+    "UP",  # Pyupgrade
+    "RUF",  # Ruff specific
+    "F",  # Flake8 core
+    "ASYNC",  # Flake8 async
+    "ISC",  # flake8-implicit-str-concat
     "TID",  # flake8-tidy-imports
-	"E",
-	"W",
+    "T10", # Debug statements
+    "EXE", # shebang usage
+    "ICN", # Import name conventions (i.e. import pandas as pd)
+    "INP", # Missing __init__.py
+    "Q",  # quotes
+    "SLOT",  # __slots__ usage
+    "TID",  # Tidy imports
+    "FLY",  # .join -> f-string
+    "PIE",  # flake8 plugin for extra lints
+    "PYI",  # type stubs linting
+    "RSE",  # Linting raises
+    "S",  # Potential security issues
+    # pycodestyle
+    "E",
+    "W",
+    # Trailing commas
+    # "COM812" # missing-trailing-comma (5105 errors)
+    "COM818",
+    "COM819",
+    # Libraries we don't use so might as well enable
+    "INT",
+    "AIR",
+    "FAST",
+    "DJ",
+    "NPY",
+    "PD",
 ]
 explicit-preview-rules = false
 ignore = [
@@ -72,6 +96,25 @@ ignore = [
     "RUF043", # pytest-raises-ambiguous-pattern
     "RUF046", # unnecessary-cast-to-int
     "RUF052", # used-dummy-variable
+
+    # Security linter
+    # Need review on which of these we can/should fix
+    "S101",
+    "S110",
+    "S404",
+    "S311",
+    "S602",
+    "S607",
+    "S603",
+    "S608",
+    "S112",
+    "S105",
+    "S104",
+    "S323",
+    "S605",
+    "S301",
+    "S403",
+    "S106",
 ]
 
 

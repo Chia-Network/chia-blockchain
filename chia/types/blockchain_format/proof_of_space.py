@@ -23,7 +23,7 @@ def get_plot_id(pos: ProofOfSpace) -> bytes32:
 
 
 def validate_proof_v2(plot_id: bytes32, size: uint8, challenge: bytes32, proof: bytes) -> Optional[bytes]:
-    raise NotImplementedError()
+    raise NotImplementedError
 
 
 def verify_and_get_quality_string(
@@ -94,7 +94,7 @@ def verify_and_get_quality_string_v2(
     *,
     height: uint32,
 ) -> Optional[bytes32]:
-    raise NotImplementedError()
+    raise NotImplementedError
 
 
 def passes_plot_filter(

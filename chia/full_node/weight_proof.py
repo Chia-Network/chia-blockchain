@@ -1149,7 +1149,7 @@ def sub_slot_data_vdf_input(
     if is_overflow and new_sub_slot:
         if sub_slot_idx >= 2:
             if sub_slots[sub_slot_idx - 2].cc_slot_end_info is None:
-                for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
+                for ssd_idx in reversed(range(sub_slot_idx - 1)):
                     ssd = sub_slots[ssd_idx]
                     if ssd.cc_slot_end_info is not None:
                         ssd = sub_slots[ssd_idx + 1]
@@ -1164,7 +1164,7 @@ def sub_slot_data_vdf_input(
         return cc_input
 
     elif not is_overflow and not new_sub_slot:
-        for ssd_idx in reversed(range(0, sub_slot_idx)):
+        for ssd_idx in reversed(range(sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
             if ssd.cc_slot_end_info is not None:
                 ssd = sub_slots[ssd_idx + 1]
@@ -1181,7 +1181,7 @@ def sub_slot_data_vdf_input(
 
     elif not new_sub_slot and is_overflow:
         slots_seen = 0
-        for ssd_idx in reversed(range(0, sub_slot_idx)):
+        for ssd_idx in reversed(range(sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
             if ssd.cc_slot_end_info is not None:
                 slots_seen += 1
@@ -1474,7 +1474,7 @@ def __get_rc_sub_slot(
 
 def __get_cc_sub_slot(sub_slots: list[SubSlotData], idx: int, ses: Optional[SubEpochSummary]) -> ChallengeChainSubSlot:
     sub_slot: Optional[SubSlotData] = None
-    for i in reversed(range(0, idx)):
+    for i in reversed(range(idx)):
         sub_slot = sub_slots[i]
         if sub_slot.cc_slot_end_info is not None:
             break
