@@ -108,6 +108,7 @@ from chia.wallet.wallet_request_types import (
     DefaultCAT,
     DeleteKey,
     DIDGetPubkey,
+    DIDGetWalletName,
     DIDSetWalletName,
     FungibleAsset,
     GetNotifications,
@@ -1508,9 +1509,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     did_id_0 = res["my_did"]
 
     # Get wallet name
-    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
-    assert res["success"]
-    assert res["name"] == "Profile 1"
+    get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
+    assert get_name_res.name == "Profile 1"
     nft_wallet = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
     assert isinstance(nft_wallet, NFTWallet)
     assert nft_wallet.get_name() == "Profile 1 NFT Wallet"
@@ -1518,9 +1518,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     # Set wallet name
     new_wallet_name = "test name"
     await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(did_wallet_id_0, new_wallet_name))
-    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
-    assert res["success"]
-    assert res["name"] == new_wallet_name
+    get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
+    assert get_name_res.name == new_wallet_name
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
         await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_1_id, new_wallet_name))
 

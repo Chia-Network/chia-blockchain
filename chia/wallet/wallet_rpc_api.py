@@ -116,6 +116,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     CombineCoinsResponse,
     DeleteKey,
+    DIDGetWalletName,
+    DIDGetWalletNameResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
     Empty,
@@ -2533,11 +2535,10 @@ class WalletRpcApi:
         await wallet.set_name(request.name)
         return DIDSetWalletNameResponse(request.wallet_id)
 
-    async def did_get_wallet_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        name: str = wallet.get_name()  # type: ignore[no-untyped-call]  # Missing hint in `did_wallet.py`
-        return {"success": True, "wallet_id": wallet_id, "name": name}
+    @marshal
+    async def did_get_wallet_name(self, request: DIDGetWalletName) -> DIDGetWalletNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        return DIDGetWalletNameResponse(request.wallet_id, wallet.get_name())
 
     @tx_endpoint(push=True)
     async def did_update_recovery_ids(
