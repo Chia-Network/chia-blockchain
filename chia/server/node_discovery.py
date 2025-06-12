@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 import dns.asyncresolver
 from chia_rs.sized_ints import uint16, uint64
+from chia_rs.sized_bytes import bytes32
 
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
@@ -69,6 +70,8 @@ class FullNodeDiscovery:
     pending_outbound_connections: set[str] = field(default_factory=set)
     pending_tasks: set[asyncio.Task[None]] = field(default_factory=set)
     introducer_info_obj: Optional[UnresolvedPeerInfo] = field(default=None)
+    farm_list: set[bytes32] = field(default_factory=set)
+
 
     def __post_init__(self) -> None:
         random.shuffle(self.dns_servers)  # Don't always start with the same DNS server
@@ -210,6 +213,7 @@ class FullNodeDiscovery:
             self.log.warning(f"querying DNS introducer failed: {e}")
 
     async def on_connect_callback(self, peer: WSChiaConnection) -> None:
+        self.farm_list.add(peer.peer_node_id)
         if self.server.on_connect is not None:
             await self.server.on_connect(peer)
         else:
@@ -319,10 +323,10 @@ class FullNodeDiscovery:
 
                 is_feeler = False
                 has_collision = False
-                if self._num_needed_peers() == 0:
-                    if time.time() * 1000 * 1000 > next_feeler:
-                        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
-                        is_feeler = True
+                # if self._num_needed_peers() == 0:
+                #     if time.time() * 1000 * 1000 > next_feeler:
+                #         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
+                #         is_feeler = True
 
                 await self.address_manager.resolve_tried_collisions()
                 tries = 0

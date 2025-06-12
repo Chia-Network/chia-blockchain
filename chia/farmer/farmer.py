@@ -131,7 +131,8 @@ class Farmer:
         local_keychain: Optional[Keychain] = None,
     ):
         self.wallet_peers: Optional[WalletPeers] = None
-        local_node_synced: bool = False
+
+        self.node_last_sptime: set[bytes32] = set()
 
         self.keychain_proxy: Optional[KeychainProxy] = None
         self.local_keychain = local_keychain
@@ -158,6 +159,8 @@ class Farmer:
 
         self.cache_clear_task: Optional[asyncio.Task[None]] = None
         self.update_pool_state_task: Optional[asyncio.Task[None]] = None
+        self.sp_task: Optional[asyncio.Task[None]] = None
+
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
@@ -183,7 +186,63 @@ class Farmer:
         # Use to find missing signage points. (new_signage_point, time)
         self.prev_signage_point: Optional[tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
-    def initialize_wallet_peers(self) -> None:
+    async def _sp_task_handler(self) -> None:
+        while True:
+            log.debug(f"WJB _sp_task_handler PRE")
+            await asyncio.sleep(30)
+            log.debug(f"WJB _sp_task_handler POST")
+
+            allgood=False
+            found=False
+            count=0
+            ngcloseit=[]
+            goodcloseit=[]
+
+            log.debug(f"WJB _sp_task_handler prepeers")
+
+            for peer in self.server.get_connections(NodeType.FULL_NODE):
+                log.debug(f"WJB loop")
+                if peer.peer_node_id in self.wallet_peers.farm_list:
+                    log.debug(f"WJB goodcloseit")
+                    goodcloseit.append(peer)
+                else:
+                    log.debug(f"WJB _sp_task_handler trusted")
+                    if peer.peer_node_id in self.node_last_sptime:
+                        log.debug(f"allgood")
+                        allgood=True
+                        found=True
+                        continue
+                    count=count+1
+                    continue
+                if not found and peer.peer_node_id in self.node_last_sptime:
+                    log.debug(f"WJB _sp_task_handler found")
+                    found=True
+                    count=count+1
+                    continue
+                log.debug(f"WJB _sp_task_handler close")
+                ngcloseit.append(peer)
+
+            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count}")
+
+            self.node_last_sptime=set()
+
+            if allgood:
+                count=0
+                for peer in goodcloseit:
+                    await peer.close()
+            else:
+                for peer in ngcloseit:
+                    await peer.close()
+
+            if not found:
+                count=count+1
+
+            self.wallet_peers.target_outbound_count=count
+ 
+
+    def initialize_wallet_peers(self, target_outbound_count) -> None:
+        log.debug("WJB initialize_wallet_peers")
+        self.server.on_connect = self.on_connect
         network_name = self.config["selected_network"]
         try:
             default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
@@ -193,9 +252,10 @@ class Farmer:
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
         testing = self.config.get("testing", False)
         if self.wallet_peers is None and connect_to_unknown_peers and not testing:
+            log.debug("WJB self.wallet_peers is None and connect_to_unknown_peers and not testing")
             self.wallet_peers = WalletPeers(
                 server=self.server,
-                target_outbound_count=self.config["target_peer_count"],
+                target_outbound_count=target_outbound_count,
                 peers_file_path=self._root_path
                 / Path(self.config.get("farmer_peers_file_path", "wallet/db/farmer_peers.dat")),
                 introducer_info=self.config["introducer_peer"],
@@ -216,9 +276,8 @@ class Farmer:
                 if await self.setup_keys():
                     self.update_pool_state_task = create_referenced_task(self._periodically_update_pool_state_task())
                     self.cache_clear_task = create_referenced_task(self._periodically_clear_cache_and_refresh_task())
+                    self.sp_task = create_referenced_task(self._sp_task_handler())
                     log.debug("start_task: initialized")
-                    if self.wallet_peers is None:
-                        self.initialize_wallet_peers()
 
                     self.started = True
                     return
@@ -240,6 +299,9 @@ class Farmer:
                 await self.cache_clear_task
             if self.update_pool_state_task is not None:
                 await self.update_pool_state_task
+            if self.sp_task is not None:
+                await self.sp_task
+
             if self.keychain_proxy is not None:
                 proxy = self.keychain_proxy
                 self.keychain_proxy = None
@@ -310,6 +372,9 @@ class Farmer:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
+    def is_trusted(self, peer: WSChiaConnection) -> bool:
+        return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
+
     async def on_connect(self, peer: WSChiaConnection) -> None:
         self.state_changed("add_connection", {})
 
@@ -339,21 +404,18 @@ class Farmer:
             await peer.send_message(msg)
             self.harvester_handshake_task = None
 
-        if peer.connection_type is NodeType.HARVESTER:
+        if peer.connection_type == NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
             self.harvester_handshake_task = create_referenced_task(handshake_task())
 
-        if peer.connection_type is NodeType.FULL_NODE:
-            # trusted = self.is_trusted(peer)
-            # if not trusted and self.local_node_synced:
-            #     await peer.close()
+        if peer.connection_type == NodeType.FULL_NODE:
             if self.wallet_peers is not None:
                 await self.wallet_peers.on_connect(peer)
 
 
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
-        self.initialize_wallet_peers()
+        self.initialize_wallet_peers(0)
 
     def state_changed(self, change: str, data: dict[str, Any]) -> None:
         if self.state_changed_callback is not None:
@@ -370,10 +432,6 @@ class Farmer:
         )
 
     async def on_disconnect(self, connection: WSChiaConnection) -> None:
-        # if self.is_trusted(peer):
-        #    self.local_node_synced = False
-        #    self.initialize_wallet_peers()
-
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:
