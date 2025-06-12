@@ -118,6 +118,8 @@ from chia.wallet.wallet_request_types import (
     DeleteKey,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
+    DIDMessageSpend,
+    DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
     DIDUpdateRecoveryIDs,
@@ -2569,28 +2571,26 @@ class WalletRpcApi:
                 raise RuntimeError("updating recovery list failed")
 
     @tx_endpoint(push=False)
+    @marshal
     async def did_message_spend(
         self,
-        request: dict[str, Any],
+        request: DIDMessageSpend,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    ) -> DIDMessageSpendResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
 
         await wallet.create_message_spend(
             action_scope,
             extra_conditions=(
                 *extra_conditions,
-                *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in request.get("coin_announcements", [])),
-                *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in request.get("puzzle_announcements", [])),
+                *(CreateCoinAnnouncement(ca) for ca in request.coin_announcements),
+                *(CreatePuzzleAnnouncement(pa) for pa in request.puzzle_announcements),
             ),
         )
-        return {
-            "success": True,
-            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+
+        # tx_endpoint will take care of the default values here
+        return DIDMessageSpendResponse([], [], WalletSpendBundle([], G2Element()))
 
     async def did_get_info(self, request: dict[str, Any]) -> EndpointResult:
         if "coin_id" not in request:

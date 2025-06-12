@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DIDMessageSpend,
     DIDSetWalletName,
     FungibleAsset,
     GetNotifications,
@@ -1096,13 +1097,15 @@ async def did_message_spend(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_message_spend(
-                did_wallet_id,
+                DIDMessageSpend(
+                    wallet_id=uint32(did_wallet_id),
+                    push=push,
+                ),
                 CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
                 extra_conditions=(
                     *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
                     *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in puzzle_announcements),
                 ),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             print(f"Message Spend Bundle: {response.spend_bundle.to_json_dict()}")

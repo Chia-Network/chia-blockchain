@@ -47,6 +47,7 @@ from chia.wallet.wallet_request_types import (
     DIDGetRecoveryInfoResponse,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
+    DIDMessageSpend,
     DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
@@ -539,21 +540,17 @@ class WalletRpcClient(RpcClient):
 
     async def did_message_spend(
         self,
-        wallet_id: int,
+        request: DIDMessageSpend,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = False,
     ) -> DIDMessageSpendResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_message_spend", request)
-        return json_deserialize_with_clvm_streamable(response, DIDMessageSpendResponse)
+        return DIDMessageSpendResponse.from_json_dict(
+            await self.fetch(
+                "did_message_spend",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def update_did_metadata(
         self,
