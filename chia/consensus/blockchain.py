@@ -7,7 +7,6 @@ import logging
 import traceback
 from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import (
@@ -124,13 +123,12 @@ class Blockchain:
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
+        height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
-        blockchain_dir: Path,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
         log_coins: bool = False,
-        selected_network: Optional[str] = None,
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -158,7 +156,7 @@ class Blockchain:
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
-        await self._load_chain_from_store(blockchain_dir, selected_network)
+        await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()
         return self
 
@@ -166,11 +164,11 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, blockchain_dir: Path, selected_network: Optional[str] = None) -> None:
+    async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper, selected_network)
+        self.__height_map = height_map
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
