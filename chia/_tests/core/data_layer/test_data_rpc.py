@@ -56,6 +56,7 @@ from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
+from chia.rpc.wallet_request_types import DLLatestSingleton
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.aliases import DataLayerService, WalletService
 from chia.server.start_data_layer import create_data_layer_service
@@ -215,7 +216,7 @@ async def check_coin_state(wallet_node: WalletNode, coin_id: bytes32) -> bool:
 
 
 async def check_singleton_confirmed(dl: DataLayer, store_id: bytes32) -> bool:
-    return await dl.wallet_rpc.dl_latest_singleton(store_id, True) is not None
+    return (await dl.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton is not None
 
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:

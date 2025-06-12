@@ -962,13 +962,11 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
 
 
 async def dl_verify_proof(
-    request: dict[str, Any],
+    dlproof: DLProof,
     wallet_node: WalletNode,
     peer: WSChiaConnection,
-) -> dict[str, Any]:
+) -> VerifyProofResponse:
     """Verify a proof of inclusion for a DL singleton"""
-
-    dlproof = DLProof.from_json_dict(request)
 
     coin_id = dlproof.coin_id
     coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
@@ -982,4 +980,4 @@ async def dl_verify_proof(
         success=True,
         current_root=coin_states[0].spent_height is None,
     )
-    return response.to_json_dict()
+    return response
