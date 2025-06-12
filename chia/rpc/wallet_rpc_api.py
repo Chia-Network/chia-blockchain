@@ -32,6 +32,8 @@ from chia.rpc.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DLDeleteMirror,
+    DLDeleteMirrorResponse,
     DLGetMirrors,
     DLGetMirrorsResponse,
     DLHistory,
@@ -4177,30 +4179,32 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def dl_delete_mirror(
         self,
-        request: dict[str, Any],
+        request: DLDeleteMirror,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> DLDeleteMirrorResponse:
         """Remove an existing mirror for a specific singleton"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-
         async with self.service.wallet_state_manager.lock:
             await dl_wallet.delete_mirror(
-                bytes32.from_hexstr(request["coin_id"]),
+                request.coin_id,
                 self.service.get_full_node_peer(),
                 action_scope,
-                fee=request.get("fee", uint64(0)),
+                fee=request.fee,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will take care of default values here
+        return DLDeleteMirrorResponse(
+            [],
+            [],
+        )
 
     async def dl_verify_proof(
         self,

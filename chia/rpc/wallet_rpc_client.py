@@ -36,6 +36,8 @@ from chia.rpc.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
+    DLDeleteMirror,
+    DLDeleteMirrorResponse,
     DLGetMirrors,
     DLGetMirrorsResponse,
     DLHistory,
@@ -1313,21 +1315,16 @@ class WalletRpcClient(RpcClient):
 
     async def dl_delete_mirror(
         self,
-        coin_id: bytes32,
-        fee: uint64 = uint64(0),
+        request: DLDeleteMirror,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        response = await self.fetch(
-            path="dl_delete_mirror",
-            request_json={
-                "coin_id": coin_id.hex(),
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            },
+    ) -> DLDeleteMirrorResponse:
+        return DLDeleteMirrorResponse.from_json_dict(
+            await self.fetch(
+                "dl_delete_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_verify_proof(self, request: DLProof) -> VerifyProofResponse:
         response = await self.fetch(path="dl_verify_proof", request_json=request.to_json_dict())

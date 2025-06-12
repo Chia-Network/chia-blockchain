@@ -16,6 +16,7 @@ from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_request_types import (
     CreateNewDL,
+    DLDeleteMirror,
     DLGetMirrors,
     DLGetMirrorsResponse,
     DLHistory,
@@ -293,7 +294,9 @@ class TestWalletRpc:
                 uint32(height + 1),
             )
             await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([mirror]), DLGetMirrors(launcher_id))
-            await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
+            await client.dl_delete_mirror(
+                DLDeleteMirror(coin_id=mirror_coin.name(), fee=uint64(2000000000000), push=True), DEFAULT_TX_CONFIG
+            )
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
