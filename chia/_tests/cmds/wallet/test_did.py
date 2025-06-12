@@ -18,7 +18,13 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnn
 from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
-from chia.wallet.wallet_request_types import DIDMessageSpendResponse, DIDTransferDIDResponse, DIDUpdateMetadataResponse
+from chia.wallet.wallet_request_types import (
+    DIDMessageSpendResponse,
+    DIDSetWalletName,
+    DIDSetWalletNameResponse,
+    DIDTransferDIDResponse,
+    DIDUpdateMetadataResponse,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
@@ -118,9 +124,9 @@ def test_did_set_name(capsys: object, get_test_cli_clients: tuple[TestRpcClients
 
     # set RPC Client
     class DidSetNameRpcClient(TestWalletRpcClient):
-        async def did_set_wallet_name(self, wallet_id: int, name: str) -> dict[str, Union[str, int]]:
-            self.add_to_log("did_set_wallet_name", (wallet_id, name))
-            return {}
+        async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
+            self.add_to_log("did_set_wallet_name", (request.wallet_id, request.name))
+            return DIDSetWalletNameResponse(request.wallet_id)
 
     inst_rpc_client = DidSetNameRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

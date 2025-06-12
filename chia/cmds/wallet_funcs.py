@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DIDSetWalletName,
     GetNotifications,
     SendTransactionResponse,
     VCAddProofs,
@@ -985,7 +986,7 @@ async def did_set_wallet_name(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
-            await wallet_client.did_set_wallet_name(wallet_id, name)
+            await wallet_client.did_set_wallet_name(DIDSetWalletName(uint32(wallet_id), name))
             print(f"Successfully set a new name for DID wallet with id {wallet_id}: {name}")
         except Exception as e:
             print(f"Failed to set DID wallet name: {e}")
