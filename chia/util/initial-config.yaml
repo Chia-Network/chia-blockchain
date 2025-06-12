@@ -464,6 +464,9 @@ full_node:
     public_key: "config/ssl/full_node/public_full_node.key"
   use_chia_loop_policy: True
 
+  mempool:
+    minimum_fpc_for_block_inclusion: 0.0
+
 ui:
   # Which port to use to communicate with the full node
   rpc_port: 8555
