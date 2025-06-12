@@ -300,6 +300,19 @@ class DIDSetWalletNameResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDGetWalletName(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetWalletNameResponse(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDGetPubkey(Streamable):
     wallet_id: uint32
 

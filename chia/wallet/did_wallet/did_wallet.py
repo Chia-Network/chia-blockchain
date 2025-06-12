@@ -576,7 +576,7 @@ class DIDWallet:
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.wallet_info.name
 
     async def create_update_spend(
