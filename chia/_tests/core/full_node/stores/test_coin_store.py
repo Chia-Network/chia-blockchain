@@ -220,22 +220,12 @@ async def test_num_unspent(bt: BlockTools, db_version: int) -> None:
         for block in blocks:
             if not block.is_transaction_block():
                 continue
-
-            if block.is_transaction_block():
-                assert block.foliage_transaction_block is not None
-                removals: list[bytes32] = []
-                additions: list[Coin] = []
-                await coin_store.new_block(
-                    block.height,
-                    block.foliage_transaction_block.timestamp,
-                    block.get_included_reward_coins(),
-                    additions,
-                    removals,
-                )
-
-                expect_unspent += len(block.get_included_reward_coins())
-                assert await coin_store.num_unspent() == expect_unspent
-                test_excercised = expect_unspent > 0
+            assert block.foliage_transaction_block is not None
+            reward_coins = block.get_included_reward_coins()
+            await coin_store.new_block(block.height, block.foliage_transaction_block.timestamp, reward_coins, [], [])
+            expect_unspent += len(reward_coins)
+            assert await coin_store.num_unspent() == expect_unspent
+            test_excercised = expect_unspent > 0
 
     assert test_excercised
 
