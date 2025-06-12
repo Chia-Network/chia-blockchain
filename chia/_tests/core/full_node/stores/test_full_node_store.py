@@ -20,8 +20,8 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node_store import FullNodeStore, UnfinishedBlockEntry, find_best_block
-from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block

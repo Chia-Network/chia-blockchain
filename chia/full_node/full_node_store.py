@@ -15,7 +15,7 @@ from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
-from chia.full_node.signage_point import SignagePoint
+from chia.consensus.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
