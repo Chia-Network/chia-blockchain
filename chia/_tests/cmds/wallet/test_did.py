@@ -11,6 +11,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.rpc.wallet_request_types import (
+    DIDMessageSpend,
     DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
@@ -304,13 +305,14 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: tuple[TestRpcCl
     class DidMessageSpendRpcClient(TestWalletRpcClient):
         async def did_message_spend(
             self,
-            wallet_id: int,
+            request: DIDMessageSpend,
             tx_config: TXConfig,
-            extra_conditions: tuple[Condition, ...],
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DIDMessageSpendResponse:
-            self.add_to_log("did_message_spend", (wallet_id, tx_config, extra_conditions, push, timelock_info))
+            self.add_to_log(
+                "did_message_spend", (request.wallet_id, tx_config, extra_conditions, request.push, timelock_info)
+            )
             return DIDMessageSpendResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = DidMessageSpendRpcClient()
