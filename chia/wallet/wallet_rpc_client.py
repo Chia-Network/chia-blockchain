@@ -52,6 +52,7 @@ from chia.wallet.wallet_request_types import (
     DIDSetWalletNameResponse,
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
+    DIDUpdateRecoveryIDs,
     DIDUpdateRecoveryIDsResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -519,25 +520,17 @@ class WalletRpcClient(RpcClient):
 
     async def update_did_recovery_list(
         self,
-        wallet_id: int,
-        recovery_list: list[str],
-        num_verification: int,
+        request: DIDUpdateRecoveryIDs,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> DIDUpdateRecoveryIDsResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "new_list": recovery_list,
-            "num_verifications_required": num_verification,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_update_recovery_ids", request)
-        return json_deserialize_with_clvm_streamable(response, DIDUpdateRecoveryIDsResponse)
+        return DIDUpdateRecoveryIDsResponse.from_json_dict(
+            await self.fetch(
+                "did_update_recovery_ids",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def get_did_recovery_list(self, wallet_id: int) -> dict[str, Any]:
         request = {"wallet_id": wallet_id}

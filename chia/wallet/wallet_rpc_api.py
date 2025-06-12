@@ -120,6 +120,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetWalletNameResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
+    DIDUpdateRecoveryIDs,
+    DIDUpdateRecoveryIDsResponse,
     Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -2541,34 +2543,30 @@ class WalletRpcApi:
         return DIDGetWalletNameResponse(request.wallet_id, wallet.get_name())
 
     @tx_endpoint(push=True)
+    @marshal
     async def did_update_recovery_ids(
         self,
-        request: dict[str, Any],
+        request: DIDUpdateRecoveryIDs,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    ) -> DIDUpdateRecoveryIDsResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         recovery_list = []
-        for _ in request["new_list"]:
-            recovery_list.append(decode_puzzle_hash(_))
-        if "num_verifications_required" in request:
-            new_amount_verifications_required = uint64(request["num_verifications_required"])
+        for puzzle_hash in request.new_list:
+            recovery_list.append(decode_puzzle_hash(puzzle_hash))
+        if request.num_verifications_required is not None:
+            new_amount_verifications_required = request.num_verifications_required
         else:
             new_amount_verifications_required = uint64(len(recovery_list))
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
             if update_success:
-                await wallet.create_update_spend(
-                    action_scope, fee=uint64(request.get("fee", 0)), extra_conditions=extra_conditions
-                )
-                return {
-                    "success": True,
-                    "transactions": None,  # tx_endpoint wrapper will take care of this
-                }
+                await wallet.create_update_spend(action_scope, fee=request.fee, extra_conditions=extra_conditions)
+                # tx_endpoint will take care of default values here
+                return DIDUpdateRecoveryIDsResponse([], [])
             else:
-                return {"success": False, "transactions": []}  # pragma: no cover
+                raise RuntimeError("updating recovery list failed")
 
     @tx_endpoint(push=False)
     async def did_message_spend(
