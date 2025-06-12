@@ -20,6 +20,9 @@ class HarvesterRpcClient(RpcClient):
     async def refresh_plots(self) -> None:
         await self.fetch("refresh_plots", {})
 
+    async def hard_refresh_plots(self) -> None:
+        await self.fetch("hard_refresh_plots", {})
+
     async def delete_plot(self, filename: str) -> bool:
         response = await self.fetch("delete_plot", {"filename": filename})
         # TODO: casting due to lack of type checked deserialization
