@@ -116,6 +116,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     CombineCoinsResponse,
     DeleteKey,
+    DIDSetWalletName,
+    DIDSetWalletNameResponse,
     Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -2525,11 +2527,11 @@ class WalletRpcApi:
     # Distributed Identities
     ##########################################################################################
 
-    async def did_set_wallet_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        await wallet.set_name(str(request["name"]))
-        return {"success": True, "wallet_id": wallet_id}
+    @marshal
+    async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        await wallet.set_name(request.name)
+        return DIDSetWalletNameResponse(request.wallet_id)
 
     async def did_get_wallet_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

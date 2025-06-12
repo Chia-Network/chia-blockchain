@@ -108,6 +108,7 @@ from chia.wallet.wallet_request_types import (
     DefaultCAT,
     DeleteKey,
     DIDGetPubkey,
+    DIDSetWalletName,
     FungibleAsset,
     GetNotifications,
     GetPrivateKey,
@@ -1516,13 +1517,12 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     # Set wallet name
     new_wallet_name = "test name"
-    res = await wallet_1_rpc.did_set_wallet_name(did_wallet_id_0, new_wallet_name)
-    assert res["success"]
+    await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(did_wallet_id_0, new_wallet_name))
     res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
     assert res["success"]
     assert res["name"] == new_wallet_name
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
-        await wallet_1_rpc.did_set_wallet_name(wallet_1_id, new_wallet_name)
+        await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_1_id, new_wallet_name))
 
     # Check DID ID
     res = await wallet_1_rpc.get_did_id(did_wallet_id_0)

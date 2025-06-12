@@ -46,6 +46,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetRecoveryInfo,
     DIDGetRecoveryInfoResponse,
     DIDMessageSpendResponse,
+    DIDSetWalletName,
+    DIDSetWalletNameResponse,
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
@@ -669,10 +671,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_transfer_did", request)
         return json_deserialize_with_clvm_streamable(response, DIDTransferDIDResponse)
 
-    async def did_set_wallet_name(self, wallet_id: int, name: str) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "name": name}
-        response = await self.fetch("did_set_wallet_name", request)
-        return response
+    async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
+        return DIDSetWalletNameResponse.from_json_dict(await self.fetch("did_set_wallet_name", request.to_json_dict()))
 
     async def did_get_wallet_name(self, wallet_id: int) -> dict[str, Any]:
         request = {"wallet_id": wallet_id}
