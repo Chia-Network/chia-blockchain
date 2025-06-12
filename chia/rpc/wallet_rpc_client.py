@@ -32,6 +32,8 @@ from chia.rpc.wallet_request_types import (
     DIDGetPubkeyResponse,
     DIDGetRecoveryInfo,
     DIDGetRecoveryInfoResponse,
+    DIDGetWalletName,
+    DIDGetWalletNameResponse,
     DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
@@ -652,10 +654,8 @@ class WalletRpcClient(RpcClient):
     async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
         return DIDSetWalletNameResponse.from_json_dict(await self.fetch("did_set_wallet_name", request.to_json_dict()))
 
-    async def did_get_wallet_name(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("did_get_wallet_name", request)
-        return response
+    async def did_get_wallet_name(self, request: DIDGetWalletName) -> DIDGetWalletNameResponse:
+        return DIDGetWalletNameResponse.from_json_dict(await self.fetch("did_get_wallet_name", request.to_json_dict()))
 
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.
     async def create_new_pool_wallet(
