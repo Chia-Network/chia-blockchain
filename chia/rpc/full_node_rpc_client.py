@@ -6,7 +6,7 @@ from chia_rs import BlockRecord, CoinSpend, EndOfSubSlotBundle, FullBlock, Spend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.full_node.signage_point import SignagePoint
+from chia.consensus.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpendWithConditions
