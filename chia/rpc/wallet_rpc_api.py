@@ -14,7 +14,7 @@ from clvm_tools.binutils import assemble
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_util import dl_verify_proof
-from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.outbound_message import NodeType
@@ -38,6 +38,8 @@ from chia.rpc.wallet_request_types import (
     DLHistoryResponse,
     DLLatestSingleton,
     DLLatestSingletonResponse,
+    DLNewMirror,
+    DLNewMirrorResponse,
     DLOwnedSingletonsResponse,
     DLSingletonsByRoot,
     DLSingletonsByRootResponse,
@@ -4146,12 +4148,13 @@ class WalletRpcApi:
         return DLGetMirrorsResponse(await wallet.get_mirrors_for_launcher(request.launcher_id))
 
     @tx_endpoint(push=True)
+    @marshal
     async def dl_new_mirror(
         self,
-        request: dict[str, Any],
+        request: DLNewMirror,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> DLNewMirrorResponse:
         """Add a new on chain message for a specific singleton"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
@@ -4159,17 +4162,19 @@ class WalletRpcApi:
         dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             await dl_wallet.create_new_mirror(
-                bytes32.from_hexstr(request["launcher_id"]),
-                request["amount"],
-                [bytes(url, "utf8") for url in request["urls"]],
+                request.launcher_id,
+                request.amount,
+                Mirror.encode_urls(request.urls),
                 action_scope,
-                fee=request.get("fee", uint64(0)),
+                fee=request.fee,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will take care of default values here
+        return DLNewMirrorResponse(
+            [],
+            [],
+        )
 
     @tx_endpoint(push=True)
     async def dl_delete_mirror(

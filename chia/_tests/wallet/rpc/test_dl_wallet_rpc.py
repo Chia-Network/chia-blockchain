@@ -20,6 +20,7 @@ from chia.rpc.wallet_request_types import (
     DLGetMirrorsResponse,
     DLHistory,
     DLLatestSingleton,
+    DLNewMirror,
     DLSingletonsByRoot,
     DLStopTracking,
     DLTrackNew,
@@ -260,7 +261,14 @@ class TestWalletRpc:
             owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
             assert owned_launcher_ids == sorted([launcher_id, launcher_id_2, launcher_id_3])
 
-            txs = await client.dl_new_mirror(launcher_id, uint64(1000), [b"foo", b"bar"], fee=uint64(2000000000000))
+            txs = (
+                await client.dl_new_mirror(
+                    DLNewMirror(
+                        launcher_id=launcher_id, amount=uint64(1000), urls=["foo", "bar"], fee=uint64(2000000000000)
+                    ),
+                    DEFAULT_TX_CONFIG,
+                )
+            ).transactions
             await full_node_api.wait_transaction_records_entered_mempool(txs)
             height = full_node_api.full_node.blockchain.get_peak_height()
             assert height is not None

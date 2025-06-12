@@ -42,6 +42,8 @@ from chia.rpc.wallet_request_types import (
     DLHistoryResponse,
     DLLatestSingleton,
     DLLatestSingletonResponse,
+    DLNewMirror,
+    DLNewMirrorResponse,
     DLOwnedSingletonsResponse,
     DLSingletonsByRoot,
     DLSingletonsByRootResponse,
@@ -1298,25 +1300,16 @@ class WalletRpcClient(RpcClient):
 
     async def dl_new_mirror(
         self,
-        launcher_id: bytes32,
-        amount: uint64,
-        urls: list[bytes],
-        fee: uint64 = uint64(0),
+        request: DLNewMirror,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        response = await self.fetch(
-            path="dl_new_mirror",
-            request_json={
-                "launcher_id": launcher_id.hex(),
-                "amount": amount,
-                "urls": [url.decode("utf8") for url in urls],
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            },
+    ) -> DLNewMirrorResponse:
+        return DLNewMirrorResponse.from_json_dict(
+            await self.fetch(
+                "dl_new_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_delete_mirror(
         self,

@@ -808,6 +808,20 @@ class DLUpdateMultipleResponse(TransactionEndpointResponse):
 
 
 @streamable
+@kw_only_dataclass
+class DLNewMirror(TransactionEndpointRequest):
+    launcher_id: bytes32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    urls: list[str] = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLNewMirrorResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
 @dataclass(frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str = field(default_factory=default_raise)
