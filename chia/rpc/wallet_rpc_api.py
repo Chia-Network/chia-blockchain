@@ -13,7 +13,7 @@ from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
-from chia.data_layer.data_layer_util import dl_verify_proof
+from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
@@ -4206,10 +4206,11 @@ class WalletRpcApi:
             [],
         )
 
+    @marshal
     async def dl_verify_proof(
         self,
-        request: dict[str, Any],
-    ) -> EndpointResult:
+        request: DLProof,
+    ) -> VerifyProofResponse:
         """Verify a proof of inclusion for a DL singleton"""
         res = await dl_verify_proof(
             request,

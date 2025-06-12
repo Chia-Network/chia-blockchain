@@ -1327,8 +1327,7 @@ class WalletRpcClient(RpcClient):
         )
 
     async def dl_verify_proof(self, request: DLProof) -> VerifyProofResponse:
-        response = await self.fetch(path="dl_verify_proof", request_json=request.to_json_dict())
-        return json_deserialize_with_clvm_streamable(response, VerifyProofResponse)
+        return VerifyProofResponse.from_json_dict(await self.fetch("dl_verify_proof", request.to_json_dict()))
 
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         response = await self.fetch("get_notifications", request.to_json_dict())
