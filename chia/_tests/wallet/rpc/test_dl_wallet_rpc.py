@@ -264,7 +264,11 @@ class TestWalletRpc:
             txs = (
                 await client.dl_new_mirror(
                     DLNewMirror(
-                        launcher_id=launcher_id, amount=uint64(1000), urls=["foo", "bar"], fee=uint64(2000000000000)
+                        launcher_id=launcher_id,
+                        amount=uint64(1000),
+                        urls=["foo", "bar"],
+                        fee=uint64(2000000000000),
+                        push=True,
                     ),
                     DEFAULT_TX_CONFIG,
                 )

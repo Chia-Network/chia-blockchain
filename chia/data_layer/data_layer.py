@@ -894,7 +894,7 @@ class DataLayer:
         if not urls:
             raise RuntimeError("URL list can't be empty")
         await self.wallet_rpc.dl_new_mirror(
-            DLNewMirror(launcher_id=store_id, amount=amount, urls=urls, fee=fee), DEFAULT_TX_CONFIG
+            DLNewMirror(launcher_id=store_id, amount=amount, urls=urls, fee=fee, push=True), DEFAULT_TX_CONFIG
         )
 
     async def delete_mirror(self, coin_id: bytes32, fee: uint64) -> None:
