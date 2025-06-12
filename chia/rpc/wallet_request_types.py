@@ -658,6 +658,20 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class DIDUpdateRecoveryIDs(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    new_list: list[str] = field(default_factory=default_raise)
+    num_verifications_required: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
 class NFTSetDIDBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
@@ -747,12 +761,6 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
-    pass
 
 
 @streamable
