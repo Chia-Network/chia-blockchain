@@ -48,6 +48,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
@@ -263,15 +264,16 @@ class FullNode:
             log_coins = self.config.get("log_coins", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+            selected_network = self.config.get("selected_network")
+            height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
             self._blockchain = await Blockchain.create(
                 coin_store=self.coin_store,
                 block_store=self.block_store,
                 consensus_constants=self.constants,
-                blockchain_dir=self.db_path.parent,
+                height_map=height_map,
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
-                selected_network=self.config.get("selected_network"),
             )
 
             self._mempool_manager = MempoolManager(
