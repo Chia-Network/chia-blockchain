@@ -109,6 +109,7 @@ from chia.wallet.wallet_request_types import (
     DeleteKey,
     DIDGetPubkey,
     DIDGetWalletName,
+    DIDMessageSpend,
     DIDSetWalletName,
     DIDUpdateRecoveryIDs,
     GetNotifications,
@@ -1530,7 +1531,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     # Update recovery list
     update_res = await wallet_1_rpc.update_did_recovery_list(
         DIDUpdateRecoveryIDs(
-            wallet_id=uint32(did_wallet_id_0), new_list=[did_id_0], num_verifications_required=uint64(1)
+            wallet_id=uint32(did_wallet_id_0), new_list=[did_id_0], num_verifications_required=uint64(1), push=True
         ),
         DEFAULT_TX_CONFIG,
     )
@@ -1582,7 +1583,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     assert metadata["Twitter"] == "Https://test"
 
     last_did_coin = await did_wallet_2.get_coin()
-    await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG, push=True)
+    await wallet_2_rpc.did_message_spend(DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG)
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -1592,7 +1593,9 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     assert next_did_coin.parent_coin_info == last_did_coin.name()
     last_did_coin = next_did_coin
 
-    await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG.override(reuse_puzhash=True), push=True)
+    await wallet_2_rpc.did_message_spend(
+        DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
+    )
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
