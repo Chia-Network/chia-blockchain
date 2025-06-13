@@ -196,11 +196,12 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
+    HARD_FORK_3_0 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
 )
 def consensus_mode(request):
     return request.param
@@ -216,6 +217,13 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
+
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        ret = ret.replace(
+            HARD_FORK_HEIGHT=uint32(0),
+            HARD_FORK2_HEIGHT=uint32(0),
+        )
+
     return ret
 
 
