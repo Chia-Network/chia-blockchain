@@ -58,6 +58,10 @@ from chia.rpc.wallet_request_types import (
     DefaultCAT,
     DeleteKey,
     DIDGetPubkey,
+    DIDGetWalletName,
+    DIDMessageSpend,
+    DIDSetWalletName,
+    DIDUpdateRecoveryIDs,
     GetNotifications,
     GetPrivateKey,
     GetSyncStatusResponse,
@@ -1500,22 +1504,19 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     did_id_0 = res["my_did"]
 
     # Get wallet name
-    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
-    assert res["success"]
-    assert res["name"] == "Profile 1"
+    get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
+    assert get_name_res.name == "Profile 1"
     nft_wallet = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
     assert isinstance(nft_wallet, NFTWallet)
     assert nft_wallet.get_name() == "Profile 1 NFT Wallet"
 
     # Set wallet name
     new_wallet_name = "test name"
-    res = await wallet_1_rpc.did_set_wallet_name(did_wallet_id_0, new_wallet_name)
-    assert res["success"]
-    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
-    assert res["success"]
-    assert res["name"] == new_wallet_name
+    await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(did_wallet_id_0, new_wallet_name))
+    get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
+    assert get_name_res.name == new_wallet_name
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
-        await wallet_1_rpc.did_set_wallet_name(wallet_1_id, new_wallet_name)
+        await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_1_id, new_wallet_name))
 
     # Check DID ID
     res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
@@ -1528,7 +1529,12 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     # Update recovery list
-    update_res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1, DEFAULT_TX_CONFIG)
+    update_res = await wallet_1_rpc.update_did_recovery_list(
+        DIDUpdateRecoveryIDs(
+            wallet_id=uint32(did_wallet_id_0), new_list=[did_id_0], num_verifications_required=uint64(1), push=True
+        ),
+        DEFAULT_TX_CONFIG,
+    )
     assert len(update_res.transactions) > 0
     res = await wallet_1_rpc.get_did_recovery_list(did_wallet_id_0)
     assert res["num_required"] == 1
@@ -1577,7 +1583,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     assert metadata["Twitter"] == "Https://test"
 
     last_did_coin = await did_wallet_2.get_coin()
-    await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG, push=True)
+    await wallet_2_rpc.did_message_spend(DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG)
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -1587,7 +1593,9 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     assert next_did_coin.parent_coin_info == last_did_coin.name()
     last_did_coin = next_did_coin
 
-    await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG.override(reuse_puzhash=True), push=True)
+    await wallet_2_rpc.did_message_spend(
+        DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
+    )
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)

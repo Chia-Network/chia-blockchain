@@ -6,11 +6,21 @@ from typing import Optional, Union
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32, bytes48
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.rpc.wallet_request_types import DIDMessageSpendResponse, DIDTransferDIDResponse, DIDUpdateMetadataResponse
+from chia.rpc.wallet_request_types import (
+    DIDGetInfo,
+    DIDGetInfoMetadata,
+    DIDGetInfoResponse,
+    DIDMessageSpend,
+    DIDMessageSpendResponse,
+    DIDSetWalletName,
+    DIDSetWalletNameResponse,
+    DIDTransferDIDResponse,
+    DIDUpdateMetadataResponse,
+)
 from chia.types.blockchain_format.program import NIL, Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
@@ -118,9 +128,9 @@ def test_did_set_name(capsys: object, get_test_cli_clients: tuple[TestRpcClients
 
     # set RPC Client
     class DidSetNameRpcClient(TestWalletRpcClient):
-        async def did_set_wallet_name(self, wallet_id: int, name: str) -> dict[str, Union[str, int]]:
-            self.add_to_log("did_set_wallet_name", (wallet_id, name))
-            return {}
+        async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
+            self.add_to_log("did_set_wallet_name", (request.wallet_id, request.name))
+            return DIDSetWalletNameResponse(request.wallet_id)
 
     inst_rpc_client = DidSetNameRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -164,21 +174,21 @@ def test_did_get_details(capsys: object, get_test_cli_clients: tuple[TestRpcClie
 
     # set RPC Client
     class DidGetDetailsRpcClient(TestWalletRpcClient):
-        async def get_did_info(self, coin_id: str, latest: bool) -> dict[str, object]:
-            self.add_to_log("get_did_info", (coin_id, latest))
-            response = {
-                "did_id": encode_puzzle_hash(get_bytes32(2), "did:chia:"),
-                "latest_coin": get_bytes32(3).hex(),
-                "p2_address": encode_puzzle_hash(get_bytes32(4), "xch"),
-                "public_key": bytes48([5] * 48).hex(),
-                "launcher_id": get_bytes32(6).hex(),
-                "metadata": "did metadata",
-                "recovery_list_hash": get_bytes32(7).hex(),
-                "num_verification": 8,
-                "full_puzzle": get_bytes32(9).hex(),
-                "solution": get_bytes32(10).hex(),
-                "hints": [get_bytes32(11).hex(), get_bytes32(12).hex()],
-            }
+        async def get_did_info(self, request: DIDGetInfo) -> DIDGetInfoResponse:
+            self.add_to_log("get_did_info", (request.coin_id, request.latest))
+            response = DIDGetInfoResponse(
+                did_id=encode_puzzle_hash(get_bytes32(2), "did:chia:"),
+                latest_coin=get_bytes32(3),
+                p2_address=encode_puzzle_hash(get_bytes32(4), "xch"),
+                public_key=bytes48([5] * 48),
+                launcher_id=get_bytes32(6),
+                metadata=DIDGetInfoMetadata.from_dict({"did metadata": "yes"}),
+                recovery_list_hash=get_bytes32(7),
+                num_verification=uint16(8),
+                full_puzzle=Program.to(9),
+                solution=Program.to(10),
+                hints=[get_bytes32(11), get_bytes32(12)],
+            )
             return response
 
     inst_rpc_client = DidGetDetailsRpcClient()
@@ -192,11 +202,11 @@ def test_did_get_details(capsys: object, get_test_cli_clients: tuple[TestRpcClie
         "Inner P2 Address:       xch1qszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqkxck8d",
         f"Public Key:             {bytes48([5] * 48).hex()}",
         f"Launcher ID:            {get_bytes32(6).hex()}",
-        "DID Metadata:           did metadata",
+        "DID Metadata:           {'did metadata': 'yes'}",
         f"Recovery List Hash:     {get_bytes32(7).hex()}",
         "Recovery Required Verifications: 8",
-        f"Last Spend Puzzle:      {get_bytes32(9).hex()}",
-        "Last Spend Solution:    0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+        "Last Spend Puzzle:      09",
+        "Last Spend Solution:    0a",
         "Last Spend Hints:       ['0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b', "
         "'0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c']",
     ]
@@ -298,13 +308,14 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: tuple[TestRpcCl
     class DidMessageSpendRpcClient(TestWalletRpcClient):
         async def did_message_spend(
             self,
-            wallet_id: int,
+            request: DIDMessageSpend,
             tx_config: TXConfig,
-            extra_conditions: tuple[Condition, ...],
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DIDMessageSpendResponse:
-            self.add_to_log("did_message_spend", (wallet_id, tx_config, extra_conditions, push, timelock_info))
+            self.add_to_log(
+                "did_message_spend", (request.wallet_id, tx_config, extra_conditions, request.push, timelock_info)
+            )
             return DIDMessageSpendResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = DidMessageSpendRpcClient()

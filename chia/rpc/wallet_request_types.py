@@ -9,6 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import Self, dataclass_transform
 
+from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -283,6 +284,78 @@ class DefaultCAT(Streamable):
 @dataclass(frozen=True)
 class GetCATListResponse(Streamable):
     cat_list: list[DefaultCAT]
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDSetWalletName(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDSetWalletNameResponse(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetWalletName(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetWalletNameResponse(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetInfo(Streamable):
+    coin_id: str
+    latest: bool = True
+
+
+class DIDGetInfoMetadata:
+    metadata: dict[str, str]
+
+    @classmethod
+    def from_dict(cls, target_dict: dict[str, str]) -> Self:
+        self = cls()
+        self.metadata = target_dict
+        return self
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return self.metadata
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls.from_dict(json_dict)
+
+    def __bytes__(self) -> None:
+        raise NotImplementedError("Should not stream DIDGetInfoMetadata as bytes")
+
+    def parse(self) -> None:
+        raise NotImplementedError("Should not stream DIDGetInfoMetadata as bytes")
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetInfoResponse(Streamable):
+    did_id: str
+    latest_coin: bytes32
+    p2_address: str
+    public_key: bytes
+    recovery_list_hash: Optional[bytes32]
+    num_verification: uint16
+    metadata: DIDGetInfoMetadata
+    launcher_id: bytes32
+    full_puzzle: Program
+    solution: Program
+    hints: list[bytes]
 
 
 @streamable
@@ -632,6 +705,34 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class DIDUpdateRecoveryIDs(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    new_list: list[str] = field(default_factory=default_raise)
+    num_verifications_required: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
+class DIDMessageSpend(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    coin_announcements: list[bytes] = field(default_factory=list)
+    puzzle_announcements: list[bytes] = field(default_factory=list)
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDMessageSpendResponse(TransactionEndpointResponse):
+    spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
 class NFTSetDIDBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
@@ -721,18 +822,6 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
-    pass
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDMessageSpendResponse(TransactionEndpointResponse):
-    spend_bundle: WalletSpendBundle
 
 
 @streamable
