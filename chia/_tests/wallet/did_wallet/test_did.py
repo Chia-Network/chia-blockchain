@@ -14,8 +14,6 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_tools import conditions_dict_for_solution
-from chia.rpc.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -40,6 +38,8 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
+from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 

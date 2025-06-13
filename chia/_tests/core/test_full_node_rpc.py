@@ -16,10 +16,10 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol

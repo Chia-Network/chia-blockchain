@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint16, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.rpc.wallet_request_types import PushTransactions
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -17,6 +16,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.wallet_request_types import PushTransactions
 
 
 async def nft_count(wallet: NFTWallet) -> int:
