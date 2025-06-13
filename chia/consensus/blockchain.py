@@ -19,8 +19,8 @@ from chia_rs import (
     SubEpochChallengeSegment,
     SubEpochSummary,
     UnfinishedBlock,
-    additions_and_removals,
     get_flags_for_height_and_constants,
+    run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
@@ -268,22 +268,26 @@ class Blockchain:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
-        additions: list[tuple[Coin, Optional[bytes]]] = []
-        removals: list[Coin] = []
+        conds = None
         if block.transactions_generator is not None:
             block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
             flags = get_flags_for_height_and_constants(block.height, self.constants)
-            additions, removals = additions_and_removals(
-                bytes(block.transactions_generator),
-                block_generator.generator_refs,
-                flags,
-                self.constants,
+            err, conds = run_block_generator2(
+                program=bytes(block.transactions_generator),
+                block_refs=block_generator.generator_refs,
+                max_cost=min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                flags=flags,
+                signature=block.transactions_info.aggregated_signature,
+                bls_cache=None,
+                constants=self.constants,
             )
+            assert err is None
+            assert conds is not None
 
-        fork_info.include_block(additions, removals, block, block.header_hash)
+        fork_info.include_spends(conds, block, block.header_hash)
 
     async def add_block(
         self,
@@ -512,8 +516,7 @@ class Blockchain:
                 )
 
             if block_record.prev_hash != peak.header_hash:
-                for coin_record in await self.coin_store.rollback_to_block(fork_info.fork_height):
-                    rolled_back_state[coin_record.name] = coin_record
+                rolled_back_state = await self.coin_store.rollback_to_block(fork_info.fork_height)
                 if self._log_coins and len(rolled_back_state) > 0:
                     log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
                     log.info(
@@ -567,8 +570,8 @@ class Blockchain:
                 if fork_add.confirmed_height == height and fork_add.is_coinbase
             ]
             tx_additions = [
-                fork_add.coin
-                for fork_add in fork_info.additions_since_fork.values()
+                (coin_id, fork_add.coin, fork_add.maybe_ff_singleton)
+                for coin_id, fork_add in fork_info.additions_since_fork.items()
                 if fork_add.confirmed_height == height and not fork_add.is_coinbase
             ]
             tx_removals = [
@@ -589,7 +592,7 @@ class Blockchain:
                     f"height: {fetched_block_record.height}), {len(tx_removals)} spends"
                 )
                 log.info("rewards: %s", ",".join([add.name().hex()[0:6] for add in included_reward_coins]))
-                log.info("additions: %s", ",".join([add.name().hex()[0:6] for add in tx_additions]))
+                log.info("additions: %s", ",".join([add[0].hex()[0:6] for add in tx_additions]))
                 log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
 
         # we made it to the end successfully
