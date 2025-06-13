@@ -3788,7 +3788,7 @@ async def test_auto_subscribe_to_local_stores(
 
     with monkeypatch.context() as m:
         m.setattr("chia.data_layer.data_store.DataStore.get_store_ids", mock_get_store_ids)
-        m.setattr("chia.rpc.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
 
         config = bt.config
         config["data_layer"]["auto_subscribe_to_local_stores"] = auto_subscribe_to_local_stores
