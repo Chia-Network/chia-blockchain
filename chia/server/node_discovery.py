@@ -71,6 +71,7 @@ class FullNodeDiscovery:
     pending_tasks: set[asyncio.Task[None]] = field(default_factory=set)
     introducer_info_obj: Optional[UnresolvedPeerInfo] = field(default=None)
     farm_list: set[bytes32] = field(default_factory=set)
+    is_farmer: bool = field(default=False)
 
 
     def __post_init__(self) -> None:
@@ -213,7 +214,8 @@ class FullNodeDiscovery:
             self.log.warning(f"querying DNS introducer failed: {e}")
 
     async def on_connect_callback(self, peer: WSChiaConnection) -> None:
-        self.farm_list.add(peer.peer_node_id)
+        if self.is_farmer:
+            self.farm_list.add(peer.peer_node_id)
         if self.server.on_connect is not None:
             await self.server.on_connect(peer)
         else:
@@ -323,10 +325,10 @@ class FullNodeDiscovery:
 
                 is_feeler = False
                 has_collision = False
-                # if self._num_needed_peers() == 0:
-                #     if time.time() * 1000 * 1000 > next_feeler:
-                #         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
-                #         is_feeler = True
+                if not self.is_farmer and self._num_needed_peers() == 0:
+                    if time.time() * 1000 * 1000 > next_feeler:
+                        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
+                        is_feeler = True
 
                 await self.address_manager.resolve_tried_collisions()
                 tries = 0
@@ -679,3 +681,21 @@ class WalletPeers(FullNodeDiscovery):
         self, peer_list: list[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
     ) -> None:
         await self._add_peers_common(peer_list, peer_src, is_full_node)
+
+@dataclass
+class FarmerPeers(FullNodeDiscovery):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+    async def start(self) -> None:
+        self.initial_wait = 1
+        self.is_farmer = True
+        self.farm_list = set()
+        await self.initialize_address_manager()
+        await self.start_tasks()
+
+    async def ensure_is_closed(self) -> None:
+        if self.is_closed:
+            return None
+        await self._close_common()
+
