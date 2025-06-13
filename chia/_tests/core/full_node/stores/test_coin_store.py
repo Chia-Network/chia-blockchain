@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
-from chia_rs import CoinState, FullBlock
+from chia_rs import CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
@@ -14,13 +14,11 @@ from clvm.casts import int_to_bytes
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.coin_store import add_coin_records_to_db
 from chia._tests.util.db_connection import DBConnection
-from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -28,7 +26,6 @@ from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.hash import std_hash
 
@@ -98,75 +95,73 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
             farmer_coin, pool_coin = get_future_reward_coins(block)
             should_be_included.add(farmer_coin)
             should_be_included.add(pool_coin)
-            if block.is_transaction_block():
-                if block.transactions_generator is not None:
-                    assert block.transactions_info is not None
-                    block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [])
-                    npc_result = get_name_puzzle_conditions(
-                        block_gen,
-                        bt.constants.MAX_BLOCK_COST_CLVM,
-                        mempool_mode=False,
-                        height=softfork_height,
-                        constants=bt.constants,
-                    )
-                    tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
-                else:
-                    tx_removals, tx_additions = [], []
+            if not block.is_transaction_block():
+                continue
+            if block.transactions_generator is not None:
+                assert block.transactions_info is not None
+                flags = get_flags_for_height_and_constants(block.height, bt.constants)
+                additions, removals = additions_and_removals(
+                    bytes(block.transactions_generator), [], flags, bt.constants
+                )
+                tx_removals = [removal.name() for removal in removals]
+                tx_additions = [addition for addition, _ in additions]
+            else:
+                tx_removals, tx_additions = [], []
 
-                assert set(block.get_included_reward_coins()) == should_be_included_prev
+            reward_coins = block.get_included_reward_coins()
+            assert set(reward_coins) == should_be_included_prev
 
-                if block.is_transaction_block():
-                    assert block.foliage_transaction_block is not None
+            assert block.foliage_transaction_block is not None
+            await coin_store.new_block(
+                block.height,
+                block.foliage_transaction_block.timestamp,
+                reward_coins,
+                tx_additions,
+                tx_removals,
+            )
+
+            if block.height != 0:
+                with pytest.raises(Exception):
                     await coin_store.new_block(
                         block.height,
                         block.foliage_transaction_block.timestamp,
-                        block.get_included_reward_coins(),
+                        reward_coins,
                         tx_additions,
                         tx_removals,
                     )
 
-                    if block.height != 0:
-                        with pytest.raises(Exception):
-                            await coin_store.new_block(
-                                block.height,
-                                block.foliage_transaction_block.timestamp,
-                                block.get_included_reward_coins(),
-                                tx_additions,
-                                tx_removals,
-                            )
+            all_records = set()
+            for expected_coin in should_be_included_prev:
+                # Check that the coinbase rewards are added
+                record = await coin_store.get_coin_record(expected_coin.name())
+                assert record is not None
+                assert not record.spent
+                assert record.coin == expected_coin
+                all_records.add(record)
+            for coin_name in tx_removals:
+                # Check that the removed coins are set to spent
+                record = await coin_store.get_coin_record(coin_name)
+                assert record is not None
+                assert record.spent
+                all_records.add(record)
+            for coin in tx_additions:
+                # Check that the added coins are added
+                record = await coin_store.get_coin_record(coin.name())
+                assert record is not None
+                assert not record.spent
+                assert coin == record.coin
+                all_records.add(record)
 
-                all_records = set()
-                for expected_coin in should_be_included_prev:
-                    # Check that the coinbase rewards are added
-                    record = await coin_store.get_coin_record(expected_coin.name())
-                    assert record is not None
-                    assert not record.spent
-                    assert record.coin == expected_coin
-                    all_records.add(record)
-                for coin_name in tx_removals:
-                    # Check that the removed coins are set to spent
-                    record = await coin_store.get_coin_record(coin_name)
-                    assert record is not None
-                    assert record.spent
-                    all_records.add(record)
-                for coin in tx_additions:
-                    # Check that the added coins are added
-                    record = await coin_store.get_coin_record(coin.name())
-                    assert record is not None
-                    assert not record.spent
-                    assert coin == record.coin
-                    all_records.add(record)
+            db_records = await coin_store.get_coin_records(
+                [c.name() for c in list(should_be_included_prev) + tx_additions] + tx_removals
+            )
+            assert len(db_records) == len(should_be_included_prev) + len(tx_removals) + len(tx_additions)
+            assert len(db_records) == len(all_records)
+            for record in db_records:
+                assert record in all_records
 
-                db_records = await coin_store.get_coin_records(
-                    [c.name() for c in list(should_be_included_prev) + tx_additions] + tx_removals
-                )
-                assert len(db_records) == len(should_be_included_prev) + len(tx_removals) + len(tx_additions)
-                assert len(db_records) == len(all_records)
-                for record in db_records:
-                    assert record in all_records
-
-                should_be_included_prev = should_be_included.copy()
-                should_be_included = set()
+            should_be_included_prev = should_be_included.copy()
+            should_be_included = set()
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
