@@ -194,6 +194,9 @@ class Err(Enum):
     INVALID_COIN_ID = 146
     # message not sent/received
     MESSAGE_NOT_SENT_OR_RECEIVED = 147
+    # the transactions generator uses overlong encoding of CLVM atoms in its
+    # serialization
+    INVALID_TRANSACTIONS_GENERATOR_ENCODING = 148
 
 
 class ValidationError(Exception):
