@@ -15,11 +15,11 @@ from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.plotting.util import PlotsRefreshParameter
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.aliases import FarmerService, HarvesterService
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import UnresolvedPeerInfo

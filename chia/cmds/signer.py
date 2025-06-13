@@ -17,17 +17,17 @@ from segno import QRCode, make_qr
 from chia.cmds.cmd_classes import chia_command, command_helper, option
 from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionsIn, TransactionsOut
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
-from chia.rpc.wallet_request_types import (
-    ApplySignatures,
-    ExecuteSigningInstructions,
-    GatherSigningInfo,
-    PushTransactions,
-)
 from chia.util.streamable import Streamable
 from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable, byte_serialize_clvm_streamable
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    PushTransactions,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 

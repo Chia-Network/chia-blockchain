@@ -4,7 +4,7 @@ from typing import Any, Optional, cast
 
 from chia_rs.sized_bytes import bytes32
 
-from chia.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
+from chia.farmer.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from chia.rpc.rpc_client import RpcClient
 from chia.util.streamable import recurse_jsonify
 

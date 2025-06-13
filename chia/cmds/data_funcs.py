@@ -10,7 +10,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.cmds.cmds_util import get_any_service_client
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.default_root import resolve_root_path
 

@@ -12,8 +12,6 @@ from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.rpc.wallet_request_types import VCAddProofs, VCGet, VCGetList, VCGetProofsForRoot, VCMint, VCRevoke, VCSpend
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -32,6 +30,16 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import (
+    VCAddProofs,
+    VCGet,
+    VCGetList,
+    VCGetProofsForRoot,
+    VCMint,
+    VCRevoke,
+    VCSpend,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 

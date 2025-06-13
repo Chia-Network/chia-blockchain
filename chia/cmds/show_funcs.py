@@ -6,7 +6,7 @@ from typing import Any, Optional, Union
 
 from chia_rs.sized_bytes import bytes32
 
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:

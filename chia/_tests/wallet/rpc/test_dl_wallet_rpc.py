@@ -14,11 +14,11 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
 from chia.data_layer.data_layer_wallet import Mirror
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 log = logging.getLogger(__name__)
 

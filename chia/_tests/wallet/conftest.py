@@ -23,11 +23,11 @@ from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironmen
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.types.peer_info import PeerInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 

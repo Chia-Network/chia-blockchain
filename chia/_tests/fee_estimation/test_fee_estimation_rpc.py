@@ -8,8 +8,8 @@ from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_api import FullNodeRpcApi
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.server.aliases import WalletService
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator

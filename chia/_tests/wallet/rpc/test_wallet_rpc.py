@@ -49,29 +49,8 @@ from chia._tests.wallet.test_wallet_coin_store import (
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import (
-    AddKey,
-    CheckDeleteKey,
-    CombineCoins,
-    DefaultCAT,
-    DeleteKey,
-    DIDGetPubkey,
-    GetNotifications,
-    GetPrivateKey,
-    GetSyncStatusResponse,
-    GetTimestampForHeight,
-    LogIn,
-    PushTransactions,
-    PushTX,
-    SetWalletResyncOnStartup,
-    SplitCoins,
-    VerifySignature,
-    VerifySignatureResponse,
-)
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.aliases import WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -122,6 +101,27 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_request_types import (
+    AddKey,
+    CheckDeleteKey,
+    CombineCoins,
+    DefaultCAT,
+    DeleteKey,
+    DIDGetPubkey,
+    GetNotifications,
+    GetPrivateKey,
+    GetSyncStatusResponse,
+    GetTimestampForHeight,
+    LogIn,
+    PushTransactions,
+    PushTX,
+    SetWalletResyncOnStartup,
+    SplitCoins,
+    VerifySignature,
+    VerifySignatureResponse,
+)
+from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 log = logging.getLogger(__name__)

@@ -58,8 +58,6 @@ from chia.data_layer.download_data import (
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import LogIn
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.async_pool import Job, QueuedAsyncPool
@@ -69,6 +67,8 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_request_types import LogIn
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 
 def server_files_path_from_config(config: dict[str, Any], root_path: Path) -> Path:

@@ -14,14 +14,6 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import (
-    NFTCoin,
-    NFTGetByDID,
-    NFTSetDIDBulk,
-    NFTSetNFTStatus,
-    NFTTransferBulk,
-    NFTWalletWithDID,
-)
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
@@ -34,6 +26,14 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import (
+    NFTCoin,
+    NFTGetByDID,
+    NFTSetDIDBulk,
+    NFTSetNFTStatus,
+    NFTTransferBulk,
+    NFTWalletWithDID,
+)
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 

@@ -14,8 +14,8 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.aliases import FullNodeService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers

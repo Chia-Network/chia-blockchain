@@ -12,8 +12,8 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_rpc_api import FarmerRpcApi
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.server.aliases import FarmerService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers

@@ -8,11 +8,11 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, get_bytes32
-from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet_request_types import GetNotifications, GetNotificationsResponse
 
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 

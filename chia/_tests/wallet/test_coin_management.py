@@ -16,8 +16,8 @@ from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletSta
 from chia.cmds.cmd_helpers import NeedsCoinSelectionConfig, NeedsWalletRPC, WalletClientInfo
 from chia.cmds.coins import CombineCMD, ListCMD, SplitCMD
 from chia.cmds.param_types import CliAmount, cli_amount_none
-from chia.rpc.wallet_request_types import GetSyncStatusResponse
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.wallet_request_types import GetSyncStatusResponse
 
 ONE_TRILLION = 1_000_000_000_000
 
