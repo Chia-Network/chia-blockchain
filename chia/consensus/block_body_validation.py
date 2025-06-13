@@ -13,6 +13,7 @@ from chia_rs import (
     SpendBundleConditions,
     UnfinishedBlock,
     compute_merkle_set_root,
+    is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -369,6 +370,10 @@ async def validate_block_body(
         # 8. The CLVM program must not return any errors
         assert conds is not None
         assert conds.validated_signature
+
+        if prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT:
+            if not is_canonical_serialization(bytes(block.transactions_generator)):
+                return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
 
         for spend in conds.spends:
             removals.append(bytes32(spend.coin_id))
