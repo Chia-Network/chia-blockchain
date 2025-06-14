@@ -132,7 +132,7 @@ class Farmer:
     ):
         self.farmer_peers: Optional[FarmerPeers] = None
 
-        self.node_last_sptime: set[bytes32] = set()
+        self.peer_with_sps: set[bytes32] = set()
 
         self.keychain_proxy: Optional[KeychainProxy] = None
         self.local_keychain = local_keychain
@@ -187,10 +187,10 @@ class Farmer:
         self.prev_signage_point: Optional[tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
     async def _sp_task_handler(self) -> None:
+        log.debug(f"WJB _sp_task_handler")
+
         while True:
-            log.debug(f"WJB _sp_task_handler PRE")
-            await asyncio.sleep(30)
-            log.debug(f"WJB _sp_task_handler POST")
+            await asyncio.sleep(120)
 
             if self.farmer_peers is None:
                 continue
@@ -201,32 +201,24 @@ class Farmer:
             ngcloseit=[]
             goodcloseit=[]
 
-            log.debug(f"WJB _sp_task_handler prepeers {self.farmer_peers.farm_list}")
-
             for peer in self.server.get_connections(NodeType.FULL_NODE):
-                log.debug(f"WJB loop")
                 if peer.peer_node_id in self.farmer_peers.farm_list:
-                    log.debug(f"WJB goodcloseit")
                     goodcloseit.append(peer)
                 else:
-                    log.debug(f"WJB _sp_task_handler trusted")
-                    if peer.peer_node_id in self.node_last_sptime:
-                        log.debug(f"allgood")
+                    if peer.peer_node_id in self.peer_with_sps:
                         allgood=True
                         found=True
                     count=count+1
                     continue
-                if not found and peer.peer_node_id in self.node_last_sptime:
-                    log.debug(f"WJB _sp_task_handler found")
+                if not found and peer.peer_node_id in self.peer_with_sps:
                     found=True
                     count=count+1
                     continue
-                log.debug(f"WJB _sp_task_handler close")
                 ngcloseit.append(peer)
 
-            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count}")
+            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count} peers {self.farmer_peers.farm_list}")
 
-            self.node_last_sptime=set()
+            self.peer_with_sps=set()
 
             if found:
                 count=0
@@ -314,7 +306,6 @@ class Farmer:
                 await proxy.close()
                 await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
             self.started = False
-
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -411,7 +402,6 @@ class Farmer:
         if peer.connection_type == NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
             self.harvester_handshake_task = create_referenced_task(handshake_task())
-
 
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
