@@ -405,7 +405,10 @@ class Farmer:
 
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
-        self.initialize_farmer_peers()
+        try:
+            self.initialize_farmer_peers()
+        except Exception:
+            self.log.debug("WJB self.initialize_farmer_peers failed")
 
     def state_changed(self, change: str, data: dict[str, Any]) -> None:
         if self.state_changed_callback is not None:
