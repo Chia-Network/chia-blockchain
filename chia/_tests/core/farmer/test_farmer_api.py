@@ -49,9 +49,9 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
     await gather(
-        farmer_api.new_signage_point(sp),
-        farmer_api.new_signage_point(sp),
-        farmer_api.new_signage_point(sp),
+        farmer_api.new_signage_point(sp, None),
+        farmer_api.new_signage_point(sp, None),
+        farmer_api.new_signage_point(sp, None),
     )
     # Wait a bit for the queue to fill
     await sleep(1)

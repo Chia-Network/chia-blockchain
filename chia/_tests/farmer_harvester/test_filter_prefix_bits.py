@@ -122,7 +122,7 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         signage_point_index=uint8(2),
         peak_height=peak_height,
     )
-    await farmer_api.new_signage_point(sp)
+    await farmer_api.new_signage_point(sp, None)
     await time_out_assert(5, state_has_changed, True)
     # We're intercepting the harvester's state changes as we're expecting
     # a farming_info one.

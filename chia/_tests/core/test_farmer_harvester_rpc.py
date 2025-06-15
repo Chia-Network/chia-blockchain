@@ -133,7 +133,7 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment: Harv
     sp = farmer_protocol.NewSignagePoint(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
-    await farmer_api.new_signage_point(sp)
+    await farmer_api.new_signage_point(sp, None)
 
     await time_out_assert(5, have_signage_points, True)
     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is not None
@@ -243,7 +243,7 @@ async def test_farmer_get_pool_state(
     sp = farmer_protocol.NewSignagePoint(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
-    await farmer_api.new_signage_point(sp)
+    await farmer_api.new_signage_point(sp, None)
     client_pool_state = await farmer_rpc_client.get_pool_state()
     for pool_dict in client_pool_state["pool_state"]:
         for key in ["points_found_24h", "points_acknowledged_24h"]:

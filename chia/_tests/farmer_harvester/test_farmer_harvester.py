@@ -278,7 +278,7 @@ async def test_missing_signage_point(
 
     farmer.state_changed_callback = state_changed  # type: ignore
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
-    await farmer_api.new_signage_point(sp_for_farmer_api)
+    await farmer_api.new_signage_point(sp_for_farmer_api, None)
     assert number_of_missing_sps == uint32(1)
 
 
