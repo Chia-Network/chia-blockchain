@@ -202,7 +202,7 @@ class Farmer:
             goodcloseit=[]
 
             for peer in self.server.get_connections(NodeType.FULL_NODE):
-                if peer.peer_node_id in self.farmer_peers.farm_list:
+                if peer in self.farmer_peers.farm_list:
                     goodcloseit.append(peer)
                 else:
                     if peer.peer_node_id in self.peer_with_sps:
@@ -216,7 +216,7 @@ class Farmer:
                     continue
                 ngcloseit.append(peer)
 
-            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count} peers {self.farmer_peers.farm_list}")
+            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {len(self.farmer_peers.farm_list)}")
 
             self.peer_with_sps=set()
 
@@ -233,6 +233,13 @@ class Farmer:
                 for peer in ngcloseit:
                     await peer.close()
 
+            removepeer=[]
+            for peer in self.farmer_peers.farm_list:
+                if peer.closed:
+                    removepeer.append(peer)
+            for peer in removepeer:
+                self.farmer_peers.farm_list.remove(peer)
+
             self.farmer_peers.target_outbound_count=count
  
 
@@ -247,7 +254,6 @@ class Farmer:
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
         testing = self.config.get("testing", False)
         if self.farmer_peers is None and connect_to_unknown_peers and not testing:
-            log.debug("WJB self.farmer_peers is None and connect_to_unknown_peers and not testing")
             self.farmer_peers = FarmerPeers(
                 server=self.server,
                 target_outbound_count=0,

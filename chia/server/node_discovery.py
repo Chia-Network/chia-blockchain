@@ -70,7 +70,7 @@ class FullNodeDiscovery:
     pending_outbound_connections: set[str] = field(default_factory=set)
     pending_tasks: set[asyncio.Task[None]] = field(default_factory=set)
     introducer_info_obj: Optional[UnresolvedPeerInfo] = field(default=None)
-    farm_list: set[bytes32] = field(default_factory=set)
+    farm_list: list[bytes32] = field(default_factory=list)
     is_farmer: bool = field(default=False)
 
 
@@ -215,7 +215,7 @@ class FullNodeDiscovery:
 
     async def on_connect_callback(self, peer: WSChiaConnection) -> None:
         if self.is_farmer:
-            self.farm_list.add(peer.peer_node_id)
+            self.farm_list.append(peer)
         if self.server.on_connect is not None:
             await self.server.on_connect(peer)
         else:
@@ -690,7 +690,7 @@ class FarmerPeers(FullNodeDiscovery):
     async def start(self) -> None:
         self.initial_wait = 1
         self.is_farmer = True
-        self.farm_list = set()
+        self.farm_list = []
         await self.initialize_address_manager()
         await self.start_tasks()
 
