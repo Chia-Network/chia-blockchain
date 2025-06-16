@@ -195,53 +195,54 @@ class Farmer:
             if self.farmer_peers is None:
                 continue
 
-            allgood=False
-            found=False
-            count=0
-            ngcloseit=[]
-            goodcloseit=[]
+            allgood = False
+            found = False
+            count = 0
+            ngcloseit = []
+            goodcloseit = []
 
             for peer in self.server.get_connections(NodeType.FULL_NODE):
                 if peer in self.farmer_peers.farm_list:
                     goodcloseit.append(peer)
                 else:
                     if peer.peer_node_id in self.peer_with_sps:
-                        allgood=True
-                        found=True
-                    count=count+1
+                        allgood = True
+                        found = True
+                    count = count + 1
                     continue
                 if not found and peer.peer_node_id in self.peer_with_sps:
-                    found=True
-                    count=count+1
+                    found = True
+                    count = count + 1
                     continue
                 ngcloseit.append(peer)
 
-            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {len(self.farmer_peers.farm_list)}")
+            log.debug(
+                f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {len(self.farmer_peers.farm_list)}"
+            )
 
-            self.peer_with_sps=set()
+            self.peer_with_sps = set()
 
             if found:
-                count=0
+                count = 0
             else:
-                count=count+1
+                count = count + 1
 
             if allgood:
-                count=0
+                count = 0
                 for peer in goodcloseit:
                     await peer.close()
             else:
                 for peer in ngcloseit:
                     await peer.close()
 
-            removepeer=[]
+            removepeer = []
             for peer in self.farmer_peers.farm_list:
                 if peer.closed:
                     removepeer.append(peer)
             for peer in removepeer:
                 self.farmer_peers.farm_list.remove(peer)
 
-            self.farmer_peers.target_outbound_count=count
- 
+            self.farmer_peers.target_outbound_count = count
 
     def initialize_farmer_peers(self) -> None:
         log.debug("WJB initialize_farmer_peers")
