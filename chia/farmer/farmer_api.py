@@ -503,8 +503,9 @@ class FarmerAPI:
 
     @metadata.request(peer_required=True)
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint, peer: WSChiaConnection) -> None:
-        self.farmer.peer_with_sps.add(peer.peer_node_id)
-        self.farmer.log.debug(f"WJB new_signage_point {self.farmer.peer_with_sps}")
+        if self.farmer.farmer_peers is not None:
+            self.farmer.peer_with_sps.add(peer.peer_node_id)
+            self.farmer.log.debug(f"WJB new_signage_point {self.farmer.peer_with_sps}")
 
         if new_signage_point.challenge_chain_sp not in self.farmer.sps:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
