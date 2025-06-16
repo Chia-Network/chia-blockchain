@@ -12,6 +12,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
+from chia._tests.plot_sync.util import get_dummy_connection
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_api import FarmerAPI
 from chia.protocols import farmer_protocol
@@ -122,7 +123,10 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         signage_point_index=uint8(2),
         peak_height=peak_height,
     )
-    await farmer_api.new_signage_point(sp, None)
+
+    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
+
+    await farmer_api.new_signage_point(sp, node_connection)
     await time_out_assert(5, state_has_changed, True)
     # We're intercepting the harvester's state changes as we're expecting
     # a farming_info one.

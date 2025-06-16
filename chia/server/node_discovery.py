@@ -70,7 +70,7 @@ class FullNodeDiscovery:
     pending_outbound_connections: set[str] = field(default_factory=set)
     pending_tasks: set[asyncio.Task[None]] = field(default_factory=set)
     introducer_info_obj: Optional[UnresolvedPeerInfo] = field(default=None)
-    farm_list: list[bytes32] = field(default_factory=list)
+    farm_list: list[WSChiaConnection] = field(default_factory=list)
     is_farmer: bool = field(default=False)
 
 
