@@ -11,6 +11,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
+from chia._tests.plot_sync.util import get_dummy_connection
 from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
@@ -279,7 +280,9 @@ async def test_missing_signage_point(
     farmer.state_changed_callback = state_changed  # type: ignore
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
 
-    await farmer_api.new_signage_point(sp_for_farmer_api, bytes32(32 * b"\0"))
+    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
+
+    await farmer_api.new_signage_point(sp_for_farmer_api, node_connection)
     assert number_of_missing_sps == uint32(1)
 
 
