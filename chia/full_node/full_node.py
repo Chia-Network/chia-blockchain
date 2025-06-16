@@ -1827,6 +1827,7 @@ class FullNode:
             sp_source_data=SignagePointSourceData(
                 vdf_data=SPVDFSourceData(request.challenge_chain_vdf.output, request.reward_chain_vdf.output)
             ),
+            peer_node_id=peer.peer_node_id,
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
         await self.server.send_to_all([msg], NodeType.FARMER)
@@ -2735,6 +2736,7 @@ class FullNode:
                             end_of_slot_bundle.challenge_chain, end_of_slot_bundle.reward_chain
                         )
                     ),
+                    peer_node_id=peer.peer_node_id,
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)

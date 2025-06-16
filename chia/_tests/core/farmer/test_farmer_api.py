@@ -9,7 +9,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import FarmerOneHarvester
 from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc
-from chia._tests.plot_sync.util import get_dummy_connection
 from chia._tests.util.network_protocol_data import (
     new_signage_point,
     request_signed_values,
@@ -50,12 +49,10 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
 
-    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
-
     await gather(
-        farmer_api.new_signage_point(sp, node_connection),
-        farmer_api.new_signage_point(sp, node_connection),
-        farmer_api.new_signage_point(sp, node_connection),
+        farmer_api.new_signage_point(sp, bytes32(32 * b"\0")),
+        farmer_api.new_signage_point(sp, bytes32(32 * b"\0")),
+        farmer_api.new_signage_point(sp, bytes32(32 * b"\0")),
     )
     # Wait a bit for the queue to fill
     await sleep(1)

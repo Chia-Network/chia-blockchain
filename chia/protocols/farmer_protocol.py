@@ -57,6 +57,7 @@ class NewSignagePoint(Streamable):
     signage_point_index: uint8
     peak_height: uint32
     sp_source_data: Optional[SignagePointSourceData] = None
+    peer_node_id: Optional[bytes32] = None
 
 
 @streamable
