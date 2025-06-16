@@ -26,14 +26,6 @@ from chia.cmds.signer import (
     SPOut,
 )
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
-from chia.rpc.wallet_request_types import (
-    ApplySignatures,
-    ExecuteSigningInstructions,
-    GatherSigningInfo,
-    GatherSigningInfoResponse,
-    SubmitTransactions,
-)
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -77,6 +69,14 @@ from chia.wallet.util.clvm_streamable import (
     json_serialize_with_clvm_streamable,
 )
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    SubmitTransactions,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 

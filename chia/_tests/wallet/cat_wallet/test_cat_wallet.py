@@ -16,7 +16,6 @@ from chia._tests.environments.wallet import (
     WalletTestFramework,
 )
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.rpc.wallet_request_types import GetTransactionMemo, PushTX
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -36,6 +35,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import GetTransactionMemo, PushTX
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 

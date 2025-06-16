@@ -42,6 +42,8 @@ from chia.cmds.data_funcs import (
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
+from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
 from chia.data_layer.data_layer_util import (
     HashOnlyProof,
     OfferStore,
@@ -54,9 +56,6 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.aliases import DataLayerService, WalletService
 from chia.server.start_data_layer import create_data_layer_service
 from chia.simulator.block_tools import BlockTools
@@ -74,6 +73,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_api import WalletRpcApi
 
 pytestmark = pytest.mark.data_layer
 nodes = tuple[WalletNode, FullNodeSimulator]
@@ -3788,7 +3788,7 @@ async def test_auto_subscribe_to_local_stores(
 
     with monkeypatch.context() as m:
         m.setattr("chia.data_layer.data_store.DataStore.get_store_ids", mock_get_store_ids)
-        m.setattr("chia.rpc.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
 
         config = bt.config
         config["data_layer"]["auto_subscribe_to_local_stores"] = auto_subscribe_to_local_stores

@@ -8,6 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
+from chia.data_layer.data_layer_rpc_util import marshal
 from chia.data_layer.data_layer_util import (
     CancelOfferRequest,
     CancelOfferResponse,
@@ -31,7 +32,6 @@ from chia.data_layer.data_layer_util import (
     unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
-from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.rpc.util import marshal as streamable_marshal
 from chia.util.byte_types import hexstr_to_bytes

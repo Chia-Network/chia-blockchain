@@ -24,19 +24,6 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import (
-    CATSpendResponse,
-    GetNotifications,
-    SendTransactionResponse,
-    VCAddProofs,
-    VCGet,
-    VCGetList,
-    VCGetProofsForRoot,
-    VCMint,
-    VCRevoke,
-    VCSpend,
-)
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
@@ -56,6 +43,19 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.wallet.wallet_request_types import (
+    CATSpendResponse,
+    GetNotifications,
+    SendTransactionResponse,
+    VCAddProofs,
+    VCGet,
+    VCGetList,
+    VCGetProofsForRoot,
+    VCMint,
+    VCRevoke,
+    VCSpend,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[tuple[Optional[uint32], str]]]]
 

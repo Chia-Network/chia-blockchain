@@ -10,7 +10,6 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.rpc.wallet_request_types import DIDMessageSpendResponse, DIDTransferDIDResponse, DIDUpdateMetadataResponse
 from chia.types.blockchain_format.program import NIL, Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
@@ -19,6 +18,7 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnn
 from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.wallet_request_types import DIDMessageSpendResponse, DIDTransferDIDResponse, DIDUpdateMetadataResponse
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
