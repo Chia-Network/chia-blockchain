@@ -1096,18 +1096,21 @@ development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 
 [[package]]
 name = "concurrent-log-handler"
-version = "0.9.25"
-description = "RotatingFileHandler replacement with concurrency, gzip and Windows support"
+version = "0.9.28"
+description = "RotatingFileHandler replacement with concurrency, gzip and Windows support. Size and time based rotation."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "concurrent_log_handler-0.9.25-py3-none-any.whl", hash = "sha256:157bee12914aa2a72246d1d0641ce07c1aa7a55faa3322bed02f21e60395eb82"},
-    {file = "concurrent_log_handler-0.9.25.tar.gz", hash = "sha256:1e2c6f021414e214d3dac66107894827a3e78db63018304a4f29e55ba549ac22"},
+    {file = "concurrent_log_handler-0.9.28-py3-none-any.whl", hash = "sha256:65db25d05506651a61573937880789fc51c7555e7452303042b5a402fd78939c"},
+    {file = "concurrent_log_handler-0.9.28.tar.gz", hash = "sha256:4cc27969b3420239bd153779266f40d9713ece814e312b7aa753ce62c6eacdb8"},
 ]
 
 [package.dependencies]
 portalocker = ">=1.6.0"
+
+[package.extras]
+dev = ["black", "coverage", "hatch", "pytest", "pytest-cov", "pytest-mock", "pytest-sugar", "ruff"]
 
 [[package]]
 name = "coverage"
