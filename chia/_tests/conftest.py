@@ -49,10 +49,9 @@ from chia._tests.util.setup_nodes import (
 )
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.seeder.dns_server import DNSServer
 from chia.server.aliases import (
     CrawlerService,
@@ -82,6 +81,7 @@ from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 # TODO: review how this is now after other imports and before some stdlib imports...  :[
 # Set spawn after stdlib imports, but before other imports
@@ -94,7 +94,7 @@ from chia_rs.sized_ints import uint128
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper

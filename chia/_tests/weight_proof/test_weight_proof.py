@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint32
 
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.pot_iterations import calculate_iterations_quality
+from chia.consensus.pot_iterations import validate_pospace_and_get_required_iters
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 
 
 async def load_blocks_dont_validate(
@@ -44,26 +42,17 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        quality_string: Optional[bytes32] = verify_and_get_quality_string(
-            block.reward_chain_block.proof_of_space,
+        required_iters = validate_pospace_and_get_required_iters(
             constants,
+            block.reward_chain_block.proof_of_space,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,
-            height=block.height,
-        )
-        assert quality_string is not None
-
-        # TODO: support v2 plots
-        pos_size_v1 = block.reward_chain_block.proof_of_space.size().size_v1
-        assert pos_size_v1 is not None, "plot format v2 not supported yet"
-
-        required_iters: uint64 = calculate_iterations_quality(
-            constants.DIFFICULTY_CONSTANT_FACTOR,
-            quality_string,
-            pos_size_v1,
+            block.height,
             difficulty,
-            cc_sp,
+            sub_slot_iters,
+            uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
         )
+        assert required_iters is not None
 
         sub_block = block_to_block_record(
             constants,

@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia._tests.util.misc import RecordingWebServer
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import PluginRemote
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 
 async def create_sufficient_wallet_rpc_client() -> WalletRpcClient:

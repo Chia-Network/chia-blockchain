@@ -22,7 +22,6 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -46,6 +45,7 @@ from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 OldSimulatorsAndWallets = tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
@@ -250,10 +250,10 @@ async def setup_simulators_and_wallets_inner(
     async with AsyncExitStack() as async_exit_stack:
         bt_tools: list[BlockTools] = [
             await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
-            for _ in range(0, simulator_count)
+            for _ in range(simulator_count)
         ]
         if wallet_count > simulator_count:
-            for _ in range(0, wallet_count - simulator_count):
+            for _ in range(wallet_count - simulator_count):
                 bt_tools.append(
                     await create_block_tools_async(
                         consensus_constants, keychain=keychain2, config_overrides=config_overrides
@@ -273,7 +273,7 @@ async def setup_simulators_and_wallets_inner(
                     disable_capabilities=disable_capabilities,
                 )
             )
-            for index in range(0, simulator_count)
+            for index in range(simulator_count)
         ]
 
         wallets: list[WalletService] = [
@@ -289,7 +289,7 @@ async def setup_simulators_and_wallets_inner(
                     initial_num_public_keys=initial_num_public_keys,
                 )
             )
-            for index in range(0, wallet_count)
+            for index in range(wallet_count)
         ]
 
         yield bt_tools, simulators, wallets
@@ -329,7 +329,7 @@ async def setup_farmer_multi_harvester(
                     start_service=start_services,
                 )
             )
-            for i in range(0, harvester_count)
+            for i in range(harvester_count)
         ]
 
         yield harvester_services, farmer_service, block_tools

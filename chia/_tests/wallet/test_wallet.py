@@ -11,7 +11,6 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.rpc.wallet_request_types import GetTransactionMemo
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -32,6 +31,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
+from chia.wallet.wallet_request_types import GetTransactionMemo
 
 
 class TestWalletSimulator:
@@ -191,7 +191,7 @@ class TestWalletSimulator:
             normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
         # Transfer to normal wallet
-        for _ in range(0, number_of_coins):
+        for _ in range(number_of_coins):
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
                     [uint64(tx_amount)],

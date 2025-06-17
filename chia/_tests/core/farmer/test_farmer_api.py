@@ -47,7 +47,7 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
     assert ProtocolMessageTypes(response).name == "harvester_handshake"
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
+        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
     )
 
     node_connection, _ = await add_dummy_connection_wsc(

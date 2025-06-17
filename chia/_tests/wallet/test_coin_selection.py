@@ -101,7 +101,7 @@ class TestCoinSelection:
     async def test_coin_selection_zero_coins(self, a_hash: bytes32) -> None:
         coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(0)), uint32(1), uint32(1), False, True, WalletType(0), 1)
-            for _ in range(0, 100)
+            for _ in range(100)
         ]
 
         result: set[Coin] = await select_coins(

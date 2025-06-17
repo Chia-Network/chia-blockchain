@@ -14,10 +14,8 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.environments.common import ServiceEnvironment
 from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionEndpoint, TransactionsOut, WalletClientInfo
 from chia.cmds.param_types import CliAmount, cli_amount_none
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -27,6 +25,8 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(

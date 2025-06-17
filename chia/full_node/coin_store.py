@@ -574,29 +574,6 @@ class CoinStore:
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
         return list(coin_changes.values())
 
-    # Store CoinRecord in DB
-    async def _add_coin_records(self, records: list[CoinRecord]) -> None:
-        values2 = []
-        for record in records:
-            values2.append(
-                (
-                    record.coin.name(),
-                    record.confirmed_block_index,
-                    record.spent_block_index,
-                    int(record.coinbase),
-                    record.coin.puzzle_hash,
-                    record.coin.parent_coin_info,
-                    uint64(record.coin.amount).stream_to_bytes(),
-                    record.timestamp,
-                )
-            )
-        if len(values2) > 0:
-            async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.executemany(
-                    "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                    values2,
-                )
-
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_names: list[bytes32], index: uint32) -> None:
         assert len(coin_names) == 0 or index > 0

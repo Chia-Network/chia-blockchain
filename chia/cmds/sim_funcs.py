@@ -363,7 +363,7 @@ async def print_coin_records(
         num_per_screen = 5 if paginate else len(coin_records)
         # ripped from cmds/wallet_funcs.
         for i in range(0, len(coin_records), num_per_screen):
-            for j in range(0, num_per_screen):
+            for j in range(num_per_screen):
                 if i + j >= len(coin_records):
                     break
                 print_coin_record(

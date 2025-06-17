@@ -103,7 +103,9 @@ def analyze() -> None:
     for input_file in glob("slow-batch-*.profile"):
         output = input_file.replace(".profile", ".png")
         print(f"{input_file}")
-        check_call(f"gprof2dot -f pstats {quote(input_file)} | dot -T png >{quote(output)}", shell=True)
+        # TODO: would indeed be nice to not use shell=True, but this is
+        #       all local data and piping is verbose.  maybe still do it though.
+        check_call(f"gprof2dot -f pstats {quote(input_file)} | dot -T png >{quote(output)}", shell=True)  # noqa: S602
 
 
 @main.command("create-checkpoint", help="sync the full node up to specified height and save its state")
