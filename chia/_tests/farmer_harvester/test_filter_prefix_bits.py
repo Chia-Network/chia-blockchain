@@ -10,6 +10,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
+from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
 from chia._tests.plot_sync.util import get_dummy_connection
@@ -18,6 +19,7 @@ from chia.farmer.farmer_api import FarmerAPI
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.protocols import farmer_protocol
+from chia.protocols.outbound_message import NodeType
 from chia.server.aliases import HarvesterService
 from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
@@ -125,7 +127,10 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         last_tx_height=uint32(0),
     )
 
-    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
+    farmer_server = harvester_service._server # just to chew on
+    node_connection, _ = await add_dummy_connection_wsc(
+        farmer_server, farmer_service.self_hostname, 8444, NodeType.FULL_NODE, []
+    )
 
     await farmer_api.new_signage_point(sp, node_connection)
     await time_out_assert(5, state_has_changed, True)
