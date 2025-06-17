@@ -476,7 +476,7 @@ def stream_dict(
         lambda inner_item, inner_f: stream_tuple(
             [key_stream_inner_type_func, value_stream_inner_type_func], inner_item, inner_f
         ),
-        list(item.items()),
+        list(sorted(item.items())),
         f,
     )
 

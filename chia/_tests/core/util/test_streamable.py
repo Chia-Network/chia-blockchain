@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import io
+import itertools
 import re
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, ClassVar, Optional, get_type_hints
+from typing import Any, Callable, ClassVar, Optional, Union, get_type_hints
 
 import pytest
 from chia_rs import FullBlock, G1Element, SubEpochChallengeSegment
@@ -922,3 +923,48 @@ def test_streamable_inheritance_missing() -> None:
 def test_unsupported_types(method: Callable[[object], object], input_type: object) -> None:
     with pytest.raises(UnsupportedType):
         method(input_type)
+
+
+@streamable
+@dataclass(frozen=True)
+class DictSerializationStrings(Streamable):
+    a: dict[str, str]
+
+
+@streamable
+@dataclass(frozen=True)
+class DictSerializationUInts(Streamable):
+    a: dict[uint8, str]
+
+
+@streamable
+@dataclass(frozen=True)
+class DictSerializationBytes(Streamable):
+    a: dict[bytes, str]
+
+
+@streamable
+@dataclass(frozen=True)
+class DictSerializationTuple(Streamable):
+    a: dict[tuple[str, str], str]
+
+
+@pytest.mark.parametrize(
+    "cls, args",
+    [
+        (DictSerializationStrings, [("foo", "bar"), ("baz", "bat"), ("qux", "quux")]),
+        (DictSerializationUInts, [(uint8(1), "bar"), (uint8(3), "bat"), (uint8(5), "quux")]),
+        (DictSerializationBytes, [((b"01"), "bar"), (b"02", "bat"), (b"3", "quux")]),
+        (DictSerializationTuple, [(("foo", "bar"), "bar"), (("baz", "bat"), "bat"), (("qux", "quux"), "quux")]),
+    ],
+)
+def test_dict_deterministic_serialization(
+    cls: type[Union[DictSerializationStrings, DictSerializationTuple, DictSerializationBytes, DictSerializationUInts]],
+    args: list[Any],
+) -> None:
+    byte_serialization: Optional[bytes] = None
+    for perm in itertools.permutations(args):
+        next_byte_serialization = bytes(cls({key: value for key, value in perm}))
+        if byte_serialization is not None:
+            assert byte_serialization == next_byte_serialization
+        byte_serialization = next_byte_serialization
