@@ -27,31 +27,26 @@ class CoinStoreProtocol(Protocol):
         """
         Add a new block to the coin store
         """
-        pass
 
     async def get_coin_record(self, coin_id: bytes32) -> Optional[CoinRecord]:
         """
         Returns the coin record for the specified coin id
         """
-        pass
 
     async def get_coin_records(self, coin_ids: Collection[bytes32]) -> list[CoinRecord]:
         """
         Returns the coin records for the specified coin ids
         """
-        pass
 
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
         """
         Returns the coins added at a specific height
         """
-        pass
 
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
         """
         Returns the coins removed at a specific height
         """
-        pass
 
     async def get_coin_records_by_puzzle_hash(
         self,
@@ -63,7 +58,6 @@ class CoinStoreProtocol(Protocol):
         """
         Returns the coin records for a specific puzzle hash
         """
-        pass
 
     async def get_coin_records_by_puzzle_hashes(
         self,
@@ -75,7 +69,6 @@ class CoinStoreProtocol(Protocol):
         """
         Returns the coin records for a list of puzzle hashes
         """
-        pass
 
     async def get_coin_records_by_names(
         self,
@@ -87,7 +80,6 @@ class CoinStoreProtocol(Protocol):
         """
         Returns the coin records for a list of coin names
         """
-        pass
 
     async def get_coin_records_by_parent_ids(
         self,
@@ -99,10 +91,8 @@ class CoinStoreProtocol(Protocol):
         """
         Returns the coin records for a list of parent ids
         """
-        pass
 
     async def rollback_to_block(self, block_index: int) -> list[CoinRecord]:
         """
         Rolls back the blockchain to the specified block index
         """
-        pass
