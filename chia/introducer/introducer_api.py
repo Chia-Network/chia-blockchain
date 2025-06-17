@@ -7,10 +7,10 @@ from chia_rs.sized_ints import uint64
 
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo
 

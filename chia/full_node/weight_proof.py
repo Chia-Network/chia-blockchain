@@ -11,6 +11,7 @@ from multiprocessing.context import BaseContext
 from typing import IO, Optional
 
 from chia_rs import (
+    BlockRecord,
     ChallengeChainSubSlot,
     ConsensusConstants,
     EndOfSubSlotBundle,
@@ -26,19 +27,18 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
+from chia.consensus.get_block_challenge import prev_tx_block
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality,
     calculate_sp_iters,
     is_overflow_block,
+    validate_pospace_and_get_required_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import (
@@ -1001,7 +1001,7 @@ def _validate_segment(
         if sampled and sub_slot_data.is_challenge():
             after_challenge = True
             required_iters = __validate_pospace(
-                constants, segment, idx, curr_difficulty, ses, first_segment_in_se, height
+                constants, segment, idx, curr_difficulty, curr_ssi, ses, first_segment_in_se, height
             )
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0), []
@@ -1149,7 +1149,7 @@ def sub_slot_data_vdf_input(
     if is_overflow and new_sub_slot:
         if sub_slot_idx >= 2:
             if sub_slots[sub_slot_idx - 2].cc_slot_end_info is None:
-                for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
+                for ssd_idx in reversed(range(sub_slot_idx - 1)):
                     ssd = sub_slots[ssd_idx]
                     if ssd.cc_slot_end_info is not None:
                         ssd = sub_slots[ssd_idx + 1]
@@ -1164,7 +1164,7 @@ def sub_slot_data_vdf_input(
         return cc_input
 
     elif not is_overflow and not new_sub_slot:
-        for ssd_idx in reversed(range(0, sub_slot_idx)):
+        for ssd_idx in reversed(range(sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
             if ssd.cc_slot_end_info is not None:
                 ssd = sub_slots[ssd_idx + 1]
@@ -1181,7 +1181,7 @@ def sub_slot_data_vdf_input(
 
     elif not new_sub_slot and is_overflow:
         slots_seen = 0
-        for ssd_idx in reversed(range(0, sub_slot_idx)):
+        for ssd_idx in reversed(range(sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
             if ssd.cc_slot_end_info is not None:
                 slots_seen += 1
@@ -1246,7 +1246,7 @@ def validate_recent_blocks(
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
 
-        if (challenge is not None) and (prev_challenge is not None):
+        if (challenge is not None) and (prev_challenge is not None) and transaction_blocks > 1:
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
                 assert prev_block_record is not None
@@ -1267,7 +1267,9 @@ def validate_recent_blocks(
                 assert caluclated_required_iters is not None
                 required_iters = caluclated_required_iters
             else:
-                ret = _validate_pospace_recent_chain(constants, block, challenge, diff, overflow, prev_challenge)
+                ret = _validate_pospace_recent_chain(
+                    constants, sub_blocks, block, challenge, diff, ssi, overflow, prev_challenge
+                )
                 if ret is None:
                     return False, []
                 required_iters = ret
@@ -1305,9 +1307,11 @@ def validate_recent_blocks(
 
 def _validate_pospace_recent_chain(
     constants: ConsensusConstants,
+    blocks: BlockCache,
     block: HeaderBlock,
     challenge: bytes32,
     diff: uint64,
+    ssi: uint64,
     overflow: bool,
     prev_challenge: bytes32,
 ) -> Optional[uint64]:
@@ -1317,23 +1321,21 @@ def _validate_pospace_recent_chain(
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
     assert cc_sp_hash is not None
-    q_str = verify_and_get_quality_string(
-        block.reward_chain_block.proof_of_space,
+
+    required_iters = validate_pospace_and_get_required_iters(
         constants,
+        block.reward_chain_block.proof_of_space,
         challenge if not overflow else prev_challenge,
         cc_sp_hash,
-        height=block.height,
+        block.height,
+        diff,
+        ssi,
+        prev_tx_block(blocks, blocks.block_record(block.prev_header_hash)),
     )
-    if q_str is None:
+    if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
         return None
-    required_iters = calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        block.reward_chain_block.proof_of_space.size,
-        diff,
-        cc_sp_hash,
-    )
+
     return required_iters
 
 
@@ -1342,6 +1344,7 @@ def __validate_pospace(
     segment: SubEpochChallengeSegment,
     idx: int,
     curr_diff: uint64,
+    curr_sub_slot_iters: uint64,
     ses: Optional[SubEpochSummary],
     first_in_sub_epoch: bool,
     height: uint32,
@@ -1367,23 +1370,22 @@ def __validate_pospace(
 
     # validate proof of space
     assert sub_slot_data.proof_of_space is not None
-    q_str = verify_and_get_quality_string(
-        sub_slot_data.proof_of_space,
+
+    required_iters = validate_pospace_and_get_required_iters(
         constants,
+        sub_slot_data.proof_of_space,
         challenge,
         cc_sp_hash,
-        height=height,
+        height,
+        curr_diff,
+        curr_sub_slot_iters,
+        uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
     )
-    if q_str is None:
+    if required_iters is None:
         log.error("could not verify proof of space")
         return None
-    return calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        sub_slot_data.proof_of_space.size,
-        curr_diff,
-        cc_sp_hash,
-    )
+
+    return required_iters
 
 
 def __get_rc_sub_slot(
@@ -1472,7 +1474,7 @@ def __get_rc_sub_slot(
 
 def __get_cc_sub_slot(sub_slots: list[SubSlotData], idx: int, ses: Optional[SubEpochSummary]) -> ChallengeChainSubSlot:
     sub_slot: Optional[SubSlotData] = None
-    for i in reversed(range(0, idx)):
+    for i in reversed(range(idx)):
         sub_slot = sub_slots[i]
         if sub_slot.cc_slot_end_info is not None:
             break

@@ -17,8 +17,8 @@ from chia._tests.util.network_protocol_data import (
 )
 from chia.farmer.farmer_api import FarmerAPI
 from chia.protocols import farmer_protocol
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, NodeType
 from chia.util.hash import std_hash
 from chia.util.task_referencer import create_referenced_task
 
@@ -46,7 +46,7 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
     assert ProtocolMessageTypes(response).name == "harvester_handshake"
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
+        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
     )
     await gather(
         farmer_api.new_signage_point(sp),

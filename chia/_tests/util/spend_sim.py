@@ -7,19 +7,23 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional
 
 import anyio
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    CoinSpend,
     ConsensusConstants,
     G2Element,
+    SpendBundle,
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import Self
 
+from chia._tests.util.coin_store import add_coin_records_to_db
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -32,16 +36,15 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle, T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
+from chia.wallet.wallet_spend_bundle import T_SpendBundle
 
 """
 The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.
@@ -105,9 +108,6 @@ class SimFullBlock(Streamable):
     height: uint32  # Note that height is not on a regular FullBlock
 
 
-_T_SimBlockRecord = TypeVar("_T_SimBlockRecord", bound="SimBlockRecord")
-
-
 @streamable
 @dataclass(frozen=True)
 class SimBlockRecord(Streamable):
@@ -120,7 +120,7 @@ class SimBlockRecord(Streamable):
     prev_transaction_block_hash: bytes32
 
     @classmethod
-    def create(cls: type[_T_SimBlockRecord], rci: list[Coin], height: uint32, timestamp: uint64) -> _T_SimBlockRecord:
+    def create(cls, rci: list[Coin], height: uint32, timestamp: uint64) -> Self:
         prev_transaction_block_height = uint32(height - 1 if height > 0 else 0)
         return cls(
             rci,
@@ -142,9 +142,6 @@ class SimStore(Streamable):
     blocks: list[SimFullBlock]
 
 
-_T_SpendSim = TypeVar("_T_SpendSim", bound="SpendSim")
-
-
 class SpendSim:
     db_wrapper: DBWrapper2
     coin_store: CoinStore
@@ -159,8 +156,8 @@ class SpendSim:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls: type[_T_SpendSim], db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
-    ) -> AsyncIterator[_T_SpendSim]:
+        cls, db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
+    ) -> AsyncIterator[Self]:
         self = cls()
         if db_path is None:
             uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
@@ -258,8 +255,8 @@ class SpendSim:
             uint64(calculate_base_farmer_reward(next_block_height) + fees),
             self.defaults.GENESIS_CHALLENGE,
         )
-        await self.coin_store._add_coin_records(
-            [self.new_coin_record(pool_coin, True), self.new_coin_record(farmer_coin, True)]
+        await add_coin_records_to_db(
+            self.coin_store.db_wrapper, [self.new_coin_record(pool_coin, True), self.new_coin_record(farmer_coin, True)]
         )
 
         # Coin store gets updated
@@ -270,7 +267,7 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = await self.mempool_manager.create_bundle_from_mempool(last_tb_header_hash=peak.header_hash)
+                result = self.mempool_manager.create_bundle_from_mempool(last_tb_header_hash=peak.header_hash)
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
@@ -285,7 +282,9 @@ class SpendSim:
                     return_additions = additions
                     return_removals = bundle.removals()
                     spent_coins_ids = [r.name() for r in return_removals]
-                    await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
+                    await add_coin_records_to_db(
+                        self.coin_store.db_wrapper, [self.new_coin_record(addition) for addition in additions]
+                    )
                     await self.coin_store._set_spent(spent_coins_ids, uint32(self.block_height + 1))
 
         # SimBlockRecord is created

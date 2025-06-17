@@ -6,19 +6,18 @@ import logging
 import time
 from typing import Optional
 
-from chia_rs import ConsensusConstants, EndOfSubSlotBundle, FullBlock, UnfinishedBlock
+from chia_rs import BlockRecord, ConsensusConstants, EndOfSubSlotBundle, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
-from chia.full_node.signage_point import SignagePoint
+from chia.consensus.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
-from chia.server.outbound_message import Message
+from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from chia.util.lru_cache import LRUCache
@@ -830,6 +829,25 @@ class FullNodeStore:
                         return sp
         return None
 
+    def get_signage_point_by_index_and_cc_output(
+        self, cc_signage_point: bytes32, challenge: bytes32, index: uint8
+    ) -> Optional[SignagePoint]:
+        assert len(self.finished_sub_slots) >= 1
+        if cc_signage_point == self.constants.GENESIS_CHALLENGE:
+            return SignagePoint(None, None, None, None)
+        for sub_slot, sps, _ in self.finished_sub_slots:
+            if sub_slot is not None and sub_slot.challenge_chain.get_hash() == challenge:
+                if index == 0:
+                    # first SP in the sub slot
+                    return SignagePoint(None, None, None, None)
+                sp: Optional[SignagePoint] = sps[index]
+                if sp is None:
+                    return None
+                assert sp.cc_vdf is not None
+                if sp.cc_vdf.output.get_hash() == cc_signage_point:
+                    return sp
+        return None
+
     def get_signage_point_by_index(
         self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32
     ) -> Optional[SignagePoint]:
@@ -864,7 +882,7 @@ class FullNodeStore:
 
             if cc_hash == challenge_hash:
                 found_rc_hash = False
-                for i in range(0, index):
+                for i in range(index):
                     sp: Optional[SignagePoint] = sps[i]
                     if sp is not None and sp.rc_vdf is not None and sp.rc_vdf.challenge == last_rc_infusion:
                         found_rc_hash = True

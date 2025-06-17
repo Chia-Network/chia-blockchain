@@ -16,6 +16,7 @@ from chia_rs import (
     FoliageTransactionBlock,
     FullBlock,
     G1Element,
+    ProofOfSpace,
     RewardChainSubSlot,
 )
 from chia_rs.sized_bytes import bytes32
@@ -23,6 +24,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -35,18 +37,16 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 
@@ -77,7 +77,6 @@ async def test_harvester_receive_source_signing_data(
         full_node_service_2,
         _,
     ) = farmer_harvester_2_simulators_zero_bits_plot_filter
-
     farmer: Farmer = farmer_service._node
     harvester: Harvester = harvester_service._node
     full_node_1: FullNode = full_node_service_1._node
@@ -106,6 +105,7 @@ async def test_harvester_receive_source_signing_data(
     # so that we have blocks generated that have our farmer reward address, instead
     # of the GENESIS_PRE_FARM_FARMER_PUZZLE_HASH.
     await add_test_blocks_into_full_node(blocks, full_node_2)
+    await time_out_assert(60, full_node_2.blockchain.get_peak_height, blocks[-1].height)
 
     validated_foliage_data = False
     validated_foliage_transaction = False
@@ -364,6 +364,7 @@ def prepare_sp_and_pos_for_fee_test(
         sub_slot_iters=uint64(0),
         signage_point_index=uint8(0),
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
 
     pos = harvester_protocol.NewProofOfSpace(
@@ -375,7 +376,7 @@ def prepare_sp_and_pos_for_fee_test(
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=pubkey,
-            size=uint8(len(proof)),
+            version_and_size=uint8(32),
             proof=proof,
         ),
         signage_point_index=uint8(0),

@@ -4,7 +4,7 @@ import functools
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import Optional, TypeVar
+from typing import Optional
 
 from chia_puzzles_py.programs import (
     CONDITIONS_W_FEE_ANNOUNCE,
@@ -16,13 +16,15 @@ from chia_puzzles_py.programs import (
 from chia_puzzles_py.programs import (
     CREDENTIAL_RESTRICTION_HASH as CREDENTIAL_RESTRICTION_HASH_BYTES,
 )
+from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 from clvm.casts import int_to_bytes
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -165,9 +167,6 @@ def construct_pending_approval_state(puzzle_hash: bytes32, amount: uint64) -> Pr
     return PENDING_VC_ANNOUNCEMENT.curry(Program.to([[51, puzzle_hash, amount, [puzzle_hash]]]))
 
 
-_T_CRCAT = TypeVar("_T_CRCAT", bound="CRCAT")
-
-
 @dataclass(frozen=True)
 class CRCAT:
     coin: Coin
@@ -179,7 +178,7 @@ class CRCAT:
 
     @classmethod
     def launch(
-        cls: type[_T_CRCAT],
+        cls,
         # General CAT launching info
         origin_coin: Coin,
         payment: CreateCoin,
@@ -307,12 +306,12 @@ class CRCAT:
         return solution.at("f").at("rrrrrrf")
 
     @classmethod
-    def get_current_from_coin_spend(cls: type[_T_CRCAT], spend: CoinSpend) -> CRCAT:  # pragma: no cover
+    def get_current_from_coin_spend(cls, spend: CoinSpend) -> CRCAT:  # pragma: no cover
         uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
         lineage_proof = LineageProof.from_program(
-            spend.solution.to_program().at("rf"),
+            Program.from_serialized(spend.solution).at("rf"),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         )
         return CRCAT(
@@ -326,7 +325,7 @@ class CRCAT:
 
     @classmethod
     def get_next_from_coin_spend(
-        cls: type[_T_CRCAT],
+        cls,
         parent_spend: CoinSpend,
         conditions: Optional[Program] = None,  # For optimization purposes, the conditions may already have been run
     ) -> list[CRCAT]:
@@ -338,8 +337,8 @@ class CRCAT:
         as the spend output a remark condition that was (REMARK authorized_providers proofs_checker)
         """
         coin_name: bytes32 = parent_spend.coin.name()
-        puzzle: Program = parent_spend.puzzle_reveal.to_program()
-        solution: Program = parent_spend.solution.to_program()
+        puzzle = Program.from_serialized(parent_spend.puzzle_reveal)
+        solution = Program.from_serialized(parent_spend.solution)
 
         # Get info by uncurrying
         _, tail_hash_as_prog, potential_cr_layer = puzzle.uncurry()[1].as_iter()
@@ -515,8 +514,8 @@ class CRCAT:
 
     @classmethod
     def spend_many(
-        cls: type[_T_CRCAT],
-        inner_spends: list[tuple[_T_CRCAT, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
+        cls,
+        inner_spends: list[tuple[Self, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
         # CR layer solving info
         proof_of_inclusions: Program,
         proof_checker_solution: Program,
@@ -538,7 +537,7 @@ class CRCAT:
         def prev_index(index: int) -> int:
             return index - 1
 
-        sorted_inner_spends: list[tuple[_T_CRCAT, int, Program, Program]] = sorted(
+        sorted_inner_spends: list[tuple[Self, int, Program, Program]] = sorted(
             inner_spends,
             key=lambda spend: spend[0].coin.name(),
         )
@@ -609,16 +608,16 @@ class CRCATSpend:
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:  # pragma: no cover
         inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal))
-        inner_solution: Program = CRCAT.get_inner_solution(spend.solution.to_program())
+        inner_solution: Program = CRCAT.get_inner_solution(Program.from_serialized(spend.solution))
         inner_conditions: Program = inner_puzzle.run(inner_solution)
         return cls(
             CRCAT.get_current_from_coin_spend(spend),
             inner_puzzle,
             inner_solution,
             CRCAT.get_next_from_coin_spend(spend, conditions=inner_conditions),
-            spend.solution.to_program().at("f").at("rrrrf") == Program.to(None),
+            Program.from_serialized(spend.solution).at("f").at("rrrrf") == Program.to(None),
             list(inner_conditions.as_iter()),
-            spend.solution.to_program().at("f").at("f"),
+            Program.from_serialized(spend.solution).at("f").at("f"),
         )
 
 

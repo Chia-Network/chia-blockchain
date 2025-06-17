@@ -9,9 +9,9 @@ import pytest
 from chia_rs.sized_ints import uint16
 
 from chia._tests.util.misc import Marks, RecordingWebServer, datacases
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.rpc.rpc_server import RpcServer
-from chia.server.outbound_message import NodeType
 
 non_fetch_client_methods = {
     RpcClient.create,

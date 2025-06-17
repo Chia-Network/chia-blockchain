@@ -32,8 +32,8 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
+from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
 
 log = logging.getLogger(__name__)

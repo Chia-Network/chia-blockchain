@@ -24,12 +24,12 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.full_block_utils import GeneratorBlockInfo
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.util.db_wrapper import get_host_parameter_limit
-from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)

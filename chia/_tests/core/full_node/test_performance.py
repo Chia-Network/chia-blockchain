@@ -4,7 +4,7 @@ import logging
 import random
 
 import pytest
-from chia_rs import UnfinishedBlock
+from chia_rs import BlockRecord, UnfinishedBlock
 from chia_rs.sized_ints import uint64
 from clvm.casts import int_to_bytes
 
@@ -13,7 +13,6 @@ from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.misc import BenchmarkRunner
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
@@ -123,7 +122,7 @@ class TestPerformance:
         curr: BlockRecord = peak
         while not curr.is_transaction_block:
             curr = full_node_1.full_node.blockchain.block_record(curr.prev_hash)
-        mempool_bundle = await full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+        mempool_bundle = full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
         if mempool_bundle is None:
             spend_bundle = None
         else:

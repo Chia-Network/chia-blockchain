@@ -49,11 +49,18 @@ from chia._tests.util.setup_nodes import (
 )
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.seeder.dns_server import DNSServer
+from chia.server.aliases import (
+    CrawlerService,
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    TimelordService,
+    WalletService,
+)
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -67,16 +74,6 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
-
-# Set spawn after stdlib imports, but before other imports
-from chia.types.aliases import (
-    CrawlerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    TimelordService,
-    WalletService,
-)
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
@@ -84,7 +81,10 @@ from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
+# TODO: review how this is now after other imports and before some stdlib imports...  :[
+# Set spawn after stdlib imports, but before other imports
 multiprocessing.set_start_method("spawn")
 
 from dataclasses import replace
@@ -94,7 +94,7 @@ from chia_rs.sized_ints import uint128
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
@@ -1236,7 +1236,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     ]
 ]:
     zero_bit_plot_filter_consts = test_constants_modified.replace(
-        NUMBER_ZERO_BITS_PLOT_FILTER=uint8(0),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(0),
         NUM_SPS_SUB_SLOT=uint32(8),
     )
 

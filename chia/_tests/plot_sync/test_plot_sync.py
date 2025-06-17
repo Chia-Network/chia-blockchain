@@ -29,8 +29,8 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.aliases import FarmerService, HarvesterService
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, HarvesterService
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.streamable import _T_Streamable
 
@@ -537,7 +537,7 @@ async def test_farmer_restart(environment: Environment) -> None:
     # Load all directories for both harvesters
     await add_and_validate_all_directories(env)
     last_sync_ids: list[uint64] = []
-    for i in range(0, len(env.harvesters)):
+    for i in range(len(env.harvesters)):
         last_sync_ids.append(env.harvesters[i].plot_sync_sender._last_sync_id)
     # Stop the farmer and make sure both receivers get dropped and refreshing gets stopped on the harvesters
     await env.split_farmer_service_manager.exit()
@@ -551,7 +551,7 @@ async def test_farmer_restart(environment: Environment) -> None:
         assert len(env.farmer.plot_sync_receivers) == 2
         # Do not use run_sync_test here, to have a more realistic test scenario just
         # wait for the harvesters to be synced.  The handshake should trigger re-sync.
-        for i in range(0, len(env.harvesters)):
+        for i in range(len(env.harvesters)):
             harvester: Harvester = env.harvesters[i]
             assert harvester.server is not None
             receiver = env.farmer.plot_sync_receivers[harvester.server.node_id]

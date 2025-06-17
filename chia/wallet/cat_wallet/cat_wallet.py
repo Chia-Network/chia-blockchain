@@ -14,8 +14,7 @@ from typing_extensions import Unpack
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import compute_additions_with_cost
+from chia.types.blockchain_format.program import Program, run
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
@@ -49,6 +48,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.compute_additions import compute_additions_with_cost
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
@@ -596,7 +596,7 @@ class CATWallet:
                 continue
             for spend in tx.spend_bundle.coin_spends:
                 if spend.coin.name() == origin_id:
-                    conditions = spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_python()
+                    conditions = run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_python()
                     for condition in conditions:
                         if condition[0] == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
                             message = condition[1]

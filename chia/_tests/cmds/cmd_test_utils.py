@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Union, cast
 
-from chia_rs import Coin, G2Element
+from chia_rs import BlockRecord, Coin, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -16,21 +16,11 @@ from chia._tests.cmds.testing_classes import create_test_block_record
 from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX, get_bytes32
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import (
-    GetSyncStatusResponse,
-    NFTCalculateRoyalties,
-    NFTCalculateRoyaltiesResponse,
-    NFTGetInfo,
-    NFTGetInfoResponse,
-    SendTransactionMultiResponse,
-)
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
@@ -43,6 +33,15 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import (
+    GetSyncStatusResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
+    SendTransactionMultiResponse,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # Any functions that are the same for every command being tested should be below.
@@ -158,7 +157,7 @@ class TestWalletRpcClient(TestRpcClient):
         if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
         """
         self.add_to_log("cat_asset_id_to_name", (asset_id,))
-        for i in range(0, 256):
+        for i in range(256):
             if asset_id == get_bytes32(i):
                 return uint32(i + 1), "test" + str(i)
         return None

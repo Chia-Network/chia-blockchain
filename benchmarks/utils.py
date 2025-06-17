@@ -64,7 +64,7 @@ def get_commit_hash() -> str:
         sys.exit("Failed to get the commit hash")
     try:
         if len(subprocess.run(["git", "status", "-s"], check=True, stdout=subprocess.PIPE).stdout) > 0:
-            raise Exception()
+            raise Exception
     except Exception:
         commit_hash += "-dirty"
     return commit_hash

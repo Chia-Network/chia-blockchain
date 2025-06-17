@@ -9,10 +9,11 @@ from typing import Any, Optional, Union, cast
 from unittest.mock import ANY
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
+from typing_extensions import Self
 from yarl import URL
 
 from chia import __version__
@@ -24,11 +25,10 @@ from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
+from chia.server.aliases import FarmerService, HarvesterService
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     generate_plot_public_key,
     verify_and_get_quality_string,
 )
@@ -571,13 +571,14 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        size=case.plot_size,
+        version_and_size=case.plot_size,
         proof=case.proof,
     )
     new_pos = NewProofOfSpace(
@@ -680,7 +681,7 @@ class DummyPoolResponse:
 
         return json.dumps(json_dict)
 
-    async def __aenter__(self) -> DummyPoolResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
@@ -711,13 +712,14 @@ def create_valid_pos(farmer: Farmer) -> tuple[farmer_protocol.NewSignagePoint, P
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        size=case.plot_size,
+        version_and_size=case.plot_size,
         proof=case.proof,
     )
     new_pos = NewProofOfSpace(
@@ -1003,7 +1005,7 @@ class DummyPoolInfoResponse:
 
         return json.dumps(self.pool_info)
 
-    async def __aenter__(self) -> DummyPoolInfoResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(

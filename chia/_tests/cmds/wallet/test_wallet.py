@@ -25,20 +25,7 @@ from chia._tests.cmds.wallet.test_consts import (
     get_bytes32,
 )
 from chia.cmds.cmds_util import TransactionBundle
-from chia.rpc.wallet_request_types import (
-    CancelOfferResponse,
-    CATSpendResponse,
-    CreateOfferForIDsResponse,
-    FungibleAsset,
-    GetHeightInfoResponse,
-    NFTCalculateRoyalties,
-    NFTGetWalletDID,
-    NFTGetWalletDIDResponse,
-    RoyaltyAsset,
-    SendTransactionResponse,
-    TakeOfferResponse,
-)
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
@@ -53,6 +40,19 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.wallet.wallet_request_types import (
+    CancelOfferResponse,
+    CATSpendResponse,
+    CreateOfferForIDsResponse,
+    FungibleAsset,
+    GetHeightInfoResponse,
+    NFTCalculateRoyalties,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
+    RoyaltyAsset,
+    SendTransactionResponse,
+    TakeOfferResponse,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 test_offer_file_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath("test_offer.toffer")

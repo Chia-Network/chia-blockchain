@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 from typing import Optional, Union
 
-from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary, UnfinishedBlock
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, SubEpochSummary, UnfinishedBlock
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import (

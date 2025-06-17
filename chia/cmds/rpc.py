@@ -131,7 +131,7 @@ def status_cmd(ctx: click.Context, json_output: bool) -> None:
         status = "ACTIVE"
         try:
             if not get_routes(service, config, root_path=root_path, quiet=True)["success"]:
-                raise Exception()
+                raise Exception
         except Exception:
             status = "INACTIVE"
         status_data[service] = status

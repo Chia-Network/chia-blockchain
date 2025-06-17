@@ -56,7 +56,6 @@ repos:
       - id: trailing-whitespace
       - id: check-merge-conflict
       - id: check-ast
-      - id: debug-statements
   - repo: local
     hooks:
       - id: chialispp

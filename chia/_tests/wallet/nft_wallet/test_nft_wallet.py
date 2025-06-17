@@ -14,7 +14,19 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import (
+from chia.simulator.simulator_protocol import ReorgProtocol
+from chia.types.blockchain_format.program import Program
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.timing import adjusted_timeout
+from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import (
     NFTAddURI,
     NFTCoin,
     NFTCountNFTs,
@@ -30,19 +42,7 @@ from chia.rpc.wallet_request_types import (
     NFTTransferNFT,
     NFTWalletWithDID,
 )
-from chia.rpc.wallet_rpc_api import MAX_NFT_CHUNK_SIZE
-from chia.simulator.simulator_protocol import ReorgProtocol
-from chia.types.blockchain_format.program import Program
-from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.timing import adjusted_timeout
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_info import NFTInfo
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.util.address_type import AddressType
-from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_rpc_api import MAX_NFT_CHUNK_SIZE
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 

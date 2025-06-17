@@ -24,7 +24,26 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import (
+from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import selected_network_address_prefix
+from chia.wallet.conditions import ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
+from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.trade_status import TradeStatus
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vc_wallet.vc_store import VCProofs
+from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.wallet.wallet_request_types import (
     CATSpendResponse,
     FungibleAsset,
     GetNotifications,
@@ -47,26 +66,7 @@ from chia.rpc.wallet_request_types import (
     VCRevoke,
     VCSpend,
 )
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import selected_network_address_prefix
-from chia.wallet.conditions import ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
-from chia.wallet.nft_wallet.nft_info import NFTInfo
-from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
-from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.transaction_sorting import SortKey
-from chia.wallet.util.address_type import AddressType
-from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
-from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
-from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.vc_store import VCProofs
-from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[tuple[Optional[uint32], str]]]]
 
@@ -245,7 +245,7 @@ async def get_transactions(
         skipped = 0
         num_per_screen = 5 if paginate else len(txs)
         for i in range(0, len(txs), num_per_screen):
-            for j in range(0, num_per_screen):
+            for j in range(num_per_screen):
                 if i + j + skipped >= len(txs):
                     break
                 coin_record: Optional[dict[str, Any]] = None

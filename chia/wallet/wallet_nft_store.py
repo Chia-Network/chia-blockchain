@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import Optional, TypeVar, Union
+from typing import Optional, Union
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -15,7 +16,6 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
 
 log = logging.getLogger(__name__)
-_T_WalletNftStore = TypeVar("_T_WalletNftStore", bound="WalletNftStore")
 REMOVE_BUFF_BLOCKS = 1000
 NFT_COIN_INFO_COLUMNS = "nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did"
 
@@ -42,7 +42,7 @@ class WalletNftStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: type[_T_WalletNftStore], db_wrapper: DBWrapper2) -> _T_WalletNftStore:
+    async def create(cls, db_wrapper: DBWrapper2) -> Self:
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:

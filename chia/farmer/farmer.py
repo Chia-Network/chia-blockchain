@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -23,6 +23,7 @@ from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_url
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
     ErrorResponse,
@@ -36,11 +37,9 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
@@ -227,7 +226,7 @@ class Farmer:
             else:
                 self.keychain_proxy = await connect_to_keychain_and_validate(self._root_path, self.log)
                 if not self.keychain_proxy:
-                    raise KeychainProxyConnectionFailure()
+                    raise KeychainProxyConnectionFailure
         return self.keychain_proxy
 
     async def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:

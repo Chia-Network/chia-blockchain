@@ -6,16 +6,22 @@ from collections.abc import Awaitable, Collection
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
-from chia_rs import ConsensusConstants, FullBlock, SpendBundleConditions, UnfinishedBlock, compute_merkle_set_root
+from chia_rs import (
+    BlockRecord,
+    ConsensusConstants,
+    FullBlock,
+    SpendBundleConditions,
+    UnfinishedBlock,
+    compute_merkle_set_root,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.coin_record import CoinRecord
 from chia.util.errors import Err
@@ -543,7 +549,7 @@ async def validate_block_body(
     # 21. Verify conditions
     # verify absolute/relative height/time conditions
     if conds is not None:
-        error = mempool_check_time_locks(
+        error = check_time_locks(
             removal_coin_records,
             conds,
             prev_transaction_block_height,

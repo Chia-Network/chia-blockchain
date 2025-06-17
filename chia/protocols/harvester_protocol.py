@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
-from chia_rs import G1Element, G2Element, RewardChainBlockUnfinished
+from chia_rs import G1Element, G2Element, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint32, uint64
 
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -42,6 +41,7 @@ class NewSignagePointHarvester(Streamable):
     sp_hash: bytes32
     pool_difficulties: list[PoolDifficulty]
     filter_prefix_bits: uint8
+    last_tx_height: uint32
 
 
 @streamable
