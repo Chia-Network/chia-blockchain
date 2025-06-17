@@ -434,7 +434,7 @@ def function_to_parse_one_item(f_type: type[Any]) -> ParseFunctionType:
     if is_type_Dict(f_type):
         inner_types = get_args(f_type)
         key_parse_inner_type_f = function_to_parse_one_item(inner_types[0])
-        value_parse_inner_type_f = function_to_parse_one_item(inner_types[0])
+        value_parse_inner_type_f = function_to_parse_one_item(inner_types[1])
         return lambda f: parse_dict(f, key_parse_inner_type_f, value_parse_inner_type_f)
     if f_type is str:
         return parse_str

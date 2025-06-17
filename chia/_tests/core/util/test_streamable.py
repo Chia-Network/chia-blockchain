@@ -497,7 +497,7 @@ def test_basic() -> None:
         e: Optional[uint32]
         f: Optional[uint32]
         g: tuple[uint32, str, bytes]
-        h: dict[uint32, uint32]
+        h: dict[uint32, str]
 
     # we want to test invalid here, hence the ignore.
     a = TestClass(
@@ -508,7 +508,7 @@ def test_basic() -> None:
         uint32(728),
         None,
         (uint32(383), "hello", b"goodbye"),
-        {uint32(1): uint32(1)},
+        {uint32(1): "foo"},
     )
 
     b: bytes = bytes(a)
