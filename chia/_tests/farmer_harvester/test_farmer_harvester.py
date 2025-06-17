@@ -12,7 +12,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.connection_utils import add_dummy_connection_wsc
-from chia._tests.plot_sync.util import get_dummy_connection
 from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
