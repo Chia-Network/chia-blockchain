@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
     BlockRecord,
     ConsensusConstants,
     EndOfSubSlotBundle,
@@ -19,8 +20,8 @@ from chia_rs import (
     SubEpochChallengeSegment,
     SubEpochSummary,
     UnfinishedBlock,
-    additions_and_removals,
     get_flags_for_height_and_constants,
+    run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
@@ -268,22 +269,26 @@ class Blockchain:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
-        additions: list[tuple[Coin, Optional[bytes]]] = []
-        removals: list[Coin] = []
+        conds = None
         if block.transactions_generator is not None:
             block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
-            flags = get_flags_for_height_and_constants(block.height, self.constants)
-            additions, removals = additions_and_removals(
-                bytes(block.transactions_generator),
-                block_generator.generator_refs,
-                flags,
-                self.constants,
+            flags = get_flags_for_height_and_constants(block.height, self.constants) | DONT_VALIDATE_SIGNATURE
+            err, conds = run_block_generator2(
+                program=bytes(block.transactions_generator),
+                block_refs=block_generator.generator_refs,
+                max_cost=self.constants.MAX_BLOCK_COST_CLVM,
+                flags=flags,
+                signature=block.transactions_info.aggregated_signature,
+                bls_cache=None,
+                constants=self.constants,
             )
+            assert err is None
+            assert conds is not None
 
-        fork_info.include_block(additions, removals, block, block.header_hash)
+        fork_info.include_spends(conds, block, block.header_hash)
 
     async def add_block(
         self,
