@@ -208,16 +208,17 @@ class Farmer:
                     if peer.peer_node_id in self.peer_with_sps:
                         allgood = True
                         found = True
-                    count = count + 1
+                    count += 1
                     continue
                 if not found and peer.peer_node_id in self.peer_with_sps:
                     found = True
-                    count = count + 1
+                    count += 1
                     continue
                 ngcloseit.append(peer)
 
+            untrusted = len(self.farmer_peers.farm_list)
             log.debug(
-                f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {len(self.farmer_peers.farm_list)}"
+                f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {untrusted}"
             )
 
             self.peer_with_sps = set()
@@ -225,7 +226,7 @@ class Farmer:
             if found:
                 count = 0
             else:
-                count = count + 1
+                count += 1
 
             if allgood:
                 count = 0
