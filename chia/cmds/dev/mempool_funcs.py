@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from chia_rs import SpendBundle
 
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
 async def import_mempool_async(

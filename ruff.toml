@@ -98,25 +98,21 @@ ignore = [
     "RUF052", # used-dummy-variable
 
     # Security linter
+    "S603", # subprocess-without-shell-equals-true
+    # Should probably fix this
+    "S104", # hardcoded-bind-all-interfaces
+    "S110", # try-except-pass
+    "S112", # try-except-continue
+    "S311", # suspicious-non-cryptographic-random-usage
+    "S608", # hardcoded-sql-expression
     # Need review on which of these we can/should fix
-    "S101",
-    "S110",
-    "S404",
-    "S311",
-    "S602",
-    "S607",
-    "S603",
-    "S608",
-    "S112",
-    "S105",
-    "S104",
-    "S323",
-    "S605",
-    "S301",
-    "S403",
-    "S106",
+    "S101", # assert
+    "S404", # suspicious-subprocess-import
+    "S607", # start-process-with-partial-path
 ]
 
+[lint.per-file-ignores]
+"chia/_tests/*" = ["S106"]
 
 [lint.flake8-implicit-str-concat]
 # Found 3279 errors.

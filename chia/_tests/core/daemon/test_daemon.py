@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
+import logging
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Optional, Union, cast
@@ -2126,3 +2127,82 @@ def test_run_plotter_bladebit(
     assert mock_run_plotter.call_args.args[1] == "bladebit"
     assert mock_run_plotter.call_args.args[2][1:] == case.expected_raw_command_args()
     mock_run_plotter.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_message_logging_redaction(
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    with caplog.at_level(logging.DEBUG, logger="chia.daemon.server"):
+        sensitive_payload = create_payload(
+            "test_command",
+            {
+                "password": "secret_password",
+                "private_key": "sensitive_key_data",
+                "secret_value": "very_secret",
+                "mnemonic": "test_mnemonic_phrase",
+                "normal_field": "normal_value",
+                "nested_object": {
+                    "passphrase": "nested_secret",
+                    "api_key": "nested_api_key",
+                    "seed_mnemonic": "nested_mnemonic",
+                    "safe_field": "safe_value",
+                },
+            },
+            "test",
+            "daemon",
+        )
+
+        original_message = json.loads(sensitive_payload)
+        request_id = original_message["request_id"]
+
+        await ws.send_str(sensitive_payload)
+        await ws.receive()
+
+        log_message = next(record for record in caplog.records if "Received message:" in record.message).message
+        _, _, ws_message_str = log_message.partition("Received message: ")
+
+        # Build the expected redacted structure and sort keys like dict_to_json_str does
+        expected_redacted_data = {
+            "ack": False,
+            "command": "test_command",
+            "data": {
+                "mnemonic": "***<redacted>***",
+                "nested_object": {
+                    "api_key": "***<redacted>***",
+                    "passphrase": "***<redacted>***",
+                    "safe_field": "safe_value",
+                    "seed_mnemonic": "***<redacted>***",
+                },
+                "normal_field": "normal_value",
+                "password": "***<redacted>***",
+                "private_key": "***<redacted>***",
+                "secret_value": "***<redacted>***",
+            },
+            "destination": "daemon",
+            "origin": "test",
+            "request_id": request_id,
+        }
+
+        expected_ws_message = f"WSMessage(type=<WSMsgType.TEXT: 1>, data={expected_redacted_data!r}, extra='')"
+
+        assert ws_message_str == expected_ws_message
+
+
+@pytest.mark.anyio
+async def test_non_text_message_logging(
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    with caplog.at_level(logging.DEBUG, logger="chia.daemon.server"):
+        # Close the websocket to trigger non-text message handling
+        await ws.close()
+
+        non_text_logs = [record for record in caplog.records if "Received non-text message" in record.message]
+
+        assert len(non_text_logs) == 1, "Expected one 'Received non-text message' log entry"

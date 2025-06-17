@@ -10,9 +10,9 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.util.errors import Err
@@ -83,7 +83,7 @@ class CoinStore:
                     uint64(now.seconds),
                 )
 
-        err = mempool_check_time_locks(
+        err = check_time_locks(
             ephemeral_db,
             result.conds,
             # TODO: this is technically not right, it's supposed to be the
