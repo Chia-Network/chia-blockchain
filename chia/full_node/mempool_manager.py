@@ -23,13 +23,13 @@ from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
+from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.eligible_coin_spends import EligibilityAndAdditions
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
-from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.clvm_cost import CLVMCost
@@ -575,7 +575,7 @@ class MempoolManager:
             Optional[MempoolItem]: the item to add (to mempool or pending pool)
             list[bytes32]: conflicting mempool items to remove, if no Err
         """
-        start_time = time.time()
+        start_time = time.monotonic()
         if self.peak is None:
             return Err.MEMPOOL_NOT_INITIALIZED, None, []
 
@@ -725,7 +725,7 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        tl_error: Optional[Err] = mempool_check_time_locks(
+        tl_error: Optional[Err] = check_time_locks(
             removal_record_dict,
             conds,
             self.peak.height,
@@ -764,13 +764,17 @@ class MempoolManager:
             if not can_replace(conflicts, removal_names, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
-        duration = time.time() - start_time
+        duration = time.monotonic() - start_time
 
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
             f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
+
+        if duration > 2:
+            log.warning("validating spend took too long, rejecting")
+            return Err.INVALID_SPEND_BUNDLE, None, []
 
         return None, potential, [item.name for item in conflicts]
 

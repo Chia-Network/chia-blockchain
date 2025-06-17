@@ -800,7 +800,7 @@ class TestFromBytes:
 class FailFromBytes:
     @classmethod
     def from_bytes(cls, b: bytes) -> FailFromBytes:
-        raise ValueError()
+        raise ValueError
 
 
 def test_parse_str() -> None:

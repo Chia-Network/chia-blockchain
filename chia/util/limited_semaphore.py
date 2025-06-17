@@ -31,7 +31,7 @@ class LimitedSemaphore:
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:
         if self._available_count < 1:
-            raise LimitedSemaphoreFullError()
+            raise LimitedSemaphoreFullError
 
         self._available_count -= 1
         try:

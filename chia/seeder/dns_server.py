@@ -35,6 +35,8 @@ DnsCallback = Callable[[DNSRecord], Awaitable[DNSRecord]]
 
 
 class DomainName(str):
+    __slots__ = ()
+
     def __getattr__(self, item: str) -> DomainName:
         return DomainName(f"{item}.{self}")  # DomainName.NS becomes DomainName("NS.DomainName")
 

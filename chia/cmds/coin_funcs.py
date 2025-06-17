@@ -12,13 +12,13 @@ from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm
 from chia.cmds.param_types import CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
-from chia.rpc.wallet_request_types import CombineCoins, SplitCoins
 from chia.types.blockchain_format.coin import Coin
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import CombineCoins, SplitCoins
 
 
 async def async_list(
@@ -92,7 +92,7 @@ def print_coins(
         return
     num_per_screen = 5 if paginate else len(coins)
     for i in range(0, len(coins), num_per_screen):
-        for j in range(0, num_per_screen):
+        for j in range(num_per_screen):
             if i + j >= len(coins):
                 break
             coin, conf_height = coins[i + j]

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional
 
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from typing_extensions import NotRequired, TypedDict, Unpack
+from typing_extensions import NotRequired, Self, TypedDict, Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -66,9 +66,6 @@ class AutofillArgs(TypedDict):
     logged_in_fingerprint: NotRequired[int]
 
 
-_T_CoinSelectionConfigLoader = TypeVar("_T_CoinSelectionConfigLoader", bound="CoinSelectionConfigLoader")
-
-
 @streamable
 @dataclasses.dataclass(frozen=True)
 class CoinSelectionConfigLoader(Streamable):
@@ -90,9 +87,7 @@ class CoinSelectionConfigLoader(Streamable):
         )
 
     @classmethod
-    def from_json_dict(
-        cls: type[_T_CoinSelectionConfigLoader], json_dict: dict[str, Any]
-    ) -> _T_CoinSelectionConfigLoader:
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         if "excluded_coins" in json_dict:
             excluded_coins: list[Coin] = [Coin.from_json_dict(c) for c in json_dict["excluded_coins"]]
             excluded_coin_ids: list[str] = [c.name().hex() for c in excluded_coins]

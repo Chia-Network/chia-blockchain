@@ -349,5 +349,3 @@ class CliRpcConnectionError(ClickException):
     """
     This error is raised when a rpc server cant be reached by the cli async generator
     """
-
-    pass

@@ -14,8 +14,6 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_tools import conditions_dict_for_solution
-from chia.rpc.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -40,6 +38,8 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
+from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -1495,7 +1495,7 @@ async def test_did_auto_transfer_limit(
     await full_node_api.farm_blocks_to_wallet(1, wallet)
 
     # Check that we cap out at 10 DID Wallets automatically created upon transfer received
-    for i in range(0, 14):
+    for i in range(14):
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager,
@@ -2389,7 +2389,7 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, use_al
         ]
     )
 
-    for _ in range(0, 2):
+    for _ in range(2):
         async with did_wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:

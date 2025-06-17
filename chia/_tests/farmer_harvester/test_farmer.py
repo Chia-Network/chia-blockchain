@@ -13,6 +13,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
+from typing_extensions import Self
 from yarl import URL
 
 from chia import __version__
@@ -570,6 +571,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,
@@ -679,7 +681,7 @@ class DummyPoolResponse:
 
         return json.dumps(json_dict)
 
-    async def __aenter__(self) -> DummyPoolResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
@@ -710,6 +712,7 @@ def create_valid_pos(farmer: Farmer) -> tuple[farmer_protocol.NewSignagePoint, P
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,
@@ -1002,7 +1005,7 @@ class DummyPoolInfoResponse:
 
         return json.dumps(self.pool_info)
 
-    async def __aenter__(self) -> DummyPoolInfoResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(

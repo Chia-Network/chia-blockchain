@@ -38,7 +38,7 @@ NIL_PH = Program.to(None).get_tree_hash()
 async def test_graftroot(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Create the coin we're testing
-        all_values: list[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
+        all_values: list[bytes32] = [bytes32([x] * 32) for x in range(100)]
         root, proofs = build_merkle_tree(all_values)
         p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
         desired_key_values = ((bytes32.zeros, bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
@@ -125,22 +125,21 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 await sim.rewind(same_height)
 
                 # try with a bad merkle root announcement
+                fake_puzzle_bad_announcement = ACS.curry(
+                    fake_struct, ACS.curry(ACS_PH, (bytes32.zeros, None), None, None)
+                )
+                await sim.farm_block(fake_puzzle_bad_announcement.get_tree_hash())
+                fake_coin_bad_announcement: Coin = (
+                    await sim_client.get_coin_records_by_puzzle_hash(fake_puzzle_bad_announcement.get_tree_hash())
+                )[0].coin
                 new_fake_spend = make_spend(
-                    fake_coin,
-                    ACS.curry(fake_struct, ACS.curry(ACS_PH, (bytes32.zeros, None), None, None)),
+                    fake_coin_bad_announcement,
+                    fake_puzzle_bad_announcement,
                     Program.to([[[62, "$"]]]),
                 )
                 new_final_bundle = WalletSpendBundle([new_fake_spend, graftroot_spend], G2Element())
                 result = await sim_client.push_tx(new_final_bundle)
-
-                # TODO: This test probably needs to be updated
-                # The original version of this test made sure we return the
-                # following error. Now that puzzle reveal validation was moved
-                # into chia_rs, this failure will be detected before running
-                # the puzzle. This test probably needs to be updated
-                # assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
-
-                assert result == (MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH)
+                assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
             else:
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
                 with pytest.raises(ValueError, match="clvm raise"):
