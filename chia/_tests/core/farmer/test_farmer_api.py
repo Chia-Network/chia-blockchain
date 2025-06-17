@@ -50,7 +50,9 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
 
-    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
+    node_connection, _ = await add_dummy_connection_wsc(
+        farmer_server, self_hostname, 8444, NodeType.FULL_NODE, []
+    )
 
     await gather(
         farmer_api.new_signage_point(sp, node_connection),
