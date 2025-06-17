@@ -280,7 +280,10 @@ async def test_missing_signage_point(
     farmer.state_changed_callback = state_changed  # type: ignore
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
 
-    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
+    farmer_server = farmer_service._server
+    node_connection, _ = await add_dummy_connection_wsc(
+        farmer_server, farmer_service.self_hostname, 8444, NodeType.FULL_NODE, []
+    )
 
     await farmer_api.new_signage_point(sp_for_farmer_api, node_connection)
     assert number_of_missing_sps == uint32(1)

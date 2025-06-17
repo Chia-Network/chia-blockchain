@@ -135,7 +135,10 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment: Harv
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
 
-    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
+    farmer_server = farmer_service._server
+    node_connection, _ = await add_dummy_connection_wsc(
+        farmer_server, farmer_service.self_hostname, 8444, NodeType.FULL_NODE, []
+    )
 
     await farmer_api.new_signage_point(sp, node_connection)
 
@@ -248,7 +251,10 @@ async def test_farmer_get_pool_state(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
     )
 
-    node_connection = get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random))
+    farmer_server = farmer_service._server
+    node_connection, _ = await add_dummy_connection_wsc(
+        farmer_server, farmer_service.self_hostname, 8444, NodeType.FULL_NODE, []
+    )
 
     await farmer_api.new_signage_point(sp, node_connection)
     client_pool_state = await farmer_rpc_client.get_pool_state()
