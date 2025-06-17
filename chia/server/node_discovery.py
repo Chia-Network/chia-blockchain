@@ -15,7 +15,6 @@ from typing import Any, Optional
 
 import dns.asyncresolver
 from chia_rs.sized_ints import uint16, uint64
-from chia_rs.sized_bytes import bytes32
 
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer

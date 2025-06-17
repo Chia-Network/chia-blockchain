@@ -19,12 +19,10 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.plot_sync.test_delta import dummy_plot
-from chia._tests.plot_sync.util import get_dummy_connection
 from chia._tests.util.misc import assert_rpc_error
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.farmer.farmer import Farmer
-from chia.protocols.outbound_message import NodeType
 from chia.farmer.farmer_rpc_api import (
     FilterItem,
     PaginatedRequestData,
@@ -37,6 +35,7 @@ from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
+from chia.protocols.outbound_message import NodeType
 from chia.simulator.block_tools import get_plot_dir
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config

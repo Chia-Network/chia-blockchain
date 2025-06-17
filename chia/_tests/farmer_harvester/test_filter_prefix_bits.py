@@ -13,7 +13,6 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
-from chia._tests.plot_sync.util import get_dummy_connection
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_api import FarmerAPI
 from chia.farmer.farmer_rpc_client import FarmerRpcClient

@@ -187,7 +187,7 @@ class Farmer:
         self.prev_signage_point: Optional[tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
     async def _sp_task_handler(self) -> None:
-        log.debug(f"WJB _sp_task_handler")
+        log.debug("WJB _sp_task_handler")
 
         while True:
             await asyncio.sleep(120)
