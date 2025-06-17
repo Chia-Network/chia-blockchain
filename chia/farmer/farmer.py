@@ -217,9 +217,7 @@ class Farmer:
                 ngcloseit.append(peer)
 
             untrusted = len(self.farmer_peers.farm_list)
-            log.debug(
-                f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {untrusted}"
-            )
+            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {untrusted}")
 
             self.peer_with_sps = set()
 

@@ -127,7 +127,7 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         last_tx_height=uint32(0),
     )
 
-    harvester_server = harvester_service._server # just to chew on
+    harvester_server = harvester_service._server  # just to chew on
     node_connection, _ = await add_dummy_connection_wsc(
         harvester_server, harvester_service.self_hostname, 8444, NodeType.FULL_NODE, []
     )

@@ -498,7 +498,9 @@ class FarmerAPI:
     """
 
     @metadata.request(peer_required=True)
-    async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint, peer: WSChiaConnection) -> None:
+    async def new_signage_point(
+        self, new_signage_point: farmer_protocol.NewSignagePoint, peer: WSChiaConnection
+    ) -> None:
         if self.farmer.farmer_peers is not None:
             self.farmer.peer_with_sps.add(peer.peer_node_id)
             self.farmer.log.debug(f"WJB new_signage_point {self.farmer.peer_with_sps}")

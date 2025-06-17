@@ -73,7 +73,6 @@ class FullNodeDiscovery:
     farm_list: list[WSChiaConnection] = field(default_factory=list)
     is_farmer: bool = field(default=False)
 
-
     def __post_init__(self) -> None:
         random.shuffle(self.dns_servers)  # Don't always start with the same DNS server
 
@@ -682,6 +681,7 @@ class WalletPeers(FullNodeDiscovery):
     ) -> None:
         await self._add_peers_common(peer_list, peer_src, is_full_node)
 
+
 @dataclass
 class FarmerPeers(FullNodeDiscovery):
     def __post_init__(self) -> None:
@@ -698,4 +698,3 @@ class FarmerPeers(FullNodeDiscovery):
         if self.is_closed:
             return None
         await self._close_common()
-
