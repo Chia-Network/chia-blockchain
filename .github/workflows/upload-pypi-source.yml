@@ -122,6 +122,8 @@ jobs:
         check:
           - name: ruff
             command: ruff format --check --diff .
+          - name: tach
+            command: tach check
           - name: generated protocol tests
             command: |
               python3 -m chia._tests.util.build_network_protocol_files
