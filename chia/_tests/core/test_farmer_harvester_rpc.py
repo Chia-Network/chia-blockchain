@@ -28,6 +28,7 @@ from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.farmer_rpc_api import (
     FilterItem,
     PaginatedRequestData,
