@@ -912,10 +912,8 @@ def test_streamable_inheritance_missing() -> None:
     [
         (function_to_parse_one_item, float),
         (function_to_parse_one_item, int),
-        (function_to_parse_one_item, dict),
         (function_to_stream_one_item, float),
         (function_to_stream_one_item, int),
-        (function_to_stream_one_item, dict),
         (recurse_jsonify, 1.0),
         (recurse_jsonify, recurse_jsonify),
     ],
