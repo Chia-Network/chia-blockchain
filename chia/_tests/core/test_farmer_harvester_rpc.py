@@ -17,6 +17,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
+from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.plot_sync.test_delta import dummy_plot
 from chia._tests.plot_sync.util import get_dummy_connection
 from chia._tests.util.misc import assert_rpc_error
