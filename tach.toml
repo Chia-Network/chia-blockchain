@@ -158,7 +158,6 @@ path = "chia.timelord"
 depends_on = [
     "chia.types",
     "chia.util",
-    "chia.apis",
     { path = "chia.server", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.consensus", deprecated = false },
@@ -176,18 +175,9 @@ path = "chia.rpc"
 depends_on = [
     "chia.types",
     "chia.util",
-    { path = "chia.seeder", deprecated = false },
-    { path = "chia.harvester", deprecated = false },
     { path = "chia.server", deprecated = false },
-    { path = "chia.farmer", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.wallet", deprecated = false },
-    { path = "chia.plot_sync", deprecated = false },
-    { path = "chia.timelord", deprecated = false },
-    { path = "chia.full_node", deprecated = false },
-    { path = "chia.consensus", deprecated = false },
-    { path = "chia.pools", deprecated = false },
-    { path = "chia.data_layer", deprecated = false },
 ]
 
 [[modules]]
@@ -234,7 +224,6 @@ depends_on = [
     { path = "chia.server", deprecated = false },
     { path = "chia.cmds", deprecated = false },
     { path = "chia.wallet", deprecated = false },
-    { path = "chia.consensus", deprecated = false },
     { path = "chia.plotters", deprecated = false },
 ]
 
