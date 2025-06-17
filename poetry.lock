@@ -3297,7 +3297,7 @@ description = "A list of Python Standard Libraries (2.7 through 3.13)."
 optional = true
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version < \"3.10\""
+markers = "python_version < \"3.10\" and extra == \"dev\""
 files = [
     {file = "stdlib_list-0.11.1-py3-none-any.whl", hash = "sha256:9029ea5e3dfde8cd4294cfd4d1797be56a67fc4693c606181730148c3fd1da29"},
     {file = "stdlib_list-0.11.1.tar.gz", hash = "sha256:95ebd1d73da9333bba03ccc097f5bac05e3aa03e6822a0c0290f87e1047f1857"},
@@ -3318,33 +3318,28 @@ optional = true
 python-versions = ">=3.7"
 groups = ["main"]
 markers = "extra == \"dev\""
-files = [
-    {file = "tach-0.29.0-cp37-abi3-macosx_10_12_x86_64.whl", hash = "sha256:517f33d18d381326a775d101650e576c6922db53b2c336192db7db88b9a3521d"},
-    {file = "tach-0.29.0-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:d984f54bebba0e4c981d2a08c3e4cdf76c3b5f3126e2f593a0faaed9d218552a"},
-    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:42e0bbecf5e8ea23791b62e54e7c8065376e8a7f642a232dcef8bcae0149944e"},
-    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3b40c59e9a1d0b28fc6176736876c4cfa2d01114870d539e9989dfb7c6638139"},
-    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:52903e54683b0aa26bd4ef0c9ed68b34480a3fbf83fb7b32e9d6a9908e2761e1"},
-    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:810e5aaa2e936c8417bb91672708886aadaf8ab116763ae418c6b1b961422bba"},
-    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:a7b8c82943f4ed72612282ff35c155fcca7222b9e9cd2864763b67497729f0c3"},
-    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:58443cbd3f5d19d6b98cd3508593eae186c91f0e059c8bcf1348e3849095b622"},
-    {file = "tach-0.29.0-cp37-abi3-win32.whl", hash = "sha256:d65408ec003ec16bdab4ef61990d7cfc0551672d145a78f80a4aef71e8714b9b"},
-    {file = "tach-0.29.0-cp37-abi3-win_amd64.whl", hash = "sha256:2e15ceb80fc25435d18e01d10029fec15a54fb53bf6b430d53c4ecb53859a0ff"},
-    {file = "tach-0.29.0.tar.gz", hash = "sha256:0b27b9265eee34f396515a2e918fa783d3d02e69edfb6ea1dfd1843d49021429"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-gitpython = ">=3.1,<4.0"
+GitPython = ">=3.1,<4.0"
 networkx = ">=2.6,<4.0"
 prompt-toolkit = ">=3.0,<4.0"
 pydot = ">=2,<4"
 pyyaml = ">=6.0,<7.0"
 rich = ">=13.0,<14.0"
-stdlib-list = {version = ">=0.10.0", markers = "python_full_version < \"3.10.0\""}
+stdlib-list = {version = ">=0.10.0", markers = "python_version < \"3.10\""}
 tomli = ">=1.2.2"
 tomli-w = ">=1.0,<2.0"
 
 [package.extras]
-dev = ["build (==1.1.1) ; python_full_version == \"3.7.*\"", "build (==1.2.1) ; python_full_version >= \"3.8.0\"", "coverage (==7.2.7) ; python_full_version == \"3.7.*\"", "coverage (==7.6.0) ; python_full_version >= \"3.8.0\"", "maturin (==1.7.1)", "pip (==24.0)", "prompt-toolkit (==3.0.47)", "pyright (==1.1.389)", "pytest (==7.4.4) ; python_full_version == \"3.7.*\"", "pytest (==8.2.2) ; python_full_version >= \"3.8.0\"", "pytest-mock (==3.11.1) ; python_full_version == \"3.7.*\"", "pytest-mock (==3.14.0) ; python_full_version >= \"3.8.0\"", "rich (==13.8.1)", "ruff (==0.11.5)", "setuptools (==47.1.0) ; python_full_version == \"3.7.*\"", "setuptools (==69.5.1) ; python_full_version >= \"3.8.0\"", "twine (==4.0.2) ; python_full_version == \"3.7.*\"", "twine (==5.1.1) ; python_full_version >= \"3.8.0\""]
+dev = ["build (==1.1.1) ; python_version == \"3.7\"", "build (==1.2.1) ; python_version > \"3.7\"", "coverage (==7.2.7) ; python_version == \"3.7\"", "coverage (==7.6.0) ; python_version > \"3.7\"", "maturin (==1.7.1)", "pip (==24.0)", "prompt-toolkit (==3.0.47)", "pyright (==1.1.389)", "pytest (==7.4.4) ; python_version == \"3.7\"", "pytest (==8.2.2) ; python_version > \"3.7\"", "pytest-mock (==3.11.1) ; python_version == \"3.7\"", "pytest-mock (==3.14.0) ; python_version > \"3.7\"", "rich (==13.8.1)", "ruff (==0.11.5)", "setuptools (==47.1.0) ; python_version == \"3.7\"", "setuptools (==69.5.1) ; python_version > \"3.7\"", "twine (==4.0.2) ; python_version == \"3.7\"", "twine (==5.1.1) ; python_version > \"3.7\""]
+
+[package.source]
+type = "git"
+url = "https://github.com/altendky/tach"
+reference = "kyle_debug"
+resolved_reference = "77f9f4b3cced3681222feedc79490e63a362dc5c"
 
 [[package]]
 name = "tomli"
@@ -3827,4 +3822,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "96199723f8be2b7b83f4321230349acc2fff5960a6d017650a216686098e93e2"
+content-hash = "66daff5042ee56a50c22eb00ecc4a3506d945691027fdb794a6b5e52158882f2"
