@@ -392,9 +392,10 @@ def parse_dict(
     keys_and_values: list[tuple[object, object]] = parse_list(  # type: ignore[assignment]
         f, lambda inner_f: parse_tuple(inner_f, [key_parse_inner_type_f, value_parse_inner_type_f])
     )
-    if len(set(key for key, _ in keys_and_values)) < len(tuple(key for key, _ in keys_and_values)):
+    parsed_dict: dict[object, object] = dict(keys_and_values)
+    if len(parsed_dict) < len(keys_and_values):
         raise ValueError("duplicate dict keys found when deserializing")
-    return {key: value for key, value in keys_and_values}
+    return parsed_dict
 
 
 def parse_str(f: BinaryIO) -> str:
