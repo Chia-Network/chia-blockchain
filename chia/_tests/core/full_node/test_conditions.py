@@ -11,7 +11,7 @@ from typing import Optional
 import pytest
 from chia_rs import AugSchemeMPL, FullBlock, G2Element, SpendBundle
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block

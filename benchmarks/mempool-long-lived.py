@@ -9,7 +9,7 @@ from typing import Optional
 from chia_rs import CoinSpend, G2Element, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager

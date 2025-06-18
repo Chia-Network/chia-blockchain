@@ -8,7 +8,7 @@ from typing import Any, ClassVar, Optional, TypeVar, Union, final, get_type_hint
 from chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from clvm.casts import int_from_bytes, int_to_bytes
+from chia.wallet.util.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program

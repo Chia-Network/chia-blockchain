@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, tree_hash
 from chia_rs.sized_bytes import bytes32
-from clvm.casts import int_from_bytes
+from chia.wallet.util.casts import int_from_bytes
 from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream

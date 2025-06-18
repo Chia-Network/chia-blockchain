@@ -5,7 +5,7 @@ from typing import Any, Optional
 from chia_rs import AugSchemeMPL, CoinSpend, ConsensusConstants, G1Element, G2Element, PrivateKey, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_from_bytes, int_to_bytes
+from chia.wallet.util.casts import int_from_bytes, int_to_bytes
 
 from chia.consensus.condition_tools import (
     agg_sig_additional_data,

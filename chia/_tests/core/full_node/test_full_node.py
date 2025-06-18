@@ -29,7 +29,7 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error

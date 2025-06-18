@@ -5,7 +5,7 @@ from typing import Optional
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from chia_rs.sized_ints import uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index

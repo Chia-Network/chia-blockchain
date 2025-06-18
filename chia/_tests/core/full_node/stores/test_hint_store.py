@@ -5,7 +5,7 @@ import logging
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 
 from chia._tests.util.db_connection import DBConnection
 from chia.full_node.hint_store import HintStore

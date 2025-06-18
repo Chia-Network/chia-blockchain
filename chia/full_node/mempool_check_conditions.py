@@ -12,10 +12,9 @@ from chia_rs import (
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
 from chia_rs.sized_ints import uint64
 
-from chia.consensus.condition_tools import conditions_for_solution
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import CoinSpendWithConditions, SpendInfo, make_spend
+from chia.types.coin_spend import SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
@@ -67,7 +66,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
 
 def get_spends_for_block_with_conditions(
     generator: BlockGenerator, height: int, constants: ConsensusConstants
-) -> list[CoinSpendWithConditions]:
+) -> list[dict]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
@@ -82,15 +81,30 @@ def get_spends_for_block_with_conditions(
         constants.MAX_BLOCK_COST_CLVM,
         flags,
     )
-
-    spends: list[CoinSpendWithConditions] = []
+    output = []
 
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
         coin_spend = make_spend(coin, puzzle, solution)
-        conditions = conditions_for_solution(puzzle, solution, constants.MAX_BLOCK_COST_CLVM)
-        spends.append(CoinSpendWithConditions(coin_spend, conditions))
+        _, conditions = run_chia_program(bytes(puzzle), bytes(solution), constants.MAX_BLOCK_COST_CLVM, flags)
+        conditions_prog = Program.to(conditions)
+        # the previous implementation ignored hints and memos so we shall do so here also
+        cond_dict = (
+            [
+                {
+                    "opcode": condition.first().as_int(),
+                    "vars": [var.atom.hex() for var in condition.rest().as_iter() if var.atom is not None],
+                }
+                for condition in conditions_prog.as_iter()
+            ],
+        )
+        output.append(
+            {
+                "coin_spend": coin_spend,
+                "conditions": cond_dict,
+            }
+        )
 
-    return spends
+    return output

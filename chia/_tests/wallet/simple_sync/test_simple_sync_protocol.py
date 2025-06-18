@@ -5,7 +5,7 @@ import asyncio
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 from colorlog import getLogger
 
 from chia._tests.connection_utils import add_dummy_connection

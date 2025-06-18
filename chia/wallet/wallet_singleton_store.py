@@ -8,7 +8,7 @@ from typing import Optional, Union
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_from_bytes
+from chia.wallet.util.casts import int_from_bytes
 from typing_extensions import Self
 
 from chia.consensus.condition_tools import conditions_dict_for_solution

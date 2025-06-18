@@ -19,7 +19,7 @@ from chia_puzzles_py.programs import (
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list

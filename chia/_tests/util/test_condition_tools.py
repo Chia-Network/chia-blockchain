@@ -4,7 +4,7 @@ import pytest
 from chia_rs import G1Element, SpendBundleConditions, SpendConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 
 from chia.consensus.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.types.blockchain_format.coin import Coin

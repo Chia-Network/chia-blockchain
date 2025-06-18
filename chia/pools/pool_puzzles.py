@@ -14,7 +14,7 @@ from chia_puzzles_py.programs import (
 from chia_rs import CoinSpend, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id

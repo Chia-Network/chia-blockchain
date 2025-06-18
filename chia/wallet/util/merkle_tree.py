@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
-from clvm.casts import int_to_bytes
+from chia.wallet.util.casts import int_to_bytes
 
 from chia.util.hash import std_hash
 
