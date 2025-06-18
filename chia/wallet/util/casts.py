@@ -1,4 +1,6 @@
-# This file converts between chialisp bytes and Python integer 
+# This file converts between chialisp bytes and Python integer
+from __future__ import annotations
+
 
 def int_from_bytes(blob: bytes) -> int:
     size = len(blob)

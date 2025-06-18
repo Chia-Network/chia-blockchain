@@ -5,6 +5,7 @@ from hashlib import sha256
 from typing import Callable
 
 from chia_rs.sized_bytes import bytes32
+
 from chia.wallet.util.casts import int_to_bytes
 
 CurryHashFunction = Callable[..., bytes32]

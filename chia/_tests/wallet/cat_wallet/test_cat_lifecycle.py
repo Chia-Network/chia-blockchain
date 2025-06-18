@@ -5,7 +5,6 @@ from typing import Optional
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from chia_rs.sized_ints import uint64
-from chia.wallet.util.casts import int_to_bytes
 
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
@@ -24,6 +23,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
+from chia.wallet.util.casts import int_to_bytes
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 acs = Program.to(1)

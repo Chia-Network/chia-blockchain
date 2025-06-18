@@ -5,9 +5,9 @@ from enum import Enum
 from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
-from chia.wallet.util.casts import int_to_bytes
 
 from chia.util.hash import std_hash
+from chia.wallet.util.casts import int_to_bytes
 
 ONE = int_to_bytes(1)
 TWO = int_to_bytes(2)

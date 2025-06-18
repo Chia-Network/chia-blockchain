@@ -5,7 +5,6 @@ from typing import Any, Optional
 from chia_rs import AugSchemeMPL, CoinSpend, ConsensusConstants, G1Element, G2Element, PrivateKey, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from chia.wallet.util.casts import int_from_bytes, int_to_bytes
 
 from chia.consensus.condition_tools import (
     agg_sig_additional_data,
@@ -26,6 +25,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.util.casts import int_from_bytes, int_to_bytes
 
 DEFAULT_SEED = b"seed" * 8
 assert len(DEFAULT_SEED) == 32

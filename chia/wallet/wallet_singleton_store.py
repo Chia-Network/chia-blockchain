@@ -8,7 +8,6 @@ from typing import Optional, Union
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from chia.wallet.util.casts import int_from_bytes
 from typing_extensions import Self
 
 from chia.consensus.condition_tools import conditions_dict_for_solution
@@ -21,6 +20,7 @@ from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
 from chia.wallet.singleton_record import SingletonRecord
+from chia.wallet.util.casts import int_from_bytes
 
 log = logging.getLogger(__name__)
 

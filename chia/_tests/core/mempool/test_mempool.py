@@ -19,7 +19,6 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from chia.wallet.util.casts import int_to_bytes
 from clvm_tools import binutils
 from clvm_tools.binutils import assemble
 
@@ -77,6 +76,7 @@ from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 from chia.wallet.estimate_fees import estimate_fees
+from chia.wallet.util.casts import int_to_bytes
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)

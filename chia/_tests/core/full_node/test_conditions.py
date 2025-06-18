@@ -11,7 +11,6 @@ from typing import Optional
 import pytest
 from chia_rs import AugSchemeMPL, FullBlock, G2Element, SpendBundle
 from chia_rs.sized_ints import uint32, uint64
-from chia.wallet.util.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -27,6 +26,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
+from chia.wallet.util.casts import int_to_bytes
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:

@@ -29,7 +29,6 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from chia.wallet.util.casts import int_to_bytes
 from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
@@ -106,6 +105,7 @@ from chia.util.recursive_replace import recursive_replace
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.casts import int_to_bytes
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle

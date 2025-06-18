@@ -14,7 +14,6 @@ from chia_puzzles_py.programs import (
 from chia_rs import CoinSpend, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from chia.wallet.util.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
@@ -29,6 +28,7 @@ from chia.wallet.puzzles.singleton_top_layer import (
     SINGLETON_MOD_HASH,
     puzzle_for_singleton,
 )
+from chia.wallet.util.casts import int_to_bytes
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
