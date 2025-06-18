@@ -117,6 +117,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                     request.push,
                     tx_config,
                     timelock_info,
+                    extra_conditions,
                 ),
             )
             return NFTMintNFTResponse(
@@ -179,6 +180,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                     reuse_puzhash=True,
                 ),
                 test_condition_valid_times,
+                (),
             )
         ],
     }
@@ -208,6 +210,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                     tx_config,
                     request.push,
                     timelock_info,
+                    extra_conditions,
                 ),
             )
             return NFTAddURIResponse([STD_UTX], [STD_TX], request.wallet_id, WalletSpendBundle([], G2Element()))
@@ -247,6 +250,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 True,
                 test_condition_valid_times,
+                (),
             )
         ],
     }
@@ -275,6 +279,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                     tx_config,
                     request.push,
                     timelock_info,
+                    extra_conditions,
                 ),
             )
             return NFTTransferNFTResponse(
@@ -319,6 +324,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 True,
                 test_condition_valid_times,
+                (),
             )
         ],
     }
@@ -410,6 +416,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                     tx_config,
                     request.push,
                     timelock_info,
+                    extra_conditions,
                 ),
             )
             return NFTSetNFTDIDResponse(
@@ -454,6 +461,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 True,
                 test_condition_valid_times,
+                (),
             )
         ],
     }

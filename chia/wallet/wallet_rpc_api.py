@@ -3503,7 +3503,7 @@ class WalletRpcApi:
             metadata_list.append(metadata_dict)
         target_list = [decode_puzzle_hash(target) for target in request.target_list]
         if request.xch_change_target is not None:
-            if request.xch_change_target[:2] == "xch":
+            if request.xch_change_target.startswith("xch"):
                 xch_change_ph = decode_puzzle_hash(request.xch_change_target)
             else:
                 xch_change_ph = bytes32.from_hexstr(request.xch_change_target)

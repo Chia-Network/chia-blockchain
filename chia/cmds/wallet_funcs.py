@@ -552,7 +552,7 @@ async def make_offer(
                     print()
                     print(f"Including Fees: {Decimal(fee) / units['chia']} XCH, {fee} mojos")
 
-                if royalty_assets != []:
+                if len(royalty_assets) > 0:
                     royalty_summary: NFTCalculateRoyaltiesResponse = await wallet_client.nft_calculate_royalties(
                         NFTCalculateRoyalties(royalty_assets, fungible_assets)
                     )
@@ -1497,7 +1497,7 @@ def driver_dict_asset_is_nft_supporting_royalties(driver_dict: dict[bytes32, Puz
 
 def driver_dict_asset_is_fungible(driver_dict: dict[bytes32, PuzzleInfo], asset_id: bytes32) -> bool:
     asset_dict: PuzzleInfo = driver_dict[asset_id]
-    return not asset_dict.type() == AssetType.SINGLETON.value
+    return asset_dict.type() != AssetType.SINGLETON.value
 
 
 def nft_coin_ids_supporting_royalties_from_offer(offer: Offer) -> list[bytes32]:

@@ -196,10 +196,7 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("nft_calculate_royalties", (request,))
         return NFTCalculateRoyaltiesResponse.from_json_dict(
             NFTWallet.royalty_calculation(
-                {
-                    asset.asset: (asset.royalty_address, uint16(asset.royalty_percentage))
-                    for asset in request.royalty_assets
-                },
+                {asset.asset: (asset.royalty_address, asset.royalty_percentage) for asset in request.royalty_assets},
                 {asset.asset: asset.amount for asset in request.fungible_assets},
             )
         )
