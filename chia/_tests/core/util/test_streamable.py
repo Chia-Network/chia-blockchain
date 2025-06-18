@@ -920,3 +920,22 @@ def test_streamable_inheritance_missing() -> None:
 def test_unsupported_types(method: Callable[[object], object], input_type: object) -> None:
     with pytest.raises(UnsupportedType):
         method(input_type)
+
+
+@streamable
+@dataclass(frozen=True)
+class UnsupportedDictToSerialize(Streamable):
+    a: list[tuple[str, uint8]]
+
+
+@streamable
+@dataclass(frozen=True)
+class UnsupportedDictToDeserialize(Streamable):
+    a: dict[str, uint8]
+
+
+def test_duplicate_dict_key_error() -> None:
+    with pytest.raises(ValueError, match="duplicate dict keys"):
+        UnsupportedDictToDeserialize.from_bytes(
+            bytes(UnsupportedDictToSerialize([("foo", uint8(1)), ("foo", uint8(2))]))
+        )

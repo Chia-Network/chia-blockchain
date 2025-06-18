@@ -388,13 +388,13 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: list[ParseFunctionType]) -
 def parse_dict(
     f: BinaryIO, key_parse_inner_type_f: ParseFunctionType, value_parse_inner_type_f: ParseFunctionType
 ) -> dict[object, object]:
-    return {  # type: ignore[misc]
-        key: value  # type: ignore[has-type]
-        # We know this is a list of tuples but our parse_list hint doesn't help us here
-        for key, value in parse_list(
-            f, lambda inner_f: parse_tuple(inner_f, [key_parse_inner_type_f, value_parse_inner_type_f])
-        )
-    }
+    # We know this is a list of tuples but our parse_list hint doesn't help us here
+    keys_and_values: list[tuple[object, object]] = parse_list(  # type: ignore[assignment]
+        f, lambda inner_f: parse_tuple(inner_f, [key_parse_inner_type_f, value_parse_inner_type_f])
+    )
+    if len(set(key for key, _ in keys_and_values)) < len(tuple(key for key, _ in keys_and_values)):
+        raise ValueError("duplicate dict keys found when deserializing")
+    return {key: value for key, value in keys_and_values}
 
 
 def parse_str(f: BinaryIO) -> str:
