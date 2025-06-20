@@ -16,13 +16,13 @@ from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.types.blockchain_format.program import INFINITE_COST, Program, run
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.conditions import CreateCoinAnnouncement, parse_conditions_non_consensus
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.program import INFINITE_COST, Program, run
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trade_record import TradeRecord

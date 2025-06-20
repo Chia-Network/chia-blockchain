@@ -14,7 +14,6 @@ from typing_extensions import Unpack
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, run
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
@@ -44,6 +43,7 @@ from chia.wallet.conditions import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.program import Program, run
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord

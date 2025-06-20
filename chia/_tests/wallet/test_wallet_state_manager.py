@@ -13,11 +13,11 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.program import Program
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType

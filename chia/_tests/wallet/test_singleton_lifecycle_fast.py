@@ -13,10 +13,10 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.pools.pool_puzzles import POOL_MEMBER_MOD
 from chia.pools.pool_puzzles import POOL_WAITING_ROOM_MOD as POOL_WAITINGROOM_MOD
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import AssertCoinAnnouncement
+from chia.wallet.program import Program
 from chia.wallet.puzzles.singleton_top_layer import (
     P2_SINGLETON_OR_DELAYED_MOD as P2_SINGLETON_MOD,
 )

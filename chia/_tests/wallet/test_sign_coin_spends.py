@@ -9,13 +9,13 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.program import Program
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,

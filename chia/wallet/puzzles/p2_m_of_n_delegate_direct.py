@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from chia_puzzles_py.programs import P2_M_OF_N_DELEGATE_DIRECT
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 
 MOD = Program.from_bytes(P2_M_OF_N_DELEGATE_DIRECT)
 

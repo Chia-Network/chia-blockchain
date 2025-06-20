@@ -7,7 +7,6 @@ from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
-from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
@@ -18,6 +17,7 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import (
     metadata_to_program,
 )
 from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, NFT_TRANSFER_PROGRAM_DEFAULT
+from chia.wallet.program import Program, run
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)

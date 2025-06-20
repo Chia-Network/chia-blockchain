@@ -14,7 +14,7 @@ from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 
 # from subprocess.pyi
 _FILE = Union[int, IO[Any], None]

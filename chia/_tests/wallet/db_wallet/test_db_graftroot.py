@@ -6,11 +6,11 @@ from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.wallet.db_wallet.db_wallet_puzzles import GRAFTROOT_DL_OFFERS
+from chia.wallet.program import Program
 from chia.wallet.util.merkle_utils import build_merkle_tree, build_merkle_tree_from_binary_tree, simplify_merkle_proof
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 

@@ -23,8 +23,8 @@ from chia.data_layer.data_layer_util import (
     key_hash,
     leaf_hash,
 )
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.wallet.program import Program
 
 pytestmark = pytest.mark.data_layer
 

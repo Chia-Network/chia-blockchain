@@ -8,11 +8,11 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
+from chia.wallet.program import Program
 
 H1 = bytes32(b"a" * 32)
 H2 = bytes32(b"b" * 32)

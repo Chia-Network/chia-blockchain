@@ -12,7 +12,6 @@ from chia_puzzles_py.programs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.cat_wallet.cat_utils import (
@@ -24,6 +23,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.program import Program
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 

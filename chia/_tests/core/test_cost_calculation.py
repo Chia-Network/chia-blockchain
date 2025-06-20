@@ -19,9 +19,9 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator
+from chia.wallet.program import Program, run_with_cost
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)

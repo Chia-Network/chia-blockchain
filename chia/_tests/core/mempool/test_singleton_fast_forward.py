@@ -28,7 +28,6 @@ from chia.full_node.eligible_coin_spends import (
     perform_the_fast_forward,
 )
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -36,6 +35,7 @@ from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, UnspentLineageInfo
 from chia.util.errors import Err
+from chia.wallet.program import Program
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
 from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
 

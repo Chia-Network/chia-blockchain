@@ -7,9 +7,9 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.program import Program
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH
 
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"

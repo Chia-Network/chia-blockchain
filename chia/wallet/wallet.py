@@ -10,7 +10,6 @@ from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
@@ -31,6 +30,7 @@ from chia.wallet.derive_keys import (
     _derive_path_unhardened,
     master_sk_to_singleton_owner_sk,
 )
+from chia.wallet.program import Program
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,

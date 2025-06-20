@@ -5,11 +5,11 @@ from typing import Callable, Optional
 
 from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.program import Program
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_STATE_LAYER_MOD,
     NFT_STATE_LAYER_MOD_HASH,
 )
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 

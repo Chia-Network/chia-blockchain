@@ -4,7 +4,6 @@ import zlib
 
 from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
 
-from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_METADATA_UPDATER,
@@ -12,6 +11,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_STATE_LAYER_MOD,
     NFT_TRANSFER_PROGRAM_DEFAULT,
 )
+from chia.wallet.program import Program
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
 from chia.wallet.singleton import (
     SINGLETON_TOP_LAYER_MOD,
