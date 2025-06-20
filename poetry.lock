@@ -1451,6 +1451,42 @@ files = [
 ]
 
 [[package]]
+name = "gitdb"
+version = "4.0.12"
+description = "Git Object Database"
+optional = true
+python-versions = ">=3.7"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "gitdb-4.0.12-py3-none-any.whl", hash = "sha256:67073e15955400952c6565cc3e707c554a4eea2e428946f7a4c162fab9bd9bcf"},
+    {file = "gitdb-4.0.12.tar.gz", hash = "sha256:5ef71f855d191a3326fcfbc0d5da835f26b13fbcba60c32c21091c349ffdb571"},
+]
+
+[package.dependencies]
+smmap = ">=3.0.1,<6"
+
+[[package]]
+name = "gitpython"
+version = "3.1.44"
+description = "GitPython is a Python library used to interact with Git repositories"
+optional = true
+python-versions = ">=3.7"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "GitPython-3.1.44-py3-none-any.whl", hash = "sha256:9e0e10cda9bed1ee64bc9a6de50e7e38a9c9943241cd7f585f6df3ed28011110"},
+    {file = "gitpython-3.1.44.tar.gz", hash = "sha256:c87e30b26253bf5418b01b0660f818967f3c503193838337fe5e573331249269"},
+]
+
+[package.dependencies]
+gitdb = ">=4.0.1,<5"
+
+[package.extras]
+doc = ["sphinx (>=7.1.2,<7.2)", "sphinx-autodoc-typehints", "sphinx_rtd_theme"]
+test = ["coverage[toml]", "ddt (>=1.1.1,!=1.4.3)", "mock ; python_version < \"3.8\"", "mypy", "pre-commit", "pytest (>=7.3.1)", "pytest-cov", "pytest-instafail", "pytest-mock", "pytest-sugar", "typing-extensions ; python_version < \"3.11\""]
+
+[[package]]
 name = "hsms"
 version = "0.3.1"
 description = "Hardware security module simulator for chia bls12_381 signatures"
@@ -1873,6 +1909,32 @@ files = [
 altgraph = ">=0.17"
 
 [[package]]
+name = "markdown-it-py"
+version = "3.0.0"
+description = "Python port of markdown-it. Markdown parsing, done right!"
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"},
+    {file = "markdown_it_py-3.0.0-py3-none-any.whl", hash = "sha256:355216845c60bd96232cd8d8c40e8f9765cc86f46880e43a8fd22dc1a1a8cab1"},
+]
+
+[package.dependencies]
+mdurl = ">=0.1,<1.0"
+
+[package.extras]
+benchmarking = ["psutil", "pytest", "pytest-benchmark"]
+code-style = ["pre-commit (>=3.0,<4.0)"]
+compare = ["commonmark (>=0.9,<1.0)", "markdown (>=3.4,<4.0)", "mistletoe (>=1.0,<2.0)", "mistune (>=2.0,<3.0)", "panflute (>=2.3,<3.0)"]
+linkify = ["linkify-it-py (>=1,<3)"]
+plugins = ["mdit-py-plugins"]
+profiling = ["gprof2dot"]
+rtd = ["jupyter_sphinx", "mdit-py-plugins", "myst-parser", "pyyaml", "sphinx", "sphinx-copybutton", "sphinx-design", "sphinx_book_theme"]
+testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
+
+[[package]]
 name = "markupsafe"
 version = "2.1.3"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -1941,6 +2003,19 @@ files = [
     {file = "MarkupSafe-2.1.3-cp39-cp39-win32.whl", hash = "sha256:fec21693218efe39aa7f8599346e90c705afa52c5b31ae019b2e57e8f6542bb2"},
     {file = "MarkupSafe-2.1.3-cp39-cp39-win_amd64.whl", hash = "sha256:3fd4abcb888d15a94f32b75d8fd18ee162ca0c064f35b11134be77050296d6ba"},
     {file = "MarkupSafe-2.1.3.tar.gz", hash = "sha256:af598ed32d6ae86f1b747b82783958b1a4ab8f617b06fe68795c7f026abbdcad"},
+]
+
+[[package]]
+name = "mdurl"
+version = "0.1.2"
+description = "Markdown URL utilities"
+optional = true
+python-versions = ">=3.7"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
+    {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
 ]
 
 [[package]]
@@ -2186,6 +2261,69 @@ files = [
 ]
 
 [[package]]
+name = "networkx"
+version = "3.2.1"
+description = "Python package for creating and manipulating graphs and networks"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "python_version < \"3.10\" and extra == \"dev\""
+files = [
+    {file = "networkx-3.2.1-py3-none-any.whl", hash = "sha256:f18c69adc97877c42332c170849c96cefa91881c99a7cb3e95b7c659ebdc1ec2"},
+    {file = "networkx-3.2.1.tar.gz", hash = "sha256:9f1bb5cf3409bf324e0a722c20bdb4c20ee39bf1c30ce8ae499c8502b0b5e0c6"},
+]
+
+[package.extras]
+default = ["matplotlib (>=3.5)", "numpy (>=1.22)", "pandas (>=1.4)", "scipy (>=1.9,!=1.11.0,!=1.11.1)"]
+developer = ["changelist (==0.4)", "mypy (>=1.1)", "pre-commit (>=3.2)", "rtoml"]
+doc = ["nb2plots (>=0.7)", "nbconvert (<7.9)", "numpydoc (>=1.6)", "pillow (>=9.4)", "pydata-sphinx-theme (>=0.14)", "sphinx (>=7)", "sphinx-gallery (>=0.14)", "texext (>=0.6.7)"]
+extra = ["lxml (>=4.6)", "pydot (>=1.4.2)", "pygraphviz (>=1.11)", "sympy (>=1.10)"]
+test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
+
+[[package]]
+name = "networkx"
+version = "3.4.2"
+description = "Python package for creating and manipulating graphs and networks"
+optional = true
+python-versions = ">=3.10"
+groups = ["main"]
+markers = "python_version >= \"3.10\" and extra == \"dev\" and python_version < \"3.12\""
+files = [
+    {file = "networkx-3.4.2-py3-none-any.whl", hash = "sha256:df5d4365b724cf81b8c6a7312509d0c22386097011ad1abe274afd5e9d3bbc5f"},
+    {file = "networkx-3.4.2.tar.gz", hash = "sha256:307c3669428c5362aab27c8a1260aa8f47c4e91d3891f48be0141738d8d053e1"},
+]
+
+[package.extras]
+default = ["matplotlib (>=3.7)", "numpy (>=1.24)", "pandas (>=2.0)", "scipy (>=1.10,!=1.11.0,!=1.11.1)"]
+developer = ["changelist (==0.5)", "mypy (>=1.1)", "pre-commit (>=3.2)", "rtoml"]
+doc = ["intersphinx-registry", "myst-nb (>=1.1)", "numpydoc (>=1.8.0)", "pillow (>=9.4)", "pydata-sphinx-theme (>=0.15)", "sphinx (>=7.3)", "sphinx-gallery (>=0.16)", "texext (>=0.6.7)"]
+example = ["cairocffi (>=1.7)", "contextily (>=1.6)", "igraph (>=0.11)", "momepy (>=0.7.2)", "osmnx (>=1.9)", "scikit-learn (>=1.5)", "seaborn (>=0.13)"]
+extra = ["lxml (>=4.6)", "pydot (>=3.0.1)", "pygraphviz (>=1.14)", "sympy (>=1.10)"]
+test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
+
+[[package]]
+name = "networkx"
+version = "3.5"
+description = "Python package for creating and manipulating graphs and networks"
+optional = true
+python-versions = ">=3.11"
+groups = ["main"]
+markers = "python_version >= \"3.12\" and extra == \"dev\""
+files = [
+    {file = "networkx-3.5-py3-none-any.whl", hash = "sha256:0030d386a9a06dee3565298b4a734b68589749a544acbb6c412dc9e2489ec6ec"},
+    {file = "networkx-3.5.tar.gz", hash = "sha256:d4c6f9cf81f52d69230866796b82afbccdec3db7ae4fbd1b65ea750feed50037"},
+]
+
+[package.extras]
+default = ["matplotlib (>=3.8)", "numpy (>=1.25)", "pandas (>=2.0)", "scipy (>=1.11.2)"]
+developer = ["mypy (>=1.15)", "pre-commit (>=4.1)"]
+doc = ["intersphinx-registry", "myst-nb (>=1.1)", "numpydoc (>=1.8.0)", "pillow (>=10)", "pydata-sphinx-theme (>=0.16)", "sphinx (>=8.0)", "sphinx-gallery (>=0.18)", "texext (>=0.6.7)"]
+example = ["cairocffi (>=1.7)", "contextily (>=1.6)", "igraph (>=0.11)", "momepy (>=0.7.2)", "osmnx (>=2.0.0)", "scikit-learn (>=1.5)", "seaborn (>=0.13)"]
+extra = ["lxml (>=4.6)", "pydot (>=3.0.1)", "pygraphviz (>=1.14)", "sympy (>=1.10)"]
+test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "pytest-xdist (>=3.0)"]
+test-extras = ["pytest-mpl", "pytest-randomly"]
+
+[[package]]
 name = "nodeenv"
 version = "1.8.0"
 description = "Node.js virtual environment builder"
@@ -2310,6 +2448,22 @@ identify = ">=1.0.0"
 nodeenv = ">=0.11.1"
 pyyaml = ">=5.1"
 virtualenv = ">=20.10.0"
+
+[[package]]
+name = "prompt-toolkit"
+version = "3.0.51"
+description = "Library for building powerful interactive command lines in Python"
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "prompt_toolkit-3.0.51-py3-none-any.whl", hash = "sha256:52742911fde84e2d423e2f9a4cf1de7d7ac4e51958f648d9540e0fb8db077b07"},
+    {file = "prompt_toolkit-3.0.51.tar.gz", hash = "sha256:931a162e3b27fc90c86f1b48bb1fb2c528c2761475e57c9c06de13311c7b54ed"},
+]
+
+[package.dependencies]
+wcwidth = "*"
 
 [[package]]
 name = "propcache"
@@ -2500,6 +2654,27 @@ files = [
 ]
 
 [[package]]
+name = "pydot"
+version = "3.0.4"
+description = "Python interface to Graphviz's Dot"
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "pydot-3.0.4-py3-none-any.whl", hash = "sha256:bfa9c3fc0c44ba1d132adce131802d7df00429d1a79cc0346b0a5cd374dbe9c6"},
+    {file = "pydot-3.0.4.tar.gz", hash = "sha256:3ce88b2558f3808b0376f22bfa6c263909e1c3981e2a7b629b65b451eee4a25d"},
+]
+
+[package.dependencies]
+pyparsing = ">=3.0.9"
+
+[package.extras]
+dev = ["chardet", "parameterized", "ruff"]
+release = ["zest.releaser[recommended]"]
+tests = ["chardet", "parameterized", "pytest", "pytest-cov", "pytest-xdist[psutil]", "ruff", "tox"]
+
+[[package]]
 name = "pygments"
 version = "2.19.1"
 description = "Pygments is a syntax highlighting package written in Python."
@@ -2569,6 +2744,22 @@ files = [
 importlib_metadata = {version = ">=4.6", markers = "python_version < \"3.10\""}
 packaging = ">=22.0"
 setuptools = ">=42.0.0"
+
+[[package]]
+name = "pyparsing"
+version = "3.2.3"
+description = "pyparsing module - Classes and methods to define and execute parsing grammars"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "pyparsing-3.2.3-py3-none-any.whl", hash = "sha256:a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf"},
+    {file = "pyparsing-3.2.3.tar.gz", hash = "sha256:b9c13f1ab8b3b542f72e28f634bad4de758ab3ce4546e4301970ad6fa77c38be"},
+]
+
+[package.extras]
+diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pyproject-hooks"
@@ -2830,6 +3021,27 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
+name = "rich"
+version = "13.9.4"
+description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
+optional = true
+python-versions = ">=3.8.0"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90"},
+    {file = "rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098"},
+]
+
+[package.dependencies]
+markdown-it-py = ">=2.2.0"
+pygments = ">=2.13.0,<3.0.0"
+typing-extensions = {version = ">=4.0.0,<5.0", markers = "python_version < \"3.11\""}
+
+[package.extras]
+jupyter = ["ipywidgets (>=7.5.1,<9)"]
+
+[[package]]
 name = "ruff"
 version = "0.11.11"
 description = "An extremely fast Python linter and code formatter, written in Rust."
@@ -3049,6 +3261,19 @@ files = [
 ]
 
 [[package]]
+name = "smmap"
+version = "5.0.2"
+description = "A pure Python implementation of a sliding window memory map manager"
+optional = true
+python-versions = ">=3.7"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "smmap-5.0.2-py3-none-any.whl", hash = "sha256:b30115f0def7d7531d22a0fb6502488d879e75b260a9db4d0819cfb25403af5e"},
+    {file = "smmap-5.0.2.tar.gz", hash = "sha256:26ea65a03958fa0c8a1c7e8c7a58fdc77221b8910f6be2131affade476898ad5"},
+]
+
+[[package]]
 name = "sniffio"
 version = "1.3.0"
 description = "Sniff out which async library your code is running under"
@@ -3073,16 +3298,85 @@ files = [
 ]
 
 [[package]]
+name = "stdlib-list"
+version = "0.11.1"
+description = "A list of Python Standard Libraries (2.7 through 3.13)."
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "extra == \"dev\" and python_version < \"3.10\""
+files = [
+    {file = "stdlib_list-0.11.1-py3-none-any.whl", hash = "sha256:9029ea5e3dfde8cd4294cfd4d1797be56a67fc4693c606181730148c3fd1da29"},
+    {file = "stdlib_list-0.11.1.tar.gz", hash = "sha256:95ebd1d73da9333bba03ccc097f5bac05e3aa03e6822a0c0290f87e1047f1857"},
+]
+
+[package.extras]
+dev = ["build", "stdlib-list[doc,lint,test]"]
+doc = ["furo", "sphinx"]
+lint = ["mypy", "ruff"]
+support = ["sphobjinv"]
+test = ["coverage[toml]", "pytest", "pytest-cov"]
+
+[[package]]
+name = "tach"
+version = "0.29.0"
+description = "A Python tool to maintain a modular package architecture."
+optional = true
+python-versions = ">=3.7"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "tach-0.29.0-cp37-abi3-macosx_10_12_x86_64.whl", hash = "sha256:517f33d18d381326a775d101650e576c6922db53b2c336192db7db88b9a3521d"},
+    {file = "tach-0.29.0-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:d984f54bebba0e4c981d2a08c3e4cdf76c3b5f3126e2f593a0faaed9d218552a"},
+    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:42e0bbecf5e8ea23791b62e54e7c8065376e8a7f642a232dcef8bcae0149944e"},
+    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3b40c59e9a1d0b28fc6176736876c4cfa2d01114870d539e9989dfb7c6638139"},
+    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:52903e54683b0aa26bd4ef0c9ed68b34480a3fbf83fb7b32e9d6a9908e2761e1"},
+    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:810e5aaa2e936c8417bb91672708886aadaf8ab116763ae418c6b1b961422bba"},
+    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:a7b8c82943f4ed72612282ff35c155fcca7222b9e9cd2864763b67497729f0c3"},
+    {file = "tach-0.29.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:58443cbd3f5d19d6b98cd3508593eae186c91f0e059c8bcf1348e3849095b622"},
+    {file = "tach-0.29.0-cp37-abi3-win32.whl", hash = "sha256:d65408ec003ec16bdab4ef61990d7cfc0551672d145a78f80a4aef71e8714b9b"},
+    {file = "tach-0.29.0-cp37-abi3-win_amd64.whl", hash = "sha256:2e15ceb80fc25435d18e01d10029fec15a54fb53bf6b430d53c4ecb53859a0ff"},
+    {file = "tach-0.29.0.tar.gz", hash = "sha256:0b27b9265eee34f396515a2e918fa783d3d02e69edfb6ea1dfd1843d49021429"},
+]
+
+[package.dependencies]
+gitpython = ">=3.1,<4.0"
+networkx = ">=2.6,<4.0"
+prompt-toolkit = ">=3.0,<4.0"
+pydot = ">=2,<4"
+pyyaml = ">=6.0,<7.0"
+rich = ">=13.0,<14.0"
+stdlib-list = {version = ">=0.10.0", markers = "python_full_version < \"3.10.0\""}
+tomli = ">=1.2.2"
+tomli-w = ">=1.0,<2.0"
+
+[package.extras]
+dev = ["build (==1.1.1) ; python_full_version == \"3.7.*\"", "build (==1.2.1) ; python_full_version >= \"3.8.0\"", "coverage (==7.2.7) ; python_full_version == \"3.7.*\"", "coverage (==7.6.0) ; python_full_version >= \"3.8.0\"", "maturin (==1.7.1)", "pip (==24.0)", "prompt-toolkit (==3.0.47)", "pyright (==1.1.389)", "pytest (==7.4.4) ; python_full_version == \"3.7.*\"", "pytest (==8.2.2) ; python_full_version >= \"3.8.0\"", "pytest-mock (==3.11.1) ; python_full_version == \"3.7.*\"", "pytest-mock (==3.14.0) ; python_full_version >= \"3.8.0\"", "rich (==13.8.1)", "ruff (==0.11.5)", "setuptools (==47.1.0) ; python_full_version == \"3.7.*\"", "setuptools (==69.5.1) ; python_full_version >= \"3.8.0\"", "twine (==4.0.2) ; python_full_version == \"3.7.*\"", "twine (==5.1.1) ; python_full_version >= \"3.8.0\""]
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "extra == \"dev\" and python_full_version <= \"3.11.0a6\" or python_version < \"3.11\""
+markers = "extra == \"dev\" or python_version < \"3.11\""
 files = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
+]
+
+[[package]]
+name = "tomli-w"
+version = "1.2.0"
+description = "A lil' TOML writer"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "tomli_w-1.2.0-py3-none-any.whl", hash = "sha256:188306098d013b691fcadc011abd66727d3c414c571bb01b1a174ba8c983cf90"},
+    {file = "tomli_w-1.2.0.tar.gz", hash = "sha256:2dd14fac5a47c27be9cd4c976af5a12d87fb1f0b4512f81d69cce3b35ae25021"},
 ]
 
 [[package]]
@@ -3250,6 +3544,19 @@ files = [
 
 [package.extras]
 watchmedo = ["PyYAML (>=3.10)"]
+
+[[package]]
+name = "wcwidth"
+version = "0.2.13"
+description = "Measures the displayed width of unicode strings in a terminal"
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "wcwidth-0.2.13-py2.py3-none-any.whl", hash = "sha256:3da69048e4540d84af32131829ff948f1e022c1c6bdb8d6102117aac784f6859"},
+    {file = "wcwidth-0.2.13.tar.gz", hash = "sha256:72ea0c06399eb286d978fdedb6923a9eb47e1c486ce63e9b4e64fc18303972b5"},
+]
 
 [[package]]
 name = "wheel"
@@ -3520,11 +3827,11 @@ url = "https://pypi.chia.net/simple"
 reference = "chia"
 
 [extras]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "056e374d3bf3dad148ac6f50edef04c0e02de44e2e2a81911b9c383881057b8f"
+content-hash = "96199723f8be2b7b83f4321230349acc2fff5960a6d017650a216686098e93e2"
