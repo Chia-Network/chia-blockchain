@@ -14,7 +14,7 @@ from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransi
 from chia._tests.util.time_out_assert import time_out_assert_not_none
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash

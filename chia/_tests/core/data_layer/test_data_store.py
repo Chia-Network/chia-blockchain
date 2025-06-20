@@ -46,7 +46,7 @@ from chia.data_layer.download_data import (
     insert_into_data_store_from_file,
     write_files_for_root,
 )
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 

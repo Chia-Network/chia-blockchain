@@ -8,7 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import NIL, Program
+from chia.wallet.program import NIL, Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH

@@ -14,7 +14,7 @@ from typing_extensions import Literal
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program, run
+from chia.wallet.program import Program, run
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet

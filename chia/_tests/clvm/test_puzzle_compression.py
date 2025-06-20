@@ -10,7 +10,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk

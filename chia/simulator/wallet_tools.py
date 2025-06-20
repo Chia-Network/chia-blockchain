@@ -13,7 +13,7 @@ from chia.consensus.condition_tools import (
     make_aggsig_final_message,
 )
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs

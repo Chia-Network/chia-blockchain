@@ -18,7 +18,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX

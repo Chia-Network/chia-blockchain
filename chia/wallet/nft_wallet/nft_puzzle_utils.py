@@ -7,7 +7,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo

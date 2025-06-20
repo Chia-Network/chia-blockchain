@@ -26,7 +26,7 @@ from chia._tests.cmds.wallet.test_consts import (
 )
 from chia.cmds.cmds_util import TransactionBundle
 from chia.protocols.outbound_message import NodeType
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import ConditionValidTimes

@@ -28,7 +28,7 @@ from chia.full_node.eligible_coin_spends import (
     perform_the_fast_forward,
 )
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode

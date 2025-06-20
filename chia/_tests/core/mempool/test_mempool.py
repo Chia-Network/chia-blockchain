@@ -62,7 +62,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import make_spend

@@ -14,7 +14,7 @@ from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash

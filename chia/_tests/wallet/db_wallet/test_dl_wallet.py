@@ -13,7 +13,7 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG

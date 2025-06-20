@@ -4,7 +4,7 @@ from chia_puzzles_py.programs import NOTIFICATION
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 
 NOTIFICATION_MOD = Program.from_bytes(NOTIFICATION)
 

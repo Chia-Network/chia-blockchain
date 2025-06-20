@@ -83,7 +83,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_ph,
     calculate_plot_id_pk,

@@ -34,7 +34,7 @@ from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST
+from chia.wallet.program import INFINITE_COST
 from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus

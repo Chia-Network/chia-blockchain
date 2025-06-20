@@ -4,7 +4,7 @@ import zlib
 
 from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_METADATA_UPDATER,

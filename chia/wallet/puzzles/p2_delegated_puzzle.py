@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.puzzles import p2_conditions
 
 MOD = Program.from_bytes(P2_DELEGATED_PUZZLE)

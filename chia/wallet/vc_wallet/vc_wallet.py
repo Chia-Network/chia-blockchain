@@ -13,7 +13,7 @@ from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash

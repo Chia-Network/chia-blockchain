@@ -14,7 +14,7 @@ from typing_extensions import Unpack
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, run
+from chia.wallet.program import Program, run
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError

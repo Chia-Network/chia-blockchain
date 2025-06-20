@@ -15,7 +15,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.simulator_protocol import ReorgProtocol
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes

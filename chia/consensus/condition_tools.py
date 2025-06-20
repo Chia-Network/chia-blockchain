@@ -9,7 +9,7 @@ from chia_rs.sized_ints import uint64
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, run_with_cost
+from chia.wallet.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs

@@ -4,7 +4,7 @@ from typing import Any, Union
 
 import pytest
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
 

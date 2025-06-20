@@ -12,7 +12,7 @@ from clvm_tools import binutils
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.wallet_pool_store import WalletPoolStore

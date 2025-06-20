@@ -18,7 +18,7 @@ from chia._tests.environments.wallet import (
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2

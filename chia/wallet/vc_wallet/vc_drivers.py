@@ -26,7 +26,7 @@ from chia_rs.sized_ints import uint64
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable

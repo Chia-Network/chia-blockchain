@@ -15,7 +15,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import encode_puzzle_hash

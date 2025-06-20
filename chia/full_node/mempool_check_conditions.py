@@ -14,7 +14,7 @@ from chia_rs.sized_ints import uint64
 
 from chia.consensus.condition_tools import conditions_for_solution
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
 

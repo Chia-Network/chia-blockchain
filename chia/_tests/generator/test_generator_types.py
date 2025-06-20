@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest import TestCase
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 
 gen0 = SerializedProgram.from_bytes(

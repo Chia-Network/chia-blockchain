@@ -9,7 +9,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet

@@ -7,7 +7,7 @@ from typing import Any, Optional
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.util.streamable import Streamable, streamable
 
 

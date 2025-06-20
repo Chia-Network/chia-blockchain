@@ -10,7 +10,7 @@ from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof

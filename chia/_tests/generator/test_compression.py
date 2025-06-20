@@ -18,7 +18,7 @@ from clvm.serialize import sexp_from_stream
 from clvm.SExp import SExp
 from clvm_tools import binutils
 
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.wallet.program import INFINITE_COST, Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles.load_clvm import load_clvm
 

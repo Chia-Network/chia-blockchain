@@ -56,7 +56,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo

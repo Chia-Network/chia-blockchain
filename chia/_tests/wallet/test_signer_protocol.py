@@ -27,7 +27,7 @@ from chia.cmds.signer import (
 )
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
 
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.wallet.program import INFINITE_COST, Program
 from chia.util.byte_types import hexstr_to_bytes
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)

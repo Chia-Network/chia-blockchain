@@ -9,7 +9,7 @@ from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.cat_wallet.cat_utils import (

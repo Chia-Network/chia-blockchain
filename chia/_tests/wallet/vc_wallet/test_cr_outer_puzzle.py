@@ -6,7 +6,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,

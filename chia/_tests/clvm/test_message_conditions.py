@@ -8,7 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err

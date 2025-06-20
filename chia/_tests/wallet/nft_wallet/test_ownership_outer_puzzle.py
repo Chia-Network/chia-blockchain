@@ -6,7 +6,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 from clvm_tools.binutils import assemble
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.nft_wallet.ownership_outer_puzzle import puzzle_for_ownership_layer
 from chia.wallet.nft_wallet.transfer_program_puzzle import puzzle_for_transfer_program
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle

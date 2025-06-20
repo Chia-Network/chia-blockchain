@@ -16,7 +16,7 @@ from chia_puzzles_py.programs import (
 )
 from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 
 NFT_STATE_LAYER_MOD = Program.from_bytes(NFT_STATE_LAYER)
 NFT_STATE_LAYER_MOD_HASH = bytes32(NFT_STATE_LAYER_HASH)

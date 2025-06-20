@@ -41,7 +41,7 @@ from chia.data_layer.data_layer_util import (
     row_to_node,
     unspecified,
 )
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 
 log = logging.getLogger(__name__)

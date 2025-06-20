@@ -9,7 +9,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import create_singleton_puzzle

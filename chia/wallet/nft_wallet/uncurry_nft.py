@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 from typing_extensions import Self
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD as NFT_MOD

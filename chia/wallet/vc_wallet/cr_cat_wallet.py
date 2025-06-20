@@ -12,7 +12,7 @@ from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import VersionedBlob

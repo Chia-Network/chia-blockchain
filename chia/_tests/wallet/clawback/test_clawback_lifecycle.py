@@ -14,7 +14,7 @@ from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.wallet.program import INFINITE_COST, Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus

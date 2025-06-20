@@ -16,7 +16,7 @@ from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofO
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, run_with_cost
+from chia.wallet.program import Program, run_with_cost
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import (

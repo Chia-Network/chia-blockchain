@@ -5,7 +5,7 @@ from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
 from chia.wallet.driver_protocol import DriverProtocol
 from chia.wallet.nft_wallet.metadata_outer_puzzle import MetadataOuterPuzzle

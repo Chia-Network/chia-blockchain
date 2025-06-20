@@ -20,7 +20,7 @@ from chia._tests.core.full_node.ram_db import create_ram_blockchain
 from chia.consensus.condition_tools import agg_sig_additional_data
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend

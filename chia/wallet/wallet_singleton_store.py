@@ -14,7 +14,7 @@ from typing_extensions import Self
 from chia.consensus.condition_tools import conditions_dict_for_solution
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet import singleton
