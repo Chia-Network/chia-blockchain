@@ -112,36 +112,6 @@ class ForkInfo:
             assert coin.name() not in self.additions_since_fork
             self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
 
-    def include_block(
-        self,
-        additions: list[tuple[Coin, Optional[bytes]]],
-        removals: list[Coin],
-        block: FullBlock,
-        header_hash: bytes32,
-    ) -> None:
-        height = block.height
-
-        assert self.peak_height == height - 1
-
-        assert len(self.block_hashes) == self.peak_height - self.fork_height
-        assert block.height == self.fork_height + 1 + len(self.block_hashes)
-        self.block_hashes.append(header_hash)
-
-        self.peak_height = int(block.height)
-        self.peak_hash = header_hash
-
-        if block.foliage_transaction_block is not None:
-            timestamp = block.foliage_transaction_block.timestamp
-            for spend in removals:
-                self.removals_since_fork[bytes32(spend.name())] = ForkRem(bytes32(spend.puzzle_hash), height)
-            for coin, hint in additions:
-                self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
-        for coin in block.get_included_reward_coins():
-            assert block.foliage_transaction_block is not None
-            timestamp = block.foliage_transaction_block.timestamp
-            assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
-
     def rollback(self, header_hash: bytes32, height: int) -> None:
         assert height <= self.peak_height
         self.peak_height = height
