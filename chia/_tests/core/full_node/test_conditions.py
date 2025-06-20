@@ -356,6 +356,9 @@ class TestConditions:
             ("", "(66 0x3f {msg} {coin})", "(67 0x3f {msg} {coin})", 513, Err.TOO_MANY_ANNOUNCEMENTS),
         ],
     )
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_2_0], reason="announce conditions limit was removed in hard-fork 3.0"
+    )
     async def test_announce_conditions_limit(
         self,
         consensus_mode: ConsensusMode,
