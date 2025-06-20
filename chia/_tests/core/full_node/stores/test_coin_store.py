@@ -282,15 +282,15 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
 
         # The reorg will revert the creation and spend of many coins. It will also revert the spend (but not the
         # creation) of the selected coin.
-        changed_records = await coin_store.rollback_to_block(reorg_index)
-        changed_coin_records = [cr.coin for cr in changed_records]
-        assert selected_coin in changed_records
+        coin_changes = await coin_store.rollback_to_block(reorg_index)
+        changed_coins = {cr.coin for cr in coin_changes.values()}
+        assert selected_coin.coin in changed_coins
         for coin_record in all_records:
             assert coin_record is not None
             if coin_record.confirmed_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.coin in changed_coins
             if coin_record.spent_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.coin in changed_coins
 
         for block in blocks:
             if not block.is_transaction_block():

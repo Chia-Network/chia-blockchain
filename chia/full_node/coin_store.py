@@ -535,10 +535,10 @@ class CoinStore:
 
         return coin_states, next_height
 
-    async def rollback_to_block(self, block_index: int) -> list[CoinRecord]:
+    async def rollback_to_block(self, block_index: int) -> dict[bytes32, CoinRecord]:
         """
         Note that block_index can be negative, in which case everything is rolled back
-        Returns the list of coin records that have been modified
+        Returns a map of coin ID to coin record for modified items.
         """
 
         coin_changes: dict[bytes32, CoinRecord] = {}
@@ -572,7 +572,7 @@ class CoinStore:
                     coin_changes[coin_name] = record
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
-        return list(coin_changes.values())
+        return coin_changes
 
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_names: list[bytes32], index: uint32) -> None:
