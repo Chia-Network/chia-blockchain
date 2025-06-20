@@ -220,7 +220,7 @@ class SpendSim:
         coins = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                "SELECT puzzle_hash,coin_parent,amount from coin_record WHERE coinbase=0 AND spent_index==0 ",
+                "SELECT puzzle_hash,coin_parent,amount from coin_record WHERE coinbase=0 AND spent_index <= 0 ",
             )
             rows = await cursor.fetchall()
 
@@ -281,11 +281,38 @@ class SpendSim:
                         await self.hint_store.add_hints(hints)
                     return_additions = additions
                     return_removals = bundle.removals()
-                    spent_coins_ids = [r.name() for r in return_removals]
-                    await add_coin_records_to_db(
-                        self.coin_store.db_wrapper, [self.new_coin_record(addition) for addition in additions]
-                    )
-                    await self.coin_store._set_spent(spent_coins_ids, uint32(self.block_height + 1))
+                    spent_coins = {r.name(): r for r in return_removals}
+                    spent_coins_ids = list(spent_coins)
+                    height = uint32(self.block_height + 1)
+                    db_values_to_insert = []
+                    for addition in additions:
+                        # Find potential fast forward singletons. As we lack
+                        # spend flags, we'll consider coins with odd amount
+                        # that share the same puzzle hash and amount as their
+                        # spent parents to be potential ff singletons.
+                        maybe_ff_singleton = (
+                            addition.amount % 2 == 1
+                            and addition.parent_coin_info in spent_coins
+                            and addition.puzzle_hash == spent_coins[addition.parent_coin_info].puzzle_hash
+                            and addition.amount == spent_coins[addition.parent_coin_info].amount
+                        )
+                        db_values_to_insert.append(
+                            (
+                                addition.name(),
+                                height,
+                                -1 if maybe_ff_singleton else 0,
+                                0,
+                                addition.puzzle_hash,
+                                addition.parent_coin_info,
+                                addition.amount.stream_to_bytes(),
+                                self.timestamp,
+                            )
+                        )
+                    async with self.coin_store.db_wrapper.writer_maybe_transaction() as conn:
+                        await conn.executemany(
+                            "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)", db_values_to_insert
+                        )
+                    await self.coin_store._set_spent(spent_coins_ids, height)
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import random
 import time
@@ -11,6 +12,7 @@ from typing import Optional
 
 import pytest
 from chia_rs import (
+    ELIGIBLE_FOR_FF,
     AugSchemeMPL,
     BlockRecord,
     ConsensusConstants,
@@ -20,6 +22,8 @@ from chia_rs import (
     InfusedChallengeChainSubSlot,
     MerkleSet,
     SpendBundle,
+    SpendBundleConditions,
+    SpendConditions,
     TransactionsInfo,
     UnfinishedBlock,
 )
@@ -38,7 +42,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.augmented_chain import AugmentedBlockchain
-from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_body_validation import ForkAdd, ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -4199,3 +4203,104 @@ async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchai
     blocks_with_filter = await b.get_header_blocks_in_range(0, 42, tx_filter=True)
     empty_tx_filter = b"\x00"
     assert blocks_with_filter[non_tx_block.header_hash].transactions_filter == empty_tx_filter
+
+
+@pytest.mark.parametrize("eligible_for_ff_flag", [True, False])
+@pytest.mark.parametrize("same_ph_as_parent", [True, False])
+@pytest.mark.parametrize("same_amount_as_parent", [True, False])
+@pytest.mark.parametrize("rollback", [True, False])
+@pytest.mark.parametrize("reset", [True, False])
+@pytest.mark.anyio
+async def test_fork_info_same_as_parent_coins(
+    eligible_for_ff_flag: bool, same_ph_as_parent: bool, same_amount_as_parent: bool, rollback: bool, reset: bool
+) -> None:
+    """
+    Tests that `ForkInfo` properly tracks potential fast forward singletons.
+    A coin is tracked as a potential fast forward singleton when its parent is
+    eligible for fast forward and the puzzle hash and amount match. We're
+    covering here `include_spends`, `rollback` and `reset` in the context of
+    potential fast forward singletons.
+    """
+    from chia._tests.util.network_protocol_data import full_block as test_block
+
+    # Let's start with a reference base to construct the initial ForkInfo
+    puzzle_hash = bytes32([0] * 32)
+    amount = uint64(1337)
+    init_coin_parent_id = bytes32([1] * 32)
+    init_coin = Coin(init_coin_parent_id, puzzle_hash, amount)
+    init_coin_id = init_coin.name()
+    initial_additions_since_fork = {init_coin_id: ForkAdd(init_coin, uint32(1), uint64(0), None, False)}
+    fork_info = ForkInfo(
+        test_block.height - 1,
+        test_block.height - 1,
+        test_block.prev_header_hash,
+        additions_since_fork=copy.copy(initial_additions_since_fork),
+    )
+    # Now let's prepare the test spend bundle conditions
+    parent_id = bytes32([2] * 32)
+    coin = Coin(parent_id, puzzle_hash, amount)
+    coin_id = coin.name()
+    child_coin_ph = puzzle_hash if same_ph_as_parent else bytes32([3] * 32)
+    child_coin_amount = amount if same_amount_as_parent else uint64(42)
+    child_coin = Coin(coin_id, child_coin_ph, child_coin_amount)
+    create_coin = [(child_coin.puzzle_hash, child_coin.amount, None)]
+    flags = ELIGIBLE_FOR_FF if eligible_for_ff_flag else 0
+    conds = SpendBundleConditions(
+        [
+            SpendConditions(
+                coin_id,
+                parent_id,
+                puzzle_hash,
+                amount,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                create_coin,
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                flags,
+            )
+        ],
+        0,
+        0,
+        0,
+        None,
+        None,
+        [],
+        0,
+        0,
+        0,
+        True,
+        0,
+        0,
+    )
+    # Now let's run the test
+    fork_info.include_spends(conds, test_block, test_block.header_hash)
+    # Let's make sure the results are as expected
+    expected_potential_ff_singleton_additions = set()
+    if eligible_for_ff_flag and same_ph_as_parent and same_amount_as_parent:
+        expected_potential_ff_singleton_additions.add(child_coin.name())
+    assert all(
+        a in fork_info.additions_since_fork and fork_info.additions_since_fork[a].same_as_parent
+        for a in expected_potential_ff_singleton_additions
+    )
+    non_ff_additions = set(fork_info.additions_since_fork) - expected_potential_ff_singleton_additions
+    assert all(not fork_info.additions_since_fork[a].same_as_parent for a in non_ff_additions)
+    if rollback:
+        # Now we rollback before the spend that belongs to the test conditions
+        fork_info.rollback(test_block.prev_header_hash, test_block.height - 1)
+        # That should leave only the initial additions we started with
+        assert fork_info.additions_since_fork == initial_additions_since_fork
+    if reset:
+        # Now we reset to a test height and header hash
+        fork_info.reset(1, bytes32([4] * 32))
+        # That should leave this empty
+        assert fork_info.additions_since_fork == {}

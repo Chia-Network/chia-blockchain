@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
 from chia_rs import (
+    ELIGIBLE_FOR_FF,
     BlockRecord,
     ConsensusConstants,
     FullBlock,
@@ -48,6 +49,7 @@ class ForkAdd:
     timestamp: uint64
     hint: Optional[bytes]
     is_coinbase: bool
+    same_as_parent: bool = False
 
 
 @dataclass(frozen=True)
@@ -102,40 +104,26 @@ class ForkInfo:
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             for spend in conds.spends:
-                self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
+                spend_coin_id = bytes32(spend.coin_id)
+                spend_ph = bytes32(spend.puzzle_hash)
+                self.removals_since_fork[spend_coin_id] = ForkRem(spend_ph, height)
+                # We're only relying on this flag here to tells us that the
+                # coin has the same puzzle hash and amount as its parent and
+                # the amount is odd (among other things).
+                spend_same_as_parent = bool(spend.flags & ELIGIBLE_FOR_FF)
                 for puzzle_hash, amount, hint in spend.create_coin:
-                    coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                    self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
-        for coin in block.get_included_reward_coins():
-            assert block.foliage_transaction_block is not None
-            timestamp = block.foliage_transaction_block.timestamp
-            assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
-
-    def include_block(
-        self,
-        additions: list[tuple[Coin, Optional[bytes]]],
-        removals: list[Coin],
-        block: FullBlock,
-        header_hash: bytes32,
-    ) -> None:
-        height = block.height
-
-        assert self.peak_height == height - 1
-
-        assert len(self.block_hashes) == self.peak_height - self.fork_height
-        assert block.height == self.fork_height + 1 + len(self.block_hashes)
-        self.block_hashes.append(header_hash)
-
-        self.peak_height = int(block.height)
-        self.peak_hash = header_hash
-
-        if block.foliage_transaction_block is not None:
-            timestamp = block.foliage_transaction_block.timestamp
-            for spend in removals:
-                self.removals_since_fork[bytes32(spend.name())] = ForkRem(bytes32(spend.puzzle_hash), height)
-            for coin, hint in additions:
-                self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
+                    child_ph = bytes32(puzzle_hash)
+                    child_amount = uint64(amount)
+                    child_coin = Coin(spend_coin_id, child_ph, child_amount)
+                    child_coin_id = child_coin.name()
+                    same_as_parent = (
+                        spend_same_as_parent
+                        and child_coin.puzzle_hash == spend.puzzle_hash
+                        and amount == spend.coin_amount
+                    )
+                    self.additions_since_fork[child_coin_id] = ForkAdd(
+                        child_coin, height, timestamp, hint, False, same_as_parent
+                    )
         for coin in block.get_included_reward_coins():
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
