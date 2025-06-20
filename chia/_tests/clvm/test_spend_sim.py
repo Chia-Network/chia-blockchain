@@ -5,9 +5,9 @@ from chia_rs import G2Element, SpendBundle
 from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.spend_sim import sim_and_client
-from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.wallet.program import Program
 from chia.wallet.util.compute_additions import compute_additions
 
 

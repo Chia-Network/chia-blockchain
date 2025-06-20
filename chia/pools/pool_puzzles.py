@@ -20,9 +20,9 @@ from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
 from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
+from chia.wallet.program import Program
 from chia.wallet.puzzles.singleton_top_layer import (
     SINGLETON_LAUNCHER_HASH,
     SINGLETON_MOD,

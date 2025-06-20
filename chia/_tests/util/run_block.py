@@ -10,12 +10,12 @@ from chia_rs import Coin, ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.wallet.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.program import Program, run_with_cost
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)

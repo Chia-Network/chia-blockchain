@@ -6,7 +6,6 @@ from typing import Optional
 from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.make_block_generator import int_to_public_key
-from chia.wallet.program import Program
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
@@ -22,6 +21,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_TRANSFER_PROGRAM_DEFAULT,
 )
 from chia.wallet.outer_puzzles import match_puzzle
+from chia.wallet.program import Program
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH as LAUNCHER_PUZZLE_HASH,

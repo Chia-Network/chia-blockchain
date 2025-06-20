@@ -39,9 +39,9 @@ from chia.pools.pool_wallet_info import (
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
+from chia.wallet.program import Program
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_additions import compute_additions

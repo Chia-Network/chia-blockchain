@@ -10,9 +10,9 @@ from chia._tests.clvm.coin_store import CoinStore, CoinTimestamp
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia._tests.util.key_tool import KeyTool
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
+from chia.wallet.program import Program
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,

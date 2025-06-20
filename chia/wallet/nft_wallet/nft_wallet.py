@@ -14,7 +14,6 @@ from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash
@@ -38,6 +37,7 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import create_ownership_layer_puzzl
 from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,

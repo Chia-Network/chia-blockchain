@@ -5,8 +5,8 @@ from chia_rs.sized_ints import uint32, uint64
 from clvm.SExp import CastableType
 from clvm_tools import binutils
 
-from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.wallet.program import Program
 
 
 def program_roundtrip(o: CastableType) -> None:

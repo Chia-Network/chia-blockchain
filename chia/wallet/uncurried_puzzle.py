@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Union
 
-from chia.wallet.program import Program, uncurry
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.wallet.program import Program, uncurry
 
 
 @dataclass(frozen=True)

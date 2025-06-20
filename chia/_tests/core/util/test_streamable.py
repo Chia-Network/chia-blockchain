@@ -15,7 +15,6 @@ from typing_extensions import Literal, get_args
 from chia.protocols.wallet_protocol import RespondRemovals
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.program import Program
 from chia.util.streamable import (
     ConversionError,
     DefinitionError,
@@ -41,6 +40,7 @@ from chia.util.streamable import (
     streamable_from_dict,
     write_uint32,
 )
+from chia.wallet.program import Program
 
 
 def test_int_not_supported() -> None:

@@ -27,13 +27,13 @@ from chia.cmds.signer import (
 )
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
-from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import _derive_path_unhardened
+from chia.wallet.program import Program
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_offset,

@@ -12,8 +12,8 @@ from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.program import Program, uncurry
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.wallet.program import Program, uncurry
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,

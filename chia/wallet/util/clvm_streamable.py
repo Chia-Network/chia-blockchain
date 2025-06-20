@@ -8,7 +8,6 @@ from typing import Any, Callable, Generic, Optional, TypeVar, Union, get_args, g
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 from typing_extensions import TypeGuard
 
-from chia.wallet.program import Program
 from chia.util.streamable import (
     Streamable,
     function_to_convert_one_item,
@@ -18,6 +17,7 @@ from chia.util.streamable import (
     recurse_jsonify,
     streamable,
 )
+from chia.wallet.program import Program
 
 _T_Streamable = TypeVar("_T_Streamable", bound=Streamable)
 

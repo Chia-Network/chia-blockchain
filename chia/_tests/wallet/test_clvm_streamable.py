@@ -7,8 +7,8 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.wallet.program import Program
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.program import Program
 from chia.wallet.signer_protocol import Coin, Spend
 from chia.wallet.util.clvm_streamable import (
     TranslationLayer,

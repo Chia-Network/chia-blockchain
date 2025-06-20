@@ -10,9 +10,9 @@ import tempfile
 import importlib_resources
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
-from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.lock import Lockfile
+from chia.wallet.program import Program
 
 compile_clvm_py = None
 

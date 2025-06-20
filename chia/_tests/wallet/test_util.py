@@ -9,10 +9,10 @@ from chia_rs.sized_ints import uint64
 from chia._tests.util.misc import CoinGenerator, coin_creation_args
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.errors import ValidationError
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
+from chia.wallet.program import Program
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 from chia.wallet.util.merkle_utils import list_to_binary_tree
 from chia.wallet.util.tx_config import (

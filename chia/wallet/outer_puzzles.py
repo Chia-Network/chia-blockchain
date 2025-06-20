@@ -5,13 +5,13 @@ from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 
-from chia.wallet.program import Program
 from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
 from chia.wallet.driver_protocol import DriverProtocol
 from chia.wallet.nft_wallet.metadata_outer_puzzle import MetadataOuterPuzzle
 from chia.wallet.nft_wallet.ownership_outer_puzzle import OwnershipOuterPuzzle
 from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
 from chia.wallet.nft_wallet.transfer_program_puzzle import TransferProgramPuzzle
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.vc_wallet.cr_outer_puzzle import CROuterPuzzle

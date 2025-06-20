@@ -20,13 +20,13 @@ from chia._tests.core.full_node.ram_db import create_ram_blockchain
 from chia.consensus.condition_tools import agg_sig_additional_data
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
-from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
+from chia.wallet.program import Program
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:

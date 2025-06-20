@@ -6,11 +6,11 @@ from typing import Any, Union
 from chia_rs import CoinSpend
 
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.program import Program
 
 
 def make_spend(

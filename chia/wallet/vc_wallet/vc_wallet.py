@@ -13,7 +13,6 @@ from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.wallet.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
@@ -28,6 +27,7 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.trading.offer import Offer
