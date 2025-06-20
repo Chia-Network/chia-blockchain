@@ -18,6 +18,22 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_request_types import (
+    CreateNewDL,
+    DLDeleteMirror,
+    DLGetMirrors,
+    DLGetMirrorsResponse,
+    DLHistory,
+    DLLatestSingleton,
+    DLNewMirror,
+    DLSingletonsByRoot,
+    DLStopTracking,
+    DLTrackNew,
+    DLUpdateMultiple,
+    DLUpdateMultipleUpdates,
+    DLUpdateRoot,
+    LauncherRootPair,
+)
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 log = logging.getLogger(__name__)
@@ -85,46 +101,50 @@ class TestWalletRpc:
             await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
 
             merkle_root: bytes32 = bytes32.zeros
-            txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
+            launcher_id = (
+                await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
+            ).launcher_id
 
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             async def is_singleton_confirmed(rpc_client: WalletRpcClient, lid: bytes32) -> bool:
-                rec = await rpc_client.dl_latest_singleton(lid)
+                rec = (await rpc_client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
                 if rec is None:
                     return False
                 return rec.confirmed
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
-            singleton_record = await client.dl_latest_singleton(launcher_id)
+            singleton_record = (await client.dl_latest_singleton(DLLatestSingleton(launcher_id))).singleton
             assert singleton_record is not None
             assert singleton_record.root == merkle_root
 
             new_root: bytes32 = bytes32([1] * 32)
-            await client.dl_update_root(launcher_id, new_root, uint64(100))
+            await client.dl_update_root(
+                DLUpdateRoot(launcher_id=launcher_id, new_root=new_root, fee=uint64(100), push=True), DEFAULT_TX_CONFIG
+            )
 
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
-            new_singleton_record = await client.dl_latest_singleton(launcher_id)
+            new_singleton_record = (await client.dl_latest_singleton(DLLatestSingleton(launcher_id))).singleton
             assert new_singleton_record is not None
             assert new_singleton_record.root == new_root
             assert new_singleton_record.confirmed
 
-            assert await client.dl_history(launcher_id) == [new_singleton_record, singleton_record]
+            assert (await client.dl_history(DLHistory(launcher_id))).history == [new_singleton_record, singleton_record]
 
             # Test tracking a launcher id that does not exist
             with pytest.raises(ValueError):
-                await client_2.dl_track_new(bytes32([1] * 32))
+                await client_2.dl_track_new(DLTrackNew(bytes32([1] * 32)))
 
-            await client_2.dl_track_new(launcher_id)
+            await client_2.dl_track_new(DLTrackNew(launcher_id))
 
             async def is_singleton_generation(rpc_client: WalletRpcClient, lid: bytes32, generation: int) -> bool:
                 if await is_singleton_confirmed(rpc_client, lid):
-                    rec = await rpc_client.dl_latest_singleton(lid)
+                    rec = (await rpc_client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
                     if rec is None:
                         raise Exception(f"No latest singleton for: {lid!r}")
                     return rec.generation == generation
@@ -133,41 +153,72 @@ class TestWalletRpc:
 
             await time_out_assert(15, is_singleton_generation, True, client_2, launcher_id, 1)
 
-            assert await client_2.dl_history(launcher_id) == [new_singleton_record, singleton_record]
-
-            assert await client.dl_history(launcher_id, min_generation=uint32(1)) == [new_singleton_record]
-            assert await client.dl_history(launcher_id, max_generation=uint32(0)) == [singleton_record]
-            assert await client.dl_history(launcher_id, num_results=uint32(1)) == [new_singleton_record]
-            assert await client.dl_history(launcher_id, num_results=uint32(2)) == [
+            assert (await client_2.dl_history(DLHistory(launcher_id))).history == [
                 new_singleton_record,
                 singleton_record,
             ]
-            assert await client.dl_history(
-                launcher_id,
-                min_generation=uint32(1),
-                max_generation=uint32(1),
-            ) == [new_singleton_record]
-            assert await client.dl_history(
-                launcher_id,
-                max_generation=uint32(0),
-                num_results=uint32(1),
-            ) == [singleton_record]
-            assert await client.dl_history(
-                launcher_id,
-                min_generation=uint32(1),
-                num_results=uint32(1),
-            ) == [new_singleton_record]
-            assert await client.dl_history(
-                launcher_id,
-                min_generation=uint32(1),
-                max_generation=uint32(1),
-                num_results=uint32(1),
-            ) == [new_singleton_record]
 
-            assert await client.dl_singletons_by_root(launcher_id, new_root) == [new_singleton_record]
+            assert (await client.dl_history(DLHistory(launcher_id, min_generation=uint32(1)))).history == [
+                new_singleton_record
+            ]
+            assert (await client.dl_history(DLHistory(launcher_id, max_generation=uint32(0)))).history == [
+                singleton_record
+            ]
+            assert (await client.dl_history(DLHistory(launcher_id, num_results=uint32(1)))).history == [
+                new_singleton_record
+            ]
+            assert (await client.dl_history(DLHistory(launcher_id, num_results=uint32(2)))).history == [
+                new_singleton_record,
+                singleton_record,
+            ]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        min_generation=uint32(1),
+                        max_generation=uint32(1),
+                    )
+                )
+            ).history == [new_singleton_record]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        max_generation=uint32(0),
+                        num_results=uint32(1),
+                    )
+                )
+            ).history == [singleton_record]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        min_generation=uint32(1),
+                        num_results=uint32(1),
+                    )
+                )
+            ).history == [new_singleton_record]
+            assert (
+                await client.dl_history(
+                    DLHistory(
+                        launcher_id,
+                        min_generation=uint32(1),
+                        max_generation=uint32(1),
+                        num_results=uint32(1),
+                    )
+                )
+            ).history == [new_singleton_record]
 
-            txs, launcher_id_2 = await client.create_new_dl(merkle_root, uint64(50))
-            txs, launcher_id_3 = await client.create_new_dl(merkle_root, uint64(50))
+            assert (await client.dl_singletons_by_root(DLSingletonsByRoot(launcher_id, new_root))).singletons == [
+                new_singleton_record
+            ]
+
+            launcher_id_2 = (
+                await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
+            ).launcher_id
+            launcher_id_3 = (
+                await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
+            ).launcher_id
 
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
@@ -178,12 +229,17 @@ class TestWalletRpc:
 
             next_root = bytes32([2] * 32)
             await client.dl_update_multiple(
-                {
-                    launcher_id: next_root,
-                    launcher_id_2: next_root,
-                    launcher_id_3: next_root,
-                },
-                uint64(0),
+                DLUpdateMultiple(
+                    updates=DLUpdateMultipleUpdates(
+                        [
+                            LauncherRootPair(launcher_id, next_root),
+                            LauncherRootPair(launcher_id_2, next_root),
+                            LauncherRootPair(launcher_id_3, next_root),
+                        ]
+                    ),
+                    fee=uint64(0),
+                ),
+                DEFAULT_TX_CONFIG,
             )
 
             for i in range(5):
@@ -195,18 +251,29 @@ class TestWalletRpc:
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
 
             for lid in [launcher_id, launcher_id_2, launcher_id_3]:
-                rec = await client.dl_latest_singleton(lid)
+                rec = (await client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
                 assert rec is not None
                 assert rec.root == next_root
 
-            await client_2.dl_stop_tracking(launcher_id)
-            assert await client_2.dl_latest_singleton(lid) is None
+            await client_2.dl_stop_tracking(DLStopTracking(launcher_id))
+            assert (await client_2.dl_latest_singleton(DLLatestSingleton(lid))).singleton is None
 
-            owned_singletons = await client.dl_owned_singletons()
+            owned_singletons = (await client.dl_owned_singletons()).singletons
             owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
             assert owned_launcher_ids == sorted([launcher_id, launcher_id_2, launcher_id_3])
 
-            txs = await client.dl_new_mirror(launcher_id, uint64(1000), [b"foo", b"bar"], fee=uint64(2000000000000))
+            txs = (
+                await client.dl_new_mirror(
+                    DLNewMirror(
+                        launcher_id=launcher_id,
+                        amount=uint64(1000),
+                        urls=["foo", "bar"],
+                        fee=uint64(2000000000000),
+                        push=True,
+                    ),
+                    DEFAULT_TX_CONFIG,
+                )
+            ).transactions
             await full_node_api.wait_transaction_records_entered_mempool(txs)
             height = full_node_api.full_node.blockchain.get_peak_height()
             assert height is not None
@@ -222,16 +289,18 @@ class TestWalletRpc:
                 mirror_coin.name(),
                 launcher_id,
                 uint64(1000),
-                [b"foo", b"bar"],
+                ["foo", "bar"],
                 True,
                 uint32(height + 1),
             )
-            await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
-            await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
+            await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([mirror]), DLGetMirrors(launcher_id))
+            await client.dl_delete_mirror(
+                DLDeleteMirror(coin_id=mirror_coin.name(), fee=uint64(2000000000000), push=True), DEFAULT_TX_CONFIG
+            )
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
-            await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)
+            await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([]), DLGetMirrors(launcher_id))
 
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio

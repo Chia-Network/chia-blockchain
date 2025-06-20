@@ -19,6 +19,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
     AssertAnnouncement,
     AssertCoinAnnouncement,
@@ -66,35 +67,23 @@ if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
 
+@streamable
 @dataclasses.dataclass(frozen=True)
-class Mirror:
+class Mirror(Streamable):
     coin_id: bytes32
     launcher_id: bytes32
     amount: uint64
-    urls: list[bytes]
+    urls: list[str]
     ours: bool
     confirmed_at_height: Optional[uint32]
 
-    def to_json_dict(self) -> dict[str, Any]:
-        return {
-            "coin_id": self.coin_id.hex(),
-            "launcher_id": self.launcher_id.hex(),
-            "amount": self.amount,
-            "urls": [url.decode("utf8") for url in self.urls],
-            "ours": self.ours,
-            "confirmed_at_height": self.confirmed_at_height,
-        }
+    @staticmethod
+    def encode_urls(urls: list[str]) -> list[bytes]:
+        return [url.encode("utf8") for url in urls]
 
-    @classmethod
-    def from_json_dict(cls, json_dict: dict[str, Any]) -> Mirror:
-        return cls(
-            bytes32.from_hexstr(json_dict["coin_id"]),
-            bytes32.from_hexstr(json_dict["launcher_id"]),
-            json_dict["amount"],
-            [bytes(url, "utf8") for url in json_dict["urls"]],
-            json_dict["ours"],
-            json_dict["confirmed_at_height"],
-        )
+    @staticmethod
+    def decode_urls(urls: list[bytes]) -> list[str]:
+        return [url.decode("utf8") for url in urls]
 
 
 @final
@@ -792,7 +781,7 @@ class DataLayerWallet:
                         coin.name(),
                         launcher_id,
                         uint64(coin.amount),
-                        urls,
+                        Mirror.decode_urls(urls),
                         ours,
                         height,
                     )

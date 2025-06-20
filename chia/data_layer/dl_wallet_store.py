@@ -37,7 +37,14 @@ def _row_to_mirror(row: Row, confirmed_at_height: Optional[uint32]) -> Mirror:
         url = byte_list[2 : length + 2]
         byte_list = byte_list[length + 2 :]
         urls.append(url)
-    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]), confirmed_at_height)
+    return Mirror(
+        bytes32(row[0]),
+        bytes32(row[1]),
+        uint64.from_bytes(row[2]),
+        Mirror.decode_urls(urls),
+        bool(row[4]),
+        confirmed_at_height,
+    )
 
 
 class DataLayerStore:
@@ -314,7 +321,7 @@ class DataLayerStore:
                     mirror.launcher_id,
                     mirror.amount.stream_to_bytes(),
                     b"".join(
-                        [uint16(len(url)).stream_to_bytes() + url for url in mirror.urls]
+                        [uint16(len(url)).stream_to_bytes() + url for url in Mirror.encode_urls(mirror.urls)]
                     ),  # prefix each item with a length
                     1 if mirror.ours else 0,
                 ),
