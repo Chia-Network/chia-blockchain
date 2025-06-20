@@ -72,6 +72,7 @@ ignore = [
     "PLW0603", # global-statement
 
     # Flake8 async
+    "ASYNC100", # cancel-scope-no-checkpoint extra care with cancellation is fine
     # Should probably fix these
     "ASYNC230", # blocking-open-call-in-async-function
     # Should probably fix these after dealing with shielding for anyio
