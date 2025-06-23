@@ -200,8 +200,10 @@ async def cli_async(
         # set initial segment heights
         start_segment: int = start_height
         end_segment: int = start_height + concurrent_requests
-        # measure time for performance measurement
+        # measure time for performance measurement per segment
         cycle_start: float = time.time()
+        # also measure time for the whole process
+        start_time: float = cycle_start
 
         while end_segment <= end_height:
             # Create an initial list to hold pending tasks
@@ -240,6 +242,10 @@ async def cli_async(
             start_segment = end_segment
             end_segment += concurrent_requests
         print(f"Finished processing blocks from {start_height} to {end_height} (peak: {peak_height})")
+        print(
+            f"Time per block for the whole process: "
+            f"{(time.time() - start_time) / (end_height - start_height):.4f} seconds"
+        )
 
 
 def main() -> None:
