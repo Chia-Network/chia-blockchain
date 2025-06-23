@@ -17,7 +17,7 @@ from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
 
-DEFAULT_REQUESTS_PER_BATCH: int = 20000
+DEFAULT_REQUESTS_PER_BATCH: int = 25000
 
 
 def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path:
