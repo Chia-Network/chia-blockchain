@@ -175,14 +175,16 @@ async def cli_async(
         config,
     ):
         blockchain_state: dict[str, Any] = await node_client.get_blockchain_state()
-        if blockchain_state or blockchain_state["peak"] is None:
-            # Peak height is required for the cache.
+        if blockchain_state is None or blockchain_state["peak"] is None:
+            # Peak height is required for thep cache.
             print("No blockchain found. Exiting.")
             return
-        peak_height = blockchain_state["peak"]["height"]
+        peak_height = blockchain_state["peak"].height
         assert peak_height is not None, "Blockchain peak height is None"
         if end_height is None:
             end_height = blockchain_state["peak"]["height"]
+
+        print("Connected to Full Node RPC at port", rpc_port)
 
         block_cache_bytearray: bytearray = await get_block_cache_bytearray(
             root_path=root_path,
@@ -190,9 +192,11 @@ async def cli_async(
             peak=peak_height,
         )
 
+        print("Bytearray loaded with block header hashes from height-to-hash file.")
+
         # set initial segment heights
         start_segment: int = start_height
-        end_segment: int = end_height + concurrent_requests
+        end_segment: int = start_height + concurrent_requests
 
         while end_segment <= end_height:
             # Create an initial list to hold pending tasks
@@ -209,19 +213,21 @@ async def cli_async(
             try:
                 results = await asyncio.gather(*pending_tasks)
                 for result in results:
-                    if result is None or result == ([], []):
+                    if result is None:
                         raise ValueError("Received None from RPC call")
             except Exception as e:
                 print(f"Error processing block range {start_segment} to {end_segment}: {e}")
                 raise e
-            if i % blocks_per_status == 0:
+            # Print status every blocks_per_status blocks
+            if end_segment - last_status_height >= blocks_per_status:
                 print(f"Processed blocks {last_status_height} to {end_segment}")
-                last_status_height = i
+                last_status_height = end_segment
 
             # reset variables for the next segment
             pending_tasks = []  # clear pending tasks after processing
             start_segment = end_segment
             end_segment += concurrent_requests
+        print(f"Finished processing blocks from {start_height} to {end_height} (peak: {peak_height})")
 
 
 def main() -> None:
