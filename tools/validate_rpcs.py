@@ -225,7 +225,6 @@ async def cli_async(
                 raise e
             # Print status every blocks_per_status blocks
             if end_segment - last_status_height >= blocks_per_status:
-                print(f"Processed blocks {last_status_height} to {end_segment}")
                 time_taken = time.time() - cycle_start
                 time_per_block = time_taken / (end_segment - last_status_height)
                 print(
