@@ -24,17 +24,11 @@ def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path
     db_path_replaced: Path = root_path / config["full_node"]["database_path"]
     db_directory: Path = path_from_root(root_path, db_path_replaced).parent
     selected_network: str = config["full_node"]["selected_network"]
-    suffix = (
-        ""
-        if (selected_network is None or selected_network == "mainnet")
-        else f"-{selected_network}"
-    )
+    suffix = "" if (selected_network is None or selected_network == "mainnet") else f"-{selected_network}"
     return db_directory / f"height-to-hash{suffix}"
 
 
-async def get_block_cache_bytearray(
-    root_path: Path, config: dict[str, Any], peak: int
-) -> bytearray:
+async def get_block_cache_bytearray(root_path: Path, config: dict[str, Any], peak: int) -> bytearray:
     """
     Load the height-to-hash database file into a bytearray.
     """
@@ -182,6 +176,7 @@ async def cli_async(
     ):
         blockchain_state: dict[str, Any] = await node_client.get_blockchain_state()
         if blockchain_state or blockchain_state["peak"] is None:
+            # Peak height is required for the cache.
             print("No blockchain found. Exiting.")
             return
         peak_height = blockchain_state["peak"]["height"]
@@ -204,30 +199,20 @@ async def cli_async(
             pending_tasks: list[Coroutine[Any, Any, Any]] = []
 
             for i in range(start_segment, end_segment):
-                block_header_hash: bytes32 = get_block_header_from_height(
-                    i, block_cache_bytearray
-                )
+                block_header_hash: bytes32 = get_block_header_from_height(i, block_cache_bytearray)
                 if spends_with_conditions:
-                    pending_tasks.append(
-                        node_client.get_block_spends_with_conditions(block_header_hash)
-                    )
+                    pending_tasks.append(node_client.get_block_spends_with_conditions(block_header_hash))
                 if block_spends:
-                    pending_tasks.append(
-                        node_client.get_block_spends(block_header_hash)
-                    )
+                    pending_tasks.append(node_client.get_block_spends(block_header_hash))
                 if additions_and_removals:
-                    pending_tasks.append(
-                        node_client.get_additions_and_removals(block_header_hash)
-                    )
+                    pending_tasks.append(node_client.get_additions_and_removals(block_header_hash))
             try:
                 results = await asyncio.gather(*pending_tasks)
                 for result in results:
                     if result is None or result == ([], []):
                         raise ValueError("Received None from RPC call")
             except Exception as e:
-                print(
-                    f"Error processing block range {start_segment} to {end_segment}: {e}"
-                )
+                print(f"Error processing block range {start_segment} to {end_segment}: {e}")
                 raise e
             if i % blocks_per_status == 0:
                 print(f"Processed blocks {last_status_height} to {end_segment}")
