@@ -117,7 +117,7 @@ def get_block_header_from_height(height: int, height_to_hash: bytearray) -> byte
     "--concurrent-requests",
     help="Number of concurrent requests to make to the RPC endpoints",
     type=int,
-    default=10,
+    default=100,
 )
 def cli(
     root_path: str,
@@ -184,7 +184,7 @@ async def cli_async(
         if end_height is None:
             end_height = blockchain_state["peak"]["height"]
 
-        print("Connected to Full Node RPC at port", rpc_port)
+        print("Connected to Full Node")
 
         block_cache_bytearray: bytearray = await get_block_cache_bytearray(
             root_path=root_path,
