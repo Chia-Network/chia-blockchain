@@ -181,7 +181,7 @@ async def cli_async(
         config,
     ):
         blockchain_state: dict[str, Any] = await node_client.get_blockchain_state()
-        if blockchain_state is None:
+        if blockchain_state or blockchain_state["peak"] is None:
             print("No blockchain found. Exiting.")
             return
         peak_height = blockchain_state["peak"]["height"]
