@@ -168,7 +168,7 @@ async def cli_async(
     start_height: int,
     end_height: Optional[int] = None,
 ) -> None:
-    blocks_per_status: int = 1000
+    blocks_per_status: int = 2000
     last_status_height: int = 0
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (
@@ -224,9 +224,12 @@ async def cli_async(
             # Print status every blocks_per_status blocks
             if end_segment - last_status_height >= blocks_per_status:
                 print(f"Processed blocks {last_status_height} to {end_segment}")
+                time_taken = time.time() - cycle_start
+                time_per_block = time_taken / (end_segment - last_status_height)
                 print(
                     f"Time taken for segment"
-                    f" {last_status_height} to {end_segment}: {time.time() - cycle_start:.2f} seconds"
+                    f" {last_status_height} to {end_segment}: {time_taken:.2f} seconds/n"
+                    f"Average time per block: {time_per_block:.4f} seconds"
                 )
                 last_status_height = end_segment
                 cycle_start = time.time()
