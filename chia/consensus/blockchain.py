@@ -510,8 +510,7 @@ class Blockchain:
                 )
 
             if block_record.prev_hash != peak.header_hash:
-                for coin_record in await self.coin_store.rollback_to_block(fork_info.fork_height):
-                    rolled_back_state[coin_record.name] = coin_record
+                rolled_back_state = await self.coin_store.rollback_to_block(fork_info.fork_height)
                 if self._log_coins and len(rolled_back_state) > 0:
                     log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
                     log.info(
