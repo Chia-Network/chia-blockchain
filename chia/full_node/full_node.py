@@ -41,6 +41,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -156,7 +157,7 @@ class FullNode:
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
     _block_store: Optional[BlockStore] = None
-    _coin_store: Optional[CoinStore] = None
+    _coin_store: Optional[CoinStoreProtocol] = None
     _mempool_manager: Optional[MempoolManager] = None
     _init_weight_proof: Optional[asyncio.Task[None]] = None
     _blockchain: Optional[Blockchain] = None
@@ -211,6 +212,13 @@ class FullNode:
 
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)
+
+        async def coin_store_seems_nonempty() -> bool:
+            for h in range(50):
+                aah = await self.coin_store.get_coins_added_at_height(uint32(h))
+                if len(aah) > 0:
+                    return True  # pragma: no cover
+            return False
 
         sql_log_path: Optional[Path] = None
         with contextlib.ExitStack() as exit_stack:
@@ -306,10 +314,9 @@ class FullNode:
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             if peak is None:
                 self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-                num_unspent = await self.coin_store.num_unspent()
-                if num_unspent > 0:
+                if await coin_store_seems_nonempty():
                     self.log.error(
-                        f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                        "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
                         "This is a fatal error. The blockchain database may be corrupt"
                     )
                     raise RuntimeError("corrupt blockchain DB")
@@ -350,9 +357,9 @@ class FullNode:
             self.initialized = True
 
             try:
-                async with contextlib.AsyncExitStack() as exit_stack:
+                async with contextlib.AsyncExitStack() as aexit_stack:
                     if self.full_node_peers is not None:
-                        await exit_stack.enter_async_context(self.full_node_peers.manage())
+                        await aexit_stack.enter_async_context(self.full_node_peers.manage())
                     yield
             finally:
                 self._shut_down = True
@@ -419,7 +426,7 @@ class FullNode:
         return self._blockchain
 
     @property
-    def coin_store(self) -> CoinStore:
+    def coin_store(self) -> CoinStoreProtocol:
         assert self._coin_store is not None
         return self._coin_store
 

@@ -26,6 +26,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -35,7 +36,6 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
@@ -102,7 +102,7 @@ class Blockchain:
     # epoch summaries
     __height_map: BlockHeightMap
     # Unspent Store
-    coin_store: CoinStore
+    coin_store: CoinStoreProtocol
     # Store
     block_store: BlockStore
     # Used to verify blocks in parallel
@@ -121,7 +121,7 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore,
+        coin_store: CoinStoreProtocol,
         block_store: BlockStore,
         height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
