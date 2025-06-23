@@ -17,7 +17,7 @@ from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
 
-DEFAULT_REQUESTS_PER_BATCH: int = 8000
+DEFAULT_REQUESTS_PER_BATCH: int = 20000
 
 
 def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path:
@@ -170,7 +170,7 @@ async def cli_async(
     start_height: int,
     end_height: Optional[int] = None,
 ) -> None:
-    blocks_per_status: int = 2000
+    blocks_per_status: int = 3000
     last_status_height: int = 0
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (
