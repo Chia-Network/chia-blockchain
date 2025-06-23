@@ -118,7 +118,7 @@ def get_block_header_from_height(height: int, height_to_hash: bytearray) -> byte
     "--concurrent-requests",
     help="Number of concurrent requests to make to the RPC endpoints",
     type=int,
-    default=50,
+    default=100,
 )
 def cli(
     root_path: str,
@@ -198,12 +198,12 @@ async def cli_async(
         # set initial segment heights
         start_segment: int = start_height
         end_segment: int = start_height + concurrent_requests
+        # measure time for performance measurement
+        cycle_start: float = time.time()
 
         while end_segment <= end_height:
             # Create an initial list to hold pending tasks
             pending_tasks: list[Coroutine[Any, Any, Any]] = []
-            # measure time for performance measurement
-            cycle_start: float = time.perf_counter()
 
             for i in range(start_segment, end_segment):
                 block_header_hash: bytes32 = get_block_header_from_height(i, block_cache_bytearray)
@@ -226,10 +226,10 @@ async def cli_async(
                 print(f"Processed blocks {last_status_height} to {end_segment}")
                 print(
                     f"Time taken for segment"
-                    f" {last_status_height} to {end_segment}: {time.perf_counter() - cycle_start} seconds"
+                    f" {last_status_height} to {end_segment}: {time.time() - cycle_start:.2f} seconds"
                 )
                 last_status_height = end_segment
-                cycle_start = time.perf_counter()
+                cycle_start = time.time()
 
             # reset variables for the next segment
             pending_tasks = []  # clear pending tasks after processing
