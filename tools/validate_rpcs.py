@@ -17,6 +17,8 @@ from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
 
+DEFAULT_REQUESTS_PER_BATCH: int = 8000
+
 
 def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path:
     """
@@ -118,7 +120,7 @@ def get_block_header_from_height(height: int, height_to_hash: bytearray) -> byte
     "--concurrent-requests",
     help="Number of concurrent requests to make to the RPC endpoints",
     type=int,
-    default=100,
+    default=DEFAULT_REQUESTS_PER_BATCH,
 )
 def cli(
     root_path: str,
@@ -228,7 +230,7 @@ async def cli_async(
                 time_per_block = time_taken / (end_segment - last_status_height)
                 print(
                     f"Time taken for segment"
-                    f" {last_status_height} to {end_segment}: {time_taken:.2f} seconds/n"
+                    f" {last_status_height} to {end_segment}: {time_taken:.2f} seconds\n"
                     f"Average time per block: {time_per_block:.4f} seconds"
                 )
                 last_status_height = end_segment
