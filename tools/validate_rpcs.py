@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any, Optional
@@ -201,6 +202,8 @@ async def cli_async(
         while end_segment <= end_height:
             # Create an initial list to hold pending tasks
             pending_tasks: list[Coroutine[Any, Any, Any]] = []
+            # measure time for performance measurement
+            cycle_start: float = time.time()
 
             for i in range(start_segment, end_segment):
                 block_header_hash: bytes32 = get_block_header_from_height(i, block_cache_bytearray)
@@ -221,7 +224,12 @@ async def cli_async(
             # Print status every blocks_per_status blocks
             if end_segment - last_status_height >= blocks_per_status:
                 print(f"Processed blocks {last_status_height} to {end_segment}")
+                print(
+                    f"Time taken for segment"
+                    f" {last_status_height} to {end_segment}: {time.time() - cycle_start:.2f} seconds"
+                )
                 last_status_height = end_segment
+                cycle_start = time.time()
 
             # reset variables for the next segment
             pending_tasks = []  # clear pending tasks after processing
