@@ -1552,8 +1552,7 @@ async def test_did_auto_transfer_limit(
             backup_data,
         )
     assert did_wallet_10.did_info.origin_coin is not None
-    resp = await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
-    assert resp["success"]
+    await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
     await time_out_assert(15, did_wallet_10.get_confirmed_balance, 101)
     await time_out_assert(15, did_wallet_10.get_unconfirmed_balance, 101)
 
@@ -1575,7 +1574,7 @@ async def test_did_auto_transfer_limit(
     assert len(did_wallets) == 9
 
     # Try and find lost coin
-    resp = await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
+    await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
     did_wallets = list(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
