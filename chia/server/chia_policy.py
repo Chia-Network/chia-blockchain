@@ -8,8 +8,7 @@ import struct
 import sys
 
 if sys.platform == "win32":
-    # type: ignore[import-not-found]
-    import _overlapped
+    import _overlapped  # type: ignore[import-not-found]
     import _winapi
 
 from collections.abc import Iterable
