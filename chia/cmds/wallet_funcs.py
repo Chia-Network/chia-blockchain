@@ -787,7 +787,7 @@ async def take_offer(
                     )
                 )
 
-        if royalty_assets != []:
+        if len(royalty_assets) > 0:
             fungible_assets = []
             for fungible_asset_id in fungible_assets_from_offer(offer):
                 fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else "xch"
