@@ -116,6 +116,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     CombineCoinsResponse,
     DeleteKey,
+    DIDGetInfo,
+    DIDGetInfoResponse,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
     DIDMessageSpend,
@@ -2592,22 +2594,21 @@ class WalletRpcApi:
         # tx_endpoint will take care of the default values here
         return DIDMessageSpendResponse([], [], WalletSpendBundle([], G2Element()))
 
-    async def did_get_info(self, request: dict[str, Any]) -> EndpointResult:
-        if "coin_id" not in request:
-            return {"success": False, "error": "Coin ID is required."}
-        coin_id = request["coin_id"]
-        if coin_id.startswith(AddressType.DID.hrp(self.service.config)):
-            coin_id = decode_puzzle_hash(coin_id)
+    @marshal
+    async def did_get_info(self, request: DIDGetInfo) -> DIDGetInfoResponse:
+        if request.coin_id.startswith(AddressType.DID.hrp(self.service.config)):
+            coin_id = decode_puzzle_hash(request.coin_id)
         else:
-            coin_id = bytes32.from_hexstr(coin_id)
+            coin_id = bytes32.from_hexstr(request.coin_id)
         # Get coin state
         peer = self.service.get_full_node_peer()
-        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.latest)
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
-            return {"success": False, "error": "The coin is not a DID."}
+            raise ValueError("The coin is not a DID.")
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        recovery_list_hash_bytes = recovery_list_hash.as_atom()
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
@@ -2616,21 +2617,20 @@ class WalletRpcApi:
         coin_memos = memos.get(coin_state.coin.name())
         if coin_memos is not None:
             for memo in coin_memos:
-                hints.append(memo.hex())
-        return {
-            "success": True,
-            "did_id": encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
-            "latest_coin": coin_state.coin.name().hex(),
-            "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.as_atom().hex(),
-            "recovery_list_hash": recovery_list_hash.as_atom().hex(),
-            "num_verification": num_verification.as_int(),
-            "metadata": did_program_to_metadata(metadata),
-            "launcher_id": launcher_id.hex(),
-            "full_puzzle": coin_spend.puzzle_reveal,
-            "solution": Program.from_serialized(coin_spend.solution).as_python(),
-            "hints": hints,
-        }
+                hints.append(memo)
+        return DIDGetInfoResponse(
+            did_id=encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
+            latest_coin=coin_state.coin.name(),
+            p2_address=encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
+            public_key=public_key.as_atom(),
+            recovery_list_hash=bytes32(recovery_list_hash_bytes) if recovery_list_hash_bytes != b"" else None,
+            num_verification=uint16(num_verification.as_int()),
+            metadata=did_program_to_metadata(metadata),
+            launcher_id=launcher_id,
+            full_puzzle=Program.from_serialized(coin_spend.puzzle_reveal),
+            solution=Program.from_serialized(coin_spend.solution),
+            hints=hints,
+        )
 
     async def did_find_lost_did(self, request: dict[str, Any]) -> EndpointResult:
         """

@@ -6,6 +6,7 @@ from typing import Any, Optional, Union
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
@@ -1772,27 +1773,27 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
     assert did_wallet_1.did_info.origin_coin is not None  # mypy
     response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
     assert response["did_id"] == encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
-    assert response["launcher_id"] == did_wallet_1.did_info.origin_coin.name().hex()
+    assert bytes32.from_hexstr(response["launcher_id"]) == did_wallet_1.did_info.origin_coin.name()
     assert did_wallet_1.did_info.current_inner is not None  # mypy
-    assert Program.from_serialized(response["full_puzzle"]) == create_singleton_puzzle(
+    assert Program.from_bytes(hexstr_to_bytes(response["full_puzzle"])) == create_singleton_puzzle(
         did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
     )
     assert response["metadata"]["twitter"] == "twitter"
-    assert response["latest_coin"] == (await did_wallet_1.get_coin()).name().hex()
+    assert bytes32.from_hexstr(response["latest_coin"]) == (await did_wallet_1.get_coin()).name()
     assert response["num_verification"] == 0
     if use_alternate_recovery:
-        assert response["recovery_list_hash"] == ""
+        assert response["recovery_list_hash"] is None
     else:
-        assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
-    assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
+        assert bytes32.from_hexstr(response["recovery_list_hash"]) == Program(Program.to([])).get_tree_hash()
+    assert decode_puzzle_hash(response["p2_address"]) == bytes32.from_hexstr(response["hints"][0])
 
     # Test non-singleton coin
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         coin = (await wallet_0.select_coins(uint64(1), action_scope)).pop()
     assert coin.amount % 2 == 1
     coin_id = coin.name()
-    response = await api_0.did_get_info({"coin_id": coin_id.hex()})
-    assert not response["success"]
+    with pytest.raises(ValueError):
+        await api_0.did_get_info({"coin_id": coin_id.hex()})
 
     # Test multiple odd coins
     odd_amount = uint64(1)

@@ -10,6 +10,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import Self, dataclass_transform
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
+from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -311,6 +312,29 @@ class DIDGetWalletName(Streamable):
 class DIDGetWalletNameResponse(Streamable):
     wallet_id: uint32
     name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetInfo(Streamable):
+    coin_id: str
+    latest: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetInfoResponse(Streamable):
+    did_id: str
+    latest_coin: bytes32
+    p2_address: str
+    public_key: bytes
+    recovery_list_hash: Optional[bytes32]
+    num_verification: uint16
+    metadata: dict[str, str]
+    launcher_id: bytes32
+    full_puzzle: Program
+    solution: Program
+    hints: list[bytes]
 
 
 @streamable

@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DIDGetInfo,
     DIDMessageSpend,
     DIDSetWalletName,
     FungibleAsset,
@@ -1035,18 +1036,21 @@ async def get_did_info(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         did_padding_length = 23
         try:
-            response = await wallet_client.get_did_info(coin_id, latest)
-            print(f"{'DID:'.ljust(did_padding_length)} {response['did_id']}")
-            print(f"{'Coin ID:'.ljust(did_padding_length)} {response['latest_coin']}")
-            print(f"{'Inner P2 Address:'.ljust(did_padding_length)} {response['p2_address']}")
-            print(f"{'Public Key:'.ljust(did_padding_length)} {response['public_key']}")
-            print(f"{'Launcher ID:'.ljust(did_padding_length)} {response['launcher_id']}")
-            print(f"{'DID Metadata:'.ljust(did_padding_length)} {response['metadata']}")
-            print(f"{'Recovery List Hash:'.ljust(did_padding_length)} {response['recovery_list_hash']}")
-            print(f"{'Recovery Required Verifications:'.ljust(did_padding_length)} {response['num_verification']}")
-            print(f"{'Last Spend Puzzle:'.ljust(did_padding_length)} {response['full_puzzle']}")
-            print(f"{'Last Spend Solution:'.ljust(did_padding_length)} {response['solution']}")
-            print(f"{'Last Spend Hints:'.ljust(did_padding_length)} {response['hints']}")
+            response = await wallet_client.get_did_info(DIDGetInfo(coin_id, latest))
+            print(f"{'DID:'.ljust(did_padding_length)} {response.did_id}")
+            print(f"{'Coin ID:'.ljust(did_padding_length)} {response.latest_coin.hex()}")
+            print(f"{'Inner P2 Address:'.ljust(did_padding_length)} {response.p2_address}")
+            print(f"{'Public Key:'.ljust(did_padding_length)} {response.public_key.hex()}")
+            print(f"{'Launcher ID:'.ljust(did_padding_length)} {response.launcher_id.hex()}")
+            print(f"{'DID Metadata:'.ljust(did_padding_length)} {response.metadata}")
+            print(
+                f"{'Recovery List Hash:'.ljust(did_padding_length)} "
+                + (response.recovery_list_hash.hex() if response.recovery_list_hash is not None else "")
+            )
+            print(f"{'Recovery Required Verifications:'.ljust(did_padding_length)} {response.num_verification}")
+            print(f"{'Last Spend Puzzle:'.ljust(did_padding_length)} {bytes(response.full_puzzle).hex()}")
+            print(f"{'Last Spend Solution:'.ljust(did_padding_length)} {bytes(response.solution).hex()}")
+            print(f"{'Last Spend Hints:'.ljust(did_padding_length)} {[hint.hex() for hint in response.hints]}")
 
         except Exception as e:
             print(f"Failed to get DID details: {e}")
