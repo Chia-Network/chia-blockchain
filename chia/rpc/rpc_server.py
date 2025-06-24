@@ -303,7 +303,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def close_connection(self, request: dict[str, Any]) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
-            raise web.HTTPInternalServerError()
+            raise web.HTTPInternalServerError
         connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")

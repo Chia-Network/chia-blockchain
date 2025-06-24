@@ -12,8 +12,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.wallet_request_types import PushTransactions
-from chia.rpc.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -23,6 +21,8 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import PushTransactions
+from chia.wallet.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -398,7 +398,7 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Test transactionality
     previous_result = None
-    for _ in range(0, wsm.initial_num_public_keys):  # all currently unused
+    for _ in range(wsm.initial_num_public_keys):  # all currently unused
         previous_result = await wsm._get_unused_derivation_record(wsm.main_wallet.id(), previous_result=previous_result)
     assert previous_result is not None
     await previous_result.commit(wsm)

@@ -11,6 +11,7 @@ from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.misc import Marks, datacases, measure_runtime
+from chia.data_layer.data_layer_rpc_util import MarshallableProtocol
 from chia.data_layer.data_layer_util import (
     ClearPendingRootsRequest,
     ClearPendingRootsResponse,
@@ -21,7 +22,6 @@ from chia.data_layer.data_layer_util import (
     key_hash,
     leaf_hash,
 )
-from chia.rpc.data_layer_rpc_util import MarshallableProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 

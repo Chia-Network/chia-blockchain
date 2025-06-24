@@ -6,7 +6,7 @@ from typing import Optional
 from chia_rs.sized_bytes import bytes32
 
 from chia.cmds.cmds_util import format_bytes, get_any_service_client
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
 async def netstorge_async(root_path: Path, rpc_port: Optional[int], delta_block_height: str, start: str) -> None:

@@ -98,7 +98,7 @@ def test_empty_lists() -> None:
 @pytest.mark.parametrize("collection_type", [list, set])
 def test_valid(collection_type: type) -> None:
     for k in range(1, 10):
-        test_collection = collection_type([x for x in range(0, k)])
+        test_collection = collection_type([x for x in range(k)])
         for i in range(1, len(test_collection) + 1):  # Test batch_size 1 to 11 (length + 1)
             checked = 0
             for batch in to_batches(test_collection, i):

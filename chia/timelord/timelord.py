@@ -254,6 +254,7 @@ class Timelord:
                 sub_slot_iters,
                 difficulty,
                 self.get_height(),
+                self.last_state.get_last_tx_height(),
             )
         except Exception as e:
             log.warning(f"Received invalid unfinished block: {e}.")
@@ -556,6 +557,7 @@ class Timelord:
                             self.last_state.get_sub_slot_iters(),
                             self.last_state.get_difficulty(),
                             self.get_height(),
+                            uint32(0),
                         )
                     except Exception as e:
                         log.error(f"Error {e}")
@@ -629,7 +631,7 @@ class Timelord:
                     ):
                         # We don't know when the last block was, so we can't make peaks
                         return
-
+                    assert self.last_state.last_tx_block_block_height is not None
                     sp_total_iters = (
                         ip_total_iters
                         - ip_iters
@@ -1170,6 +1172,7 @@ class Timelord:
                     t1 = time.time()
                     log.info(
                         f"Working on compact proof for height: {picked_info.height}. "
+                        f"VDF: {picked_info.field_vdf}. "
                         f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
                     )
                     bluebox_process_data = BlueboxProcessData(

@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Collection
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
@@ -59,11 +59,24 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import WSMsgType, web
+    from aiohttp import WSMessage, WSMsgType, web
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     sys.exit()
+
+
+def redact_sensitive_data(obj: Any, redaction_triggers: Collection[str] = ("pass", "key", "secret", "mnemonic")) -> Any:
+    """Recursively redact sensitive data from nested dictionaries."""
+    if isinstance(obj, dict):
+        return {
+            key: "***<redacted>***"
+            if any(trigger.casefold() in key.casefold() for trigger in redaction_triggers)
+            else redact_sensitive_data(value, redaction_triggers)
+            for key, value in obj.items()
+        }
+    else:
+        return obj
 
 
 log = logging.getLogger(__name__)
@@ -267,7 +280,6 @@ class WebSocketServer:
 
         while True:
             msg = await ws.receive()
-            self.log.debug("Received message: %s", msg)
             decoded: WsRpcMessage = {
                 "command": "",
                 "ack": False,
@@ -281,6 +293,10 @@ class WebSocketServer:
                     decoded = json.loads(msg.data)
                     if "data" not in decoded:
                         decoded["data"] = {}
+
+                    redacted_data = redact_sensitive_data(decoded)
+                    redacted_message = WSMessage(msg.type, redacted_data, msg.extra)
+                    self.log.debug("Received message: %s", redacted_message)
 
                     maybe_response = await self.handle_message(ws, decoded)
                     if maybe_response is None:
@@ -297,6 +313,7 @@ class WebSocketServer:
 
                 await self.send_all_responses(connections, response)
             else:
+                self.log.debug("Received non-text message")
                 service_names = self.remove_connection(ws)
 
                 if len(service_names) == 0:

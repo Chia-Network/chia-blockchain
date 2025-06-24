@@ -24,6 +24,7 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.pools.pool_config import (
     PoolWalletConfig,
     load_pool_config,
@@ -31,8 +32,6 @@ from chia.pools.pool_config import (
 )
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.bech32m import encode_puzzle_hash
@@ -41,6 +40,7 @@ from chia.util.errors import CliRpcConnectionError
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 
 async def create_pool_args(pool_url: str) -> dict[str, Any]:

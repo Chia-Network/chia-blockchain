@@ -14,9 +14,9 @@ from chia._tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.protocols import farmer_protocol
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.aliases import HarvesterService
 from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
@@ -121,6 +121,7 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         sub_slot_iters=uint64(1000000),
         signage_point_index=uint8(2),
         peak_height=peak_height,
+        last_tx_height=uint32(0),
     )
     await farmer_api.new_signage_point(sp)
     await time_out_assert(5, state_has_changed, True)

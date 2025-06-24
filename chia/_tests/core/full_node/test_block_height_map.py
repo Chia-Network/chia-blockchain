@@ -511,7 +511,7 @@ class TestBlockHeightMap:
                 assert len(new_heights) == 4000 * 32
                 # pytest doesn't behave very well comparing large buffers
                 # (when the test fails). Compare small portions at a time instead
-                for idx in range(0, 2000):
+                for idx in range(2000):
                     assert new_heights[idx * 32 : idx * 32 + 32] == gen_block_hash(idx)
 
 

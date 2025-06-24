@@ -79,12 +79,11 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     CS = len(mnemonic_bytes) // 4
 
     checksum = BitArray(bytes(std_hash(mnemonic_bytes)))[:CS]
-
     bitarray = BitArray(mnemonic_bytes) + checksum
     mnemonics = []
     assert len(bitarray) % 11 == 0
 
-    for i in range(0, len(bitarray) // 11):
+    for i in range(len(bitarray) // 11):
         start = i * 11
         end = start + 11
         bits = bitarray[start:end]
@@ -127,7 +126,7 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
 
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
-    for i in range(0, len(mnemonic)):
+    for i in range(len(mnemonic)):
         word = mnemonic[i]
         if word not in word_list:
             raise ValueError(f"'{word}' is not in the mnemonic dictionary; may be misspelled")
@@ -264,24 +263,24 @@ class KeyData(Streamable):
     @property
     def mnemonic(self) -> list[str]:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.mnemonic
 
     def mnemonic_str(self) -> str:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.mnemonic_str()
 
     @property
     def entropy(self) -> bytes:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.entropy
 
     @property
     def private_key(self) -> PrivateKey:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.private_key
 
 

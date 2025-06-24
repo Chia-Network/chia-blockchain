@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional, TypeVar, final
+from typing import Any, Optional, final
 
 from chia_rs import G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from typing_extensions import dataclass_transform
+from typing_extensions import Self, dataclass_transform
 
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
@@ -28,15 +28,13 @@ from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-_T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
-
 
 @dataclass_transform(frozen_default=True, kw_only_default=True)
 def kw_only_dataclass(cls: type[Any]) -> type[Any]:
-    if sys.version_info < (3, 10):
-        return dataclass(frozen=True)(cls)  # pragma: no cover
-    else:
+    if sys.version_info >= (3, 10):
         return dataclass(frozen=True, kw_only=True)(cls)
+    else:
+        return dataclass(frozen=True)(cls)  # pragma: no cover
 
 
 def default_raise() -> Any:  # pragma: no cover
@@ -404,11 +402,8 @@ class VCProofsRPC(Streamable):
         return VCProofs({key: value for key, value in self.key_value_pairs})
 
     @classmethod
-    def from_vc_proofs(cls: type[_T_VCProofsRPC], vc_proofs: VCProofs) -> _T_VCProofsRPC:
+    def from_vc_proofs(cls, vc_proofs: VCProofs) -> Self:
         return cls([(key, value) for key, value in vc_proofs.key_value_pairs.items()])
-
-
-_T_VCProofsRPC = TypeVar("_T_VCProofsRPC", bound=VCProofsRPC)
 
 
 # utility for VCGetListResponse
@@ -471,11 +466,8 @@ class VCAddProofs(VCProofsRPC):
         return {"proofs": self.to_vc_proofs().key_value_pairs}
 
     @classmethod
-    def from_json_dict(cls: type[_T_VCAddProofs], json_dict: dict[str, Any]) -> _T_VCAddProofs:
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         return cls([(key, value) for key, value in json_dict["proofs"].items()])
-
-
-_T_VCAddProofs = TypeVar("_T_VCAddProofs", bound=VCAddProofs)
 
 
 @streamable
@@ -771,7 +763,7 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
     trade_record: TradeRecord
 
     @classmethod
-    def from_json_dict(cls: type[_T_OfferEndpointResponse], json_dict: dict[str, Any]) -> _T_OfferEndpointResponse:
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         tx_endpoint: TransactionEndpointResponse = json_deserialize_with_clvm_streamable(
             json_dict, TransactionEndpointResponse
         )

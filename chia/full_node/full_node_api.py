@@ -39,11 +39,11 @@ from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.full_node.signage_point import SignagePoint
 from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -301,7 +301,7 @@ class FullNodeAPI:
 
         if len(tips) > 4:
             # Remove old from cache
-            for i in range(0, 4):
+            for i in range(4):
                 self.full_node.pow_creation.pop(tips[i])
 
         if wp is None:
@@ -982,16 +982,15 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            # TODO: support v2 plots after the hard fork
-            pos_size_v1 = request.proof_of_space.size_v1()
-            assert pos_size_v1
-
+            tx_peak = self.full_node.blockchain.get_tx_peak()
             required_iters: uint64 = calculate_iterations_quality(
-                self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
+                self.full_node.constants,
                 quality_string,
-                pos_size_v1,
+                request.proof_of_space.size(),
                 difficulty,
                 request.challenge_chain_sp,
+                sub_slot_iters,
+                tx_peak.height if tx_peak is not None else uint32(0),
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(

@@ -535,10 +535,10 @@ class CoinStore:
 
         return coin_states, next_height
 
-    async def rollback_to_block(self, block_index: int) -> list[CoinRecord]:
+    async def rollback_to_block(self, block_index: int) -> dict[bytes32, CoinRecord]:
         """
         Note that block_index can be negative, in which case everything is rolled back
-        Returns the list of coin records that have been modified
+        Returns a map of coin ID to coin record for modified items.
         """
 
         coin_changes: dict[bytes32, CoinRecord] = {}
@@ -572,30 +572,7 @@ class CoinStore:
                     coin_changes[coin_name] = record
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
-        return list(coin_changes.values())
-
-    # Store CoinRecord in DB
-    async def _add_coin_records(self, records: list[CoinRecord]) -> None:
-        values2 = []
-        for record in records:
-            values2.append(
-                (
-                    record.coin.name(),
-                    record.confirmed_block_index,
-                    record.spent_block_index,
-                    int(record.coinbase),
-                    record.coin.puzzle_hash,
-                    record.coin.parent_coin_info,
-                    uint64(record.coin.amount).stream_to_bytes(),
-                    record.timestamp,
-                )
-            )
-        if len(values2) > 0:
-            async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.executemany(
-                    "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                    values2,
-                )
+        return coin_changes
 
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_names: list[bytes32], index: uint32) -> None:

@@ -4,7 +4,7 @@ import functools
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import Optional, TypeVar
+from typing import Optional
 
 from chia_puzzles_py.programs import (
     CONDITIONS_W_FEE_ANNOUNCE,
@@ -20,6 +20,7 @@ from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 from clvm.casts import int_to_bytes
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -166,9 +167,6 @@ def construct_pending_approval_state(puzzle_hash: bytes32, amount: uint64) -> Pr
     return PENDING_VC_ANNOUNCEMENT.curry(Program.to([[51, puzzle_hash, amount, [puzzle_hash]]]))
 
 
-_T_CRCAT = TypeVar("_T_CRCAT", bound="CRCAT")
-
-
 @dataclass(frozen=True)
 class CRCAT:
     coin: Coin
@@ -180,7 +178,7 @@ class CRCAT:
 
     @classmethod
     def launch(
-        cls: type[_T_CRCAT],
+        cls,
         # General CAT launching info
         origin_coin: Coin,
         payment: CreateCoin,
@@ -308,7 +306,7 @@ class CRCAT:
         return solution.at("f").at("rrrrrrf")
 
     @classmethod
-    def get_current_from_coin_spend(cls: type[_T_CRCAT], spend: CoinSpend) -> CRCAT:  # pragma: no cover
+    def get_current_from_coin_spend(cls, spend: CoinSpend) -> CRCAT:  # pragma: no cover
         uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
@@ -327,7 +325,7 @@ class CRCAT:
 
     @classmethod
     def get_next_from_coin_spend(
-        cls: type[_T_CRCAT],
+        cls,
         parent_spend: CoinSpend,
         conditions: Optional[Program] = None,  # For optimization purposes, the conditions may already have been run
     ) -> list[CRCAT]:
@@ -516,8 +514,8 @@ class CRCAT:
 
     @classmethod
     def spend_many(
-        cls: type[_T_CRCAT],
-        inner_spends: list[tuple[_T_CRCAT, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
+        cls,
+        inner_spends: list[tuple[Self, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
         # CR layer solving info
         proof_of_inclusions: Program,
         proof_checker_solution: Program,
@@ -539,7 +537,7 @@ class CRCAT:
         def prev_index(index: int) -> int:
             return index - 1
 
-        sorted_inner_spends: list[tuple[_T_CRCAT, int, Program, Program]] = sorted(
+        sorted_inner_spends: list[tuple[Self, int, Program, Program]] = sorted(
             inner_spends,
             key=lambda spend: spend[0].coin.name(),
         )

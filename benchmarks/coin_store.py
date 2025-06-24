@@ -144,12 +144,13 @@ async def run_new_block_benchmark(version: int) -> None:
 
             # add one new coins
             c = make_coin()
+            coin_id = c.name()
             additions.append(c)
             total_add += 1
 
             farmer_coin, pool_coin = rewards(uint32(height))
-            all_coins += [c.name()]
-            all_unspent += [c.name()]
+            all_coins += [coin_id]
+            all_unspent += [coin_id]
             all_unspent += [pool_coin.name(), farmer_coin.name()]
             total_add += 2
 

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional, TypeVar, Union
+from typing import Optional, Union
 
 from aiosqlite import Row
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
+from typing_extensions import Self
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet.lineage_proof import LineageProof
-
-_T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 
 
 def _row_to_singleton_record(row: Row) -> SingletonRecord:
@@ -49,7 +48,7 @@ class DataLayerStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
+    async def create(cls, db_wrapper: DBWrapper2) -> Self:
         self = cls()
 
         self.db_wrapper = db_wrapper
