@@ -335,8 +335,9 @@ class DataLayer:
         for pending_root in pending_roots:
             root_hash = pending_root.node_hash if pending_root.node_hash is not None else self.none_bytes
             update_dictionary[pending_root.store_id] = root_hash
-            await self.data_store.change_root_status(pending_root, Status.PENDING)
         transaction_records = await self.wallet_rpc.dl_update_multiple(update_dictionary=update_dictionary, fee=fee)
+        for pending_root in pending_roots:
+            await self.data_store.change_root_status(pending_root, Status.PENDING)
         return transaction_records
 
     async def batch_insert(
