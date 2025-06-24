@@ -13,6 +13,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.connection_utils import add_dummy_connection
+from chia._tests.util.coin_store import add_coin_records_to_db
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool import MempoolRemoveReason
@@ -277,7 +278,7 @@ async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None
         coinbase=False,
         timestamp=uint64(1),
     )
-    await simulator.full_node.coin_store._add_coin_records([*coin_records, ignored_coin])
+    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, [*coin_records, ignored_coin])
 
     # Request no coin states
     resp = await simulator.request_coin_state(wallet_protocol.RequestCoinState([], None, genesis, False), peer)
@@ -377,7 +378,7 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
             )
             coin_records[coin_record.coin.name()] = coin_record
 
-    await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
+    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, list(coin_records.values()))
 
     # Fetch the coin records using the wallet protocol,
     # with more coin ids than the limit of 100,000, but only after height 10000.
@@ -440,7 +441,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
         timestamp=uint64(1),
     )
 
-    await simulator.full_node.coin_store._add_coin_records([*coin_records, ignored_coin])
+    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, [*coin_records, ignored_coin])
 
     # We already test permutations of CoinStateFilters in the CoinStore tests
     # So it's redundant to do so here
@@ -569,7 +570,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
             )
             coin_records[coin_record.coin.name()] = coin_record
 
-    await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
+    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, list(coin_records.values()))
 
     # Fetch the coin records using the wallet protocol,
     # only after height 10000, so that the limit of 100000 isn't exceeded
@@ -723,7 +724,7 @@ async def test_sync_puzzle_state(
             if coin_ph != puzzle_hash:
                 hints.append((coin.name(), puzzle_hash))
 
-    await simulator.full_node.coin_store._add_coin_records(list(coin_records.values()))
+    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, list(coin_records.values()))
     await simulator.full_node.hint_store.add_hints(hints)
 
     # Farm peak

@@ -1437,7 +1437,7 @@ async def test_retry_store(
         ) -> list[CoinState]:
             if flakiness_info.coin_state_flaky:
                 flakiness_info.coin_state_flaky = False
-                raise PeerRequestException()
+                raise PeerRequestException
             else:
                 return await func(coin_names, peer, fork_height)
 
@@ -1470,7 +1470,7 @@ async def test_retry_store(
         ) -> list[CoinState]:
             if flakiness_info.fetch_children_flaky:
                 flakiness_info.fetch_children_flaky = False
-                raise PeerRequestException()
+                raise PeerRequestException
             else:
                 return await func(coin_name, peer, fork_height)
 
@@ -1482,7 +1482,7 @@ async def test_retry_store(
         async def new_func(height: uint32) -> uint64:
             if flakiness_info.get_timestamp_flaky:
                 flakiness_info.get_timestamp_flaky = False
-                raise PeerRequestException()
+                raise PeerRequestException
             else:
                 return await func(height)
 
@@ -1494,7 +1494,7 @@ async def test_retry_store(
         async def new_func(puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
             if flakiness_info.db_flaky:
                 flakiness_info.db_flaky = False
-                raise AIOSqliteError()
+                raise AIOSqliteError
             else:
                 return await func(puzzle_hash)
 

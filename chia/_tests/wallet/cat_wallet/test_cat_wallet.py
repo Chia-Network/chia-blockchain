@@ -16,7 +16,6 @@ from chia._tests.environments.wallet import (
     WalletTestFramework,
 )
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.rpc.wallet_request_types import GetTransactionMemo, PushTX
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -36,6 +35,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import GetTransactionMemo, PushTX
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -1715,7 +1715,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
     assert isinstance(cat_wallet, CATWallet)
 
     # Let's test that continuing to melt this CAT results in the correct balance changes
-    for _ in range(0, 5):
+    for _ in range(5):
         tx_amount -= 1
         new_coin = (await cat_wallet.get_cat_spendable_coins())[0].coin
         new_spend = unsigned_spend_bundle_for_spendable_cats(

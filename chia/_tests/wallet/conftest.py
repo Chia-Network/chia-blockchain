@@ -5,7 +5,7 @@ import unittest
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import AsyncExitStack
 from dataclasses import replace
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import (
@@ -17,18 +17,17 @@ from chia_rs import (
     run_block_generator,
     run_block_generator2,
 )
-from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.types.peer_info import PeerInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -65,7 +64,7 @@ async def ignore_block_validation(
     if "standard_block_tools" in request.keywords:
         return None
 
-    async def validate_block_body(*args: Any, **kwargs: Any) -> Literal[None]:
+    async def validate_block_body(*args: Any, **kwargs: Any) -> None:
         return None
 
     def create_wrapper(original_create: Any) -> Any:
@@ -121,7 +120,7 @@ async def ignore_block_validation(
         "chia.consensus.multiprocess_validation.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
     )
     monkeypatch.setattr(
-        "chia.consensus.multiprocess_validation.verify_and_get_quality_string", lambda *_, **__: bytes32.zeros
+        "chia.consensus.multiprocess_validation.validate_pospace_and_get_required_iters", lambda *_, **__: uint64(0)
     )
     monkeypatch.setattr("chia_rs.BlockRecord.sp_total_iters", lambda *_: uint128(0))
     monkeypatch.setattr("chia_rs.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))

@@ -47,6 +47,8 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.consensus.signage_point import SignagePoint
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
@@ -56,7 +58,6 @@ from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
-from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
@@ -263,15 +264,16 @@ class FullNode:
             log_coins = self.config.get("log_coins", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+            selected_network = self.config.get("selected_network")
+            height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
             self._blockchain = await Blockchain.create(
                 coin_store=self.coin_store,
                 block_store=self.block_store,
                 consensus_constants=self.constants,
-                blockchain_dir=self.db_path.parent,
+                height_map=height_map,
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
-                selected_network=self.config.get("selected_network"),
             )
 
             self._mempool_manager = MempoolManager(
@@ -1383,7 +1385,7 @@ class FullNode:
                     block_rate_height = end_height
 
                 self.log.info(
-                    "Added blocks {start_height} to {end_height} "
+                    f"Added blocks {start_height} to {end_height} "
                     f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1815,6 +1817,7 @@ class FullNode:
             difficulty = self.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
 
+        tx_peak = self.blockchain.get_tx_peak()
         # Notify farmers of the new signage point
         broadcast_farmer = farmer_protocol.NewSignagePoint(
             request.challenge_chain_vdf.challenge,
@@ -1824,6 +1827,7 @@ class FullNode:
             sub_slot_iters,
             request.index_from_challenge,
             uint32(0) if peak is None else peak.height,
+            tx_peak.height if tx_peak is not None else uint32(0),
             sp_source_data=SignagePointSourceData(
                 vdf_data=SPVDFSourceData(request.challenge_chain_vdf.output, request.reward_chain_vdf.output)
             ),
@@ -2152,7 +2156,7 @@ class FullNode:
                         added = AddBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     elif Err(pre_validation_result.error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
-                        raise TimestampError()
+                        raise TimestampError
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
@@ -2254,8 +2258,8 @@ class FullNode:
 
         state_changed_data: dict[str, Any] = {
             "transaction_block": False,
-            "k_size": block.reward_chain_block.proof_of_space.size_v1(),
-            "k_size2": block.reward_chain_block.proof_of_space.size_v2(),
+            "k_size": block.reward_chain_block.proof_of_space.size().size_v1,
+            "k_size2": block.reward_chain_block.proof_of_space.size().size_v2,
             "header_hash": block.header_hash,
             "fork_height": None,
             "rolled_back_records": None,
@@ -2367,7 +2371,7 @@ class FullNode:
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
                 if header_error == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
-                    raise TimestampError()
+                    raise TimestampError
                 else:
                     raise ConsensusError(header_error)
             validate_time = time.monotonic() - start_header_time
@@ -2720,7 +2724,7 @@ class FullNode:
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
-
+                tx_peak = self.blockchain.get_tx_peak()
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
                     end_of_slot_bundle.challenge_chain.get_hash(),
@@ -2730,6 +2734,7 @@ class FullNode:
                     next_sub_slot_iters,
                     uint8(0),
                     uint32(0) if peak is None else peak.height,
+                    tx_peak.height if tx_peak is not None else uint32(0),
                     sp_source_data=SignagePointSourceData(
                         sub_slot_data=SPSubSlotSourceData(
                             end_of_slot_bundle.challenge_chain, end_of_slot_bundle.reward_chain

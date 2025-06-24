@@ -15,11 +15,11 @@ from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.plotting.util import PlotsRefreshParameter
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.aliases import FarmerService, HarvesterService
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import UnresolvedPeerInfo
@@ -221,7 +221,14 @@ async def test_missing_signage_point(
     def create_sp(index: int, challenge_hash: bytes32) -> tuple[uint64, farmer_protocol.NewSignagePoint]:
         time = uint64(index + 1)
         sp = farmer_protocol.NewSignagePoint(
-            challenge_hash, std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(index), uint32(1)
+            challenge_hash,
+            std_hash(b"2"),
+            std_hash(b"3"),
+            uint64(1),
+            uint64(1000000),
+            uint8(index),
+            uint32(1),
+            uint32(0),
         )
         return time, sp
 

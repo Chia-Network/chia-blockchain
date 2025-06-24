@@ -39,7 +39,6 @@ from chia.cmds.plotnft import (
 )
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.setup_services import setup_farmer
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
@@ -47,6 +46,7 @@ from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 # limit to plain consensus mode for all tests
@@ -1006,7 +1006,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
 @pytest.mark.anyio
 async def test_plotnft_unsynced_joining(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
     from chia.cmds.plotnft_funcs import join_pool
-    from chia.rpc.wallet_request_types import GetSyncStatusResponse
+    from chia.wallet.wallet_request_types import GetSyncStatusResponse
 
     test_rpc_client = TestWalletRpcClient()
 

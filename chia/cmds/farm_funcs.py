@@ -9,11 +9,11 @@ from chia_rs import BlockRecord
 
 from chia.cmds.cmds_util import format_bytes, format_minutes, get_any_service_client
 from chia.cmds.units import units
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.util.errors import CliRpcConnectionError
 from chia.util.network import is_localhost
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
