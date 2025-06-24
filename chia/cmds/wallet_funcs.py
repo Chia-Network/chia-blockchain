@@ -803,7 +803,7 @@ async def take_offer(
                         FungibleAsset(nft_royalty_currency, uint64(requested[fungible_asset_id_str]))
                     )
 
-            if fungible_assets != []:
+            if len(fungible_assets) > 0:
                 royalty_summary = await wallet_client.nft_calculate_royalties(
                     NFTCalculateRoyalties(royalty_assets, fungible_assets)
                 )
