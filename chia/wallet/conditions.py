@@ -12,9 +12,9 @@ from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.casts import int_from_bytes, int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
-from chia.util.casts import int_from_bytes, int_to_bytes
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
 

@@ -98,6 +98,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.casts import int_to_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
@@ -105,7 +106,6 @@ from chia.util.recursive_replace import recursive_replace
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.transaction_record import TransactionRecord
-from chia.util.casts import int_to_bytes
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle

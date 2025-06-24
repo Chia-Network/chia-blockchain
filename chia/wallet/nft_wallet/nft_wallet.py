@@ -16,6 +16,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
+from chia.util.casts import int_from_bytes, int_to_bytes
 from chia.util.hash import std_hash
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -47,7 +48,6 @@ from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.util.casts import int_from_bytes, int_to_bytes
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType

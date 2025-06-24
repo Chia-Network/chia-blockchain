@@ -24,6 +24,7 @@ from typing_extensions import Self
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -31,7 +32,6 @@ from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
-from chia.util.casts import int_to_bytes
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.vc_wallet.vc_drivers import (
     COVENANT_LAYER_HASH,

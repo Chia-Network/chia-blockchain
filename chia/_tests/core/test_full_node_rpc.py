@@ -27,8 +27,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.hash import std_hash
 from chia.util.casts import int_to_bytes
+from chia.util.hash import std_hash
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 

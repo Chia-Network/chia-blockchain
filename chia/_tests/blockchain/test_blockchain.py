@@ -60,6 +60,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -68,7 +69,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.util.casts import int_to_bytes
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.create(b"\x00")

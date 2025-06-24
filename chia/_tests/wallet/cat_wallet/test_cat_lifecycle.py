@@ -14,6 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
@@ -23,7 +24,6 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
-from chia.util.casts import int_to_bytes
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 acs = Program.to(1)

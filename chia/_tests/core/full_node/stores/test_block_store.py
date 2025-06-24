@@ -29,9 +29,9 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFProof
+from chia.util.casts import int_to_bytes
 from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.task_referencer import create_referenced_task
-from chia.util.casts import int_to_bytes
 
 log = logging.getLogger(__name__)
 

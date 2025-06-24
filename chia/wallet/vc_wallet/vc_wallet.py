@@ -15,6 +15,7 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import (
@@ -32,7 +33,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_fo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.util.casts import int_to_bytes
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state

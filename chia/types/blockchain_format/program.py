@@ -14,8 +14,8 @@ from typing_extensions import Self
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.tree_hash import sha256_treehash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.hash import std_hash
 from chia.util.casts import int_from_bytes
+from chia.util.hash import std_hash
 
 INFINITE_COST = 11000000000
 

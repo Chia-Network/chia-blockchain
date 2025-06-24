@@ -27,8 +27,8 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
-from chia.util.hash import std_hash
 from chia.util.casts import int_to_bytes
+from chia.util.hash import std_hash
 
 constants = test_constants
 
