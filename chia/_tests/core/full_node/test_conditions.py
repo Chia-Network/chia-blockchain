@@ -26,7 +26,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:

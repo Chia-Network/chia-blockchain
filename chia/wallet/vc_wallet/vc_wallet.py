@@ -32,7 +32,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_fo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state

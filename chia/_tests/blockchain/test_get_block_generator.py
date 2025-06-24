@@ -10,7 +10,7 @@ from chia_rs.sized_ints import uint32
 from chia.consensus.get_block_generator import get_block_generator
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 
 @dataclass(frozen=True)

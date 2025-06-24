@@ -6,7 +6,7 @@ from typing import Callable
 
 from chia_rs.sized_bytes import bytes32
 
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 CurryHashFunction = Callable[..., bytes32]
 

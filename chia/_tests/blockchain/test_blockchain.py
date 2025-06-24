@@ -68,7 +68,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.create(b"\x00")

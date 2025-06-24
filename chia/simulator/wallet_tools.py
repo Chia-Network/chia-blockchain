@@ -25,7 +25,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
-from chia.wallet.util.casts import int_from_bytes, int_to_bytes
+from chia.util.casts import int_from_bytes, int_to_bytes
 
 DEFAULT_SEED = b"seed" * 8
 assert len(DEFAULT_SEED) == 32

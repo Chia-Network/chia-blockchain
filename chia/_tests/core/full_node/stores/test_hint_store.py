@@ -15,7 +15,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 log = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 log = logging.getLogger(__name__)
 

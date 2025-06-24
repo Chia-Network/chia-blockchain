@@ -59,7 +59,7 @@ from chia.wallet.conditions import (
     parse_conditions_non_consensus,
     parse_timelock_info,
 )
-from chia.wallet.util.casts import int_from_bytes
+from chia.util.casts import int_from_bytes
 
 
 @dataclass(frozen=True)

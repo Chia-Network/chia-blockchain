@@ -28,7 +28,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.hash import std_hash
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 constants = test_constants
 

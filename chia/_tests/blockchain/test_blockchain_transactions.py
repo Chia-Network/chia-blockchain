@@ -21,7 +21,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 from chia.wallet.estimate_fees import estimate_fees
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 

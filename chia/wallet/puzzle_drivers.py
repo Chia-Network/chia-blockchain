@@ -8,7 +8,7 @@ from clvm_tools.binutils import assemble, type_for_atom
 from ir.Type import Type
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.util.casts import int_from_bytes
+from chia.util.casts import int_from_bytes
 
 """
 The following two classes act as wrapper classes around dictionaries of strings.

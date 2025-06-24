@@ -47,7 +47,7 @@ from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.casts import int_from_bytes, int_to_bytes
+from chia.util.casts import int_from_bytes, int_to_bytes
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType

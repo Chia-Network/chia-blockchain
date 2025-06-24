@@ -5,7 +5,7 @@ import random
 import pytest
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.util.casts import int_from_bytes, int_to_bytes
+from chia.util.casts import int_from_bytes, int_to_bytes
 
 
 @pytest.mark.parametrize(

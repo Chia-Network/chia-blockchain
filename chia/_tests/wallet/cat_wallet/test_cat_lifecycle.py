@@ -23,7 +23,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 acs = Program.to(1)

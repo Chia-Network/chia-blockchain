@@ -12,7 +12,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
-from chia.wallet.util.casts import int_to_bytes
+from chia.util.casts import int_to_bytes
 
 H1 = bytes32(b"a" * 32)
 H2 = bytes32(b"b" * 32)

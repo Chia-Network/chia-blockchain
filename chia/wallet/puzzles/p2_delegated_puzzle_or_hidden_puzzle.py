@@ -68,7 +68,7 @@ from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from chia.wallet.util.casts import int_from_bytes
+from chia.util.casts import int_from_bytes
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
