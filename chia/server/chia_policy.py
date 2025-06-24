@@ -8,7 +8,7 @@ import struct
 import sys
 
 if sys.platform == "win32":
-    # typing: ignore[import-not-found]
+    # type: ignore[import-not-found]
     import _overlapped
     import _winapi
 
