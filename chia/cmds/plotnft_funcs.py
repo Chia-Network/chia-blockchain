@@ -11,6 +11,9 @@ from pprint import pprint
 from typing import Any, Callable, Optional
 
 import aiohttp
+import click
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import (
@@ -21,22 +24,24 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.pools.pool_config import (
+    PoolWalletConfig,
+    load_pool_config,
+    update_pool_config,
+)
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 
 async def create_pool_args(pool_url: str) -> dict[str, Any]:
@@ -309,6 +314,17 @@ async def join_pool(
     prompt: bool,
 ) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+
+    sync_status = await wallet_info.client.get_sync_status()
+    if not sync_status.synced:
+        raise click.ClickException("Wallet must be synced before joining a pool.")
+
+    pool_wallet_info, _ = await wallet_info.client.pw_status(selected_wallet_id)
+    if (
+        pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
+        and pool_wallet_info.current.pool_url == pool_url
+    ):
+        raise click.ClickException(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
 
     enforce_https = wallet_info.config["selected_network"] == "mainnet"
 

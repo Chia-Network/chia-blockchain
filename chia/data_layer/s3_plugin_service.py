@@ -18,9 +18,9 @@ import boto3
 import yaml
 from aiohttp import web
 from botocore.exceptions import ClientError
+from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.download_data import is_filename_valid
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
 plugin_name = "Chia S3 Datalayer plugin"
@@ -384,7 +384,6 @@ def read_store_ids_from_config(config: dict[str, Any]) -> list[StoreConfig]:
             else:
                 bad_store_id = "<missing>"
             log.info(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
-            pass
 
     return stores
 

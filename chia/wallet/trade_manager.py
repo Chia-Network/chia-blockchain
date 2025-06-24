@@ -6,18 +6,17 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from chia_rs import CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Literal
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
-from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import estimate_fees
+from chia.types.blockchain_format.program import Program, run
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -29,6 +28,7 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
+from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
@@ -122,7 +122,7 @@ class TradeManager:
     ) -> set[bytes32]:
         """
         Returns list of coins we want to check if they are included in filter,
-        These will include coins that belong to us and coins that that on other side of treade
+        These will include coins that belong to us and coins that on other side of trade
         """
         coin_ids = await self.trade_store.get_coin_ids_of_interest_with_trade_statuses(
             trade_statuses=[TradeStatus.PENDING_ACCEPT, TradeStatus.PENDING_CONFIRM, TradeStatus.PENDING_CANCEL]
@@ -301,9 +301,7 @@ class TradeManager:
                     self.log.error(f"Cannot find wallet for offer {trade.trade_id}, skip cancellation.")
                     continue
 
-                new_ph = await wallet.wallet_state_manager.main_wallet.get_puzzle_hash(
-                    new=(not action_scope.config.tx_config.reuse_puzhash)
-                )
+                new_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
 
                 if len(trade_records) > 1 or len(cancellation_coins) > 1:
                     announcement_conditions: tuple[Condition, ...] = (
@@ -498,18 +496,11 @@ class TradeManager:
                 if amount > 0:
                     # this is what we are receiving in the trade
                     memos: list[bytes] = []
+                    p2_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets.get(wallet_id)
-                        assert isinstance(wallet, (CATWallet, Wallet))
-                        if isinstance(wallet, Wallet):
-                            p2_ph: bytes32 = await wallet.get_puzzle_hash(
-                                new=not action_scope.config.tx_config.reuse_puzhash
-                            )
-                        else:
-                            p2_ph = await wallet.standard_wallet.get_puzzle_hash(
-                                new=not action_scope.config.tx_config.reuse_puzhash
-                            )
+                        assert isinstance(wallet, (Wallet, CATWallet))
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 assert isinstance(wallet, CATWallet)
@@ -520,9 +511,6 @@ class TradeManager:
                                     f"Cannot request assets from wallet id {wallet.id()} without more information"
                                 )
                     else:
-                        p2_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(
-                            new=not action_scope.config.tx_config.reuse_puzhash
-                        )
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
@@ -716,7 +704,7 @@ class TradeManager:
             parse_conditions_non_consensus(
                 condition
                 for spend in final_spend_bundle.coin_spends
-                for condition in spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter()
+                for condition in run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_iter()
             )
         )
         # this executes the puzzles again
@@ -873,6 +861,16 @@ class TradeManager:
 
             complete_offer, valid_spend_solver = await self.check_for_final_modifications(
                 Offer.aggregate([offer, take_offer]), solver, inner_action_scope
+            )
+
+        async with action_scope.use() as interface:
+            if interface.side_effects.get_unused_derivation_record_result is not None:
+                # This error is of a protection against potential misues of this band-aid solution.
+                # We should put more thought into how sub-action scopes are generated and what effects
+                # we might want to push. A ticket to this respect can be found [CHIA-2984].
+                raise ValueError("Cannot use `respond_to_offer` with existing puzzle hash generation")
+            interface.side_effects.get_unused_derivation_record_result = (
+                inner_action_scope.side_effects.get_unused_derivation_record_result
             )
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()

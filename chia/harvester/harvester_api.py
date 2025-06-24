@@ -6,26 +6,28 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotSize, ProofOfSpace
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
-from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from chia.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_sp_interval_iters,
+)
 from chia.harvester.harvester import Harvester
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     calculate_pos_challenge,
     generate_plot_public_key,
     passes_plot_filter,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
@@ -88,7 +90,7 @@ class HarvesterAPI:
             f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}"
         )
 
-        start = time.time()
+        start = time.monotonic()
         assert len(new_challenge.challenge_hash) == 32
 
         loop = asyncio.get_running_loop()
@@ -144,12 +146,15 @@ class HarvesterAPI:
 
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):
+                        # TODO: todo_v2_plots
                         required_iters: uint64 = calculate_iterations_quality(
-                            self.harvester.constants.DIFFICULTY_CONSTANT_FACTOR,
+                            self.harvester.constants,
                             quality_str,
-                            plot_info.prover.get_size(),
+                            PlotSize.make_v1(plot_info.prover.get_size()),
                             difficulty,
                             new_challenge.sp_hash,
+                            sub_slot_iters,
+                            new_challenge.last_tx_height,
                         )
                         sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:
@@ -254,11 +259,11 @@ class HarvesterAPI:
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
-        time_taken = time.time() - start
+        time_taken = time.monotonic() - start
         total_proofs_found = 0
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
-            time_taken = time.time() - start
+            time_taken = time.monotonic() - start
             if time_taken > 8:
                 self.harvester.log.warning(
                     f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"

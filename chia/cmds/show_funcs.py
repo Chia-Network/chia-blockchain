@@ -4,16 +4,18 @@ import json
 from pathlib import Path
 from typing import Any, Optional, Union
 
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
+
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:
     import time
 
+    from chia_rs import BlockRecord
+    from chia_rs.sized_ints import uint64
+
     from chia.cmds.cmds_util import format_bytes
-    from chia.consensus.block_record import BlockRecord
-    from chia.util.ints import uint64
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:
@@ -97,9 +99,9 @@ async def print_block_from_hash(
 ) -> None:
     import time
 
-    from chia.consensus.block_record import BlockRecord
-    from chia.types.blockchain_format.sized_bytes import bytes32
-    from chia.types.full_block import FullBlock
+    from chia_rs import BlockRecord, FullBlock
+    from chia_rs.sized_bytes import bytes32
+
     from chia.util.bech32m import encode_puzzle_hash
 
     block: Optional[BlockRecord] = await node_client.get_block_record(bytes32.from_hexstr(block_by_header_hash))
@@ -150,7 +152,8 @@ async def print_block_from_hash(
             f"Total VDF Iterations   {block.total_iters}\n"
             f"Is a Transaction Block?{block.is_transaction_block}\n"
             f"Deficit                {block.deficit}\n"
-            f"PoSpace 'k' Size       {full_block.reward_chain_block.proof_of_space.size}\n"
+            f"PoSpace 'k' Size (v1)  {full_block.reward_chain_block.proof_of_space.size().size_v1}\n"
+            f"PoSpace 'k' Size (v2)  {full_block.reward_chain_block.proof_of_space.size().size_v2}\n"
             f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
             f"Pool Public Key        {pool_pk}\n"
             f"Tx Filter Hash         {tx_filter_hash}\n"

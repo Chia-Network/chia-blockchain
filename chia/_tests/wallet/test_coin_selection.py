@@ -5,12 +5,12 @@ import time
 from random import randrange
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import (
     check_for_exact_match,
     knapsack_coin_algorithm,
@@ -101,7 +101,7 @@ class TestCoinSelection:
     async def test_coin_selection_zero_coins(self, a_hash: bytes32) -> None:
         coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(0)), uint32(1), uint32(1), False, True, WalletType(0), 1)
-            for _ in range(0, 100)
+            for _ in range(100)
         ]
 
         result: set[Coin] = await select_coins(

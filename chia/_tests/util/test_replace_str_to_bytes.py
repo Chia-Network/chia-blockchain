@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia.consensus.constants import replace_str_to_bytes
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
@@ -23,7 +23,8 @@ test_constants = ConsensusConstants(
     EPOCH_BLOCKS=uint32(4608),
     SIGNIFICANT_BITS=uint8(8),
     DISCRIMINANT_SIZE_BITS=uint16(1024),
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(9),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(9),
     MIN_PLOT_SIZE=uint8(32),
     MAX_PLOT_SIZE=uint8(50),
     SUB_SLOT_TIME_TARGET=uint16(600),
@@ -56,11 +57,16 @@ test_constants = ConsensusConstants(
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),
     POOL_SUB_SLOT_ITERS=uint64(37600000000),
-    SOFT_FORK6_HEIGHT=uint32(6800000),
     HARD_FORK_HEIGHT=uint32(5496000),
+    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFF),
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
+    PLOT_DIFFICULTY_4_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_5_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_6_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_7_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_8_HEIGHT=uint32(0xFFFFFFFF),
 )
 
 

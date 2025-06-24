@@ -64,10 +64,10 @@ from typing import Union
 
 from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE
 from chia_rs import G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
 

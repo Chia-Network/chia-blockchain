@@ -9,9 +9,9 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.farm_funcs import summary
 from chia.farmer.farmer import Farmer
 from chia.harvester.harvester import Harvester
+from chia.server.aliases import FarmerService, HarvesterService, WalletService
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.aliases import FarmerService, HarvesterService, WalletService
 
 
 @pytest.mark.anyio

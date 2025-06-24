@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 test_constants = DEFAULT_CONSTANTS.replace(
     MIN_PLOT_SIZE=uint8(18),
@@ -16,5 +17,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
     MAX_SUB_SLOT_BLOCKS=uint32(50),
     EPOCH_BLOCKS=uint32(340),
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
 )

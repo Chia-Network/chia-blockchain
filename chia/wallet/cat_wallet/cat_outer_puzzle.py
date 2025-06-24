@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -117,4 +118,4 @@ class CATOuterPuzzle:
                 )
             )
         bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
-        return next(cs.solution.to_program() for cs in bundle.coin_spends if cs.coin == target_coin)
+        return next(Program.from_serialized(cs.solution) for cs in bundle.coin_spends if cs.coin == target_coin)

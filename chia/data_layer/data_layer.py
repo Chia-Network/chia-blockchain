@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast, final
 
 import aiohttp
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_util import (
@@ -54,21 +56,29 @@ from chia.data_layer.download_data import (
     write_files_for_root,
 )
 from chia.data_layer.singleton_record import SingletonRecord
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.rpc.wallet_request_types import LogIn
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.async_pool import Job, QueuedAsyncPool
-from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_request_types import LogIn
+from chia.wallet.wallet_rpc_client import WalletRpcClient
+
+
+def server_files_path_from_config(config: dict[str, Any], root_path: Path) -> Path:
+    server_files_replaced: Path = path_from_root(
+        root_path,
+        config.get("server_files_location", "data_layer/db/server_files_location_CHALLENGE").replace(
+            "CHALLENGE", config["selected_network"]
+        ),
+    )
+    return server_files_replaced
 
 
 async def get_plugin_info(plugin_remote: PluginRemote) -> tuple[PluginRemote, dict[str, Any]]:
@@ -162,9 +172,7 @@ class DataLayer:
             #       need this.
             name = None
 
-        server_files_replaced: str = config.get(
-            "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
-        ).replace("CHALLENGE", config["selected_network"])
+        server_files_replaced = server_files_path_from_config(config, root_path)
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
 
@@ -174,7 +182,7 @@ class DataLayer:
             wallet_rpc_init=wallet_rpc_init,
             log=logging.getLogger(name if name is None else __name__),
             db_path=path_from_root(root_path, db_path_replaced),
-            server_files_location=path_from_root(root_path, server_files_replaced),
+            server_files_location=server_files_replaced,
             downloaders=downloaders,
             uploaders=uploaders,
             maximum_full_file_count=config.get("maximum_full_file_count", 1),

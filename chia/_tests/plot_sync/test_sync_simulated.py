@@ -14,6 +14,8 @@ from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint8, uint64
 
 from chia._tests.plot_sync.util import start_harvester_service
 from chia._tests.util.time_out_assert import time_out_assert
@@ -25,14 +27,12 @@ from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
+from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
+from chia.server.aliases import FarmerService, HarvesterService
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, HarvesterService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
-from chia.util.ints import int16, uint8, uint64
 
 log = logging.getLogger(__name__)
 
@@ -291,7 +291,7 @@ def create_example_plots(count: int, seeded_random: random.Random) -> list[PlotI
             file_size=uint64(0),
             time_modified=time.time(),
         )
-        for x in range(0, count)
+        for x in range(count)
     ]
 
 

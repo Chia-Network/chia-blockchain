@@ -6,16 +6,18 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.apis import ApiProtocolRegistry
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
+from chia.server.aliases import WalletService
+from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
-from chia.types.aliases import WalletService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
 from chia.util.keychain import Keychain
 from chia.util.task_timing import maybe_manage_task_instrumentation
@@ -23,6 +25,7 @@ from chia.wallet.wallet_node import WalletNode
 
 # See: https://bugs.python.org/issue29288
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.wallet.wallet_rpc_api import WalletRpcApi
 
 "".encode("idna")
 

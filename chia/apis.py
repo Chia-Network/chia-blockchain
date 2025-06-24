@@ -4,8 +4,8 @@ from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.introducer.introducer_api import IntroducerAPI
+from chia.protocols.outbound_message import NodeType
 from chia.server.api_protocol import ApiProtocol
-from chia.server.outbound_message import NodeType
 from chia.timelord.timelord_api import TimelordAPI
 from chia.wallet.wallet_node_api import WalletNodeAPI
 

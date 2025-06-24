@@ -9,8 +9,11 @@ from typing import Any, Optional, Union, cast
 from unittest.mock import ANY
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey, ProofOfSpace
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
+from typing_extensions import Self
 from yarl import URL
 
 from chia import __version__
@@ -22,18 +25,15 @@ from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
+from chia.server.aliases import FarmerService, HarvesterService
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     generate_plot_public_key,
     verify_and_get_quality_string,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -191,8 +191,7 @@ class NewProofOfSpaceCase:
             plot_challenge=bytes32.fromhex("7580e4c366dc2c94c37ce44943f9629a3cd6e027d7b24cd014adeaa578d4b0a2"),
             plot_public_key=G1Element.from_bytes(
                 bytes.fromhex(
-                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3e"
-                    "d69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
+                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3ed69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
                 )
             ),
             pool_public_key=None,
@@ -572,13 +571,14 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        size=case.plot_size,
+        version_and_size=case.plot_size,
         proof=case.proof,
     )
     new_pos = NewProofOfSpace(
@@ -681,7 +681,7 @@ class DummyPoolResponse:
 
         return json.dumps(json_dict)
 
-    async def __aenter__(self) -> DummyPoolResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
@@ -712,13 +712,14 @@ def create_valid_pos(farmer: Farmer) -> tuple[farmer_protocol.NewSignagePoint, P
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        size=case.plot_size,
+        version_and_size=case.plot_size,
         proof=case.proof,
     )
     new_pos = NewProofOfSpace(
@@ -1004,7 +1005,7 @@ class DummyPoolInfoResponse:
 
         return json.dumps(self.pool_info)
 
-    async def __aenter__(self) -> DummyPoolInfoResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(

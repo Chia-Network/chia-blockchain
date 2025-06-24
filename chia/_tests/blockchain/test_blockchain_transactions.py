@@ -3,6 +3,9 @@ from __future__ import annotations
 import logging
 
 import pytest
+from chia_rs import SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -14,13 +17,11 @@ from chia.server.server import ChiaServer
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
+from chia.wallet.estimate_fees import estimate_fees
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 
@@ -65,9 +66,7 @@ class TestBlockchainTransactions:
         assert sb == spend_bundle
 
         last_block = blocks[-1]
-        result = await full_node_1.mempool_manager.create_bundle_from_mempool(
-            last_block.header_hash, full_node_1.coin_store.get_unspent_lineage_info_for_puzzle_hash
-        )
+        result = full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header_hash)
         assert result is not None
         next_spendbundle, _ = result
 

@@ -7,16 +7,16 @@ from typing import Optional, TypeVar
 import aiohttp
 import anyio
 import pytest
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.misc import RecordingWebServer
 from chia._tests.util.split_managers import SplitAsyncManager, SplitManager, split_async_manager, split_manager
 from chia._tests.wallet.test_singleton_lifecycle_fast import satisfies_hint
 from chia.cmds.cmds_util import format_bytes, format_minutes, validate_directory_writable
+from chia.full_node.tx_processing_queue import ValuedEvent
 from chia.types.blockchain_format.program import Program
-from chia.types.transaction_queue_entry import ValuedEvent
 from chia.util.batches import to_batches
 from chia.util.errors import InvalidPathError
-from chia.util.ints import uint64
 from chia.util.timing import adjusted_timeout, backoff_times
 
 T = TypeVar("T")
@@ -98,7 +98,7 @@ def test_empty_lists() -> None:
 @pytest.mark.parametrize("collection_type", [list, set])
 def test_valid(collection_type: type) -> None:
     for k in range(1, 10):
-        test_collection = collection_type([x for x in range(0, k)])
+        test_collection = collection_type([x for x in range(k)])
         for i in range(1, len(test_collection) + 1):  # Test batch_size 1 to 11 (length + 1)
             checked = 0
             for batch in to_batches(test_collection, i):

@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from chia_rs.sized_ints import uint32
 
 from chia._tests.conftest import node_with_params
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks, RespondBlock, RespondBlocks
+from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.server.outbound_message import make_msg
 from chia.server.rate_limit_numbers import compose_rate_limits, get_rate_limits_to_use
 from chia.server.rate_limit_numbers import rate_limits as rl_numbers
 from chia.server.rate_limits import RateLimiter
@@ -17,7 +18,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32
 
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
 rl_v1 = [Capability.BASE]

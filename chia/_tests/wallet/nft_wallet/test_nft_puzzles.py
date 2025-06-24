@@ -3,9 +3,10 @@ from __future__ import annotations
 import random
 from typing import Optional
 
+from chia_rs.sized_bytes import bytes32
+
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,

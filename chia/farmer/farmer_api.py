@@ -6,7 +6,9 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
@@ -23,6 +25,7 @@ from chia.protocols.harvester_protocol import (
     SignatureRequestSourceData,
     SigningDataKind,
 )
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.pool_protocol import (
     PoolErrorCode,
     PostPartialPayload,
@@ -31,11 +34,9 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
@@ -43,8 +44,6 @@ from chia.types.blockchain_format.proof_of_space import (
     get_plot_id,
     verify_and_get_quality_string,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 
 class FarmerAPI:
@@ -111,11 +110,13 @@ class FarmerAPI:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
             required_iters: uint64 = calculate_iterations_quality(
-                self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
+                self.farmer.constants,
                 computed_quality_string,
-                new_proof_of_space.proof.size,
+                new_proof_of_space.proof.size(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
+                sp.sub_slot_iters,
+                sp.last_tx_height,
             )
 
             # If the iters are good enough to make a block, proceed with the block making flow
@@ -218,11 +219,13 @@ class FarmerAPI:
                     return
 
                 required_iters = calculate_iterations_quality(
-                    self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
+                    self.farmer.constants,
                     computed_quality_string,
-                    new_proof_of_space.proof.size,
+                    new_proof_of_space.proof.size(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
+                    sp.sub_slot_iters,
+                    sp.last_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(
                     self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
@@ -384,8 +387,7 @@ class FarmerAPI:
                             self.farmer.log.info(f"Pool response: {pool_response}")
                             if "error_code" in pool_response:
                                 self.farmer.log.error(
-                                    f"Error in pooling: "
-                                    f"{pool_response['error_code'], pool_response['error_message']}"
+                                    f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}"
                                 )
 
                                 increment_pool_stats(
@@ -535,6 +537,7 @@ class FarmerAPI:
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
                 uint8(calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height)),
+                new_signage_point.last_tx_height,
             )
 
             msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)

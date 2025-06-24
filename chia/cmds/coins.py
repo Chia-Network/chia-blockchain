@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import Optional
 
 import click
+from chia_rs.sized_bytes import bytes32
 
 from chia.cmds.cmd_classes import (
     chia_command,
@@ -16,7 +17,6 @@ from chia.cmds.cmd_helpers import (
     transaction_endpoint_runner,
 )
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.transaction_record import TransactionRecord
 
 

@@ -1,20 +1,20 @@
 from __future__ import annotations
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm.SExp import CastableType
 from clvm_tools import binutils
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 
 
 def program_roundtrip(o: CastableType) -> None:
     prg1 = Program.to(o)
     prg2 = SerializedProgram.to(o)
-    prg3 = SerializedProgram.from_program(prg1)
+    prg3 = prg1.to_serialized()
     prg4 = SerializedProgram.from_bytes(prg1.as_bin())
-    prg5 = prg2.to_program()
+    prg5 = Program.from_serialized(prg2)
 
     assert bytes(prg1) == bytes(prg2)
     assert bytes(prg1) == bytes(prg3)

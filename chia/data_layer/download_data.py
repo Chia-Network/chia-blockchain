@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Optional
 
 import aiohttp
+from chia_rs.sized_bytes import bytes32
 from typing_extensions import Literal
 
 from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
@@ -187,7 +187,7 @@ async def download_file(
     root_hash: bytes32,
     generation: int,
     server_info: ServerInfo,
-    proxy_url: str,
+    proxy_url: Optional[str],
     downloader: Optional[PluginRemote],
     timeout: aiohttp.ClientTimeout,
     client_foldername: Path,
@@ -242,7 +242,7 @@ async def insert_from_delta_file(
     client_foldername: Path,
     timeout: aiohttp.ClientTimeout,
     log: logging.Logger,
-    proxy_url: str,
+    proxy_url: Optional[str],
     downloader: Optional[PluginRemote],
     group_files_by_store: bool = False,
     maximum_full_file_count: int = 1,
@@ -357,7 +357,7 @@ def delete_full_file_if_exists(foldername: Path, store_id: bytes32, root: Root) 
 async def http_download(
     target_filename_path: Path,
     filename: str,
-    proxy_url: str,
+    proxy_url: Optional[str],
     server_info: ServerInfo,
     timeout: aiohttp.ClientTimeout,
     log: logging.Logger,

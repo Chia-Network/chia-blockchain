@@ -6,13 +6,14 @@ from dataclasses import dataclass, fields, replace
 from typing import Any, ClassVar, Optional, TypeVar, Union, final, get_type_hints
 
 from chia_rs import Coin, G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm.casts import int_from_bytes, int_to_bytes
+from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
@@ -237,7 +238,7 @@ class CreateCoin(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: type[_T_CreateCoin], program: Program) -> _T_CreateCoin:
+    def from_program(cls, program: Program) -> Self:
         potential_memos: Program = program.at("rrr")
         return cls(
             bytes32(program.at("rf").as_atom()),
@@ -251,9 +252,6 @@ class CreateCoin(Condition):
 
     def as_condition_args(self) -> list[Union[bytes32, uint64, Optional[list[bytes]]]]:
         return [self.puzzle_hash, self.amount, self.memos]
-
-
-_T_CreateCoin = TypeVar("_T_CreateCoin", bound=CreateCoin)
 
 
 @final
@@ -451,9 +449,9 @@ class MessageParticipant(Streamable):
                     == self.coin_id_committed
                 ), "The value for coin_id_committed must be equal to the implied ID of the other three arguments"
         if self.mode_integer is not None:
-            assert (
-                self.mode == self.mode_integer
-            ), "If mode_integer is manually specified, you must specify committments that match with the mode"
+            assert self.mode == self.mode_integer, (
+                "If mode_integer is manually specified, you must specify committments that match with the mode"
+            )
 
     @property
     def _nothing_committed(self) -> bool:
@@ -541,9 +539,6 @@ class MessageParticipant(Streamable):
         )
 
 
-_T_MessageCondition = TypeVar("_T_MessageCondition", bound="SendMessage")
-
-
 @streamable
 @dataclass(frozen=True)
 class SendMessage(Condition):
@@ -564,17 +559,17 @@ class SendMessage(Condition):
 
     def __post_init__(self) -> None:
         if self.mode_integer is None and (self.sender is None or self.receiver is None):
-            raise ValueError("Must specify either mode_integer or both sender and reciever")
+            raise ValueError("Must specify either mode_integer or both sender and receiver")
 
         if self.mode_integer is not None and self.sender is not None:
-            assert (
-                self.mode_integer >> 3 == self.sender.mode
-            ), "The first 3 bits of mode_integer don't match the sender's mode"
+            assert self.mode_integer >> 3 == self.sender.mode, (
+                "The first 3 bits of mode_integer don't match the sender's mode"
+            )
 
         if self.mode_integer is not None and self.receiver is not None:
-            assert (
-                self.mode_integer & 0b000111 == self.receiver.mode
-            ), "The last 3 bits of mode_integer don't match the receiver's mode"
+            assert self.mode_integer & 0b000111 == self.receiver.mode, (
+                "The last 3 bits of mode_integer don't match the receiver's mode"
+            )
 
         if self.var_args is None and self._other_party is None:
             raise ValueError(
@@ -582,9 +577,9 @@ class SendMessage(Condition):
             )
 
         if self.var_args is not None and self._other_party is not None and not self._other_party._nothing_committed:
-            assert (
-                self.var_args == self._other_party.necessary_args
-            ), f"The implied arguments for {self._other_party} do not match the specified arguments {self.var_args}"
+            assert self.var_args == self._other_party.necessary_args, (
+                f"The implied arguments for {self._other_party} do not match the specified arguments {self.var_args}"
+            )
 
     @property
     def args(self) -> list[Program]:
@@ -607,7 +602,7 @@ class SendMessage(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: type[_T_MessageCondition], program: Program) -> _T_MessageCondition:
+    def from_program(cls, program: Program) -> Self:
         full_mode = uint8(program.at("rf").as_int())
         var_args = list(program.at("rrr").as_iter())
         return cls(

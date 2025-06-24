@@ -7,12 +7,13 @@ import sys
 from pathlib import Path
 from time import monotonic
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
+
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import rand_hash, rewards
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 
 # to run this benchmark:
 # python -m benchmarks.coin_store
@@ -143,12 +144,13 @@ async def run_new_block_benchmark(version: int) -> None:
 
             # add one new coins
             c = make_coin()
+            coin_id = c.name()
             additions.append(c)
             total_add += 1
 
             farmer_coin, pool_coin = rewards(uint32(height))
-            all_coins += [c.name()]
-            all_unspent += [c.name()]
+            all_coins += [coin_id]
+            all_unspent += [coin_id]
             all_unspent += [pool_coin.name(), farmer_coin.name()]
             total_add += 2
 

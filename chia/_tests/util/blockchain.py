@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import contextlib
 import os
-import pickle
+import pickle  # noqa: S403  # TODO: use explicit serialization instead of pickle
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Optional
 
+from chia_rs import ConsensusConstants, FullBlock
+from chia_rs.sized_ints import uint64
+
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.constants import ConsensusConstants
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
-from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -25,7 +27,9 @@ async def create_blockchain(
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
         coin_store = await CoinStore.create(wrapper)
         store = await BlockStore.create(wrapper)
-        bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2, single_threaded=True, log_coins=True)
+        path = Path(".")
+        height_map = await BlockHeightMap.create(path, wrapper)
+        bc1 = await Blockchain.create(coin_store, store, height_map, constants, 3, single_threaded=True, log_coins=True)
         try:
             assert bc1.get_peak() is None
             yield bc1, wrapper
@@ -66,12 +70,14 @@ def persistent_blocks(
         print(f"File found at: {file_path}")
         try:
             bytes_list = file_path.read_bytes()
-            block_bytes_list: list[bytes] = pickle.loads(bytes_list)
+            # TODO: use explicit serialization instead of pickle
+            block_bytes_list: list[bytes] = pickle.loads(bytes_list)  # noqa: S301
             blocks: list[FullBlock] = []
             for block_bytes in block_bytes_list:
                 blocks.append(FullBlock.from_bytes_unchecked(block_bytes))
             if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
+
                 return blocks
         except EOFError:
             print("\n error reading db file")
@@ -125,6 +131,7 @@ def new_test_db(
         normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
         dummy_block_references=dummy_block_references,
         include_transactions=include_transactions,
+        genesis_timestamp=uint64(1234567890),
     )
     block_bytes_list: list[bytes] = []
     for block in blocks:

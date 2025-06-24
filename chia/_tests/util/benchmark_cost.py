@@ -4,15 +4,15 @@ import random
 import time
 
 from chia_rs import AugSchemeMPL, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.ints import uint32
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     seeded_random = random.Random()
     seeded_random.seed(a=0, version=2)
 
-    for i in range(0, 1000):
+    for i in range(1000):
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
         public_key = private_key.get_g1()
         solution = wallet_tool.make_solution(
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     # Run Puzzle 1000 times
     puzzle_start = time.time()
     clvm_cost = 0
-    for i in range(0, 1000):
+    for i in range(1000):
         cost_run, _ = puzzles[i].run_with_cost(INFINITE_COST, solutions[i])
         clvm_cost += cost_run
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     # Run AggSig 1000 times
     agg_sig_start = time.time()
     agg_sig_cost = 0
-    for i in range(0, 1000):
+    for i in range(1000):
         valid = AugSchemeMPL.verify(public_key, message, signature)
         assert valid
         agg_sig_cost += 20

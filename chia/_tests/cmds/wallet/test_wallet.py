@@ -8,6 +8,8 @@ from typing import Any, Optional, Union
 import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -23,20 +25,10 @@ from chia._tests.cmds.wallet.test_consts import (
     get_bytes32,
 )
 from chia.cmds.cmds_util import TransactionBundle
-from chia.rpc.wallet_request_types import (
-    CancelOfferResponse,
-    CATSpendResponse,
-    CreateOfferForIDsResponse,
-    GetHeightInfoResponse,
-    SendTransactionResponse,
-    TakeOfferResponse,
-)
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -48,6 +40,14 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.wallet.wallet_request_types import (
+    CancelOfferResponse,
+    CATSpendResponse,
+    CreateOfferForIDsResponse,
+    GetHeightInfoResponse,
+    SendTransactionResponse,
+    TakeOfferResponse,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 test_offer_file_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath("test_offer.toffer")
@@ -1004,9 +1004,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
     assert_list = [
-        "  OFFERED:\n"
-        "    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n"
-        f"    - {cat1.hex()}: 100.0 (100000 mojos)",
+        f"  OFFERED:\n    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n    - {cat1.hex()}: 100.0 (100000 mojos)",
         "  REQUESTED:\n"
         f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"
         "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",
@@ -1101,9 +1099,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
     assert_list = [
-        "  OFFERED:\n"
-        "    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n"
-        f"    - {cat1.hex()}: 100.0 (100000 mojos)",
+        f"  OFFERED:\n    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n    - {cat1.hex()}: 100.0 (100000 mojos)",
         "  REQUESTED:\n"
         f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"
         "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",

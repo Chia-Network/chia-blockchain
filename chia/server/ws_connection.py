@@ -12,10 +12,13 @@ from typing import Any, Callable, Optional, Union
 from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint8, uint16
 from packaging.version import Version
 from typing_extensions import Protocol, final
 
 from chia import __version__
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -27,12 +30,9 @@ from chia.protocols.protocol_timing import (
 from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.capabilities import known_active_capabilities
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
-from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -463,8 +463,7 @@ class WSChiaConnection:
 
             response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)
             self.log.debug(
-                f"Time taken to process {message_type} from {self.peer_node_id} is "
-                f"{time.time() - start_time} seconds"
+                f"Time taken to process {message_type} from {self.peer_node_id} is {time.time() - start_time} seconds"
             )
 
             if response is not None:

@@ -20,25 +20,25 @@ from aiohttp import (
     client_exceptions,
     web,
 )
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from typing_extensions import final
 
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
 from chia.server.api_protocol import ApiProtocol
 from chia.server.introducer_peers import IntroducerPeers
-from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.ssl.ssl_check import verify_ssl_certs_and_keys
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
-from chia.util.ssl_check import verify_ssl_certs_and_keys
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 
@@ -57,7 +57,7 @@ def ssl_context_for_server(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))  # noqa: S323
     ssl_context.check_hostname = False
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
     ssl_context.set_ciphers(
@@ -99,7 +99,7 @@ def ssl_context_for_client(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))  # noqa: S323
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
@@ -142,7 +142,7 @@ class ChiaServer:
     connection_close_task: Optional[asyncio.Task[None]] = None
     received_message_callback: Optional[ConnectionCallback] = None
     banned_peers: dict[str, float] = field(default_factory=dict)
-    invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
+    invalid_protocol_ban_seconds: int = INVALID_PROTOCOL_BAN_SECONDS
 
     @classmethod
     def create(

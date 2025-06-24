@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, Optional, TypeVar
 
+from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -24,11 +25,10 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.batches import to_batches
-from chia.util.ints import int16, uint32, uint64
 from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
@@ -125,7 +125,7 @@ class Sender:
             if not self._plot_manager.initial_refresh() or self._sync_id != 0:
                 self._reset()
         else:
-            raise AlreadyStartedError()
+            raise AlreadyStartedError
 
     def stop(self) -> None:
         self._stop_requested = True

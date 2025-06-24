@@ -43,9 +43,10 @@ from pathlib import Path
 from typing import Any
 
 import click
+from chia_rs import ConsensusConstants
 
 from chia._tests.util.run_block import run_json_block
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH

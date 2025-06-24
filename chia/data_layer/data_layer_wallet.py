@@ -5,23 +5,20 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import G1Element, G2Element
+from chia_rs import BlockRecord, CoinSpend, CoinState, G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
-from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
 from chia.data_layer.singleton_record import SingletonRecord
-from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.blockchain_format.program import Program, run_with_cost
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertAnnouncement,
     AssertCoinAnnouncement,
@@ -52,6 +49,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
@@ -167,13 +165,13 @@ class DataLayerWallet:
     @staticmethod
     async def match_dl_launcher(launcher_spend: CoinSpend) -> tuple[bool, Optional[bytes32]]:
         # Sanity check it's a launcher
-        if launcher_spend.puzzle_reveal.to_program() != SINGLETON_LAUNCHER_PUZZLE:
+        if launcher_spend.puzzle_reveal != SINGLETON_LAUNCHER_PUZZLE.to_serialized():
             return False, None
 
         # Let's make sure the solution looks how we expect it to
         try:
             full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
-                launcher_spend.solution.to_program()
+                Program.from_serialized(launcher_spend.solution)
             )
         except ValueError:
             return False, None
@@ -223,7 +221,9 @@ class DataLayerWallet:
 
         assert spend.coin.name() == launcher_id, "coin_id should always match the launcher_id here"
 
-        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(spend.solution.to_program())
+        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
+            Program.from_serialized(spend.solution)
+        )
         new_singleton = Coin(launcher_id, full_puzhash, amount)
 
         singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
@@ -300,9 +300,7 @@ class DataLayerWallet:
         launcher_parent: Coin = next(iter(coins))
         launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
 
-        inner_puzzle: Program = await self.standard_wallet.get_puzzle(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
+        inner_puzzle: Program = await action_scope.get_puzzle(self.wallet_state_manager)
         full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
 
         genesis_launcher_solution: Program = Program.to(
@@ -321,10 +319,10 @@ class DataLayerWallet:
             extra_conditions=(*extra_conditions, announcement),
         )
 
-        launcher_cs: CoinSpend = CoinSpend(
+        launcher_cs: CoinSpend = make_spend(
             launcher_coin,
-            SerializedProgram.from_program(SINGLETON_LAUNCHER_PUZZLE),
-            SerializedProgram.from_program(genesis_launcher_solution),
+            SINGLETON_LAUNCHER_PUZZLE,
+            genesis_launcher_solution,
         )
         launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
         launcher_id = launcher_coin.name()
@@ -394,9 +392,7 @@ class DataLayerWallet:
 
         # Make the child's puzzles
         if new_puz_hash is None:
-            new_puz_hash = await self.standard_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
+            new_puz_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         assert new_puz_hash is not None
         next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash_precalc(
             new_puz_hash
@@ -457,10 +453,10 @@ class DataLayerWallet:
             second_coin = Coin(
                 current_coin.name(), second_full_puz.get_tree_hash(), singleton_record.lineage_proof.amount
             )
-            second_coin_spend = CoinSpend(
+            second_coin_spend = make_spend(
                 second_coin,
-                SerializedProgram.from_program(second_full_puz),
-                SerializedProgram.to(
+                second_full_puz,
+                Program.to(
                     [
                         LineageProof(
                             current_coin.parent_coin_info,
@@ -538,10 +534,10 @@ class DataLayerWallet:
         )
 
         # Create the spend
-        coin_spend = CoinSpend(
+        coin_spend = make_spend(
             current_coin,
-            SerializedProgram.from_program(current_full_puz),
-            SerializedProgram.from_program(full_sol),
+            current_full_puz,
+            full_sol,
         )
 
         spend_bundle = WalletSpendBundle([coin_spend], G2Element())
@@ -722,18 +718,16 @@ class DataLayerWallet:
             raise ValueError(f"DL Wallet does not have permission to delete mirror with ID {mirror_id}")
 
         parent_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
-        new_puzhash: bytes32 = await self.standard_wallet.get_puzzle_hash(
-            new=not action_scope.config.tx_config.reuse_puzhash
-        )
+        new_puzhash: bytes32 = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         excess_fee: int = fee - mirror_coin.amount
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=[CreateCoin(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if excess_fee > 0 else extra_conditions,
         )
-        mirror_spend = CoinSpend(
+        mirror_spend = make_spend(
             mirror_coin,
-            SerializedProgram.from_program(create_mirror_puzzle()),
-            SerializedProgram.to(
+            create_mirror_puzzle(),
+            Program.to(
                 [
                     parent_coin.parent_coin_info,
                     parent_inner_puzzle,
@@ -826,7 +820,7 @@ class DataLayerWallet:
             root: bytes32
             inner_puzzle_hash: bytes32
 
-            conditions = puzzle.run_with_cost(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, solution)[
+            conditions = run_with_cost(puzzle, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, solution)[
                 1
             ].as_python()
             found_singleton: bool = False
@@ -936,14 +930,6 @@ class DataLayerWallet:
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return self.standard_wallet.puzzle_for_pk(pubkey)
 
-    async def get_new_puzzle(self) -> Program:
-        return self.puzzle_for_pk(
-            (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
-        )
-
-    async def get_new_puzzlehash(self) -> bytes32:
-        return (await self.get_new_puzzle()).get_tree_hash()
-
     async def new_peak(self, peak: BlockRecord) -> None:
         pass
 
@@ -1024,9 +1010,7 @@ class DataLayerWallet:
             except KeyError:
                 this_solver = solver["0x" + launcher.hex()]
             new_root: bytes32 = this_solver["new_root"]
-            new_ph: bytes32 = await wallet_state_manager.main_wallet.get_puzzle_hash(
-                new=not action_scope.config.tx_config.reuse_puzhash
-            )
+            new_ph: bytes32 = await action_scope.get_puzzle_hash(wallet_state_manager)
             async with wallet_state_manager.new_action_scope(
                 action_scope.config.tx_config, push=False
             ) as inner_action_scope:
@@ -1050,7 +1034,7 @@ class DataLayerWallet:
                         for cs in tx.spend_bundle.coin_spends
                         if tx.spend_bundle is not None and match_dl_singleton(cs.puzzle_reveal)[0]
                     )
-                dl_solution: Program = dl_spend.solution.to_program()
+                dl_solution = Program.from_serialized(dl_spend.solution)
                 old_graftroot: Program = dl_solution.at("rrffrf")
                 new_graftroot: Program = create_graftroot_offer_puz(
                     [bytes32(dep["launcher_id"]) for dep in this_solver["dependencies"]],
@@ -1059,7 +1043,7 @@ class DataLayerWallet:
                 )
 
                 new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
-                new_spend: CoinSpend = dl_spend.replace(solution=SerializedProgram.from_program(new_solution))
+                new_spend: CoinSpend = dl_spend.replace(solution=new_solution.to_serialized())
                 async with inner_action_scope.use() as interface:
                     for i, tx in enumerate(interface.side_effects.transactions):
                         if tx.spend_bundle is not None and dl_spend in tx.spend_bundle.coin_spends:
@@ -1115,7 +1099,7 @@ class DataLayerWallet:
         # Create all of the new solutions
         new_spends: list[CoinSpend] = []
         for spend in offer.coin_spends():
-            solution = spend.solution.to_program()
+            solution = Program.from_serialized(spend.solution)
             if match_dl_singleton(spend.puzzle_reveal)[0]:
                 try:
                     graftroot: Program = solution.at("rrffrf")
@@ -1163,7 +1147,7 @@ class DataLayerWallet:
                             ]
                         )
                     )
-                    new_spend: CoinSpend = spend.replace(solution=SerializedProgram.from_program(new_solution))
+                    new_spend: CoinSpend = spend.replace(solution=new_solution.to_serialized())
                     spend = new_spend
             new_spends.append(spend)
 
@@ -1173,7 +1157,7 @@ class DataLayerWallet:
     async def get_offer_summary(offer: Offer) -> dict[str, Any]:
         summary: dict[str, Any] = {"offered": []}
         for spend in offer.coin_spends():
-            solution = spend.solution.to_program()
+            solution = Program.from_serialized(spend.solution)
             matched, curried_args = match_dl_singleton(spend.puzzle_reveal)
             if matched:
                 try:

@@ -7,43 +7,45 @@ import logging
 import traceback
 from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import (
+    BlockRecord,
+    ConsensusConstants,
+    EndOfSubSlotBundle,
+    FullBlock,
+    HeaderBlock,
+    SubEpochChallengeSegment,
+    SubEpochSummary,
+    UnfinishedBlock,
+    additions_and_removals,
+    get_flags_for_height_and_constants,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
-from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.priority_mutex import PriorityMutex
 
 log = logging.getLogger(__name__)
@@ -121,8 +123,8 @@ class Blockchain:
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
+        height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
-        blockchain_dir: Path,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
@@ -154,7 +156,7 @@ class Blockchain:
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
-        await self._load_chain_from_store(blockchain_dir)
+        await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()
         return self
 
@@ -162,11 +164,11 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, blockchain_dir: Path) -> None:
+    async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper)
+        self.__height_map = height_map
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
@@ -358,7 +360,7 @@ class Blockchain:
             fork_info.reset(block.height - 1, block.prev_header_hash)
 
         # we dont consider block_record passed in here since it might be from
-        # a current sync process and not yet fully validated and commited to the DB
+        # a current sync process and not yet fully validated and committed to the DB
         block_rec_from_db = await self.get_block_record_from_db(header_hash)
         if block_rec_from_db is not None:
             # We have already validated the block, but if it's not part of the
@@ -508,8 +510,7 @@ class Blockchain:
                 )
 
             if block_record.prev_hash != peak.header_hash:
-                for coin_record in await self.coin_store.rollback_to_block(fork_info.fork_height):
-                    rolled_back_state[coin_record.name] = coin_record
+                rolled_back_state = await self.coin_store.rollback_to_block(fork_info.fork_height)
                 if self._log_coins and len(rolled_back_state) > 0:
                     log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
                     log.info(
@@ -609,20 +610,13 @@ class Blockchain:
             [fork_add.coin for fork_add in fork_info.additions_since_fork.values() if fork_add.is_coinbase],
         )
 
-    def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
+    def get_next_sub_slot_iters_and_difficulty(self, header_hash: bytes32, new_slot: bool) -> tuple[uint64, uint64]:
         curr = self.try_block_record(header_hash)
         assert curr is not None
         if curr.height <= 2:
-            return self.constants.DIFFICULTY_STARTING
+            return self.constants.SUB_SLOT_ITERS_STARTING, self.constants.DIFFICULTY_STARTING
 
-        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[1]
-
-    def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        curr = self.try_block_record(header_hash)
-        assert curr is not None
-        if curr.height <= 2:
-            return self.constants.SUB_SLOT_ITERS_STARTING
-        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
+        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)
 
     async def get_sp_and_ip_sub_slots(
         self, header_hash: bytes32

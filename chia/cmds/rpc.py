@@ -8,10 +8,10 @@ from typing import Any, Optional, TextIO
 
 import click
 from aiohttp import ClientResponseError
+from chia_rs.sized_ints import uint16
 
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
-from chia.util.ints import uint16
 
 services: list[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 
@@ -131,7 +131,7 @@ def status_cmd(ctx: click.Context, json_output: bool) -> None:
         status = "ACTIVE"
         try:
             if not get_routes(service, config, root_path=root_path, quiet=True)["success"]:
-                raise Exception()
+                raise Exception
         except Exception:
             status = "INACTIVE"
         status_data[service] = status

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
+
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
@@ -25,7 +26,12 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     EPOCH_BLOCKS=uint32(4608),  # The number of blocks per epoch, mainnet 4608. Must be multiple of SUB_EPOCH_SB
     SIGNIFICANT_BITS=uint8(8),  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS=uint16(1024),  # Max is 1024 (based on ClassGroupElement int size)
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(
+        9
+    ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
+        9
+    ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
     MIN_PLOT_SIZE=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE=uint8(50),
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
@@ -37,7 +43,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # Default used for tests is std_hash(b'')
     GENESIS_CHALLENGE=bytes32.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
     # Forks of chia should change the AGG_SIG_*_ADDITIONAL_DATA values to provide
-    # replay attack protection. This is set to mainnet genesis challange
+    # replay attack protection. This is set to mainnet genesis challenge
     AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
     AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
     AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
@@ -71,19 +77,23 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
-    SOFT_FORK6_HEIGHT=uint32(6800000),
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
+    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFF),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
+    PLOT_DIFFICULTY_4_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_5_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_6_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_7_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_8_HEIGHT=uint32(0xFFFFFFFF),
 )
 
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
     if network_id == "testnet11":
-        if "SOFT_FORK6_HEIGHT" not in overrides:
-            overrides["SOFT_FORK6_HEIGHT"] = 2000000
+        pass
