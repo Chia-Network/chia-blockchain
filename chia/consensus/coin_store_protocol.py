@@ -54,8 +54,8 @@ class CoinStoreProtocol(Protocol):
         self,
         include_spent_coins: bool,
         puzzle_hash: bytes32,
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        start_height: uint32 = ...,
+        end_height: uint32 = ...,
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a specific puzzle hash
@@ -65,8 +65,8 @@ class CoinStoreProtocol(Protocol):
         self,
         coins: bool,
         puzzle_hashes: list[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        start_height: uint32 = ...,
+        end_height: uint32 = ...,
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a list of puzzle hashes
@@ -76,8 +76,8 @@ class CoinStoreProtocol(Protocol):
         self,
         include_spent_coins: bool,
         names: list[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        start_height: uint32 = ...,
+        end_height: uint32 = ...,
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a list of coin names
@@ -89,7 +89,7 @@ class CoinStoreProtocol(Protocol):
         puzzle_hashes: set[bytes32],
         min_height: uint32 = uint32(0),
         *,
-        max_items: int = 50000,
+        max_items: int = ...,
     ) -> set[CoinState]:
         """
         Returns the coin states for a set of puzzle hashes
@@ -99,8 +99,8 @@ class CoinStoreProtocol(Protocol):
         self,
         include_spent_coins: bool,
         parent_ids: list[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        start_height: uint32 = ...,
+        end_height: uint32 = ...,
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a list of parent ids
@@ -112,8 +112,8 @@ class CoinStoreProtocol(Protocol):
         coin_ids: Collection[bytes32],
         min_height: uint32 = uint32(0),
         *,
-        max_height: uint32 = uint32.MAXIMUM,
-        max_items: int = 50000,
+        max_height: uint32 = ...,
+        max_items: int = ...,
     ) -> list[CoinState]:
         """
         Returns the coin states for a collection of coin ids
@@ -123,12 +123,12 @@ class CoinStoreProtocol(Protocol):
         self,
         puzzle_hashes: list[bytes32],
         *,
-        min_height: uint32 = uint32(0),
-        include_spent: bool = True,
-        include_unspent: bool = True,
-        include_hinted: bool = True,
-        min_amount: uint64 = uint64(0),
-        max_items: int = 50000,
+        min_height: uint32 = ...,
+        include_spent: bool = ...,
+        include_unspent: bool = ...,
+        include_hinted: bool = ...,
+        min_amount: uint64 = ...,
+        max_items: int = ...,
     ) -> tuple[list[CoinState], Optional[uint32]]:
         """
         Returns the coin states, as well as the next block height (or `None` if finished).
