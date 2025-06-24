@@ -27,7 +27,6 @@ class ProofOfSpaceCase:
     marks: Marks = ()
 
 
-# TODO: todo_v2_plots
 @datacases(
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
@@ -125,7 +124,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
 
 
-# TODO: todo_v2_plots
+# TODO: todo_v2_plots more test cases
 @datacases(
     ProofOfSpaceCase(
         id="v2 plot size 0",
@@ -144,6 +143,14 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         pool_public_key=G1Element(),
         expected_error="Plot size is higher than the maximum",
     ),
+    ProofOfSpaceCase(
+        id="v2 plot are not implemented",
+        pos_challenge=bytes32(b"1" * 32),
+        plot_size=uint8(0x80 | 30),
+        plot_public_key=G1Element(),
+        pool_public_key=G1Element(),
+        expected_error="NotImplementedError",
+    ),
 )
 def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
     pos = ProofOfSpace(
@@ -157,17 +164,21 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
     size = pos.size()
     assert size.size_v2 is not None
     assert size.size_v1 is None
-    quality_string = verify_and_get_quality_string(
-        pos=pos,
-        constants=DEFAULT_CONSTANTS,
-        original_challenge_hash=bytes32.from_hexstr(
-            "0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"
-        ),
-        signage_point=bytes32.from_hexstr("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
-        height=case.height,
-    )
-    assert quality_string is None
-    assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
+    try:
+        quality_string = verify_and_get_quality_string(
+            pos=pos,
+            constants=DEFAULT_CONSTANTS,
+            original_challenge_hash=bytes32.from_hexstr(
+                "0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"
+            ),
+            signage_point=bytes32.from_hexstr("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
+            height=case.height,
+        )
+        assert quality_string is None
+        assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
+    except Exception as e:
+        assert case.expected_error is not None
+        assert case.expected_error in repr(e)
 
 
 class TestProofOfSpace:

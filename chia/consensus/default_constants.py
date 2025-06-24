@@ -34,7 +34,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
     MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE_V1=uint8(50),
-    MIN_PLOT_SIZE_V2=uint8(28),  # 32 for mainnet
+    MIN_PLOT_SIZE_V2=uint8(28),
     MAX_PLOT_SIZE_V2=uint8(32),
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     NUM_SP_INTERVALS_EXTRA=uint8(3),  # The number of sp intervals to add to the signage point
