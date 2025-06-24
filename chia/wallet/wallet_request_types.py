@@ -339,6 +339,21 @@ class DIDGetInfoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDFindLostDID(Streamable):
+    coin_id: str
+    recovery_list_hash: Optional[bytes32] = None
+    num_verification: Optional[uint16] = None
+    metadata: Optional[dict[str, str]] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDFindLostDIDResponse(Streamable):
+    latest_coin_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDGetPubkey(Streamable):
     wallet_id: uint32
 

@@ -39,6 +39,8 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
+    DIDFindLostDID,
+    DIDFindLostDIDResponse,
     DIDGetCurrentCoinInfo,
     DIDGetCurrentCoinInfoResponse,
     DIDGetInfo,
@@ -580,22 +582,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_get_metadata", request)
         return response
 
-    async def find_lost_did(
-        self,
-        coin_id: str,
-        recovery_list_hash: Optional[str],
-        metadata: Optional[dict[str, Any]],
-        num_verification: Optional[int],
-    ) -> dict[str, Any]:
-        request: dict[str, Any] = {"coin_id": coin_id}
-        if recovery_list_hash is not None:
-            request["recovery_list_hash"] = recovery_list_hash
-        if metadata is not None:
-            request["metadata"] = (metadata,)
-        if num_verification is not None:
-            request["num_verification"] = num_verification
-        response = await self.fetch("did_find_lost_did", request)
-        return response
+    async def find_lost_did(self, request: DIDFindLostDID) -> DIDFindLostDIDResponse:
+        return DIDFindLostDIDResponse.from_json_dict(await self.fetch("did_find_lost_did", request.to_json_dict()))
 
     async def create_new_did_wallet_from_recovery(self, filename: str) -> dict[str, Any]:
         request = {"wallet_type": "did_wallet", "did_type": "recovery", "filename": filename}

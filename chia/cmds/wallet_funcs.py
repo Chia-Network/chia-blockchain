@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DIDFindLostDID,
     DIDGetInfo,
     DIDMessageSpend,
     DIDSetWalletName,
@@ -1161,22 +1162,21 @@ async def find_lost_did(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     coin_id: str,
-    metadata: Optional[Any],
+    metadata: Optional[str],
     recovery_list_hash: Optional[str],
     num_verification: Optional[int],
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
             response = await wallet_client.find_lost_did(
-                coin_id,
-                recovery_list_hash,
-                metadata,
-                num_verification,
+                DIDFindLostDID(
+                    coin_id,
+                    bytes32.from_hexstr(recovery_list_hash) if recovery_list_hash is not None else None,
+                    uint16.construct_optional(num_verification),
+                    json.loads(metadata) if metadata is not None else None,
+                )
             )
-            if response["success"]:
-                print(f"Successfully found lost DID {coin_id}, latest coin ID: {response['latest_coin_id']}")
-            else:
-                print(f"Cannot find lost DID {coin_id}: {response['error']}")
+            print(f"Successfully found lost DID {coin_id}, latest coin ID: {response.latest_coin_id.hex()}")
         except Exception as e:
             print(f"Failed to find lost DID: {e}")
 

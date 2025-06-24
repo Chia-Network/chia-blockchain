@@ -116,6 +116,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     CombineCoinsResponse,
     DeleteKey,
+    DIDFindLostDID,
+    DIDFindLostDIDResponse,
     DIDGetInfo,
     DIDGetInfoResponse,
     DIDGetWalletName,
@@ -2632,33 +2634,33 @@ class WalletRpcApi:
             hints=hints,
         )
 
-    async def did_find_lost_did(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def did_find_lost_did(self, request: DIDFindLostDID) -> DIDFindLostDIDResponse:
         """
         Recover a missing or unspendable DID wallet by a coin id of the DID
         :param coin_id: It can be DID ID, launcher coin ID or any coin ID of the DID you want to find.
         The latest coin ID will take less time.
         :return:
         """
-        if "coin_id" not in request:
-            return {"success": False, "error": "DID coin ID is required."}
-        coin_id = request["coin_id"]
         # Check if we have a DID wallet for this
-        if coin_id.startswith(AddressType.DID.hrp(self.service.config)):
-            coin_id = decode_puzzle_hash(coin_id)
+        if request.coin_id.startswith(AddressType.DID.hrp(self.service.config)):
+            coin_id = decode_puzzle_hash(request.coin_id)
         else:
-            coin_id = bytes32.from_hexstr(coin_id)
+            coin_id = bytes32.from_hexstr(request.coin_id)
         # Get coin state
         peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
-            return {"success": False, "error": "The coin is not a DID."}
+            raise ValueError("The coin is not a DID.")
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        num_verification_int: Optional[uint16] = uint16(num_verification.as_int())
+        assert num_verification_int is not None
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
             bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
-            uint16(num_verification.as_int()),
+            num_verification_int,
             singleton_struct,
             metadata,
             get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
@@ -2686,7 +2688,7 @@ class WalletRpcApi:
 
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         if derivation_record is None:
-            return {"success": False, "error": f"This DID {launcher_id} does not belong to the connected wallet"}
+            raise ValueError(f"This DID {launcher_id} does not belong to the connected wallet")
         else:
             our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
@@ -2722,11 +2724,12 @@ class WalletRpcApi:
                     did_puzzle = did_wallet.did_info.current_inner
                 else:
                     # Try override
-                    if "recovery_list_hash" in request:
-                        recovery_list_hash = Program.from_bytes(bytes.fromhex(request["recovery_list_hash"]))
-                    num_verification = request.get("num_verification", num_verification)
-                    if "metadata" in request:
-                        metadata = metadata_to_program(request["metadata"])
+                    if request.recovery_list_hash is not None:
+                        recovery_list_hash = Program.from_bytes(request.recovery_list_hash)
+                    if request.num_verification is not None:
+                        num_verification_int = request.num_verification
+                    if request.metadata is not None:
+                        metadata = metadata_to_program(request.metadata)
                     did_puzzle = DID_INNERPUZ_MOD.curry(
                         our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                     )
@@ -2758,17 +2761,16 @@ class WalletRpcApi:
                             )
 
                     if not matched:
-                        return {
-                            "success": False,
-                            "error": f"Cannot recover DID {launcher_id}"
-                            f" because the last spend updated recovery_list_hash/num_verification/metadata.",
-                        }
+                        raise RuntimeError(
+                            f"Cannot recover DID {launcher_id} "
+                            f"because the last spend updated recovery_list_hash/num_verification/metadata."
+                        )
 
             if did_wallet is None:
                 # Create DID wallet
                 response: list[CoinState] = await self.service.get_coin_state([launcher_id], peer=peer)
                 if len(response) == 0:
-                    return {"success": False, "error": f"Could not find the launch coin with ID: {launcher_id}"}
+                    raise ValueError(f"Could not find the launch coin with ID: {launcher_id}")
                 launcher_coin: CoinState = response[0]
                 did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                     self.service.wallet_state_manager,
@@ -2811,7 +2813,7 @@ class WalletRpcApi:
             try:
                 coin = await did_wallet.get_coin()
                 if coin.name() == coin_state.coin.name():
-                    return {"success": True, "latest_coin_id": coin.name().hex()}
+                    return DIDFindLostDIDResponse(coin.name())
             except RuntimeError:
                 # We don't have any coin for this wallet, add the coin
                 pass
@@ -2829,7 +2831,7 @@ class WalletRpcApi:
                 peer,
                 did_data,
             )
-            return {"success": True, "latest_coin_id": coin_state.coin.name().hex()}
+            return DIDFindLostDIDResponse(coin_state.coin.name())
 
     @tx_endpoint(push=True)
     async def did_update_metadata(

@@ -39,7 +39,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
+from chia.wallet.wallet_request_types import DIDFindLostDID, DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -870,7 +870,6 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
     env_0 = wallet_environments.environments[0]
     wallet_node_0 = env_0.node
     wallet_0 = env_0.xch_wallet
-    api_0 = env_0.rpc_api
 
     env_0.wallet_aliases = {
         "xch": 1,
@@ -925,8 +924,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
     assert len(wallet_node_0.wallet_state_manager.wallets) == 1
     # Find lost DID
     assert did_wallet_0.did_info.origin_coin is not None  # mypy
-    resp = await api_0.did_find_lost_did({"coin_id": did_wallet_0.did_info.origin_coin.name().hex()})
-    assert resp["success"]
+    await env_0.rpc_client.find_lost_did(DIDFindLostDID(did_wallet_0.did_info.origin_coin.name().hex()))
     did_wallets = list(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
@@ -993,8 +991,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
     did_wallet.did_info = dataclasses.replace(did_wallet.did_info, current_inner=new_inner_puzzle)
     # Recovery the coin
     assert did_wallet.did_info.origin_coin is not None  # mypy
-    resp = await api_0.did_find_lost_did({"coin_id": did_wallet.did_info.origin_coin.name().hex()})
-    assert resp["success"]
+    await env_0.rpc_client.find_lost_did(DIDFindLostDID(did_wallet.did_info.origin_coin.name().hex()))
     found_coin = await did_wallet.get_coin()
     assert found_coin == coin
     assert did_wallet.did_info.current_inner != new_inner_puzzle

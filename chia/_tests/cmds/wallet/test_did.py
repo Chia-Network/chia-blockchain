@@ -19,6 +19,8 @@ from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_request_types import (
+    DIDFindLostDID,
+    DIDFindLostDIDResponse,
     DIDGetInfo,
     DIDGetInfoResponse,
     DIDMessageSpend,
@@ -267,20 +269,17 @@ def test_did_find_lost(capsys: object, get_test_cli_clients: tuple[TestRpcClient
 
     # set RPC Client
     class DidFindLostRpcClient(TestWalletRpcClient):
-        async def find_lost_did(
-            self,
-            coin_id: str,
-            recovery_list_hash: Optional[str],
-            metadata: Optional[dict[str, object]],
-            num_verification: Optional[int],
-        ) -> dict[str, Union[bool, str]]:
-            self.add_to_log("find_lost_did", (coin_id, recovery_list_hash, metadata, num_verification))
-            return {"success": True, "latest_coin_id": get_bytes32(2).hex()}
+        async def find_lost_did(self, request: DIDFindLostDID) -> DIDFindLostDIDResponse:
+            self.add_to_log(
+                "find_lost_did",
+                (request.coin_id, request.recovery_list_hash, request.metadata, request.num_verification),
+            )
+            return DIDFindLostDIDResponse(get_bytes32(2))
 
     inst_rpc_client = DidFindLostRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     c_id = get_bytes32(1)
-    json_mdata = '{"test": true}'
+    json_mdata = '{"foo": "bar"}'
     command_args = [
         "wallet",
         "did",
@@ -295,7 +294,7 @@ def test_did_find_lost(capsys: object, get_test_cli_clients: tuple[TestRpcClient
     assert_list = [f"Successfully found lost DID {c_id.hex()}, latest coin ID: {get_bytes32(2).hex()}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "find_lost_did": [(c_id.hex(), None, json_mdata, None)],
+        "find_lost_did": [(c_id.hex(), None, {"foo": "bar"}, None)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
