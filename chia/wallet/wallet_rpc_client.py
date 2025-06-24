@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import Any, Optional, Union, cast
 
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror
@@ -71,18 +71,33 @@ from chia.wallet.wallet_request_types import (
     GetTransactionMemoResponse,
     LogIn,
     LogInResponse,
+    NFTAddURI,
     NFTAddURIResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
+    NFTCountNFTs,
+    NFTCountNFTsResponse,
     NFTGetByDID,
     NFTGetByDIDResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
+    NFTGetNFTs,
+    NFTGetNFTsResponse,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
     NFTGetWalletsWithDIDsResponse,
+    NFTMintBulk,
     NFTMintBulkResponse,
+    NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetDIDBulk,
     NFTSetDIDBulkResponse,
+    NFTSetNFTDID,
     NFTSetNFTDIDResponse,
     NFTSetNFTStatus,
     NFTTransferBulk,
     NFTTransferBulkResponse,
+    NFTTransferNFT,
     NFTTransferNFTResponse,
     PushTransactions,
     PushTransactionsResponse,
@@ -986,211 +1001,97 @@ class WalletRpcClient(RpcClient):
 
     async def mint_nft(
         self,
-        wallet_id: int,
-        royalty_address: Optional[str],
-        target_address: Optional[str],
-        hash: str,
-        uris: list[str],
+        request: NFTMintNFTRequest,
         tx_config: TXConfig,
-        meta_hash: Optional[str] = "",
-        meta_uris: list[str] = [],
-        license_hash: Optional[str] = "",
-        license_uris: list[str] = [],
-        edition_total: Optional[int] = 1,
-        edition_number: Optional[int] = 1,
-        fee: int = 0,
-        royalty_percentage: int = 0,
-        did_id: Optional[str] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTMintNFTResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "royalty_address": royalty_address,
-            "target_address": target_address,
-            "hash": hash,
-            "uris": uris,
-            "meta_hash": meta_hash,
-            "meta_uris": meta_uris,
-            "license_hash": license_hash,
-            "license_uris": license_uris,
-            "edition_number": edition_number,
-            "edition_total": edition_total,
-            "royalty_percentage": royalty_percentage,
-            "did_id": did_id,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_mint_nft", request)
-        return json_deserialize_with_clvm_streamable(response, NFTMintNFTResponse)
+        return NFTMintNFTResponse.from_json_dict(
+            await self.fetch(
+                "nft_mint_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def add_uri_to_nft(
         self,
-        wallet_id: int,
-        nft_coin_id: str,
-        key: str,
-        uri: str,
-        fee: int,
+        request: NFTAddURI,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTAddURIResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "uri": uri,
-            "key": key,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_add_uri", request)
-        return json_deserialize_with_clvm_streamable(response, NFTAddURIResponse)
+        return NFTAddURIResponse.from_json_dict(
+            await self.fetch(
+                "nft_add_uri", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def nft_calculate_royalties(
         self,
-        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
-        fungible_asset_dict: dict[Any, uint64],
-    ) -> dict[str, list[dict[str, Any]]]:
-        request = {
-            "royalty_assets": [
-                {"asset": id, "royalty_address": royalty_info[0], "royalty_percentage": royalty_info[1]}
-                for id, royalty_info in royalty_assets_dict.items()
-            ],
-            "fungible_assets": [{"asset": name, "amount": amount} for name, amount in fungible_asset_dict.items()],
-        }
-        response = await self.fetch("nft_calculate_royalties", request)
-        del response["success"]
-        return response
+        request: NFTCalculateRoyalties,
+    ) -> NFTCalculateRoyaltiesResponse:
+        return NFTCalculateRoyaltiesResponse.from_json_dict(
+            await self.fetch("nft_calculate_royalties", request.to_json_dict())
+        )
 
-    async def get_nft_info(self, coin_id: str, latest: bool = True) -> dict[str, Any]:
-        request = {"coin_id": coin_id, "latest": latest}
-        response = await self.fetch("nft_get_info", request)
-        return response
+    async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
+        return NFTGetInfoResponse.from_json_dict(await self.fetch("nft_get_info", request.to_json_dict()))
 
     async def transfer_nft(
         self,
-        wallet_id: int,
-        nft_coin_id: str,
-        target_address: str,
-        fee: int,
+        request: NFTTransferNFT,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTTransferNFTResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "target_address": target_address,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_transfer_nft", request)
-        return json_deserialize_with_clvm_streamable(response, NFTTransferNFTResponse)
+        return NFTTransferNFTResponse.from_json_dict(
+            await self.fetch(
+                "nft_transfer_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def count_nfts(self, wallet_id: Optional[int]) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("nft_count_nfts", request)
-        return response
+    async def count_nfts(self, request: NFTCountNFTs) -> NFTCountNFTsResponse:
+        return NFTCountNFTsResponse.from_json_dict(await self.fetch("nft_count_nfts", request.to_json_dict()))
 
-    async def list_nfts(self, wallet_id: int, num: int = 50, start_index: int = 0) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "num": num, "start_index": start_index}
-        response = await self.fetch("nft_get_nfts", request)
-        return response
+    async def list_nfts(self, request: NFTGetNFTs) -> NFTGetNFTsResponse:
+        return NFTGetNFTsResponse.from_json_dict(await self.fetch("nft_get_nfts", request.to_json_dict()))
 
     async def get_nft_wallet_by_did(self, request: NFTGetByDID) -> NFTGetByDIDResponse:
         return NFTGetByDIDResponse.from_json_dict(await self.fetch("nft_get_by_did", request.to_json_dict()))
 
     async def set_nft_did(
         self,
-        wallet_id: int,
-        did_id: Optional[str],
-        nft_coin_id: str,
-        fee: int,
+        request: NFTSetNFTDID,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTSetNFTDIDResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if did_id is not None:
-            request["did_id"] = did_id
-        response = await self.fetch("nft_set_nft_did", request)
-        return json_deserialize_with_clvm_streamable(response, NFTSetNFTDIDResponse)
+        return NFTSetNFTDIDResponse.from_json_dict(
+            await self.fetch(
+                "nft_set_nft_did", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def set_nft_status(self, request: NFTSetNFTStatus) -> None:
         await self.fetch("nft_set_nft_status", request.to_json_dict())
 
-    async def get_nft_wallet_did(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("nft_get_wallet_did", request)
-        return response
+    async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
+        return NFTGetWalletDIDResponse.from_json_dict(await self.fetch("nft_get_wallet_did", request.to_json_dict()))
 
     async def get_nft_wallets_with_dids(self) -> NFTGetWalletsWithDIDsResponse:
         return NFTGetWalletsWithDIDsResponse.from_json_dict(await self.fetch("nft_get_wallets_with_dids", {}))
 
     async def nft_mint_bulk(
         self,
-        wallet_id: int,
-        metadata_list: list[dict[str, Any]],
-        royalty_percentage: Optional[int],
-        royalty_address: Optional[str],
+        request: NFTMintBulk,
         tx_config: TXConfig,
-        target_list: Optional[list[str]] = None,
-        mint_number_start: Optional[int] = 1,
-        mint_total: Optional[int] = None,
-        xch_coins: Optional[list[dict[str, Any]]] = None,
-        xch_change_target: Optional[str] = None,
-        new_innerpuzhash: Optional[str] = None,
-        did_coin: Optional[dict[str, Any]] = None,
-        did_lineage_parent: Optional[str] = None,
-        mint_from_did: Optional[bool] = False,
-        fee: Optional[int] = 0,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = False,
     ) -> NFTMintBulkResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "metadata_list": metadata_list,
-            "target_list": target_list,
-            "royalty_percentage": royalty_percentage,
-            "royalty_address": royalty_address,
-            "mint_number_start": mint_number_start,
-            "mint_total": mint_total,
-            "xch_coins": xch_coins,
-            "xch_change_target": xch_change_target,
-            "new_innerpuzhash": new_innerpuzhash,
-            "did_coin": did_coin,
-            "did_lineage_parent": did_lineage_parent,
-            "mint_from_did": mint_from_did,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_mint_bulk", request)
-        return json_deserialize_with_clvm_streamable(response, NFTMintBulkResponse)
+        return NFTMintBulkResponse.from_json_dict(
+            await self.fetch(
+                "nft_mint_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def set_nft_did_bulk(
         self,
