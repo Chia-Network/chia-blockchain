@@ -174,11 +174,12 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
             signage_point=bytes32.from_hexstr("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
             height=case.height,
         )
-        assert quality_string is None
-        assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
     except Exception as e:
         assert case.expected_error is not None
         assert case.expected_error in repr(e)
+    else:
+        assert quality_string is None
+        assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
 
 
 class TestProofOfSpace:
