@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, PlotSize, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 
@@ -493,9 +493,12 @@ class TestWeightProof:
 
 
 @pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
-def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None:
+@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
+def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_size: PlotSize) -> None:
     constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
-    assert calculate_prefix_bits(constants, height) == expected
+    if plot_size.size_v2 is not None:
+        expected = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
+    assert calculate_prefix_bits(constants, height, plot_size) == expected
 
 
 @pytest.mark.parametrize(
@@ -512,6 +515,9 @@ def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None
         (20643000, 5),
     ],
 )
-def test_calculate_prefix_bits_default(height: uint32, expected: int) -> None:
+@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
+def test_calculate_prefix_bits_default(height: uint32, expected: int, plot_size: PlotSize) -> None:
     constants = DEFAULT_CONSTANTS
-    assert calculate_prefix_bits(constants, height) == expected
+    if plot_size.size_v2 is not None:
+        expected = DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER_V2
+    assert calculate_prefix_bits(constants, height, plot_size) == expected
