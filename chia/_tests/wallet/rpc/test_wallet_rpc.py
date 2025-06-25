@@ -109,6 +109,7 @@ from chia.wallet.wallet_request_types import (
     DeleteKey,
     DIDGetDID,
     DIDGetPubkey,
+    DIDGetRecoveryList,
     DIDGetWalletName,
     DIDMessageSpend,
     DIDSetWalletName,
@@ -1544,9 +1545,9 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
         DEFAULT_TX_CONFIG,
     )
     assert len(update_res.transactions) > 0
-    res = await wallet_1_rpc.get_did_recovery_list(did_wallet_id_0)
-    assert res["num_required"] == 1
-    assert res["recovery_list"][0] == did_id_0
+    recovery_list_res = await wallet_1_rpc.get_did_recovery_list(DIDGetRecoveryList(did_wallet_id_0))
+    assert recovery_list_res.num_required == 1
+    assert recovery_list_res.recovery_list[0] == did_id_0
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)

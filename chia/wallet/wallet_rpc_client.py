@@ -51,6 +51,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetPubkeyResponse,
     DIDGetRecoveryInfo,
     DIDGetRecoveryInfoResponse,
+    DIDGetRecoveryList,
+    DIDGetRecoveryListResponse,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
     DIDMessageSpend,
@@ -536,10 +538,10 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def get_did_recovery_list(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("did_get_recovery_list", request)
-        return response
+    async def get_did_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
+        return DIDGetRecoveryListResponse.from_json_dict(
+            await self.fetch("did_get_recovery_list", request.to_json_dict())
+        )
 
     async def did_message_spend(
         self,

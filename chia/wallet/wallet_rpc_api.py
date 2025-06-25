@@ -122,6 +122,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetDIDResponse,
     DIDGetInfo,
     DIDGetInfoResponse,
+    DIDGetRecoveryList,
+    DIDGetRecoveryListResponse,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
     DIDMessageSpend,
@@ -2872,19 +2874,18 @@ class WalletRpcApi:
             except RuntimeError:
                 return DIDGetDIDResponse(wallet_id=request.wallet_id, my_did=my_did)
 
-    async def did_get_recovery_list(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         recovery_list = wallet.did_info.backup_ids
         recovery_dids = []
         for backup_id in recovery_list:
             recovery_dids.append(encode_puzzle_hash(backup_id, AddressType.DID.hrp(self.service.config)))
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "recovery_list": recovery_dids,
-            "num_required": wallet.did_info.num_of_backup_ids_needed,
-        }
+        return DIDGetRecoveryListResponse(
+            wallet_id=request.wallet_id,
+            recovery_list=recovery_dids,
+            num_required=uint16(wallet.did_info.num_of_backup_ids_needed),
+        )
 
     async def did_get_metadata(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

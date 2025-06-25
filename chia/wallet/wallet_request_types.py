@@ -413,6 +413,20 @@ class DIDGetDIDResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDGetRecoveryList(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetRecoveryListResponse(Streamable):
+    wallet_id: uint32
+    recovery_list: list[str]
+    num_required: uint16
+
+
+@streamable
+@dataclass(frozen=True)
 class NFTCountNFTs(Streamable):
     wallet_id: Optional[uint32] = None
 
