@@ -126,6 +126,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetMetadataResponse,
     DIDGetPubkey,
     DIDGetPubkeyResponse,
+    DIDGetRecoveryInfo,
+    DIDGetRecoveryInfoResponse,
     DIDGetRecoveryList,
     DIDGetRecoveryListResponse,
     DIDGetWalletName,
@@ -2983,23 +2985,24 @@ class WalletRpcApi:
         else:
             return {"success": False}
 
-    async def did_get_information_needed_for_recovery(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_information_needed_for_recovery(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
             bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
         )
         assert did_wallet.did_info.temp_coin is not None
-        coin_name = did_wallet.did_info.temp_coin.name().hex()
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "my_did": my_did,
-            "coin_name": coin_name,
-            "newpuzhash": did_wallet.did_info.temp_puzhash,
-            "pubkey": did_wallet.did_info.temp_pubkey,
-            "backup_dids": did_wallet.did_info.backup_ids,
-        }
+        coin_name = did_wallet.did_info.temp_coin.name()
+        return DIDGetRecoveryInfoResponse(
+            wallet_id=request.wallet_id,
+            my_did=my_did,
+            coin_name=coin_name,
+            newpuzhash=did_wallet.did_info.temp_puzhash,
+            pubkey=G1Element.from_bytes(did_wallet.did_info.temp_pubkey)
+            if did_wallet.did_info.temp_pubkey is not None
+            else None,
+            backup_dids=did_wallet.did_info.backup_ids,
+        )
 
     async def did_get_current_coin_info(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

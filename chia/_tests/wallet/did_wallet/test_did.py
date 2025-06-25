@@ -347,6 +347,8 @@ async def test_creation_from_backup_file(
     # TODO: this check is kind of weak, we should research when this endpoint might actually be useful
     assert current_coin_info_response.wallet_id == env_0.wallet_aliases["did"]
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        assert recovery_info.pubkey is not None
+        assert recovery_info.newpuzhash is not None
         message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
             recovery_info.coin_name, recovery_info.newpuzhash, recovery_info.pubkey, action_scope
         )

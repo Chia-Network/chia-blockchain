@@ -376,8 +376,8 @@ class DIDGetRecoveryInfoResponse(Streamable):
     wallet_id: uint32
     my_did: str
     coin_name: bytes32
-    newpuzhash: bytes32
-    pubkey: G1Element
+    newpuzhash: Optional[bytes32]
+    pubkey: Optional[G1Element]
     backup_dids: list[bytes32]
 
 
