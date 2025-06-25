@@ -126,6 +126,8 @@ from chia.wallet.wallet_request_types import (
     DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
+    DIDUpdateMetadata,
+    DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDs,
     DIDUpdateRecoveryIDsResponse,
     Empty,
@@ -2834,32 +2836,28 @@ class WalletRpcApi:
             return DIDFindLostDIDResponse(coin_state.coin.name())
 
     @tx_endpoint(push=True)
+    @marshal
     async def did_update_metadata(
         self,
-        request: dict[str, Any],
+        request: DIDUpdateMetadata,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        metadata: dict[str, str] = {}
-        if "metadata" in request and type(request["metadata"]) is dict:
-            metadata = request["metadata"]
+    ) -> DIDUpdateMetadataResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         async with self.service.wallet_state_manager.lock:
-            update_success = await wallet.update_metadata(metadata)
+            update_success = await wallet.update_metadata(request.metadata)
             # Update coin with new ID info
             if update_success:
-                await wallet.create_update_spend(
-                    action_scope, uint64(request.get("fee", 0)), extra_conditions=extra_conditions
+                await wallet.create_update_spend(action_scope, request.fee, extra_conditions=extra_conditions)
+                # tx_endpoint wrapper will take care of these default values
+                return DIDUpdateMetadataResponse(
+                    [],
+                    [],
+                    wallet_id=request.wallet_id,
+                    spend_bundle=WalletSpendBundle([], G2Element()),
                 )
-                return {
-                    "wallet_id": wallet_id,
-                    "success": True,
-                    "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-                    "transactions": None,  # tx_endpoint wrapper will take care of this
-                }
             else:
-                return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
+                raise ValueError(f"Couldn't update metadata with input: {request.metadata}")
 
     async def did_get_did(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

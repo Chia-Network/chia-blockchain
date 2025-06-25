@@ -49,6 +49,7 @@ from chia.wallet.wallet_request_types import (
     DIDGetInfo,
     DIDMessageSpend,
     DIDSetWalletName,
+    DIDUpdateMetadata,
     FungibleAsset,
     GetNotifications,
     NFTAddURI,
@@ -1070,12 +1071,14 @@ async def update_did_metadata(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.update_did_metadata(
-                did_wallet_id,
-                json.loads(metadata),
+                DIDUpdateMetadata(
+                    wallet_id=uint32(did_wallet_id),
+                    metadata=json.loads(metadata),
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             if push:

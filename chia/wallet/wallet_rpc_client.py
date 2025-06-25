@@ -56,6 +56,7 @@ from chia.wallet.wallet_request_types import (
     DIDSetWalletName,
     DIDSetWalletNameResponse,
     DIDTransferDIDResponse,
+    DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDs,
     DIDUpdateRecoveryIDsResponse,
@@ -556,23 +557,17 @@ class WalletRpcClient(RpcClient):
 
     async def update_did_metadata(
         self,
-        wallet_id: int,
-        metadata: dict[str, Any],
+        request: DIDUpdateMetadata,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> DIDUpdateMetadataResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "metadata": metadata,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_update_metadata", request)
-        return json_deserialize_with_clvm_streamable(response, DIDUpdateMetadataResponse)
+        return DIDUpdateMetadataResponse.from_json_dict(
+            await self.fetch(
+                "did_update_metadata",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def get_did_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
         return DIDGetPubkeyResponse.from_json_dict(await self.fetch("did_get_pubkey", request.to_json_dict()))

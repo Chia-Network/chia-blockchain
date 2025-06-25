@@ -877,6 +877,20 @@ class DIDMessageSpendResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class DIDUpdateMetadata(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    metadata: dict[str, str] = field(default_factory=dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDUpdateMetadataResponse(TransactionEndpointResponse):
+    spend_bundle: WalletSpendBundle
+    wallet_id: uint32
+
+
+@streamable
+@kw_only_dataclass
 class NFTMintNFTRequest(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     royalty_address: Optional[str] = field(default_factory=default_raise)
@@ -1124,13 +1138,6 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDUpdateMetadataResponse(TransactionEndpointResponse):
-    spend_bundle: WalletSpendBundle
-    wallet_id: uint32
 
 
 @streamable

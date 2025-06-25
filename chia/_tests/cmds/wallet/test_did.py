@@ -28,6 +28,7 @@ from chia.wallet.wallet_request_types import (
     DIDSetWalletName,
     DIDSetWalletNameResponse,
     DIDTransferDIDResponse,
+    DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -225,19 +226,22 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
     class DidUpdateMetadataRpcClient(TestWalletRpcClient):
         async def update_did_metadata(
             self,
-            wallet_id: int,
-            metadata: dict[str, object],
+            request: DIDUpdateMetadata,
             tx_config: TXConfig,
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DIDUpdateMetadataResponse:
-            self.add_to_log("update_did_metadata", (wallet_id, metadata, tx_config, push, timelock_info))
-            return DIDUpdateMetadataResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()), uint32(wallet_id))
+            self.add_to_log(
+                "update_did_metadata", (request.wallet_id, request.metadata, tx_config, request.push, timelock_info)
+            )
+            return DIDUpdateMetadataResponse(
+                [STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()), uint32(request.wallet_id)
+            )
 
     inst_rpc_client = DidUpdateMetadataRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     w_id = 3
-    json_mdata = '{"test": true}'
+    json_mdata = '{"foo": "bar"}'
     command_args = [
         "wallet",
         "did",
@@ -258,7 +262,7 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "update_did_metadata": [
-            (w_id, {"test": True}, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), True, test_condition_valid_times)
+            (w_id, {"foo": "bar"}, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), True, test_condition_valid_times)
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

@@ -111,6 +111,7 @@ from chia.wallet.wallet_request_types import (
     DIDGetWalletName,
     DIDMessageSpend,
     DIDSetWalletName,
+    DIDUpdateMetadata,
     DIDUpdateRecoveryIDs,
     FungibleAsset,
     GetNotifications,
@@ -1552,8 +1553,12 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     # Update metadata
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
-        await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
-    await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
+        await wallet_1_rpc.update_did_metadata(
+            DIDUpdateMetadata(wallet_id=wallet_1_id, metadata={"Twitter": "Https://test"}, push=True), DEFAULT_TX_CONFIG
+        )
+    await wallet_1_rpc.update_did_metadata(
+        DIDUpdateMetadata(wallet_id=did_wallet_id_0, metadata={"Twitter": "Https://test"}, push=True), DEFAULT_TX_CONFIG
+    )
 
     res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
     assert res["metadata"]["Twitter"] == "Https://test"
