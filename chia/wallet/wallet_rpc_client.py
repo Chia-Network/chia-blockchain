@@ -9,7 +9,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
-from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -102,6 +101,14 @@ from chia.wallet.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    PWAbsorbRewards,
+    PWAbsorbRewardsResponse,
+    PWJoinPool,
+    PWJoinPoolResponse,
+    PWSelfPool,
+    PWSelfPoolResponse,
+    PWStatus,
+    PWStatusResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -707,41 +714,47 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def pw_self_pool(self, wallet_id: int, fee: uint64) -> dict[str, Any]:
-        reply = await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee})
-        reply = parse_result_transactions(reply)
-        return reply
+    async def pw_self_pool(
+        self,
+        request: PWSelfPool,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWSelfPoolResponse:
+        return PWSelfPoolResponse.from_json_dict(
+            await self.fetch(
+                "pw_self_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def pw_join_pool(
-        self, wallet_id: int, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
-    ) -> dict[str, Any]:
-        request = {
-            "wallet_id": int(wallet_id),
-            "target_puzzlehash": target_puzzlehash.hex(),
-            "relative_lock_height": relative_lock_height,
-            "pool_url": pool_url,
-            "fee": fee,
-        }
-        reply = await self.fetch("pw_join_pool", request)
-        reply = parse_result_transactions(reply)
-        return reply
+        self,
+        request: PWJoinPool,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWJoinPoolResponse:
+        return PWJoinPoolResponse.from_json_dict(
+            await self.fetch(
+                "pw_join_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def pw_absorb_rewards(
-        self, wallet_id: int, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None
-    ) -> dict[str, Any]:
-        reply = await self.fetch(
-            "pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee, "max_spends_in_tx": max_spends_in_tx}
+        self,
+        request: PWAbsorbRewards,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWAbsorbRewardsResponse:
+        return PWAbsorbRewardsResponse.from_json_dict(
+            await self.fetch(
+                "pw_absorb_rewards", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        reply["state"] = PoolWalletInfo.from_json_dict(reply["state"])
-        reply = parse_result_transactions(reply)
-        return reply
 
-    async def pw_status(self, wallet_id: int) -> tuple[PoolWalletInfo, list[TransactionRecord]]:
-        json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})
-        return (
-            PoolWalletInfo.from_json_dict(json_dict["state"]),
-            [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
-        )
+    async def pw_status(self, request: PWStatus) -> PWStatusResponse:
+        return PWStatusResponse.from_json_dict(await self.fetch("pw_status", request.to_json_dict()))
 
     # CATS
     async def create_new_cat_and_wallet(

@@ -167,6 +167,14 @@ from chia.wallet.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    PWAbsorbRewards,
+    PWAbsorbRewardsResponse,
+    PWJoinPool,
+    PWJoinPoolResponse,
+    PWSelfPool,
+    PWSelfPoolResponse,
+    PWStatus,
+    PWStatusResponse,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -385,6 +393,27 @@ def tx_endpoint(
         return rpc_endpoint
 
     return _inner
+
+
+REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
+    confirmed_at_height=uint32(0),
+    created_at_time=uint64(0),
+    to_puzzle_hash=bytes32.zeros,
+    amount=uint64(0),
+    fee_amount=uint64(0),
+    confirmed=False,
+    sent=uint32(0),
+    spend_bundle=WalletSpendBundle([], G2Element()),
+    additions=[],
+    removals=[],
+    wallet_id=uint32(0),
+    sent_to=[],
+    trade_id=None,
+    type=uint32(0),
+    name=bytes32.zeros,
+    memos=[],
+    valid_times=ConditionValidTimes(),
+)
 
 
 class WalletRpcApi:
@@ -3736,15 +3765,14 @@ class WalletRpcApi:
     # Pool Wallet
     ##########################################################################################
     @tx_endpoint(push=True)
+    @marshal
     async def pw_join_pool(
         self,
-        request: dict[str, Any],
+        request: PWJoinPool,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        fee = uint64(request.get("fee", 0))
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+    ) -> PWJoinPoolResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
@@ -3752,97 +3780,92 @@ class WalletRpcApi:
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         if (
             pool_wallet_info.current.state == FARMING_TO_POOL.value
-            and pool_wallet_info.current.pool_url == request["pool_url"]
+            and pool_wallet_info.current.pool_url == request.pool_url
         ):
             raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
 
         owner_pubkey = pool_wallet_info.current.owner_pubkey
-        target_puzzlehash = None
-
-        if "target_puzzlehash" in request:
-            target_puzzlehash = bytes32.from_hexstr(request["target_puzzlehash"])
-        assert target_puzzlehash is not None
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
-            target_puzzlehash,
+            request.target_puzzlehash,
             owner_pubkey,
-            request["pool_url"],
-            uint32(request["relative_lock_height"]),
+            request.pool_url,
+            request.relative_lock_height,
         )
 
-        async with self.service.wallet_state_manager.lock:
-            total_fee = await wallet.join_pool(new_target_state, fee, action_scope)
-            return {
-                "total_fee": total_fee,
-                "transaction": None,  # tx_endpoint wrapper will take care of this
-                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+        total_fee = await wallet.join_pool(new_target_state, request.fee, action_scope)
+        # tx_endpoint will take care of filling in these default values
+        return PWJoinPoolResponse(
+            [],
+            [],
+            total_fee=total_fee,
+            transaction=REPLACEABLE_TRANSACTION_RECORD,
+            fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
+        )
 
     @tx_endpoint(push=True)
+    @marshal
     async def pw_self_pool(
         self,
-        request: dict[str, Any],
+        request: PWSelfPool,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> PWSelfPoolResponse:
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
-        fee = uint64(request.get("fee", 0))
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
 
-        async with self.service.wallet_state_manager.lock:
-            total_fee = await wallet.self_pool(fee, action_scope)
-            return {
-                "total_fee": total_fee,
-                "transaction": None,  # tx_endpoint wrapper will take care of this
-                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+        total_fee = await wallet.self_pool(request.fee, action_scope)
+        # tx_endpoint will take care of filling in these default values
+        return PWSelfPoolResponse(
+            [],
+            [],
+            total_fee=total_fee,
+            transaction=REPLACEABLE_TRANSACTION_RECORD,
+            fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
+        )
 
     @tx_endpoint(push=True)
+    @marshal
     async def pw_absorb_rewards(
         self,
-        request: dict[str, Any],
+        request: PWAbsorbRewards,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> PWAbsorbRewardsResponse:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
-        fee = uint64(request.get("fee", 0))
-        max_spends_in_tx = request.get("max_spends_in_tx", None)
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)
         async with self.service.wallet_state_manager.lock:
-            await wallet.claim_pool_rewards(fee, max_spends_in_tx, action_scope)
+            await wallet.claim_pool_rewards(request.fee, request.max_spends_in_tx, action_scope)
             state: PoolWalletInfo = await wallet.get_current_state()
-            return {
-                "state": state.to_json_dict(),
-                "transaction": None,  # tx_endpoint wrapper will take care of this
-                "fee_transaction": None,  # tx_endpoint wrapper will take care of this
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
+            return PWAbsorbRewardsResponse(
+                [],
+                [],
+                state=state,
+                transaction=REPLACEABLE_TRANSACTION_RECORD,
+                fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
+            )
 
-    async def pw_status(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def pw_status(self, request: PWStatus) -> PWStatusResponse:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)
         state: PoolWalletInfo = await wallet.get_current_state()
         unconfirmed_transactions: list[TransactionRecord] = await wallet.get_unconfirmed_transactions()
-        return {
-            "state": state.to_json_dict(),
-            "unconfirmed_transactions": unconfirmed_transactions,
-        }
+        return PWStatusResponse(
+            state=state,
+            unconfirmed_transactions=unconfirmed_transactions,
+        )
 
     ##########################################################################################
     # DataLayer Wallet
