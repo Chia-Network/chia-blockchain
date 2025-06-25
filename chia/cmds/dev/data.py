@@ -25,10 +25,10 @@ from chia.data_layer.data_layer import server_files_path_from_config
 from chia.data_layer.data_layer_util import ServerInfo, Status, Subscription
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file
-from chia.rpc.wallet_request_types import DLHistory, DLTrackNew
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.task_referencer import create_referenced_task
+from chia.wallet.wallet_request_types import DLHistory, DLTrackNew
 
 
 class NonZeroReturnCodeError(Exception):
