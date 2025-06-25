@@ -1,0 +1,277 @@
+interfaces = []
+exclude = ["**/*__pycache__", "**/*egg-info", "**/docs", "**/tests", "**/venv"]
+source_roots = ["."]
+
+[[modules]]
+path = "chia.protocols"
+depends_on = ["chia.types", "chia.util"]
+
+[[modules]]
+path = "chia.pools"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+]
+
+[[modules]]
+path = "chia.consensus"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.full_node", deprecated = false },
+]
+
+[[modules]]
+path = "chia.server"
+depends_on = [
+    "chia.protocols",
+    "chia.types",
+    "chia.util",
+    { path = "chia.ssl", deprecated = false },
+    # these ones can be removed by getting rid of `chia.server.aliases`
+    # and/or the `start_*.py` scripts, which can go in their respective modules
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.full_node", deprecated = false },
+    { path = "chia.data_layer", deprecated = false },
+    { path = "chia.farmer", deprecated = false },
+    { path = "chia.simulator", deprecated = false },
+    { path = "chia.daemon", deprecated = false },
+    { path = "chia.harvester", deprecated = false },
+    { path = "chia.timelord", deprecated = false },
+    { path = "chia.introducer", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.apis", deprecated = false },
+    { path = "chia.seeder", deprecated = false },
+]
+
+[[modules]]
+path = "chia.simulator"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.server", deprecated = false },
+    { path = "chia.plotting", deprecated = false },
+    { path = "chia.full_node", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.seeder", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+    { path = "chia.apis", deprecated = false },
+    { path = "chia.cmds", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.timelord", deprecated = false },
+    { path = "chia.daemon", deprecated = false },
+    { path = "chia.ssl", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+]
+
+[[modules]]
+path = "chia.full_node"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    "chia.consensus",
+    "chia.protocols",
+    "chia.server",
+    { path = "chia.rpc", deprecated = false },
+]
+
+[[modules]]
+path = "chia.data_layer"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    "chia.protocols",
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+]
+
+[[modules]]
+path = "chia.apis"
+depends_on = [
+    { path = "chia.harvester", deprecated = false },
+    { path = "chia.farmer", deprecated = false },
+    { path = "chia.introducer", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.full_node", deprecated = false },
+    { path = "chia.timelord", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.server", deprecated = false },
+]
+
+[[modules]]
+path = "chia.introducer"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.server", deprecated = false },
+]
+
+[[modules]]
+path = "chia.plot_sync"
+depends_on = [
+    "chia.util",
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.plotting", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+]
+
+[[modules]]
+path = "chia.farmer"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.pools", deprecated = false },
+    { path = "chia.plot_sync", deprecated = false },
+    { path = "chia.daemon", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.ssl", deprecated = false },
+    { path = "chia.harvester", deprecated = false },
+]
+
+[[modules]]
+path = "chia.plotters"
+depends_on = [
+    { path = "chia.util", deprecated = false },
+    { path = "chia.plotting", deprecated = false },
+]
+
+[[modules]]
+path = "chia.ssl"
+depends_on = ["chia.util"]
+
+[[modules]]
+path = "chia.timelord"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.server", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+]
+
+[[modules]]
+path = "chia.legacy"
+depends_on = ["chia.util"]
+
+[[modules]]
+path = "chia.rpc"
+# this module should probably be disbanded and contents moved to the modules
+# for their respective services
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.server", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+]
+
+[[modules]]
+path = "chia.harvester"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+    { path = "chia.plotting", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.plot_sync", deprecated = false },
+]
+
+[[modules]]
+path = "chia.cmds"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.plotters", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+    { path = "chia.plotting", deprecated = false },
+    { path = "chia.pools", deprecated = false },
+    { path = "chia.daemon", deprecated = false },
+    { path = "chia.ssl", deprecated = false },
+    { path = "chia.farmer", deprecated = false },
+    { path = "chia.full_node", deprecated = false },
+    { path = "chia.harvester", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.simulator", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.data_layer", deprecated = false },
+]
+
+[[modules]]
+path = "chia.daemon"
+depends_on = [
+    "chia.util",
+    { path = "chia.plotting", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.cmds", deprecated = false },
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.plotters", deprecated = false },
+]
+
+[[modules]]
+path = "chia.wallet"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.server", deprecated = false },
+    { path = "chia.daemon", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.data_layer", deprecated = false },
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.pools", deprecated = false },
+    { path = "chia.full_node", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+]
+
+[[modules]]
+path = "chia.types"
+depends_on = ["chia.util"]
+
+[[modules]]
+path = "chia.util"
+
+[[modules]]
+path = "chia.clvm"
+depends_on = []
+
+[[modules]]
+path = "chia.plotting"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    "chia.consensus",
+    { path = "chia.wallet", deprecated = false },
+    { path = "chia.daemon", deprecated = false },
+]
+
+[[modules]]
+path = "chia.seeder"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    { path = "chia.protocols", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.full_node", deprecated = false },
+    { path = "chia.server", deprecated = false },
+    { path = "chia.apis", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+]

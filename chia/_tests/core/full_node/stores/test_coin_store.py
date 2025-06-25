@@ -19,6 +19,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -281,15 +282,15 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
 
         # The reorg will revert the creation and spend of many coins. It will also revert the spend (but not the
         # creation) of the selected coin.
-        changed_records = await coin_store.rollback_to_block(reorg_index)
-        changed_coin_records = [cr.coin for cr in changed_records]
-        assert selected_coin in changed_records
+        coin_changes = await coin_store.rollback_to_block(reorg_index)
+        changed_coins = {cr.coin for cr in coin_changes.values()}
+        assert selected_coin.coin in changed_coins
         for coin_record in all_records:
             assert coin_record is not None
             if coin_record.confirmed_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.coin in changed_coins
             if coin_record.spent_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.coin in changed_coins
 
         for block in blocks:
             if not block.is_transaction_block():
@@ -314,7 +315,8 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
         blocks = bt.get_consecutive_blocks(initial_block_count)
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
-        b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, 2)
         try:
             records: list[Optional[CoinRecord]] = []
 
@@ -380,7 +382,8 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
         )
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
-        b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, 2)
         for block in blocks:
             await _validate_and_add_block(b, block)
         peak = b.get_peak()

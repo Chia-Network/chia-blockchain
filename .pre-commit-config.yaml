@@ -30,6 +30,14 @@ repos:
         types: [python]
   - repo: local
     hooks:
+      - id: tach
+        name: tach
+        entry: ./activated.py tach check
+        language: system
+        types: [python]
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: poetry
         name: poetry
         entry: ./activated.py --poetry poetry check
