@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any, Optional
 
@@ -160,7 +159,6 @@ async def cli_async(
     end_height: Optional[int] = None,
 ) -> None:
     blocks_per_status: int = 3000
-    last_status_height: int = 0
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (
         node_client,
@@ -188,6 +186,7 @@ async def cli_async(
 
         # set initial segment heights
         start_segment: int = start_height
+        last_status_height: int = start_segment
         end_segment: int = start_height + concurrent_requests
         # measure time for performance measurement per segment
         cycle_start: float = time.time()
@@ -195,20 +194,23 @@ async def cli_async(
         start_time: float = cycle_start
 
         while end_segment <= end_height:
-            # Create an initial list to hold pending tasks
-            pending_tasks: list[Coroutine[Any, Any, Any]] = []
-
-            for i in range(start_segment, end_segment):
-                block_header_hash: bytes32 = get_block_hash_from_height(i, height_to_hash_bytes)
-                if spends_with_conditions:
-                    pending_tasks.append(node_client.get_block_spends_with_conditions(block_header_hash))
-                if block_spends:
-                    pending_tasks.append(node_client.get_block_spends(block_header_hash))
-                if additions_and_removals:
-                    pending_tasks.append(node_client.get_additions_and_removals(block_header_hash))
             try:
-                results = await asyncio.gather(*pending_tasks)
-                for result in results:
+                # Create a list to hold task results
+                task_results: list[Optional[Any]] = []
+                async with asyncio.TaskGroup() as tg:
+                    for i in range(start_segment, end_segment):
+                        block_header_hash: bytes32 = get_block_hash_from_height(i, height_to_hash_bytes)
+                        if spends_with_conditions:
+                            task_results.append(
+                                tg.create_task(node_client.get_block_spends_with_conditions(block_header_hash))
+                            )
+                        if block_spends:
+                            task_results.append(tg.create_task(node_client.get_block_spends(block_header_hash)))
+                        if additions_and_removals:
+                            task_results.append(
+                                tg.create_task(node_client.get_additions_and_removals(block_header_hash))
+                            )
+                for result in task_results:
                     if result is None:
                         raise ValueError("Received None from RPC call")
             except Exception as e:
@@ -227,7 +229,6 @@ async def cli_async(
                 cycle_start = time.time()
 
             # reset variables for the next segment
-            pending_tasks = []  # clear pending tasks after processing
             start_segment = end_segment
             end_segment += concurrent_requests
         print(f"Finished processing blocks from {start_height} to {end_height} (peak: {peak_height})")
