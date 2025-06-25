@@ -124,6 +124,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetInfoResponse,
     DIDGetMetadata,
     DIDGetMetadataResponse,
+    DIDGetPubkey,
+    DIDGetPubkeyResponse,
     DIDGetRecoveryList,
     DIDGetRecoveryListResponse,
     DIDGetWalletName,
@@ -2942,11 +2944,12 @@ class WalletRpcApi:
             "transactions": [tx.to_json_dict_convenience(self.service.config)],
         }
 
-    async def did_get_pubkey(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        pubkey = bytes((await wallet.wallet_state_manager.get_unused_derivation_record(wallet_id)).pubkey).hex()
-        return {"success": True, "pubkey": pubkey}
+    @marshal
+    async def did_get_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        return DIDGetPubkeyResponse(
+            (await wallet.wallet_state_manager.get_unused_derivation_record(request.wallet_id)).pubkey
+        )
 
     # TODO: this needs a test
     @tx_endpoint(push=True)
