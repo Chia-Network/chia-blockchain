@@ -12,7 +12,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 
 
-def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
+def skip_list(buf: bytes, skip_item: Callable[[bytes], bytes]) -> bytes:
     n = int.from_bytes(buf[:4], "big", signed=False)
     buf = buf[4:]
     for _ in range(n):
@@ -20,63 +20,63 @@ def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) ->
     return buf
 
 
-def skip_bytes(buf: memoryview) -> memoryview:
+def skip_bytes(buf: bytes) -> bytes:
     n = int.from_bytes(buf[:4], "big", signed=False)
     buf = buf[4:]
     assert n >= 0
     return buf[n:]
 
 
-def skip_optional(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
+def skip_optional(buf: bytes, skip_item: Callable[[bytes], bytes]) -> bytes:
     if buf[0] == 0:
         return buf[1:]
     assert buf[0] == 1
     return skip_item(buf[1:])
 
 
-def skip_bytes32(buf: memoryview) -> memoryview:
+def skip_bytes32(buf: bytes) -> bytes:
     return buf[32:]
 
 
-def skip_uint32(buf: memoryview) -> memoryview:
+def skip_uint32(buf: bytes) -> bytes:
     return buf[4:]
 
 
-def skip_uint64(buf: memoryview) -> memoryview:
+def skip_uint64(buf: bytes) -> bytes:
     return buf[8:]
 
 
-def skip_uint128(buf: memoryview) -> memoryview:
+def skip_uint128(buf: bytes) -> bytes:
     return buf[16:]
 
 
-def skip_uint8(buf: memoryview) -> memoryview:
+def skip_uint8(buf: bytes) -> bytes:
     return buf[1:]
 
 
-def skip_bool(buf: memoryview) -> memoryview:
+def skip_bool(buf: bytes) -> bytes:
     assert buf[0] in {0, 1}
     return buf[1:]
 
 
-# def skip_class_group_element(buf: memoryview) -> memoryview:
+# def skip_class_group_element(buf: bytes) -> bytes:
 #    return buf[100:]  # bytes100
 
 
-def skip_vdf_info(buf: memoryview) -> memoryview:
+def skip_vdf_info(buf: bytes) -> bytes:
     #    buf = skip_bytes32(buf)
     #    buf = skip_uint64(buf)
     #    return skip_class_group_element(buf)
     return buf[32 + 8 + 100 :]
 
 
-def skip_vdf_proof(buf: memoryview) -> memoryview:
+def skip_vdf_proof(buf: bytes) -> bytes:
     buf = skip_uint8(buf)  # witness_type
     buf = skip_bytes(buf)  # witness
     return skip_bool(buf)  # normalized_to_identity
 
 
-def skip_challenge_chain_sub_slot(buf: memoryview) -> memoryview:
+def skip_challenge_chain_sub_slot(buf: bytes) -> bytes:
     buf = skip_vdf_info(buf)
     buf = skip_optional(buf, skip_bytes32)  # infused challenge chain sub skit hash
     buf = skip_optional(buf, skip_bytes32)  # subepoch_summary_hash
@@ -84,39 +84,39 @@ def skip_challenge_chain_sub_slot(buf: memoryview) -> memoryview:
     return skip_optional(buf, skip_uint64)  # new_difficulty
 
 
-def skip_infused_challenge_chain(buf: memoryview) -> memoryview:
+def skip_infused_challenge_chain(buf: bytes) -> bytes:
     return skip_vdf_info(buf)  # infused_challenge_chain_end_of_slot_vdf
 
 
-def skip_reward_chain_sub_slot(buf: memoryview) -> memoryview:
+def skip_reward_chain_sub_slot(buf: bytes) -> bytes:
     buf = skip_vdf_info(buf)  # end_of_slot_vdf
     buf = skip_bytes32(buf)  # challenge_chain_sub_slot_hash
     buf = skip_optional(buf, skip_bytes32)  # infused_challenge_chain_sub_slot_hash
     return skip_uint8(buf)
 
 
-def skip_sub_slot_proofs(buf: memoryview) -> memoryview:
+def skip_sub_slot_proofs(buf: bytes) -> bytes:
     buf = skip_vdf_proof(buf)  # challenge_chain_slot_proof
     buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_slot_proof
     return skip_vdf_proof(buf)  # reward_chain_slot_proof
 
 
-def skip_end_of_sub_slot_bundle(buf: memoryview) -> memoryview:
+def skip_end_of_sub_slot_bundle(buf: bytes) -> bytes:
     buf = skip_challenge_chain_sub_slot(buf)
     buf = skip_optional(buf, skip_infused_challenge_chain)
     buf = skip_reward_chain_sub_slot(buf)
     return skip_sub_slot_proofs(buf)
 
 
-def skip_g1_element(buf: memoryview) -> memoryview:
+def skip_g1_element(buf: bytes) -> bytes:
     return buf[G1Element.SIZE :]
 
 
-def skip_g2_element(buf: memoryview) -> memoryview:
+def skip_g2_element(buf: bytes) -> bytes:
     return buf[G2Element.SIZE :]
 
 
-def skip_proof_of_space(buf: memoryview) -> memoryview:
+def skip_proof_of_space(buf: bytes) -> bytes:
     buf = skip_bytes32(buf)  # challenge
     buf = skip_optional(buf, skip_g1_element)  # pool_public_key
     buf = skip_optional(buf, skip_bytes32)  # pool_contract_puzzle_hash
@@ -125,7 +125,7 @@ def skip_proof_of_space(buf: memoryview) -> memoryview:
     return skip_bytes(buf)  # proof
 
 
-def skip_reward_chain_block(buf: memoryview) -> memoryview:
+def skip_reward_chain_block(buf: bytes) -> bytes:
     buf = skip_uint128(buf)  # weight
     buf = skip_uint32(buf)  # height
     buf = skip_uint128(buf)  # total_iters
@@ -143,13 +143,13 @@ def skip_reward_chain_block(buf: memoryview) -> memoryview:
     return skip_bool(buf)  # is_transaction_block
 
 
-def skip_pool_target(buf: memoryview) -> memoryview:
+def skip_pool_target(buf: bytes) -> bytes:
     # buf = skip_bytes32(buf)  # puzzle_hash
     # return skip_uint32(buf)  # max_height
     return buf[32 + 4 :]
 
 
-def skip_foliage_block_data(buf: memoryview) -> memoryview:
+def skip_foliage_block_data(buf: bytes) -> bytes:
     buf = skip_bytes32(buf)  # unfinished_reward_block_hash
     buf = skip_pool_target(buf)  # pool_target
     buf = skip_optional(buf, skip_g2_element)  # pool_signature
@@ -157,7 +157,7 @@ def skip_foliage_block_data(buf: memoryview) -> memoryview:
     return skip_bytes32(buf)  # extension_data
 
 
-def skip_foliage(buf: memoryview) -> memoryview:
+def skip_foliage(buf: bytes) -> bytes:
     buf = skip_bytes32(buf)  # prev_block_hash
     buf = skip_bytes32(buf)  # reward_block_hash
     buf = skip_foliage_block_data(buf)  # foliage_block_data
@@ -166,7 +166,7 @@ def skip_foliage(buf: memoryview) -> memoryview:
     return skip_optional(buf, skip_g2_element)  # foliage_transaction_block_signature
 
 
-def prev_hash_from_foliage(buf: memoryview) -> tuple[memoryview, bytes32]:
+def prev_hash_from_foliage(buf: bytes) -> tuple[bytes, bytes32]:
     prev_hash = buf[:32]  # prev_block_hash
     buf = skip_bytes32(buf)  # prev_block_hash
     buf = skip_bytes32(buf)  # reward_block_hash
@@ -176,7 +176,7 @@ def prev_hash_from_foliage(buf: memoryview) -> tuple[memoryview, bytes32]:
     return skip_optional(buf, skip_g2_element), bytes32(prev_hash)  # foliage_transaction_block_signature
 
 
-def skip_foliage_transaction_block(buf: memoryview) -> memoryview:
+def skip_foliage_transaction_block(buf: bytes) -> bytes:
     # buf = skip_bytes32(buf)  # prev_transaction_block_hash
     # buf = skip_uint64(buf)  # timestamp
     # buf = skip_bytes32(buf)  # filter_hash
@@ -186,14 +186,14 @@ def skip_foliage_transaction_block(buf: memoryview) -> memoryview:
     return buf[32 + 8 + 32 + 32 + 32 + 32 :]
 
 
-def skip_coin(buf: memoryview) -> memoryview:
+def skip_coin(buf: bytes) -> bytes:
     # buf = skip_bytes32(buf)  # parent_coin_info
     # buf = skip_bytes32(buf)  # puzzle_hash
     # return skip_uint64(buf)  # amount
     return buf[32 + 32 + 8 :]
 
 
-def skip_transactions_info(buf: memoryview) -> memoryview:
+def skip_transactions_info(buf: bytes) -> bytes:
     # buf = skip_bytes32(buf)  # generator_root
     # buf = skip_bytes32(buf)  # generator_refs_root
     # buf = skip_g2_element(buf)  # aggregated_signature
@@ -203,7 +203,7 @@ def skip_transactions_info(buf: memoryview) -> memoryview:
     return skip_list(buf, skip_coin)
 
 
-def generator_from_block(buf: memoryview) -> Optional[bytes]:
+def generator_from_block(buf: bytes) -> Optional[bytes]:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf = skip_reward_chain_block(buf)  # reward_chain_block
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
@@ -232,7 +232,7 @@ class GeneratorBlockInfo:
     transactions_generator_ref_list: list[uint32]
 
 
-def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
+def block_info_from_block(buf: bytes) -> GeneratorBlockInfo:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf = skip_reward_chain_block(buf)  # reward_chain_block
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
@@ -266,7 +266,7 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
 
 
 def header_block_from_block(
-    buf: memoryview, request_filter: bool = True, tx_addition_coins: list[Coin] = [], removal_names: list[bytes32] = []
+    buf: bytes, request_filter: bool = True, tx_addition_coins: list[Coin] = [], removal_names: list[bytes32] = []
 ) -> bytes:
     buf2 = buf[:]
     buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots
@@ -320,7 +320,7 @@ def header_block_from_block(
     return header_block
 
 
-def get_height_and_tx_status_from_block(buf: memoryview) -> tuple[uint32, bool]:
+def get_height_and_tx_status_from_block(buf: bytes) -> tuple[uint32, bool]:
     """
     Returns the height of the block and whether it's a transaction block or not.
     We're considering the block as a transaction block if transactions_info is not None.
