@@ -922,19 +922,17 @@ class TestPoolWalletRpc:
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
         assert status.target is None
 
-        (
-            await client.pw_join_pool(
-                PWJoinPool(
-                    wallet_id=uint32(wallet_id),
-                    target_puzzlehash=pool_ph,
-                    pool_url="https://pool.example.com",
-                    relative_lock_height=uint32(5),
-                    fee=fee,
-                    push=True,
-                ),
-                DEFAULT_TX_CONFIG,
-            )
-        ).transaction
+        await client.pw_join_pool(
+            PWJoinPool(
+                wallet_id=uint32(wallet_id),
+                target_puzzlehash=pool_ph,
+                pool_url="https://pool.example.com",
+                relative_lock_height=uint32(5),
+                fee=fee,
+                push=True,
+            ),
+            DEFAULT_TX_CONFIG,
+        )
 
         status = (await client.pw_status(PWStatus(uint32(wallet_id)))).state
 
@@ -1026,19 +1024,17 @@ class TestPoolWalletRpc:
         wallet_id = await create_new_plotnft(wallet_environments)
 
         # Join a different pool
-        (
-            await wallet_rpc.pw_join_pool(
-                PWJoinPool(
-                    wallet_id=uint32(wallet_id),
-                    target_puzzlehash=bytes32.zeros,
-                    pool_url="https://pool-b.org",
-                    relative_lock_height=LOCK_HEIGHT,
-                    fee=uint64(fee),
-                    push=True,
-                ),
-                DEFAULT_TX_CONFIG,
-            )
-        ).transaction
+        await wallet_rpc.pw_join_pool(
+            PWJoinPool(
+                wallet_id=uint32(wallet_id),
+                target_puzzlehash=bytes32.zeros,
+                pool_url="https://pool-b.org",
+                relative_lock_height=LOCK_HEIGHT,
+                fee=uint64(fee),
+                push=True,
+            ),
+            DEFAULT_TX_CONFIG,
+        )
 
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)

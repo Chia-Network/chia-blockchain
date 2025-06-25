@@ -285,7 +285,7 @@ async def submit_tx_with_confirmation(
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
-                    return None
+                    return
     except ResponseFailureError:
         raise
     except Exception as e:
