@@ -10,8 +10,8 @@ import psutil
 
 @dataclass(frozen=True)
 class Counters:
-    user_time: int
-    system_time: int
+    user_time: float
+    system_time: float
 
 
 @click.command()

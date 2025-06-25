@@ -1893,6 +1893,22 @@ htmlsoup = ["BeautifulSoup4"]
 source = ["Cython (>=3.0.11,<3.1.0)"]
 
 [[package]]
+name = "lxml-stubs"
+version = "0.5.1"
+description = "Type annotations for the lxml package"
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "lxml-stubs-0.5.1.tar.gz", hash = "sha256:e0ec2aa1ce92d91278b719091ce4515c12adc1d564359dfaf81efa7d4feab79d"},
+    {file = "lxml_stubs-0.5.1-py3-none-any.whl", hash = "sha256:1f689e5dbc4b9247cb09ae820c7d34daeb1fdbd1db06123814b856dae7787272"},
+]
+
+[package.extras]
+test = ["coverage[toml] (>=7.2.5)", "mypy (>=1.2.0)", "pytest (>=7.3.0)", "pytest-mypy-plugins (>=1.10.1)"]
+
+[[package]]
 name = "macholib"
 version = "1.16.3"
 description = "Mach-O header analysis and editing"
@@ -3393,6 +3409,19 @@ files = [
 ]
 
 [[package]]
+name = "types-colorama"
+version = "0.4.15.20240311"
+description = "Typing stubs for colorama"
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "types-colorama-0.4.15.20240311.tar.gz", hash = "sha256:a28e7f98d17d2b14fb9565d32388e419f4108f557a7d939a66319969b2b99c7a"},
+    {file = "types_colorama-0.4.15.20240311-py3-none-any.whl", hash = "sha256:6391de60ddc0db3f147e31ecb230006a6823e81e380862ffca1e4695c13a0b8e"},
+]
+
+[[package]]
 name = "types-cryptography"
 version = "3.3.23.2"
 description = "Typing stubs for cryptography"
@@ -3404,6 +3433,46 @@ files = [
     {file = "types-cryptography-3.3.23.2.tar.gz", hash = "sha256:09cc53f273dd4d8c29fa7ad11fefd9b734126d467960162397bc5e3e604dea75"},
     {file = "types_cryptography-3.3.23.2-py3-none-any.whl", hash = "sha256:b965d548f148f8e87f353ccf2b7bd92719fdf6c845ff7cedf2abb393a0643e4f"},
 ]
+
+[[package]]
+name = "types-docutils"
+version = "0.21.0.20250604"
+description = "Typing stubs for docutils"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "types_docutils-0.21.0.20250604-py3-none-any.whl", hash = "sha256:bfa8628176c06a80cdd1d6f3fb32e972e042db53538596488dfe0e9c5962b222"},
+    {file = "types_docutils-0.21.0.20250604.tar.gz", hash = "sha256:5a9cc7f5a4c5ef694aa0abc61111e0b1376a53dee90d65757f77f31acfcca8f2"},
+]
+
+[[package]]
+name = "types-psutil"
+version = "7.0.0.20250601"
+description = "Typing stubs for psutil"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "types_psutil-7.0.0.20250601-py3-none-any.whl", hash = "sha256:0c372e2d1b6529938a080a6ba4a9358e3dfc8526d82fabf40c1ef9325e4ca52e"},
+    {file = "types_psutil-7.0.0.20250601.tar.gz", hash = "sha256:71fe9c4477a7e3d4f1233862f0877af87bff057ff398f04f4e5c0ca60aded197"},
+]
+
+[[package]]
+name = "types-pygments"
+version = "2.19.0.20250516"
+description = "Typing stubs for Pygments"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "types_pygments-2.19.0.20250516-py3-none-any.whl", hash = "sha256:db27de8b59591389cd7d14792483892c021c73b8389ef55fef40a48aa371fbcc"},
+    {file = "types_pygments-2.19.0.20250516.tar.gz", hash = "sha256:b53fd07e197f0e7be38ee19598bd99c78be5ca5f9940849c843be74a2f81ab58"},
+]
+
+[package.dependencies]
+types-docutils = "*"
 
 [[package]]
 name = "types-pyyaml"
@@ -3429,6 +3498,19 @@ markers = "extra == \"dev\""
 files = [
     {file = "types_setuptools-80.9.0.20250529-py3-none-any.whl", hash = "sha256:00dfcedd73e333a430e10db096e4d46af93faf9314f832f13b6bbe3d6757e95f"},
     {file = "types_setuptools-80.9.0.20250529.tar.gz", hash = "sha256:79e088ba0cba2186c8d6499cbd3e143abb142d28a44b042c28d3148b1e353c91"},
+]
+
+[[package]]
+name = "types-zstd"
+version = "1.5.7.0.20250507"
+description = "Typing stubs for zstd"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "types_zstd-1.5.7.0.20250507-py3-none-any.whl", hash = "sha256:c5cfed59fbfd1fc597d3f159295f26810e7fda436b616483bb55de4ccb1cde35"},
+    {file = "types_zstd-1.5.7.0.20250507.tar.gz", hash = "sha256:32d3d2c0797eb043de2092ee2d5f0dc1114afba0a7f5b6e9e31bc3b27af10aa6"},
 ]
 
 [[package]]
@@ -3827,11 +3909,11 @@ url = "https://pypi.chia.net/simple"
 reference = "chia"
 
 [extras]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "lxml-stubs", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-colorama", "types-cryptography", "types-psutil", "types-pyyaml", "types-setuptools", "types-zstd"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "96199723f8be2b7b83f4321230349acc2fff5960a6d017650a216686098e93e2"
+content-hash = "e6755e221c20ca5875fc95a6983209ec72a0f0b202680c7a44064d9e1cc54f71"

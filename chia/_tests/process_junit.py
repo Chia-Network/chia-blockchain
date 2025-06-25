@@ -133,12 +133,13 @@ def main(
     tree = lxml.etree.parse(xml_file)
     root = tree.getroot()
 
-    cases_by_test_id: defaultdict[TestId, list[lxml.etree.Element]] = defaultdict(list)
+    cases_by_test_id: defaultdict[TestId, list[lxml.etree._Element]] = defaultdict(list)
     for suite in root.findall("testsuite"):
         for case in suite.findall("testcase"):
             if case.find("skipped") is not None:
                 continue
             test_id_property = case.find("properties/property[@name='test_id']")
+            assert test_id_property is not None, "Test ID property not found in test case"
             test_id = TestId.unmarshal(json.loads(test_id_property.attrib["value"]))
             test_id = dataclasses.replace(
                 test_id, ids=tuple(id for id in test_id.ids if not id.startswith(f"{data_type.tag}_repeat"))
@@ -149,7 +150,9 @@ def main(
     for test_id, cases in cases_by_test_id.items():
         for case in cases:
             for property in case.findall(f"properties/property[@name='{tag}']"):
-                tag = property.attrib["name"]
+                name = property.attrib["name"]
+                assert isinstance(name, str), f"Property name must be a string, got: {type(name).__name__}"
+                tag = name
                 data = supported_data_types_by_tag[tag].unmarshal(json.loads(property.attrib["value"]))
                 event_id = EventId(test_id=test_id, tag=tag, line=data.line, path=data.path, label=data.label)
                 data_by_event_id[event_id].append(data)
