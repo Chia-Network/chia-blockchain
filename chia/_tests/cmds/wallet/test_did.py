@@ -21,6 +21,8 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_request_types import (
     DIDFindLostDID,
     DIDFindLostDIDResponse,
+    DIDGetDID,
+    DIDGetDIDResponse,
     DIDGetInfo,
     DIDGetInfoResponse,
     DIDMessageSpend,
@@ -153,9 +155,13 @@ def test_did_get_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
 
     # set RPC Client
     class DidGetDidRpcClient(TestWalletRpcClient):
-        async def get_did_id(self, wallet_id: int) -> dict[str, str]:
-            self.add_to_log("get_did_id", (wallet_id,))
-            return {"my_did": encode_puzzle_hash(get_bytes32(1), "did:chia:"), "coin_id": get_bytes32(2).hex()}
+        async def get_did_id(self, request: DIDGetDID) -> DIDGetDIDResponse:
+            self.add_to_log("get_did_id", (request.wallet_id,))
+            return DIDGetDIDResponse(
+                wallet_id=request.wallet_id,
+                my_did=encode_puzzle_hash(get_bytes32(1), "did:chia:"),
+                coin_id=get_bytes32(2),
+            )
 
     inst_rpc_client = DidGetDidRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

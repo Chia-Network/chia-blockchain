@@ -46,6 +46,7 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
     DIDFindLostDID,
+    DIDGetDID,
     DIDGetInfo,
     DIDMessageSpend,
     DIDSetWalletName,
@@ -960,8 +961,8 @@ async def print_balances(
                 print(f"{indent}{'-Spendable:'.ljust(ljust)} {spendable_balance}")
                 print(f"{indent}{'-Type:'.ljust(ljust)} {typ.name}")
                 if typ == WalletType.DECENTRALIZED_ID:
-                    get_did_response = await wallet_client.get_did_id(wallet_id)
-                    my_did = get_did_response["my_did"]
+                    get_did_response = await wallet_client.get_did_id(DIDGetDID(wallet_id))
+                    my_did = get_did_response.my_did
                     print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
                 elif typ == WalletType.NFT:
                     my_did = (await wallet_client.get_nft_wallet_did(NFTGetWalletDID(wallet_id))).did_id
@@ -1023,11 +1024,9 @@ async def get_did(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
-            response = await wallet_client.get_did_id(did_wallet_id)
-            my_did = response["my_did"]
-            coin_id = response["coin_id"]
-            print(f"{'DID:'.ljust(23)} {my_did}")
-            print(f"{'Coin ID:'.ljust(23)} {coin_id}")
+            response = await wallet_client.get_did_id(DIDGetDID(uint32(did_wallet_id)))
+            print(f"{'DID:'.ljust(23)} {response.my_did}")
+            print(f"{'Coin ID:'.ljust(23)} {response.coin_id.hex() if response.coin_id is not None else 'Unknown'}")
         except Exception as e:
             print(f"Failed to get DID: {e}")
 

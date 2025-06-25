@@ -118,6 +118,8 @@ from chia.wallet.wallet_request_types import (
     DeleteKey,
     DIDFindLostDID,
     DIDFindLostDIDResponse,
+    DIDGetDID,
+    DIDGetDIDResponse,
     DIDGetInfo,
     DIDGetInfoResponse,
     DIDGetWalletName,
@@ -2859,16 +2861,16 @@ class WalletRpcApi:
             else:
                 raise ValueError(f"Couldn't update metadata with input: {request.metadata}")
 
-    async def did_get_did(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_did(self, request: DIDGetDID) -> DIDGetDIDResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
         async with self.service.wallet_state_manager.lock:
             try:
                 coin = await wallet.get_coin()
-                return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
+                return DIDGetDIDResponse(wallet_id=request.wallet_id, my_did=my_did, coin_id=coin.name())
             except RuntimeError:
-                return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
+                return DIDGetDIDResponse(wallet_id=request.wallet_id, my_did=my_did)
 
     async def did_get_recovery_list(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

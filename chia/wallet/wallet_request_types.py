@@ -399,6 +399,20 @@ class DIDGetCurrentCoinInfoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDGetDID(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetDIDResponse(Streamable):
+    wallet_id: uint32
+    my_did: str
+    coin_id: Optional[bytes32] = None
+
+
+@streamable
+@dataclass(frozen=True)
 class NFTCountNFTs(Streamable):
     wallet_id: Optional[uint32] = None
 

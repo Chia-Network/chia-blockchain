@@ -107,6 +107,7 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     DefaultCAT,
     DeleteKey,
+    DIDGetDID,
     DIDGetPubkey,
     DIDGetWalletName,
     DIDMessageSpend,
@@ -1527,9 +1528,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
         await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_1_id, new_wallet_name))
 
     # Check DID ID
-    res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
-    assert res["success"]
-    assert did_id_0 == res["my_did"]
+    did_id_res = await wallet_1_rpc.get_did_id(DIDGetDID(did_wallet_id_0))
+    assert did_id_0 == did_id_res.my_did
     # Create backup file
     res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
     assert res["success"]
