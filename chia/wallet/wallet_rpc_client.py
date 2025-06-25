@@ -47,6 +47,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetDIDResponse,
     DIDGetInfo,
     DIDGetInfoResponse,
+    DIDGetMetadata,
+    DIDGetMetadataResponse,
     DIDGetPubkey,
     DIDGetPubkeyResponse,
     DIDGetRecoveryInfo,
@@ -574,10 +576,8 @@ class WalletRpcClient(RpcClient):
     async def get_did_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
         return DIDGetPubkeyResponse.from_json_dict(await self.fetch("did_get_pubkey", request.to_json_dict()))
 
-    async def get_did_metadata(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("did_get_metadata", request)
-        return response
+    async def get_did_metadata(self, request: DIDGetMetadata) -> DIDGetMetadataResponse:
+        return DIDGetMetadataResponse.from_json_dict(await self.fetch("did_get_metadata", request.to_json_dict()))
 
     async def find_lost_did(self, request: DIDFindLostDID) -> DIDFindLostDIDResponse:
         return DIDFindLostDIDResponse.from_json_dict(await self.fetch("did_find_lost_did", request.to_json_dict()))

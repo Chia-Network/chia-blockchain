@@ -122,6 +122,8 @@ from chia.wallet.wallet_request_types import (
     DIDGetDIDResponse,
     DIDGetInfo,
     DIDGetInfoResponse,
+    DIDGetMetadata,
+    DIDGetMetadataResponse,
     DIDGetRecoveryList,
     DIDGetRecoveryListResponse,
     DIDGetWalletName,
@@ -2887,15 +2889,14 @@ class WalletRpcApi:
             num_required=uint16(wallet.did_info.num_of_backup_ids_needed),
         )
 
-    async def did_get_metadata(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_metadata(self, request: DIDGetMetadata) -> DIDGetMetadataResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         metadata = json.loads(wallet.did_info.metadata)
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "metadata": metadata,
-        }
+        return DIDGetMetadataResponse(
+            wallet_id=request.wallet_id,
+            metadata=metadata,
+        )
 
     # TODO: this needs a test
     # Don't need full @tx_endpoint decorator here, but "push" is still a valid option

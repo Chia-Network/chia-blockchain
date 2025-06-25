@@ -427,6 +427,19 @@ class DIDGetRecoveryListResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDGetMetadata(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetMetadataResponse(Streamable):
+    wallet_id: uint32
+    metadata: dict[str, str]
+
+
+@streamable
+@dataclass(frozen=True)
 class NFTCountNFTs(Streamable):
     wallet_id: Optional[uint32] = None
 

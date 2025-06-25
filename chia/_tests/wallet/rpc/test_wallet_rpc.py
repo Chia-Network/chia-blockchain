@@ -108,6 +108,7 @@ from chia.wallet.wallet_request_types import (
     DefaultCAT,
     DeleteKey,
     DIDGetDID,
+    DIDGetMetadata,
     DIDGetPubkey,
     DIDGetRecoveryList,
     DIDGetWalletName,
@@ -1561,8 +1562,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
         DIDUpdateMetadata(wallet_id=did_wallet_id_0, metadata={"Twitter": "Https://test"}, push=True), DEFAULT_TX_CONFIG
     )
 
-    res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
-    assert res["metadata"]["Twitter"] == "Https://test"
+    get_metadata_res = await wallet_1_rpc.get_did_metadata(DIDGetMetadata(did_wallet_id_0))
+    assert get_metadata_res.metadata["Twitter"] == "Https://test"
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
