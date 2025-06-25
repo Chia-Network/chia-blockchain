@@ -31,27 +31,16 @@ def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path
     return db_directory / f"height-to-hash{suffix}"
 
 
-async def get_block_cache_bytearray(root_path: Path, config: dict[str, Any], peak: int) -> bytearray:
+async def get_height_to_hash_bytes(root_path: Path, config: dict[str, Any], peak: int) -> bytes:
     """
     Load the height-to-hash database file into a bytearray.
     """
-    height_to_hash = bytearray()  # Init as bytearray to prep file loading
     height_to_hash_filename: Path = get_height_to_hash_filename(root_path, config)
-    # Load the height-to-hash file
     async with aiofiles.open(height_to_hash_filename, "rb") as f:
-        height_to_hash = bytearray(await f.read())
-    # allocate memory for height to hash map
-    # this may also truncate it, if the file on disk had an invalid size
-    new_size = (peak + 1) * 32
-    size = len(height_to_hash)
-    if size > new_size:
-        del height_to_hash[new_size:]
-    else:
-        height_to_hash += bytearray([0] * (new_size - size))
-    return height_to_hash
+        return await f.read()
 
 
-def get_block_header_from_height(height: int, height_to_hash: bytearray) -> bytes32:
+def get_block_hash_from_height(height: int, height_to_hash: bytes) -> bytes32:
     """
     Get the block header hash from the height-to-hash database.
     """
@@ -179,7 +168,7 @@ async def cli_async(
     ):
         blockchain_state: dict[str, Any] = await node_client.get_blockchain_state()
         if blockchain_state is None or blockchain_state["peak"] is None:
-            # Peak height is required for thep cache.
+            # Peak height is required for the cache.
             print("No blockchain found. Exiting.")
             return
         peak_height = blockchain_state["peak"].height
@@ -189,13 +178,13 @@ async def cli_async(
 
         print("Connected to Full Node")
 
-        block_cache_bytearray: bytearray = await get_block_cache_bytearray(
+        height_to_hash_bytes: bytes = await get_height_to_hash_bytes(
             root_path=root_path,
             config=config,
             peak=peak_height,
         )
 
-        print("Bytearray loaded with block header hashes from height-to-hash file.")
+        print("block header hashes loaded from height-to-hash file.")
 
         # set initial segment heights
         start_segment: int = start_height
@@ -210,7 +199,7 @@ async def cli_async(
             pending_tasks: list[Coroutine[Any, Any, Any]] = []
 
             for i in range(start_segment, end_segment):
-                block_header_hash: bytes32 = get_block_header_from_height(i, block_cache_bytearray)
+                block_header_hash: bytes32 = get_block_hash_from_height(i, height_to_hash_bytes)
                 if spends_with_conditions:
                     pending_tasks.append(node_client.get_block_spends_with_conditions(block_header_hash))
                 if block_spends:
@@ -248,9 +237,5 @@ async def cli_async(
         )
 
 
-def main() -> None:
-    cli()
-
-
 if __name__ == "__main__":
-    main()
+    cli()
