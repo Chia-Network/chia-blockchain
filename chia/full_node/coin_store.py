@@ -605,3 +605,12 @@ class CoinStore:
                 return UnspentLineageInfo(
                     coin_id=bytes32(coin_id), parent_id=bytes32(parent_id), parent_parent_id=bytes32(parent_parent_id)
                 )
+
+    async def is_empty(self) -> bool:
+        """
+        Returns True if the coin store is empty, False otherwise.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT coin_name FROM coin_record LIMIT 1") as cursor:
+                row = await cursor.fetchone()
+                return row is None or len(row) == 0

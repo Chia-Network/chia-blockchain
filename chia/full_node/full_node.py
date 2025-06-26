@@ -213,13 +213,6 @@ class FullNode:
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)
 
-        async def coin_store_seems_nonempty() -> bool:
-            for h in range(50):
-                aah = await self.coin_store.get_coins_added_at_height(uint32(h))
-                if len(aah) > 0:
-                    return True  # pragma: no cover
-            return False
-
         sql_log_path: Optional[Path] = None
         with contextlib.ExitStack() as exit_stack:
             sql_log_file: Optional[TextIO] = None
@@ -314,7 +307,7 @@ class FullNode:
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             if peak is None:
                 self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-                if await coin_store_seems_nonempty():
+                if not await self.coin_store.is_empty():
                     self.log.error(
                         "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
                         "This is a fatal error. The blockchain database may be corrupt"

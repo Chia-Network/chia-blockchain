@@ -143,3 +143,9 @@ class CoinStoreProtocol(Protocol):
         """
         Rolls back the blockchain to the specified block index
         """
+
+    # DEPRECATED: do not use in new code
+    async def is_empty(self) -> bool:
+        """
+        Returns True if the coin store is empty
+        """
