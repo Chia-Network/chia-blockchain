@@ -9,7 +9,6 @@ import pytest
 from chia_rs import CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.coin_store import add_coin_records_to_db
@@ -28,6 +27,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 
 constants = test_constants
