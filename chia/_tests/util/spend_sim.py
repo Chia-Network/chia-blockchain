@@ -258,8 +258,8 @@ class SpendSim:
         ]
         # Coin store gets updated
         generator_bundle: Optional[SpendBundle] = None
-        return_additions: list[Coin] = []
-        return_removals: list[Coin] = []
+        tx_additions = []
+        tx_removals = []
         spent_coins_ids = None
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
@@ -268,6 +268,7 @@ class SpendSim:
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
+                    spent_coins_ids = []
                     for spend in generator_bundle.coin_spends:
                         hint_dict, _ = compute_spend_hints_and_additions(spend)
                         hints: list[tuple[bytes32, bytes]] = []
@@ -276,14 +277,14 @@ class SpendSim:
                             if hint_obj.hint is not None:
                                 hints.append((coin_name, bytes(hint_obj.hint)))
                         await self.hint_store.add_hints(hints)
-                    return_additions = additions
-                    return_removals = bundle.removals()
-                    spent_coins_ids = [r.name() for r in return_removals]
+                        spent_coins_ids.append(spend.coin.name())
+                        tx_removals.append(spend.coin)
+                    tx_additions = additions
         await self.coin_store.new_block(
             height=uint32(self.block_height + 1),
             timestamp=self.timestamp,
             included_reward_coins=included_reward_coins,
-            tx_additions=return_additions,
+            tx_additions=tx_additions,
             tx_removals=spent_coins_ids if spent_coins_ids is not None else [],
         )
         # SimBlockRecord is created
@@ -298,7 +299,7 @@ class SpendSim:
         await self.new_peak(spent_coins_ids)
 
         # return some debugging data
-        return return_additions, return_removals
+        return tx_additions, tx_removals
 
     def get_height(self) -> uint32:
         return self.block_height
