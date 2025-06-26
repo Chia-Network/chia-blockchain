@@ -57,6 +57,7 @@ def test_minimal_encoding() -> None:
 
 
 def test_randomized() -> None:
+    random.seed(97)
     for _ in range(1000):
         v = random.randint(-(2**256), 2**256)
         assert int_from_bytes(int_to_bytes(v)) == v
