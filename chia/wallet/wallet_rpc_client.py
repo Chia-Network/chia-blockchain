@@ -63,6 +63,7 @@ from chia.wallet.wallet_request_types import (
     DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
+    DIDTransferDID,
     DIDTransferDIDResponse,
     DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
@@ -628,27 +629,17 @@ class WalletRpcClient(RpcClient):
 
     async def did_transfer_did(
         self,
-        wallet_id: int,
-        address: str,
-        fee: int,
-        with_recovery: bool,
+        request: DIDTransferDID,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> DIDTransferDIDResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "inner_address": address,
-            "fee": fee,
-            "with_recovery_info": with_recovery,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_transfer_did", request)
-        return json_deserialize_with_clvm_streamable(response, DIDTransferDIDResponse)
+        return DIDTransferDIDResponse.from_json_dict(
+            await self.fetch(
+                "did_transfer_did",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
         return DIDSetWalletNameResponse.from_json_dict(await self.fetch("did_set_wallet_name", request.to_json_dict()))

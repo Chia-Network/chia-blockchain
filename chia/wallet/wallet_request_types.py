@@ -945,6 +945,21 @@ class DIDUpdateMetadataResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class DIDTransferDID(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    inner_address: str = field(default_factory=default_raise)
+    with_recovery_info: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDTransferDIDResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
+@streamable
+@kw_only_dataclass
 class NFTMintNFTRequest(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     royalty_address: Optional[str] = field(default_factory=default_raise)
@@ -1192,13 +1207,6 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDTransferDIDResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
 
 
 @streamable

@@ -115,6 +115,7 @@ from chia.wallet.wallet_request_types import (
     DIDGetWalletName,
     DIDMessageSpend,
     DIDSetWalletName,
+    DIDTransferDID,
     DIDUpdateMetadata,
     DIDUpdateRecoveryIDs,
     FungibleAsset,
@@ -1571,7 +1572,12 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     # Transfer DID
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
-    await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True, DEFAULT_TX_CONFIG)
+    await wallet_1_rpc.did_transfer_did(
+        DIDTransferDID(
+            wallet_id=did_wallet_id_0, inner_address=addr, fee=uint64(0), with_recovery_info=True, push=True
+        ),
+        DEFAULT_TX_CONFIG,
+    )
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)

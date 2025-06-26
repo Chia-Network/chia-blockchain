@@ -50,6 +50,7 @@ from chia.wallet.wallet_request_types import (
     DIDGetInfo,
     DIDMessageSpend,
     DIDSetWalletName,
+    DIDTransferDID,
     DIDUpdateMetadata,
     FungibleAsset,
     GetNotifications,
@@ -1138,14 +1139,16 @@ async def transfer_did(
         try:
             target_address = target_cli_address.original_address
             response = await wallet_client.did_transfer_did(
-                did_wallet_id,
-                target_address,
-                fee,
-                with_recovery,
+                DIDTransferDID(
+                    wallet_id=uint32(did_wallet_id),
+                    inner_address=target_address,
+                    fee=fee,
+                    with_recovery_info=with_recovery,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             if push:

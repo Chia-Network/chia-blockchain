@@ -140,6 +140,8 @@ from chia.wallet.wallet_request_types import (
     DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
+    DIDTransferDID,
+    DIDTransferDIDResponse,
     DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDs,
@@ -3032,32 +3034,33 @@ class WalletRpcApi:
         return DIDCreateBackupFileResponse(wallet_id=request.wallet_id, backup_data=did_wallet.create_backup())
 
     @tx_endpoint(push=True)
+    @marshal
     async def did_transfer_did(
         self,
-        request: dict[str, Any],
+        request: DIDTransferDID,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> DIDTransferDIDResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        puzzle_hash: bytes32 = decode_puzzle_hash(request.inner_address)
         async with self.service.wallet_state_manager.lock:
             await did_wallet.transfer_did(
                 puzzle_hash,
-                uint64(request.get("fee", 0)),
-                request.get("with_recovery_info", True),
+                request.fee,
+                request.with_recovery_info,
                 action_scope,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "success": True,
-            "transaction": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "transaction_id": None,  # tx_endpoint wrapper will take care of this
-        }
+        # The tx_endpoint wrapper will take care of these default values
+        return DIDTransferDIDResponse(
+            [],
+            [],
+            transaction=REPLACEABLE_TRANSACTION_RECORD,
+            transaction_id=bytes32.zeros,
+        )
 
     ##########################################################################################
     # NFT Wallet

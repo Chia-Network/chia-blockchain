@@ -29,6 +29,7 @@ from chia.wallet.wallet_request_types import (
     DIDMessageSpendResponse,
     DIDSetWalletName,
     DIDSetWalletNameResponse,
+    DIDTransferDID,
     DIDTransferDIDResponse,
     DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
@@ -374,16 +375,22 @@ def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     class DidTransferRpcClient(TestWalletRpcClient):
         async def did_transfer_did(
             self,
-            wallet_id: int,
-            address: str,
-            fee: int,
-            with_recovery: bool,
+            request: DIDTransferDID,
             tx_config: TXConfig,
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DIDTransferDIDResponse:
             self.add_to_log(
-                "did_transfer_did", (wallet_id, address, fee, with_recovery, tx_config, push, timelock_info)
+                "did_transfer_did",
+                (
+                    request.wallet_id,
+                    request.inner_address,
+                    request.fee,
+                    request.with_recovery_info,
+                    tx_config,
+                    request.push,
+                    timelock_info,
+                ),
             )
             return DIDTransferDIDResponse(
                 [STD_UTX],
