@@ -298,49 +298,6 @@ async def test_creation_from_backup_file(wallet_environments: WalletTestFramewor
     for wallet in [did_wallet_0, did_wallet_1, did_wallet_2]:
         assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
 
-    some_ph = bytes32(32 * b"\2")
-    async with env_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        await did_wallet_2.create_exit_spend(some_ph, action_scope)
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "did": {
-                        "unconfirmed_wallet_balance": -201,
-                        "spendable_balance": -201,
-                        "max_send_amount": -201,
-                        "pending_coin_removal_count": 1,
-                    }
-                },
-                post_block_balance_updates={
-                    "did": {
-                        "confirmed_wallet_balance": -201,
-                        "unspent_coin_count": -1,
-                        "pending_coin_removal_count": -1,
-                    }
-                },
-            ),
-        ]
-    )
-
-    async def get_coins_with_ph() -> bool:
-        coins = await wallet_environments.full_node.full_node.coin_store.get_coin_records_by_puzzle_hash(True, some_ph)
-        return len(coins) == 1
-
-    await time_out_assert(15, get_coins_with_ph, True)
-
-    for wallet in [did_wallet_0, did_wallet_1]:
-        assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
-
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)

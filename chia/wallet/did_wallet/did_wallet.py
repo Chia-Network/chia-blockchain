@@ -837,63 +837,6 @@ class DIDWallet:
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(tx)
 
-    # This is used to cash out, or update the id_list
-    async def create_exit_spend(self, puzhash: bytes32, action_scope: WalletActionScope) -> None:
-        assert self.did_info.current_inner is not None
-        assert self.did_info.origin_coin is not None
-        coin = await self.get_coin()
-        message_puz = Program.to((1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]]))
-
-        # innerpuz solution is (mode p2_solution)
-        innersol: Program = Program.to([1, [[], message_puz, []]])
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz: Program = self.did_info.current_inner
-
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=await action_scope.get_puzzle_hash(
-                        self.wallet_state_manager, override_reuse_puzhash_with=True
-                    ),
-                    amount=uint64(coin.amount),
-                    fee_amount=uint64(0),
-                    confirmed=False,
-                    sent=uint32(0),
-                    spend_bundle=spend_bundle,
-                    additions=spend_bundle.additions(),
-                    removals=spend_bundle.removals(),
-                    wallet_id=self.wallet_info.id,
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
-                    name=bytes32.secret(),
-                    memos=list(compute_memos(spend_bundle).items()),
-                    valid_times=ConditionValidTimes(),
-                )
-            )
-
     async def get_did_innerpuz(
         self,
         action_scope: WalletActionScope,
