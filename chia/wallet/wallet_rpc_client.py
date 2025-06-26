@@ -39,6 +39,8 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
+    DIDCreateBackupFile,
+    DIDCreateBackupFileResponse,
     DIDFindLostDID,
     DIDFindLostDIDResponse,
     DIDGetCurrentCoinInfo,
@@ -521,10 +523,10 @@ class WalletRpcClient(RpcClient):
     async def get_did_info(self, request: DIDGetInfo) -> DIDGetInfoResponse:
         return DIDGetInfoResponse.from_json_dict(await self.fetch("did_get_info", request.to_json_dict()))
 
-    async def create_did_backup_file(self, wallet_id: int, filename: str) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "filename": filename}
-        response = await self.fetch("did_create_backup_file", request)
-        return response
+    async def create_did_backup_file(self, request: DIDCreateBackupFile) -> DIDCreateBackupFileResponse:
+        return DIDCreateBackupFileResponse.from_json_dict(
+            await self.fetch("did_create_backup_file", request.to_json_dict())
+        )
 
     async def update_did_recovery_list(
         self,

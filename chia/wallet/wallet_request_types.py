@@ -399,6 +399,19 @@ class DIDGetCurrentCoinInfoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDCreateBackupFile(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDCreateBackupFileResponse(Streamable):
+    wallet_id: uint32
+    backup_data: str
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDGetDID(Streamable):
     wallet_id: uint32
 

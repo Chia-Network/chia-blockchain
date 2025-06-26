@@ -116,6 +116,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     CombineCoinsResponse,
     DeleteKey,
+    DIDCreateBackupFile,
+    DIDCreateBackupFileResponse,
     DIDFindLostDID,
     DIDFindLostDIDResponse,
     DIDGetCurrentCoinInfo,
@@ -3024,10 +3026,10 @@ class WalletRpcApi:
             did_amount=did_coin_threeple[2],
         )
 
-    async def did_create_backup_file(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        return {"wallet_id": wallet_id, "success": True, "backup_data": did_wallet.create_backup()}
+    @marshal
+    async def did_create_backup_file(self, request: DIDCreateBackupFile) -> DIDCreateBackupFileResponse:
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        return DIDCreateBackupFileResponse(wallet_id=request.wallet_id, backup_data=did_wallet.create_backup())
 
     @tx_endpoint(push=True)
     async def did_transfer_did(
