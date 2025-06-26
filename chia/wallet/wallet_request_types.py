@@ -11,6 +11,7 @@ from typing_extensions import Self, dataclass_transform
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
+from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -511,6 +512,19 @@ class NFTCalculateRoyaltiesResponse(Streamable):
 class NFTCoin(Streamable):
     nft_coin_id: str
     wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class PWStatus(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class PWStatusResponse(Streamable):
+    state: PoolWalletInfo
+    unconfirmed_transactions: list[TransactionRecord]
 
 
 @streamable
@@ -1081,6 +1095,52 @@ class NFTMintBulk(TransactionEndpointRequest):
 class NFTMintBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
     nft_id_list: list[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class PWJoinPool(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    pool_url: str = field(default_factory=default_raise)
+    target_puzzlehash: bytes32 = field(default_factory=default_raise)
+    relative_lock_height: uint32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class PWJoinPoolResponse(TransactionEndpointResponse):
+    total_fee: uint64
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class PWSelfPool(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class PWSelfPoolResponse(TransactionEndpointResponse):
+    total_fee: uint64
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class PWAbsorbRewards(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    max_spends_in_tx: Optional[uint16] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class PWAbsorbRewardsResponse(TransactionEndpointResponse):
+    state: PoolWalletInfo
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
 
 
 @streamable
