@@ -239,7 +239,8 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DIDUpdateMetadataResponse:
             self.add_to_log(
-                "update_did_metadata", (request.wallet_id, request.metadata, tx_config, request.push, timelock_info)
+                "update_did_metadata",
+                (request.wallet_id, request.metadata, tx_config, request.push, extra_conditions, timelock_info),
             )
             return DIDUpdateMetadataResponse(
                 [STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()), uint32(request.wallet_id)
@@ -269,7 +270,7 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "update_did_metadata": [
-            (w_id, {"foo": "bar"}, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), True, test_condition_valid_times)
+            (w_id, {"foo": "bar"}, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), True, (), test_condition_valid_times)
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -389,6 +390,7 @@ def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                     request.with_recovery_info,
                     tx_config,
                     request.push,
+                    extra_conditions,
                     timelock_info,
                 ),
             )
@@ -438,6 +440,7 @@ def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 True,
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 True,
+                (),
                 test_condition_valid_times,
             )
         ],
