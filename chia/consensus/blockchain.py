@@ -564,8 +564,8 @@ class Blockchain:
                 if fork_add.confirmed_height == height and fork_add.is_coinbase
             ]
             tx_additions = [
-                fork_add.coin
-                for fork_add in fork_info.additions_since_fork.values()
+                (coin_id, fork_add.coin)
+                for coin_id, fork_add in fork_info.additions_since_fork.items()
                 if fork_add.confirmed_height == height and not fork_add.is_coinbase
             ]
             tx_removals = [
@@ -586,7 +586,7 @@ class Blockchain:
                     f"height: {fetched_block_record.height}), {len(tx_removals)} spends"
                 )
                 log.info("rewards: %s", ",".join([add.name().hex()[0:6] for add in included_reward_coins]))
-                log.info("additions: %s", ",".join([add.name().hex()[0:6] for add in tx_additions]))
+                log.info("additions: %s", ",".join([add[0].hex()[0:6] for add in tx_additions]))
                 log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
 
         # we made it to the end successfully

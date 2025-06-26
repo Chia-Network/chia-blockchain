@@ -82,7 +82,7 @@ class CoinStore:
         height: uint32,
         timestamp: uint64,
         included_reward_coins: Collection[Coin],
-        tx_additions: Collection[Coin],
+        tx_additions: Collection[tuple[bytes32, Coin]],
         tx_removals: list[bytes32],
     ) -> None:
         """
@@ -93,10 +93,10 @@ class CoinStore:
 
         db_values_to_insert = []
 
-        for coin in tx_additions:
+        for coin_id, coin in tx_additions:
             db_values_to_insert.append(
                 (
-                    coin.name(),
+                    coin_id,
                     # confirmed_index
                     height,
                     # spent_index
