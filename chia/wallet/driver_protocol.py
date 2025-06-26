@@ -5,7 +5,7 @@ from typing import Optional
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import Protocol
 
-from chia.types.blockchain_format.program import Program
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 

@@ -9,7 +9,6 @@ from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.cat_wallet.cat_utils import (
@@ -20,6 +19,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes, CreateCoin
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import OFFER_MOD, Offer
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle

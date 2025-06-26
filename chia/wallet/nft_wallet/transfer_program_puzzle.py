@@ -6,8 +6,8 @@ from typing import Callable, Optional
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
-from chia.types.blockchain_format.program import Program
 from chia.wallet.nft_wallet.nft_puzzles import NFT_TRANSFER_PROGRAM_DEFAULT
+from chia.wallet.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle

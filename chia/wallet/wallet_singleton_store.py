@@ -14,11 +14,11 @@ from typing_extensions import Self
 from chia.consensus.condition_tools import conditions_dict_for_solution
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.program import Program
 from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
 from chia.wallet.singleton_record import SingletonRecord
 

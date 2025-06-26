@@ -11,10 +11,10 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import MempoolInfo
 from chia.full_node.mempool import Mempool
-from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
+from chia.wallet.program import INFINITE_COST
 
 MEMPOOL_INFO = MempoolInfo(
     max_size_in_cost=CLVMCost(uint64(INFINITE_COST * 10)),

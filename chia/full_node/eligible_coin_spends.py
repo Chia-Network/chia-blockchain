@@ -9,11 +9,11 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import run_mempool_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend, UnspentLineageInfo
 from chia.util.errors import Err
+from chia.wallet.program import run_mempool_with_cost
 
 
 @dataclasses.dataclass(frozen=True)

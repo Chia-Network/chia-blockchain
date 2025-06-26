@@ -16,7 +16,6 @@ from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofO
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import (
@@ -45,6 +44,7 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.program import Program, run_with_cost
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import NotarizedPayment, Offer

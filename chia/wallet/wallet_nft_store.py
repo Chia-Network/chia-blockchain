@@ -10,10 +10,10 @@ from chia_rs.sized_ints import uint32
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
+from chia.wallet.program import Program
 
 log = logging.getLogger(__name__)
 REMOVE_BUFF_BLOCKS = 1000

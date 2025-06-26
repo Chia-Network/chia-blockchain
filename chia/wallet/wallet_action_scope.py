@@ -10,10 +10,10 @@ from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.program import Program
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig

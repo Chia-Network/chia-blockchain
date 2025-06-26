@@ -6,9 +6,9 @@ from typing import Optional
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.types.blockchain_format.program import Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.program import Program
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 
 

@@ -14,9 +14,9 @@ from chia_rs.sized_ints import uint64
 
 from chia.consensus.condition_tools import conditions_for_solution
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
+from chia.wallet.program import Program
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
@@ -57,11 +57,13 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
     spends: list[CoinSpend] = []
 
     for spend in Program.to(ret).first().as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
-        puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
-        spends.append(make_spend(coin, puzzle, solution))
-
+        try:
+            parent, puzzle, amount, solution = spend.as_iter()
+            puzzle_hash = puzzle.get_tree_hash()
+            coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+            spends.append(make_spend(coin, puzzle, solution))
+        except Exception as e:
+            log.error(f"Failed to fetch a spend. Caught exception: {e}")
     return spends
 
 
@@ -86,11 +88,14 @@ def get_spends_for_block_with_conditions(
     spends: list[CoinSpendWithConditions] = []
 
     for spend in Program.to(ret).first().as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
-        puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
-        coin_spend = make_spend(coin, puzzle, solution)
-        conditions = conditions_for_solution(puzzle, solution, constants.MAX_BLOCK_COST_CLVM)
-        spends.append(CoinSpendWithConditions(coin_spend, conditions))
+        try:
+            parent, puzzle, amount, solution = spend.as_iter()
+            puzzle_hash = puzzle.get_tree_hash()
+            coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+            coin_spend = make_spend(coin, puzzle, solution)
+            conditions = conditions_for_solution(puzzle, solution, constants.MAX_BLOCK_COST_CLVM)
+            spends.append(CoinSpendWithConditions(coin_spend, conditions))
+        except Exception as e:
+            log.error(f"Failed to fetch a spend and condition. Caught exception: {e}")
 
     return spends

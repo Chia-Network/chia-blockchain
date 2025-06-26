@@ -13,11 +13,11 @@ from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
+from chia.wallet.program import Program
 
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
