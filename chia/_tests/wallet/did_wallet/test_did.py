@@ -6,7 +6,6 @@ from typing import Any, Optional, Union
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
-from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
@@ -39,7 +38,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import DIDFindLostDID, DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
+from chia.wallet.wallet_request_types import DIDFindLostDID, DIDGetCurrentCoinInfo, DIDGetInfo, DIDGetRecoveryInfo
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -1709,7 +1708,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
     wallet_node_0 = env_0.node
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
-    api_0 = env_0.rpc_api
+    api_0 = env_0.rpc_client
 
     env_0.wallet_aliases = {
         "xch": 1,
@@ -1769,21 +1768,24 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
         ]
     )
     assert did_wallet_1.did_info.origin_coin is not None  # mypy
-    response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
-    assert response["did_id"] == encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
-    assert bytes32.from_hexstr(response["launcher_id"]) == did_wallet_1.did_info.origin_coin.name()
+    coin_id_as_bech32 = encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
+    response = await api_0.get_did_info(DIDGetInfo(did_wallet_1.did_info.origin_coin.name().hex()))
+    response_with_bech32 = await api_0.get_did_info(DIDGetInfo(coin_id_as_bech32))
+    assert response == response_with_bech32
+    assert response.did_id == coin_id_as_bech32
+    assert response.launcher_id == did_wallet_1.did_info.origin_coin.name()
     assert did_wallet_1.did_info.current_inner is not None  # mypy
-    assert Program.from_bytes(hexstr_to_bytes(response["full_puzzle"])) == create_singleton_puzzle(
+    assert response.full_puzzle == create_singleton_puzzle(
         did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
     )
-    assert response["metadata"]["twitter"] == "twitter"
-    assert bytes32.from_hexstr(response["latest_coin"]) == (await did_wallet_1.get_coin()).name()
-    assert response["num_verification"] == 0
+    assert response.metadata["twitter"] == "twitter"
+    assert response.latest_coin == (await did_wallet_1.get_coin()).name()
+    assert response.num_verification == 0
     if use_alternate_recovery:
-        assert response["recovery_list_hash"] is None
+        assert response.recovery_list_hash is None
     else:
-        assert bytes32.from_hexstr(response["recovery_list_hash"]) == Program(Program.to([])).get_tree_hash()
-    assert decode_puzzle_hash(response["p2_address"]) == bytes32.from_hexstr(response["hints"][0])
+        assert response.recovery_list_hash == Program(Program.to([])).get_tree_hash()
+    assert decode_puzzle_hash(response.p2_address) == response.hints[0]
 
     # Test non-singleton coin
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
@@ -1791,7 +1793,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
     assert coin.amount % 2 == 1
     coin_id = coin.name()
     with pytest.raises(ValueError):
-        await api_0.did_get_info({"coin_id": coin_id.hex()})
+        await api_0.get_did_info(DIDGetInfo(coin_id.hex()))
 
     # Test multiple odd coins
     odd_amount = uint64(1)
@@ -1845,7 +1847,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
     )
 
     with pytest.raises(ValueError):
-        await api_0.did_get_info({"coin_id": coin_1.name().hex()})
+        await api_0.get_did_info(DIDGetInfo(coin_1.name().hex()))
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
