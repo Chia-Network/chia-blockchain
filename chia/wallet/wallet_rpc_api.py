@@ -118,6 +118,8 @@ from chia.wallet.wallet_request_types import (
     DeleteKey,
     DIDFindLostDID,
     DIDFindLostDIDResponse,
+    DIDGetCurrentCoinInfo,
+    DIDGetCurrentCoinInfoResponse,
     DIDGetDID,
     DIDGetDIDResponse,
     DIDGetInfo,
@@ -3004,9 +3006,9 @@ class WalletRpcApi:
             backup_dids=did_wallet.did_info.backup_ids,
         )
 
-    async def did_get_current_coin_info(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
             bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
         )
@@ -3014,14 +3016,13 @@ class WalletRpcApi:
         did_coin_threeple = await did_wallet.get_info_for_recovery()
         assert my_did is not None
         assert did_coin_threeple is not None
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "my_did": my_did,
-            "did_parent": did_coin_threeple[0],
-            "did_innerpuz": did_coin_threeple[1],
-            "did_amount": did_coin_threeple[2],
-        }
+        return DIDGetCurrentCoinInfoResponse(
+            wallet_id=request.wallet_id,
+            my_did=my_did,
+            did_parent=did_coin_threeple[0],
+            did_innerpuz=did_coin_threeple[1],
+            did_amount=did_coin_threeple[2],
+        )
 
     async def did_create_backup_file(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
