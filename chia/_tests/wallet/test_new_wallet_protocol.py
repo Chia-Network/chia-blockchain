@@ -828,7 +828,7 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
     reward_1 = Coin(std_hash(b"reward 1"), std_hash(b"reward puzzle hash"), uint64(1000))
     reward_2 = Coin(std_hash(b"reward 2"), std_hash(b"reward puzzle hash"), uint64(2000))
     await simulator.full_node.coin_store.new_block(
-        uint32(2), uint64(10000), [reward_1, reward_2], [coin for coin, _ in new_coins], []
+        uint32(2), uint64(10000), [reward_1, reward_2], [(coin.name(), coin) for coin, _ in new_coins], []
     )
     await simulator.full_node.hint_store.add_hints([(coin.name(), hint) for coin, hint in new_coins])
 
@@ -855,7 +855,9 @@ async def make_coin(full_node: FullNode) -> tuple[Coin, bytes32]:
 
     reward_1 = Coin(std_hash(b"reward 1"), std_hash(b"reward puzzle hash"), uint64(3000))
     reward_2 = Coin(std_hash(b"reward 2"), std_hash(b"reward puzzle hash"), uint64(4000))
-    await full_node.coin_store.new_block(uint32(height + 1), uint64(200000), [reward_1, reward_2], [coin], [])
+    await full_node.coin_store.new_block(
+        uint32(height + 1), uint64(200000), [reward_1, reward_2], [(coin.name(), coin)], []
+    )
     await full_node.hint_store.add_hints([(coin.name(), hint)])
 
     return coin, hint

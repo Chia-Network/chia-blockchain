@@ -279,7 +279,7 @@ class SpendSim:
                         await self.hint_store.add_hints(hints)
                         spent_coins_ids.append(spend.coin.name())
                         tx_removals.append(spend.coin)
-                    tx_additions = additions
+                    tx_additions = [(addition.name(), addition) for addition in additions]
         await self.coin_store.new_block(
             height=uint32(self.block_height + 1),
             timestamp=self.timestamp,
@@ -299,7 +299,7 @@ class SpendSim:
         await self.new_peak(spent_coins_ids)
 
         # return some debugging data
-        return tx_additions, tx_removals
+        return [a for _, a in tx_additions], tx_removals
 
     def get_height(self) -> uint32:
         return self.block_height

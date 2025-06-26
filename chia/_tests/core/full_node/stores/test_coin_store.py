@@ -117,7 +117,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 block.height,
                 block.foliage_transaction_block.timestamp,
                 reward_coins,
-                tx_additions,
+                [(a.name(), a) for a in tx_additions],
                 tx_removals,
             )
 
@@ -127,7 +127,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                         block.height,
                         block.foliage_transaction_block.timestamp,
                         reward_coins,
-                        tx_additions,
+                        [(a.name(), a) for a in tx_additions],
                         tx_removals,
                     )
 
