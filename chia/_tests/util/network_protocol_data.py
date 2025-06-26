@@ -795,7 +795,7 @@ new_signage_point_harvester = harvester_protocol.NewSignagePointHarvester(
     uint8(148),
     bytes32(bytes.fromhex("b78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c")),
     [pool_difficulty],
-    uint8(9),
+    uint32(0),
     uint32(0),
 )
 

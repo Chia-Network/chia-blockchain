@@ -40,7 +40,7 @@ class NewSignagePointHarvester(Streamable):
     signage_point_index: uint8
     sp_hash: bytes32
     pool_difficulties: list[PoolDifficulty]
-    filter_prefix_bits: uint8
+    peak_height: uint32
     last_tx_height: uint32
 
 

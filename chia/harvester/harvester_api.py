@@ -25,6 +25,7 @@ from chia.server.api_protocol import ApiMetadata
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
+    calculate_prefix_bits,
     generate_plot_public_key,
     passes_plot_filter,
 )
@@ -248,8 +249,9 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
+                filter_prefix_bits = uint8(calculate_prefix_bits(self.harvester.constants, new_challenge.peak_height))
                 if passes_plot_filter(
-                    new_challenge.filter_prefix_bits,
+                    filter_prefix_bits,
                     try_plot_info.prover.get_id(),
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
