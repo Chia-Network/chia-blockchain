@@ -53,9 +53,6 @@ ignore_missing_imports = True
 [mypy-clvm_tools_rs.*]
 ignore_missing_imports = True
 
-[mypy-colorama.*]
-ignore_missing_imports = True
-
 [mypy-dnslib.*]
 ignore_missing_imports = True
 
@@ -65,20 +62,11 @@ ignore_missing_imports = True
 [mypy-keyrings.cryptfile.*]
 ignore_missing_imports = True
 
-[mypy-lxml.*]
-ignore_missing_imports = True
-
 [mypy-miniupnpc.*]
-ignore_missing_imports = True
-
-[mypy-psutil.*]
 ignore_missing_imports = True
 
 [mypy-sortedcontainers.*]
 ignore_missing_imports = True
 
 [mypy-testconfig.*]
-ignore_missing_imports = True
-
-[mypy-zstd.*]
 ignore_missing_imports = True
