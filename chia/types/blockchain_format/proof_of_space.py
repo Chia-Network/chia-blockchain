@@ -61,10 +61,10 @@ def verify_and_get_quality_string_v1(
         return None
     size = pos.size().size_v1
     assert size is not None
-    if size < constants.MIN_PLOT_SIZE:
+    if size < constants.MIN_PLOT_SIZE_V1:
         log.error("Plot size is lower than the minimum")
         return None
-    if size > constants.MAX_PLOT_SIZE:
+    if size > constants.MAX_PLOT_SIZE_V1:
         log.error("Plot size is higher than the maximum")
         return None
 
@@ -94,6 +94,17 @@ def verify_and_get_quality_string_v2(
     *,
     height: uint32,
 ) -> Optional[bytes32]:
+    # TODO: todo_v2_plots complete function
+
+    size = pos.size().size_v2
+    assert size is not None
+    if size < constants.MIN_PLOT_SIZE_V2:
+        log.error("Plot size is lower than the minimum")
+        return None
+    if size > constants.MAX_PLOT_SIZE_V2:
+        log.error("Plot size is higher than the maximum")
+        return None
+
     raise NotImplementedError
 
 

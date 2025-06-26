@@ -1248,7 +1248,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
 ]:
     zero_bit_plot_filter_consts = test_constants_modified.replace(
         NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(0),
-        NUM_SPS_SUB_SLOT=uint32(8),
+        NUM_SPS_SUB_SLOT=uint8(8),
     )
 
     async with AsyncExitStack() as async_exit_stack:

@@ -14,7 +14,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     SLOT_BLOCKS_TARGET=uint32(32),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(16),  # Must be less than half of SLOT_BLOCKS_TARGET
     MAX_SUB_SLOT_BLOCKS=uint32(128),  # Must be less than half of SUB_EPOCH_BLOCKS
-    NUM_SPS_SUB_SLOT=uint32(64),  # Must be a power of 2
+    NUM_SPS_SUB_SLOT=uint8(64),  # Must be a power of 2
     SUB_SLOT_ITERS_STARTING=uint64(2**27),
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
@@ -32,8 +32,10 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
         9
     ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
-    MIN_PLOT_SIZE=uint8(32),  # 32 for mainnet
-    MAX_PLOT_SIZE=uint8(50),
+    MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
+    MAX_PLOT_SIZE_V1=uint8(50),
+    MIN_PLOT_SIZE_V2=uint8(28),
+    MAX_PLOT_SIZE_V2=uint8(32),
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     NUM_SP_INTERVALS_EXTRA=uint8(3),  # The number of sp intervals to add to the signage point
     MAX_FUTURE_TIME2=uint32(2 * 60),  # The next block can have a timestamp of at most these many seconds in the future
@@ -86,6 +88,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
+    PLOT_DIFFICULTY_INITIAL=uint8(2),
     PLOT_DIFFICULTY_4_HEIGHT=uint32(0xFFFFFFFF),
     PLOT_DIFFICULTY_5_HEIGHT=uint32(0xFFFFFFFF),
     PLOT_DIFFICULTY_6_HEIGHT=uint32(0xFFFFFFFF),
