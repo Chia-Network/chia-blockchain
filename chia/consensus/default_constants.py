@@ -30,7 +30,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
         9
     ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
     NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
-        9
+        5
     ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
     MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE_V1=uint8(50),
@@ -81,7 +81,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
-    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFF),
+    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFA),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
@@ -89,10 +89,10 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
     PLOT_DIFFICULTY_INITIAL=uint8(2),
-    PLOT_DIFFICULTY_4_HEIGHT=uint32(0xFFFFFFFF),
-    PLOT_DIFFICULTY_5_HEIGHT=uint32(0xFFFFFFFF),
-    PLOT_DIFFICULTY_6_HEIGHT=uint32(0xFFFFFFFF),
-    PLOT_DIFFICULTY_7_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_DIFFICULTY_4_HEIGHT=uint32(0xFFFFFFFB),
+    PLOT_DIFFICULTY_5_HEIGHT=uint32(0xFFFFFFFC),
+    PLOT_DIFFICULTY_6_HEIGHT=uint32(0xFFFFFFFD),
+    PLOT_DIFFICULTY_7_HEIGHT=uint32(0xFFFFFFFE),
     PLOT_DIFFICULTY_8_HEIGHT=uint32(0xFFFFFFFF),
 )
 

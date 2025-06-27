@@ -249,7 +249,15 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
-                filter_prefix_bits = uint8(calculate_prefix_bits(self.harvester.constants, new_challenge.peak_height))
+
+                # TODO: todo_v2_plots support v2 plots in PlotManager
+                filter_prefix_bits = uint8(
+                    calculate_prefix_bits(
+                        self.harvester.constants,
+                        new_challenge.peak_height,
+                        PlotSize.make_v1(try_plot_info.prover.get_size()),
+                    )
+                )
                 if passes_plot_filter(
                     filter_prefix_bits,
                     try_plot_info.prover.get_id(),
