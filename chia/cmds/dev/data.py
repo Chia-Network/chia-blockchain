@@ -28,6 +28,7 @@ from chia.data_layer.download_data import insert_from_delta_file
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.task_referencer import create_referenced_task
+from chia.wallet.wallet_request_types import DLHistory, DLTrackNew
 
 
 class NonZeroReturnCodeError(Exception):
@@ -108,7 +109,7 @@ class SyncTimeCommand:
 
                 wallet_client_info = await exit_stack.enter_async_context(self.wallet_rpc_info.wallet_rpc())
                 wallet_rpc = wallet_client_info.client
-                await wallet_rpc.dl_track_new(launcher_id=self.store_id)
+                await wallet_rpc.dl_track_new(DLTrackNew(launcher_id=self.store_id))
 
                 data_store = await exit_stack.enter_async_context(DataStore.managed(database=database_path))
 
@@ -119,11 +120,15 @@ class SyncTimeCommand:
 
                 print_date("subscribed")
 
-                to_download = await wallet_rpc.dl_history(
-                    launcher_id=self.store_id,
-                    min_generation=uint32(1),
-                    max_generation=uint32(self.generation_limit + 1),
-                )
+                to_download = (
+                    await wallet_rpc.dl_history(
+                        DLHistory(
+                            launcher_id=self.store_id,
+                            min_generation=uint32(1),
+                            max_generation=uint32(self.generation_limit + 1),
+                        )
+                    )
+                ).history
 
                 print_date(
                     f"found generations to download: {to_download[-1].generation} -> {to_download[0].generation}"

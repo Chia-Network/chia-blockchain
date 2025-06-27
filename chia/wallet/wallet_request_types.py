@@ -9,6 +9,8 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import Self, dataclass_transform
 
+from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
@@ -527,6 +529,79 @@ class PWStatusResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DLTrackNew(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLStopTracking(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLLatestSingleton(Streamable):
+    launcher_id: bytes32
+    only_confirmed: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class DLLatestSingletonResponse(Streamable):
+    singleton: Optional[SingletonRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class DLSingletonsByRoot(Streamable):
+    launcher_id: bytes32
+    root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLSingletonsByRootResponse(Streamable):
+    singletons: list[SingletonRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class DLHistory(Streamable):
+    launcher_id: bytes32
+    min_generation: Optional[uint32] = None
+    max_generation: Optional[uint32] = None
+    num_results: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DLHistoryResponse(Streamable):
+    history: list[SingletonRecord]
+    count: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLOwnedSingletonsResponse(Streamable):
+    singletons: list[SingletonRecord]
+    count: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLGetMirrors(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLGetMirrorsResponse(Streamable):
+    mirrors: list[Mirror]
+
+
+@streamable
+@dataclass(frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 
@@ -851,6 +926,104 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
     tx_num: uint16
     spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
+class CreateNewDL(TransactionEndpointRequest):
+    root: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class CreateNewDLResponse(TransactionEndpointResponse):
+    launcher_id: bytes32
+
+
+@streamable
+@kw_only_dataclass
+class DLUpdateRoot(TransactionEndpointRequest):
+    launcher_id: bytes32 = field(default_factory=default_raise)
+    new_root: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateRootResponse(TransactionEndpointResponse):
+    tx_record: TransactionRecord
+
+
+# utilities for DLUpdateMultiple
+@streamable
+@dataclass(frozen=True)
+class LauncherRootPair(Streamable):
+    launcher_id: bytes32
+    new_root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateMultipleUpdates(Streamable):
+    launcher_root_pairs: list[LauncherRootPair]
+
+    def __post_init__(self) -> None:
+        if len(set(pair.launcher_id for pair in self.launcher_root_pairs)) < len(self.launcher_root_pairs):
+            raise ValueError("Multiple updates specified for a single launcher in `DLUpdateMultiple`")
+
+    # TODO: deprecate the kinda silly format of this RPC and delete this function
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            [
+                LauncherRootPair(
+                    bytes32.from_hexstr(key),
+                    bytes32.from_hexstr(value),
+                )
+                for key, value in json_dict.items()
+            ]
+        )
+
+
+@streamable
+@kw_only_dataclass
+class DLUpdateMultiple(TransactionEndpointRequest):
+    updates: DLUpdateMultipleUpdates = field(default_factory=default_raise)
+
+    # TODO: deprecate the kinda silly format of this RPC and delete this function
+    def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
+        return {"updates": {pair.launcher_id.hex(): pair.new_root.hex() for pair in self.updates.launcher_root_pairs}}
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateMultipleResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
+class DLNewMirror(TransactionEndpointRequest):
+    launcher_id: bytes32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    urls: list[str] = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLNewMirrorResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
+class DLDeleteMirror(TransactionEndpointRequest):
+    coin_id: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLDeleteMirrorResponse(TransactionEndpointResponse):
+    pass
 
 
 @streamable

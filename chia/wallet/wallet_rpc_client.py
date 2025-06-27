@@ -7,8 +7,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
-from chia.data_layer.data_layer_wallet import Mirror
-from chia.data_layer.singleton_record import SingletonRecord
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -36,6 +34,8 @@ from chia.wallet.wallet_request_types import (
     CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CreateNewDL,
+    CreateNewDLResponse,
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
@@ -49,6 +49,25 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
+    DLDeleteMirror,
+    DLDeleteMirrorResponse,
+    DLGetMirrors,
+    DLGetMirrorsResponse,
+    DLHistory,
+    DLHistoryResponse,
+    DLLatestSingleton,
+    DLLatestSingletonResponse,
+    DLNewMirror,
+    DLNewMirrorResponse,
+    DLOwnedSingletonsResponse,
+    DLSingletonsByRoot,
+    DLSingletonsByRootResponse,
+    DLStopTracking,
+    DLTrackNew,
+    DLUpdateMultiple,
+    DLUpdateMultipleResponse,
+    DLUpdateRoot,
+    DLUpdateRootResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
@@ -1135,147 +1154,94 @@ class WalletRpcClient(RpcClient):
     # DataLayer
     async def create_new_dl(
         self,
-        root: bytes32,
-        fee: uint64,
+        request: CreateNewDL,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> tuple[list[TransactionRecord], bytes32]:
-        request = {
-            "root": root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("create_new_dl", request)
-        txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
-        launcher_id = bytes32.from_hexstr(response["launcher_id"])
-        return txs, launcher_id
+    ) -> CreateNewDLResponse:
+        return CreateNewDLResponse.from_json_dict(
+            await self.fetch(
+                "create_new_dl", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def dl_track_new(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
-        await self.fetch("dl_track_new", request)
+    async def dl_track_new(self, request: DLTrackNew) -> None:
+        await self.fetch("dl_track_new", request.to_json_dict())
 
-    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
-        await self.fetch("dl_stop_tracking", request)
+    async def dl_stop_tracking(self, request: DLStopTracking) -> None:
+        await self.fetch("dl_stop_tracking", request.to_json_dict())
 
-    async def dl_latest_singleton(
-        self, launcher_id: bytes32, only_confirmed: bool = False
-    ) -> Optional[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "only_confirmed": only_confirmed}
-        response = await self.fetch("dl_latest_singleton", request)
-        return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
+    async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
+        return DLLatestSingletonResponse.from_json_dict(await self.fetch("dl_latest_singleton", request.to_json_dict()))
 
-    async def dl_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> list[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "root": root.hex()}
-        response = await self.fetch("dl_singletons_by_root", request)
-        return [SingletonRecord.from_json_dict(single) for single in response["singletons"]]
+    async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
+        return DLSingletonsByRootResponse.from_json_dict(
+            await self.fetch("dl_singletons_by_root", request.to_json_dict())
+        )
 
     async def dl_update_root(
         self,
-        launcher_id: bytes32,
-        new_root: bytes32,
-        fee: uint64,
+        request: DLUpdateRoot,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> TransactionRecord:
-        request = {
-            "launcher_id": launcher_id.hex(),
-            "new_root": new_root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("dl_update_root", request)
-        return TransactionRecord.from_json_dict_convenience(response["tx_record"])
+    ) -> DLUpdateRootResponse:
+        return DLUpdateRootResponse.from_json_dict(
+            await self.fetch(
+                "dl_update_root", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def dl_update_multiple(
         self,
-        update_dictionary: dict[bytes32, bytes32],
-        fee: uint64,
+        request: DLUpdateMultiple,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        updates_as_strings = {str(lid): str(root) for lid, root in update_dictionary.items()}
-        request = {
-            "updates": updates_as_strings,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("dl_update_multiple", request)
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+    ) -> DLUpdateMultipleResponse:
+        return DLUpdateMultipleResponse.from_json_dict(
+            await self.fetch(
+                "dl_update_multiple", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def dl_history(
-        self,
-        launcher_id: bytes32,
-        min_generation: Optional[uint32] = None,
-        max_generation: Optional[uint32] = None,
-        num_results: Optional[uint32] = None,
-    ) -> list[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex()}
+    async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
+        return DLHistoryResponse.from_json_dict(await self.fetch("dl_history", request.to_json_dict()))
 
-        if min_generation is not None:
-            request["min_generation"] = str(min_generation)
-        if max_generation is not None:
-            request["max_generation"] = str(max_generation)
-        if num_results is not None:
-            request["num_results"] = str(num_results)
+    async def dl_owned_singletons(self) -> DLOwnedSingletonsResponse:
+        return DLOwnedSingletonsResponse.from_json_dict(await self.fetch("dl_owned_singletons", {}))
 
-        response = await self.fetch("dl_history", request)
-        return [SingletonRecord.from_json_dict(single) for single in response["history"]]
-
-    async def dl_owned_singletons(self) -> list[SingletonRecord]:
-        response = await self.fetch(path="dl_owned_singletons", request_json={})
-        return [SingletonRecord.from_json_dict(singleton) for singleton in response["singletons"]]
-
-    async def dl_get_mirrors(self, launcher_id: bytes32) -> list[Mirror]:
-        response = await self.fetch(path="dl_get_mirrors", request_json={"launcher_id": launcher_id.hex()})
-        return [Mirror.from_json_dict(mirror) for mirror in response["mirrors"]]
+    async def dl_get_mirrors(self, request: DLGetMirrors) -> DLGetMirrorsResponse:
+        return DLGetMirrorsResponse.from_json_dict(await self.fetch("dl_get_mirrors", request.to_json_dict()))
 
     async def dl_new_mirror(
         self,
-        launcher_id: bytes32,
-        amount: uint64,
-        urls: list[bytes],
-        fee: uint64 = uint64(0),
+        request: DLNewMirror,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        response = await self.fetch(
-            path="dl_new_mirror",
-            request_json={
-                "launcher_id": launcher_id.hex(),
-                "amount": amount,
-                "urls": [url.decode("utf8") for url in urls],
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            },
+    ) -> DLNewMirrorResponse:
+        return DLNewMirrorResponse.from_json_dict(
+            await self.fetch(
+                "dl_new_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_delete_mirror(
         self,
-        coin_id: bytes32,
-        fee: uint64 = uint64(0),
+        request: DLDeleteMirror,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        response = await self.fetch(
-            path="dl_delete_mirror",
-            request_json={
-                "coin_id": coin_id.hex(),
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            },
+    ) -> DLDeleteMirrorResponse:
+        return DLDeleteMirrorResponse.from_json_dict(
+            await self.fetch(
+                "dl_delete_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_verify_proof(self, request: DLProof) -> VerifyProofResponse:
-        response = await self.fetch(path="dl_verify_proof", request_json=request.to_json_dict())
-        return json_deserialize_with_clvm_streamable(response, VerifyProofResponse)
+        return VerifyProofResponse.from_json_dict(await self.fetch("dl_verify_proof", request.to_json_dict()))
 
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         response = await self.fetch("get_notifications", request.to_json_dict())
