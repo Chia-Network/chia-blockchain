@@ -87,31 +87,35 @@ class ForkInfo:
         self.removals_since_fork = {}
         self.block_hashes = []
 
-    def include_spends(self, conds: Optional[SpendBundleConditions], block: FullBlock, header_hash: bytes32) -> None:
-        height = block.height
-
-        assert self.peak_height == height - 1
-
+    def update_fork_peak(self, block: FullBlock, header_hash: bytes32) -> None:
+        """Updates `self` with `block`'s height and `header_hash`."""
+        assert self.peak_height == block.height - 1
         assert len(self.block_hashes) == self.peak_height - self.fork_height
         assert block.height == self.fork_height + 1 + len(self.block_hashes)
         self.block_hashes.append(header_hash)
-
         self.peak_height = int(block.height)
         self.peak_hash = header_hash
 
+    def include_reward_coins(self, block: FullBlock) -> None:
+        """Updates `self` with `block`'s reward coins."""
+        for coin in block.get_included_reward_coins():
+            assert block.foliage_transaction_block is not None
+            timestamp = block.foliage_transaction_block.timestamp
+            coin_id = coin.name()
+            assert coin_id not in self.additions_since_fork
+            self.additions_since_fork[coin_id] = ForkAdd(coin, block.height, timestamp, None, True)
+
+    def include_spends(self, conds: Optional[SpendBundleConditions], block: FullBlock, header_hash: bytes32) -> None:
+        self.update_fork_peak(block, header_hash)
         if conds is not None:
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             for spend in conds.spends:
-                self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
+                self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), block.height)
                 for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                    self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
-        for coin in block.get_included_reward_coins():
-            assert block.foliage_transaction_block is not None
-            timestamp = block.foliage_transaction_block.timestamp
-            assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
+                    self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, hint, False)
+        self.include_reward_coins(block)
 
     def include_block(
         self,
@@ -120,28 +124,14 @@ class ForkInfo:
         block: FullBlock,
         header_hash: bytes32,
     ) -> None:
-        height = block.height
-
-        assert self.peak_height == height - 1
-
-        assert len(self.block_hashes) == self.peak_height - self.fork_height
-        assert block.height == self.fork_height + 1 + len(self.block_hashes)
-        self.block_hashes.append(header_hash)
-
-        self.peak_height = int(block.height)
-        self.peak_hash = header_hash
-
+        self.update_fork_peak(block, header_hash)
         if block.foliage_transaction_block is not None:
             timestamp = block.foliage_transaction_block.timestamp
             for spend in removals:
-                self.removals_since_fork[bytes32(spend.name())] = ForkRem(bytes32(spend.puzzle_hash), height)
+                self.removals_since_fork[bytes32(spend.name())] = ForkRem(bytes32(spend.puzzle_hash), block.height)
             for coin, hint in additions:
-                self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
-        for coin in block.get_included_reward_coins():
-            assert block.foliage_transaction_block is not None
-            timestamp = block.foliage_transaction_block.timestamp
-            assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
+                self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, hint, False)
+        self.include_reward_coins(block)
 
     def rollback(self, header_hash: bytes32, height: int) -> None:
         assert height <= self.peak_height
