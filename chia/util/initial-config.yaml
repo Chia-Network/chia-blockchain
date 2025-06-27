@@ -98,6 +98,9 @@ logging: &logging
   log_syslog_host: "localhost" # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514 # UDP port of the remote or local Unix syslog
 
+resource_monitoring: &resource_monitoring
+  process_memory: False
+
 seeder:
   # The fake full node used for crawling will run on this port.
   port: 8444
@@ -132,6 +135,7 @@ seeder:
   network_overrides: *network_overrides
   selected_network: *selected_network
   logging: *logging
+  resource_monitoring: *resource_monitoring
   # Crawler is its own standalone service within the seeder component
   crawler:
     start_rpc_server: True
@@ -160,6 +164,7 @@ harvester:
   parallel_read: True
 
   logging: *logging
+  resource_monitoring: *resource_monitoring
   network_overrides: *network_overrides
   selected_network: *selected_network
 
@@ -226,6 +231,7 @@ farmer:
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
   logging: *logging
+  resource_monitoring: *resource_monitoring
   network_overrides: *network_overrides
   selected_network: *selected_network
 
@@ -264,6 +270,7 @@ timelord:
     host: *self_hostname
     port: 8000
   logging: *logging
+  resource_monitoring: *resource_monitoring
   network_overrides: *network_overrides
   selected_network: *selected_network
   # Bluebox (sanitizing timelord):
@@ -453,6 +460,7 @@ full_node:
     port: 8444
     enable_private_networks: False
   logging: *logging
+  resource_monitoring: *resource_monitoring
   network_overrides: *network_overrides
   selected_network: *selected_network
 
@@ -493,6 +501,7 @@ introducer:
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging
+  resource_monitoring: *resource_monitoring
   network_overrides: *network_overrides
   selected_network: *selected_network
   dns_servers: *dns_servers
@@ -551,6 +560,7 @@ wallet:
   log_sqlite_cmds: False
 
   logging: *logging
+  resource_monitoring: *resource_monitoring
   network_overrides: *network_overrides
   selected_network: *selected_network
 
@@ -665,6 +675,7 @@ data_layer:
   enable_batch_autoinsert: True
 
   logging: *logging
+  resource_monitoring: *resource_monitoring
 
   ssl:
     private_crt: "config/ssl/data_layer/private_data_layer.crt"
