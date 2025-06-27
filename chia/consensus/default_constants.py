@@ -107,4 +107,4 @@ def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None
         overrides.pop("MAX_PLOT_SIZE")
     if network_id in {"testnet11", "testneta"}:
         if "MIN_PLOT_SIZE_V2" not in overrides:
-            overrides["MIN_PLOT_SIZE_V2"] = 20
+            overrides["MIN_PLOT_SIZE_V2"] = 18
