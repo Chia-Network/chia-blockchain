@@ -423,7 +423,7 @@ async def test_get_coin_states(db_version: int) -> None:
             for i in range(1, 301)
         ]
         coin_store = await CoinStore.create(db_wrapper)
-        await add_coin_records_to_db(coin_store.db_wrapper, crs)
+        await add_coin_records_to_db(coin_store, crs)
 
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, {std_hash(b"2")}, uint32(0))) == 0
@@ -551,7 +551,7 @@ async def test_coin_state_batches(
         coin_store = await CoinStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
 
-        await add_coin_records_to_db(coin_store.db_wrapper, random_coin_records.items)
+        await add_coin_records_to_db(coin_store, random_coin_records.items)
         await hint_store.add_hints(random_coin_records.hints)
 
         # Make sure all of the coin states are found when batching.
@@ -645,7 +645,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
         coin_store = await CoinStore.create(db_wrapper)
         await HintStore.create(db_wrapper)
 
-        await add_coin_records_to_db(coin_store.db_wrapper, coin_records)
+        await add_coin_records_to_db(coin_store, coin_records)
 
         # Make sure all of the coin states are found.
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
@@ -659,7 +659,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 
         # For the middle case, insert a coin record between the two heights 10 and 12.
         await add_coin_records_to_db(
-            coin_store.db_wrapper,
+            coin_store,
             [
                 CoinRecord(
                     coin=Coin(std_hash(b"extra coin"), ph, uint64(0)),
@@ -707,7 +707,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
             uint64(12321312),
         )
 
-        await add_coin_records_to_db(coin_store.db_wrapper, [cr])
+        await add_coin_records_to_db(coin_store, [cr])
         await hint_store.add_hints([(cr.coin.name(), cr.coin.puzzle_hash)])
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
@@ -884,7 +884,7 @@ async def test_add_coin_records_to_db() -> None:
             )
             for i in range(5)
         ]
-        await add_coin_records_to_db(db_wrapper, test_records)
+        await add_coin_records_to_db(coin_store, test_records)
         # Verify all records got inserted correctly
         for record in test_records:
             resulting_record = await coin_store.get_coin_record(record.coin.name())

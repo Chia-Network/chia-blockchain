@@ -47,11 +47,11 @@ from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_cu
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.sync_store import Peak
@@ -2505,7 +2505,7 @@ def print_coin_records(records: dict[bytes32, CoinRecord]) -> None:  # pragma: n
         print(f"{rec}")
 
 
-async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> None:
+async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBlock]) -> None:
     prev_height = blocks[0].height - 1
     prev_hash = blocks[0].prev_header_hash
     for block in blocks:

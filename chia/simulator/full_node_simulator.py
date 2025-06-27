@@ -123,7 +123,33 @@ class FullNodeSimulator(FullNodeAPI):
             return self.auto_farm
 
     async def get_all_coins(self, request: GetAllCoinsProtocol) -> list[CoinRecord]:
-        return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
+        """
+        Simulates fetching all coins by querying coins added at each block height.
+
+        Args:
+            request: An object containing the `include_spent_coins` flag.
+
+        Returns:
+            A combined list of CoinRecords (including spent coins if requested).
+        """
+        coin_records: list[CoinRecord] = []
+        current_height = 0
+
+        # `.get_peak_height` can return `None`. We use -1 in that case to exit early
+        max_block_height = self.full_node.blockchain.get_peak_height() or -1
+
+        while current_height <= max_block_height:
+            # Fetch coins added at the current block height
+            records_at_height = await self.full_node.coin_store.get_coins_added_at_height(uint32(current_height))
+
+            if not request.include_spent_coins:
+                # Filter out spent coins if not requested
+                records_at_height = [record for record in records_at_height if not record.spent]
+
+            coin_records.extend(records_at_height)
+            current_height += 1
+
+        return coin_records
 
     async def revert_block_height(self, new_height: uint32) -> None:
         """
