@@ -139,6 +139,21 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
     return max(0, prefix_bits)
 
 
+def calculate_plot_difficulty(constants: ConsensusConstants, height: uint32) -> uint8:
+    if height < constants.PLOT_DIFFICULTY_4_HEIGHT:
+        return constants.PLOT_DIFFICULTY_INITIAL
+    if height < constants.PLOT_DIFFICULTY_5_HEIGHT:
+        return uint8(4)
+    if height < constants.PLOT_DIFFICULTY_6_HEIGHT:
+        return uint8(5)
+    if height < constants.PLOT_DIFFICULTY_7_HEIGHT:
+        return uint8(6)
+    if height < constants.PLOT_DIFFICULTY_8_HEIGHT:
+        return uint8(7)
+    else:
+        return uint8(8)
+
+
 def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
     return std_hash(plot_id + challenge_hash + signage_point)
 

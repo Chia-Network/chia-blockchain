@@ -11,7 +11,11 @@ from chia_rs.sized_ints import uint8, uint32
 
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.proof_of_space import passes_plot_filter, verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_plot_difficulty,
+    passes_plot_filter,
+    verify_and_get_quality_string,
+)
 
 
 @dataclass
@@ -176,6 +180,29 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
     else:
         assert quality_string is None
         assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
+
+
+@pytest.mark.parametrize(
+    "height, difficulty",
+    [
+        (0, 2),
+        (DEFAULT_CONSTANTS.HARD_FORK_HEIGHT, 2),
+        (DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT, 2),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_4_HEIGHT - 1, 2),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_4_HEIGHT, 4),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_5_HEIGHT - 1, 4),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_5_HEIGHT, 5),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_6_HEIGHT - 1, 5),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_6_HEIGHT, 6),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_7_HEIGHT - 1, 6),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_7_HEIGHT, 7),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_8_HEIGHT - 1, 7),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_8_HEIGHT, 8),
+        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_8_HEIGHT + 1000000, 8),
+    ],
+)
+def test_calculate_plot_difficulty(height: uint32, difficulty: uint8) -> None:
+    assert calculate_plot_difficulty(DEFAULT_CONSTANTS, height) == difficulty
 
 
 class TestProofOfSpace:
