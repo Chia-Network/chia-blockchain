@@ -400,11 +400,6 @@ class VCWallet:
             )
             return
 
-        recovery_info: Optional[tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
-        if recovery_info is None:
-            raise RuntimeError("DID could not currently be accessed while trying to revoke VC")  # pragma: no cover
-        _, provider_inner_puzhash, _ = recovery_info
-
         # Generate spend specific nonce
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
@@ -421,7 +416,10 @@ class VCWallet:
             )
 
         # Assemble final bundle
-        expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
+        assert did_wallet.did_info.current_inner is not None
+        expected_did_announcement, vc_spend = vc.activate_backdoor(
+            did_wallet.did_info.current_inner.get_tree_hash(), announcement_nonce=nonce
+        )
         await did_wallet.create_message_spend(
             action_scope,
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),

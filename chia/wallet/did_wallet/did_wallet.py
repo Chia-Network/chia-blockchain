@@ -78,8 +78,6 @@ class DIDWallet:
         wallet: Wallet,
         amount: uint64,
         action_scope: WalletActionScope,
-        backups_ids: list[bytes32] = [],
-        num_of_backup_ids_needed: uint64 = None,
         metadata: dict[str, str] = {},
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
@@ -114,14 +112,10 @@ class DIDWallet:
         if amount & 1 == 0:
             raise ValueError("DID amount must be odd number")
 
-        if num_of_backup_ids_needed is None:
-            num_of_backup_ids_needed = uint64(len(backups_ids))
-        if num_of_backup_ids_needed > len(backups_ids):
-            raise ValueError("Cannot require more IDs than are known.")
         self.did_info = DIDInfo(
             origin_coin=None,
-            backup_ids=backups_ids,
-            num_of_backup_ids_needed=num_of_backup_ids_needed,
+            backup_ids=[],
+            num_of_backup_ids_needed=uint64(0),
             parent_info=[],
             current_inner=None,
             temp_coin=None,
@@ -229,6 +223,7 @@ class DIDWallet:
         recovery_list: list[bytes32] = []
         backup_required: int = num_verification.as_int()
         if not did_recovery_is_nil(recovery_list_hash):
+            self.log.warning(f"DID {launch_coin.name().hex()} has a recovery list hash which has been deprecated.")
             try:
                 for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                     recovery_list.append(bytes32(did[0]))
@@ -682,7 +677,6 @@ class DIDWallet:
         self,
         new_puzhash: bytes32,
         fee: uint64,
-        with_recovery: bool,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
@@ -690,7 +684,6 @@ class DIDWallet:
         Transfer the current DID to another owner
         :param new_puzhash: New owner's p2_puzzle
         :param fee: Transaction fee
-        :param with_recovery: A boolean indicates if the recovery info will be sent through the blockchain
         :return: Spend bundle
         """
         assert self.did_info.current_inner is not None
@@ -698,9 +691,8 @@ class DIDWallet:
         coin = await self.get_coin()
         backup_ids = []
         backup_required = uint64(0)
-        if with_recovery:
-            backup_ids = self.did_info.backup_ids
-            backup_required = self.did_info.num_of_backup_ids_needed
+        backup_ids = self.did_info.backup_ids
+        backup_required = self.did_info.num_of_backup_ids_needed
         new_did_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
             p2_puzhash=new_puzhash,
             recovery_list=backup_ids,
@@ -713,12 +705,7 @@ class DIDWallet:
             primaries=[CreateCoin(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
-        # Need to include backup list reveal here, even we are don't recover
-        # innerpuz solution is
-        # (mode, p2_solution)
-        innersol: Program = Program.to([2, p2_solution])
-        if with_recovery:
-            innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
+        innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
         full_puzzle: Program = create_singleton_puzzle(
@@ -849,280 +836,6 @@ class DIDWallet:
         )
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(tx)
-
-    # This is used to cash out, or update the id_list
-    async def create_exit_spend(self, puzhash: bytes32, action_scope: WalletActionScope) -> None:
-        assert self.did_info.current_inner is not None
-        assert self.did_info.origin_coin is not None
-        coin = await self.get_coin()
-        message_puz = Program.to((1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]]))
-
-        # innerpuz solution is (mode p2_solution)
-        innersol: Program = Program.to([1, [[], message_puz, []]])
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz: Program = self.did_info.current_inner
-
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=await action_scope.get_puzzle_hash(
-                        self.wallet_state_manager, override_reuse_puzhash_with=True
-                    ),
-                    amount=uint64(coin.amount),
-                    fee_amount=uint64(0),
-                    confirmed=False,
-                    sent=uint32(0),
-                    spend_bundle=spend_bundle,
-                    additions=spend_bundle.additions(),
-                    removals=spend_bundle.removals(),
-                    wallet_id=self.wallet_info.id,
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
-                    name=bytes32.secret(),
-                    memos=list(compute_memos(spend_bundle).items()),
-                    valid_times=ConditionValidTimes(),
-                )
-            )
-
-    # Pushes a spend bundle to create a message coin on the blockchain
-    # Returns a spend bundle for the recoverer to spend the message coin
-    async def create_attestment(
-        self,
-        recovering_coin_name: bytes32,
-        newpuz: bytes32,
-        pubkey: G1Element,
-        action_scope: WalletActionScope,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> tuple[WalletSpendBundle, str]:
-        """
-        Create an attestment
-        TODO:
-            1. We should use/respect `action_scope.config.tx_config` (reuse_puzhash and co)
-            2. We should take a fee as it's a requirement for every transaction function to do so
-        :param recovering_coin_name: Coin ID of the DID
-        :param newpuz: New puzzle hash
-        :param pubkey: New wallet pubkey
-        :return: (Spend bundle, attest string)
-        """
-        assert self.did_info.current_inner is not None
-        assert self.did_info.origin_coin is not None
-        coin = await self.get_coin()
-        message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
-        innermessage = message.get_tree_hash()
-        innerpuz: Program = self.did_info.current_inner
-        uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
-        assert uncurried is not None
-        p2_puzzle = uncurried[0]
-        # innerpuz solution is (mode, p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                CreateCoin(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
-                CreateCoin(innermessage, uint64(0)),
-            ],
-            conditions=extra_conditions,
-        )
-        innersol = Program.to([1, p2_solution])
-
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
-        message_spend_bundle = WalletSpendBundle([message_spend], AugSchemeMPL.aggregate([]))
-        spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
-            ),
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32.secret(),
-            memos=list(compute_memos(spend_bundle).items()),
-            valid_times=parse_timelock_info(extra_conditions),
-        )
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(did_record)
-        attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
-        attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
-        return message_spend_bundle, attest_str
-
-    async def get_info_for_recovery(self) -> Optional[tuple[bytes32, bytes32, uint64]]:
-        assert self.did_info.current_inner is not None
-        assert self.did_info.origin_coin is not None
-        try:
-            coin = await self.get_coin()
-        except RuntimeError:
-            return None
-        parent = coin.parent_coin_info
-        innerpuzhash = self.did_info.current_inner.get_tree_hash()
-        amount = uint64(coin.amount)
-        return (parent, innerpuzhash, amount)
-
-    async def load_attest_files_for_recovery_spend(self, attest_data: list[str]) -> tuple[list, WalletSpendBundle]:
-        spend_bundle_list = []
-        info_dict = {}
-        for attest in attest_data:
-            info = attest.split(":")
-            info_dict[info[0]] = [
-                bytes.fromhex(info[2]),
-                bytes.fromhex(info[3]),
-                uint64(info[4]),
-            ]
-            new_sb = WalletSpendBundle.from_bytes(bytes.fromhex(info[1]))
-            spend_bundle_list.append(new_sb)
-        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-        my_recovery_list: list[bytes32] = self.did_info.backup_ids
-
-        # convert info dict into recovery list - same order as wallet
-        info_list = []
-        for entry in my_recovery_list:
-            if entry.hex() in info_dict:
-                info_list.append(
-                    [
-                        info_dict[entry.hex()][0],
-                        info_dict[entry.hex()][1],
-                        info_dict[entry.hex()][2],
-                    ]
-                )
-            else:
-                info_list.append([])
-        message_spend_bundle = WalletSpendBundle.aggregate(spend_bundle_list)
-        return info_list, message_spend_bundle
-
-    async def recovery_spend(
-        self,
-        coin: Coin,
-        puzhash: bytes32,
-        parent_innerpuzhash_amounts_for_recovery_ids: list[tuple[bytes, bytes, int]],
-        pubkey: G1Element,
-        spend_bundle: WalletSpendBundle,
-        action_scope: WalletActionScope,
-    ) -> None:
-        assert self.did_info.origin_coin is not None
-
-        # innersol is mode new_amount_or_p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
-        innersol: Program = Program.to(
-            [
-                0,
-                coin.amount,
-                puzhash,
-                parent_innerpuzhash_amounts_for_recovery_ids,
-                bytes(pubkey),
-                self.did_info.backup_ids,
-                coin.name(),
-            ]
-        )
-        # full solution is (parent_info my_amount solution)
-        assert self.did_info.current_inner is not None
-        innerpuz: Program = self.did_info.current_inner
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-
-        spend_bundle = spend_bundle.aggregate([spend_bundle, WalletSpendBundle(list_of_coinspends, G2Element())])
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
-                    to_puzzle_hash=await action_scope.get_puzzle_hash(
-                        self.wallet_state_manager, override_reuse_puzhash_with=True
-                    ),
-                    amount=uint64(coin.amount),
-                    fee_amount=uint64(0),
-                    confirmed=False,
-                    sent=uint32(0),
-                    spend_bundle=spend_bundle,
-                    additions=spend_bundle.additions(),
-                    removals=spend_bundle.removals(),
-                    wallet_id=self.wallet_info.id,
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
-                    name=bytes32.secret(),
-                    memos=list(compute_memos(spend_bundle).items()),
-                    valid_times=ConditionValidTimes(),
-                )
-            )
-        new_did_info = DIDInfo(
-            origin_coin=self.did_info.origin_coin,
-            backup_ids=self.did_info.backup_ids,
-            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
-            parent_info=self.did_info.parent_info,
-            current_inner=self.did_info.current_inner,
-            temp_coin=self.did_info.temp_coin,
-            temp_puzhash=self.did_info.temp_puzhash,
-            temp_pubkey=self.did_info.temp_pubkey,
-            sent_recovery_transaction=True,
-            metadata=self.did_info.metadata,
-        )
-        await self.save_info(new_did_info)
 
     async def get_did_innerpuz(
         self,
@@ -1394,25 +1107,6 @@ class DIDWallet:
             metadata=self.did_info.metadata,
         )
         await self.save_info(did_info)
-
-    async def update_recovery_list(self, recover_list: list[bytes32], num_of_backup_ids_needed: uint64) -> bool:
-        if num_of_backup_ids_needed > len(recover_list):
-            return False
-        did_info = DIDInfo(
-            origin_coin=self.did_info.origin_coin,
-            backup_ids=recover_list,
-            num_of_backup_ids_needed=num_of_backup_ids_needed,
-            parent_info=self.did_info.parent_info,
-            current_inner=self.did_info.current_inner,
-            temp_coin=self.did_info.temp_coin,
-            temp_puzhash=self.did_info.temp_puzhash,
-            temp_pubkey=self.did_info.temp_pubkey,
-            sent_recovery_transaction=self.did_info.sent_recovery_transaction,
-            metadata=self.did_info.metadata,
-        )
-        await self.save_info(did_info)
-        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        return True
 
     async def update_metadata(self, metadata: dict[str, str]) -> bool:
         # validate metadata

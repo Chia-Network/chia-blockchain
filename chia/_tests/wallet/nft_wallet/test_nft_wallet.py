@@ -1284,7 +1284,7 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     async with did_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
-        await did_wallet.transfer_did(wallet_1_ph, uint64(0), True, action_scope)
+        await did_wallet.transfer_did(wallet_1_ph, uint64(0), action_scope)
 
     await wallet_environments.process_pending_states(
         [
