@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pytest
-from chia_rs import G1Element, ProofOfSpace
+from chia_rs import G1Element, PlotSize, ProofOfSpace
 from chia_rs.sized_bytes import bytes32, bytes48
 from chia_rs.sized_ints import uint8, uint32
 
@@ -13,6 +13,7 @@ from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_difficulty,
+    calculate_prefix_bits,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -238,3 +239,34 @@ class TestProofOfSpace:
                 success_count += 1
 
         assert abs((success_count * target_filter / num_trials) - 1) < 0.35
+
+
+@pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
+@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
+def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_size: PlotSize) -> None:
+    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
+    if plot_size.size_v2 is not None:
+        expected = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
+    assert calculate_prefix_bits(constants, height, plot_size) == expected
+
+
+@pytest.mark.parametrize(
+    argnames=["height", "expected"],
+    argvalues=[
+        (0, 9),
+        (5495999, 9),
+        (5496000, 8),
+        (10541999, 8),
+        (10542000, 7),
+        (15591999, 7),
+        (15592000, 6),
+        (20642999, 6),
+        (20643000, 5),
+    ],
+)
+@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
+def test_calculate_prefix_bits_default(height: uint32, expected: int, plot_size: PlotSize) -> None:
+    constants = DEFAULT_CONSTANTS
+    if plot_size.size_v2 is not None:
+        expected = DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER_V2
+    assert calculate_prefix_bits(constants, height, plot_size) == expected
