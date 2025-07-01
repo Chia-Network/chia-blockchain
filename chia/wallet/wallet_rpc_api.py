@@ -2596,13 +2596,12 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> DIDUpdateRecoveryIDsResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-        recovery_list = []
-        for puzzle_hash in request.new_list:
-            recovery_list.append(decode_puzzle_hash(puzzle_hash))
-        if request.num_verifications_required is not None:
-            new_amount_verifications_required = request.num_verifications_required
-        else:
-            new_amount_verifications_required = uint64(len(recovery_list))
+        recovery_list = [decode_puzzle_hash(puzzle_hash) for puzzle_hash in request.new_list]
+        new_amount_verifications_required = (
+            request.num_verifications_required
+            if request.num_verifications_required is not None
+            else uint64(len(recovery_list))
+        )
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
@@ -2924,10 +2923,7 @@ class WalletRpcApi:
     async def did_get_metadata(self, request: DIDGetMetadata) -> DIDGetMetadataResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         metadata = json.loads(wallet.did_info.metadata)
-        return DIDGetMetadataResponse(
-            wallet_id=request.wallet_id,
-            metadata=metadata,
-        )
+        return DIDGetMetadataResponse(wallet_id=request.wallet_id, metadata=metadata)
 
     # TODO: this needs a test
     # Don't need full @tx_endpoint decorator here, but "push" is still a valid option
@@ -3076,12 +3072,7 @@ class WalletRpcApi:
             )
 
         # The tx_endpoint wrapper will take care of these default values
-        return DIDTransferDIDResponse(
-            [],
-            [],
-            transaction=REPLACEABLE_TRANSACTION_RECORD,
-            transaction_id=bytes32.zeros,
-        )
+        return DIDTransferDIDResponse([], [], transaction=REPLACEABLE_TRANSACTION_RECORD, transaction_id=bytes32.zeros)
 
     ##########################################################################################
     # NFT Wallet

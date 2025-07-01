@@ -1792,7 +1792,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
         coin = (await wallet_0.select_coins(uint64(1), action_scope)).pop()
     assert coin.amount % 2 == 1
     coin_id = coin.name()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="The coin is not a DID."):
         await api_0.get_did_info(DIDGetInfo(coin_id.hex()))
 
     # Test multiple odd coins
@@ -1846,7 +1846,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
         ]
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="This is not a singleton, multiple children coins found."):
         await api_0.get_did_info(DIDGetInfo(coin_1.name().hex()))
 
 

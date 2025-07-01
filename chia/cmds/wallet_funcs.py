@@ -1105,10 +1105,7 @@ async def did_message_spend(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_message_spend(
-                DIDMessageSpend(
-                    wallet_id=uint32(did_wallet_id),
-                    push=push,
-                ),
+                DIDMessageSpend(wallet_id=uint32(did_wallet_id), push=push),
                 CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
                 extra_conditions=(
                     *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
