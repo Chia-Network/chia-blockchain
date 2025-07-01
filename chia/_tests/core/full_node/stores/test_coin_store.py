@@ -9,7 +9,6 @@ import pytest
 from chia_rs import CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.coin_store import add_coin_records_to_db
@@ -19,6 +18,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -27,6 +27,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 
 constants = test_constants
@@ -116,7 +117,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 block.height,
                 block.foliage_transaction_block.timestamp,
                 reward_coins,
-                tx_additions,
+                [(a.name(), a) for a in tx_additions],
                 tx_removals,
             )
 
@@ -126,7 +127,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                         block.height,
                         block.foliage_transaction_block.timestamp,
                         reward_coins,
-                        tx_additions,
+                        [(a.name(), a) for a in tx_additions],
                         tx_removals,
                     )
 
@@ -281,15 +282,15 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
 
         # The reorg will revert the creation and spend of many coins. It will also revert the spend (but not the
         # creation) of the selected coin.
-        changed_records = await coin_store.rollback_to_block(reorg_index)
-        changed_coin_records = [cr.coin for cr in changed_records]
-        assert selected_coin in changed_records
+        coin_changes = await coin_store.rollback_to_block(reorg_index)
+        changed_coins = {cr.coin for cr in coin_changes.values()}
+        assert selected_coin.coin in changed_coins
         for coin_record in all_records:
             assert coin_record is not None
             if coin_record.confirmed_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.coin in changed_coins
             if coin_record.spent_block_index > reorg_index:
-                assert coin_record.coin in changed_coin_records
+                assert coin_record.coin in changed_coins
 
         for block in blocks:
             if not block.is_transaction_block():
@@ -314,7 +315,8 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
         blocks = bt.get_consecutive_blocks(initial_block_count)
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
-        b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, 2)
         try:
             records: list[Optional[CoinRecord]] = []
 
@@ -380,7 +382,8 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
         )
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
-        b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, 2)
         for block in blocks:
             await _validate_and_add_block(b, block)
         peak = b.get_peak()
@@ -420,7 +423,7 @@ async def test_get_coin_states(db_version: int) -> None:
             for i in range(1, 301)
         ]
         coin_store = await CoinStore.create(db_wrapper)
-        await add_coin_records_to_db(coin_store.db_wrapper, crs)
+        await add_coin_records_to_db(coin_store, crs)
 
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, {std_hash(b"2")}, uint32(0))) == 0
@@ -548,7 +551,7 @@ async def test_coin_state_batches(
         coin_store = await CoinStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
 
-        await add_coin_records_to_db(coin_store.db_wrapper, random_coin_records.items)
+        await add_coin_records_to_db(coin_store, random_coin_records.items)
         await hint_store.add_hints(random_coin_records.hints)
 
         # Make sure all of the coin states are found when batching.
@@ -642,7 +645,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
         coin_store = await CoinStore.create(db_wrapper)
         await HintStore.create(db_wrapper)
 
-        await add_coin_records_to_db(coin_store.db_wrapper, coin_records)
+        await add_coin_records_to_db(coin_store, coin_records)
 
         # Make sure all of the coin states are found.
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
@@ -656,7 +659,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 
         # For the middle case, insert a coin record between the two heights 10 and 12.
         await add_coin_records_to_db(
-            coin_store.db_wrapper,
+            coin_store,
             [
                 CoinRecord(
                     coin=Coin(std_hash(b"extra coin"), ph, uint64(0)),
@@ -704,7 +707,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
             uint64(12321312),
         )
 
-        await add_coin_records_to_db(coin_store.db_wrapper, [cr])
+        await add_coin_records_to_db(coin_store, [cr])
         await hint_store.add_hints([(cr.coin.name(), cr.coin.puzzle_hash)])
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
@@ -881,7 +884,7 @@ async def test_add_coin_records_to_db() -> None:
             )
             for i in range(5)
         ]
-        await add_coin_records_to_db(db_wrapper, test_records)
+        await add_coin_records_to_db(coin_store, test_records)
         # Verify all records got inserted correctly
         for record in test_records:
             resulting_record = await coin_store.get_coin_record(record.coin.name())

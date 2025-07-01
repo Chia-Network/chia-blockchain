@@ -7,7 +7,6 @@ import logging
 import traceback
 from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import (
@@ -27,6 +26,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -36,7 +36,6 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
@@ -103,7 +102,7 @@ class Blockchain:
     # epoch summaries
     __height_map: BlockHeightMap
     # Unspent Store
-    coin_store: CoinStore
+    coin_store: CoinStoreProtocol
     # Store
     block_store: BlockStore
     # Used to verify blocks in parallel
@@ -122,15 +121,14 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore,
+        coin_store: CoinStoreProtocol,
         block_store: BlockStore,
+        height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
-        blockchain_dir: Path,
         reserved_cores: int,
         *,
         single_threaded: bool = False,
         log_coins: bool = False,
-        selected_network: Optional[str] = None,
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -158,7 +156,7 @@ class Blockchain:
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
-        await self._load_chain_from_store(blockchain_dir, selected_network)
+        await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()
         return self
 
@@ -166,11 +164,11 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, blockchain_dir: Path, selected_network: Optional[str] = None) -> None:
+    async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper, selected_network)
+        self.__height_map = height_map
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
@@ -512,8 +510,7 @@ class Blockchain:
                 )
 
             if block_record.prev_hash != peak.header_hash:
-                for coin_record in await self.coin_store.rollback_to_block(fork_info.fork_height):
-                    rolled_back_state[coin_record.name] = coin_record
+                rolled_back_state = await self.coin_store.rollback_to_block(fork_info.fork_height)
                 if self._log_coins and len(rolled_back_state) > 0:
                     log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
                     log.info(
@@ -567,8 +564,8 @@ class Blockchain:
                 if fork_add.confirmed_height == height and fork_add.is_coinbase
             ]
             tx_additions = [
-                fork_add.coin
-                for fork_add in fork_info.additions_since_fork.values()
+                (coin_id, fork_add.coin)
+                for coin_id, fork_add in fork_info.additions_since_fork.items()
                 if fork_add.confirmed_height == height and not fork_add.is_coinbase
             ]
             tx_removals = [
@@ -589,7 +586,7 @@ class Blockchain:
                     f"height: {fetched_block_record.height}), {len(tx_removals)} spends"
                 )
                 log.info("rewards: %s", ",".join([add.name().hex()[0:6] for add in included_reward_coins]))
-                log.info("additions: %s", ",".join([add.name().hex()[0:6] for add in tx_additions]))
+                log.info("additions: %s", ",".join([add[0].hex()[0:6] for add in tx_additions]))
                 log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
 
         # we made it to the end successfully

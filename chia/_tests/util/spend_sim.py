@@ -23,7 +23,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Self
 
-from chia._tests.util.coin_store import add_coin_records_to_db
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -243,26 +242,24 @@ class SpendSim:
 
         # Rewards get created
         next_block_height: uint32 = uint32(self.block_height + 1) if len(self.block_records) > 0 else self.block_height
-        pool_coin: Coin = create_pool_coin(
-            next_block_height,
-            puzzle_hash,
-            calculate_pool_reward(next_block_height),
-            self.defaults.GENESIS_CHALLENGE,
-        )
-        farmer_coin: Coin = create_farmer_coin(
-            next_block_height,
-            puzzle_hash,
-            uint64(calculate_base_farmer_reward(next_block_height) + fees),
-            self.defaults.GENESIS_CHALLENGE,
-        )
-        await add_coin_records_to_db(
-            self.coin_store.db_wrapper, [self.new_coin_record(pool_coin, True), self.new_coin_record(farmer_coin, True)]
-        )
-
+        included_reward_coins = [
+            create_pool_coin(
+                next_block_height,
+                puzzle_hash,
+                calculate_pool_reward(next_block_height),
+                self.defaults.GENESIS_CHALLENGE,
+            ),
+            create_farmer_coin(
+                next_block_height,
+                puzzle_hash,
+                uint64(calculate_base_farmer_reward(next_block_height) + fees),
+                self.defaults.GENESIS_CHALLENGE,
+            ),
+        ]
         # Coin store gets updated
         generator_bundle: Optional[SpendBundle] = None
-        return_additions: list[Coin] = []
-        return_removals: list[Coin] = []
+        tx_additions = []
+        tx_removals = []
         spent_coins_ids = None
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
@@ -271,6 +268,7 @@ class SpendSim:
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
+                    spent_coins_ids = []
                     for spend in generator_bundle.coin_spends:
                         hint_dict, _ = compute_spend_hints_and_additions(spend)
                         hints: list[tuple[bytes32, bytes]] = []
@@ -279,23 +277,19 @@ class SpendSim:
                             if hint_obj.hint is not None:
                                 hints.append((coin_name, bytes(hint_obj.hint)))
                         await self.hint_store.add_hints(hints)
-                    return_additions = additions
-                    return_removals = bundle.removals()
-                    spent_coins_ids = [r.name() for r in return_removals]
-                    await add_coin_records_to_db(
-                        self.coin_store.db_wrapper, [self.new_coin_record(addition) for addition in additions]
-                    )
-                    await self.coin_store._set_spent(spent_coins_ids, uint32(self.block_height + 1))
-
+                        spent_coins_ids.append(spend.coin.name())
+                        tx_removals.append(spend.coin)
+                    tx_additions = [(addition.name(), addition) for addition in additions]
+        await self.coin_store.new_block(
+            height=uint32(self.block_height + 1),
+            timestamp=self.timestamp,
+            included_reward_coins=included_reward_coins,
+            tx_additions=tx_additions,
+            tx_removals=spent_coins_ids if spent_coins_ids is not None else [],
+        )
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
-        self.block_records.append(
-            SimBlockRecord.create(
-                [pool_coin, farmer_coin],
-                next_block_height,
-                self.timestamp,
-            )
-        )
+        self.block_records.append(SimBlockRecord.create(included_reward_coins, next_block_height, self.timestamp))
         self.blocks.append(SimFullBlock(generator, next_block_height))
 
         # block_height is incremented
@@ -305,7 +299,7 @@ class SpendSim:
         await self.new_peak(spent_coins_ids)
 
         # return some debugging data
-        return return_additions, return_removals
+        return [a for _, a in tx_additions], tx_removals
 
     def get_height(self) -> uint32:
         return self.block_height

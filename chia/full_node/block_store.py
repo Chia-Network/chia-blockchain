@@ -250,7 +250,7 @@ class BlockStore:
             row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
-            block_bytes = zstd.decompress(row[0])
+            block_bytes = memoryview(zstd.decompress(row[0]))
 
             try:
                 return block_info_from_block(block_bytes)
@@ -274,7 +274,7 @@ class BlockStore:
             row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
-            block_bytes = zstd.decompress(row[0])
+            block_bytes = memoryview(zstd.decompress(row[0]))
 
             try:
                 return generator_from_block(block_bytes)
@@ -297,7 +297,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, list(heights)) as cursor:
                 async for row in cursor:
-                    block_bytes = zstd.decompress(row[0])
+                    block_bytes = memoryview(zstd.decompress(row[0]))
 
                     try:
                         gen = generator_from_block(block_bytes)

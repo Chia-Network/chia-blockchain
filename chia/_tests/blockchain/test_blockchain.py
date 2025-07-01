@@ -22,10 +22,10 @@ from chia_rs import (
     SpendBundle,
     TransactionsInfo,
     UnfinishedBlock,
+    is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
@@ -61,6 +61,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -3647,6 +3648,41 @@ class TestReorgs:
         assert blocks
         assert len(blocks) == 200
         assert blocks[-1].height == 199
+
+    @pytest.mark.anyio
+    async def test_overlong_generator_encoding(
+        self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
+    ) -> None:
+        # add enough blocks to pass the hard fork
+        blocks = bt.get_consecutive_blocks(10)
+        for b in blocks[:-1]:
+            await _validate_and_add_block(empty_blockchain, b)
+
+        while not blocks[-1].is_transaction_block():
+            await _validate_and_add_block(empty_blockchain, blocks[-1])
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+        original_block: FullBlock = blocks[-1]
+
+        # overlong encoding
+        generator = SerializedProgram.fromhex("c00101")
+        assert not is_canonical_serialization(bytes(generator))
+
+        block = recursive_replace(original_block, "transactions_generator", generator)
+        block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
+        block = recursive_replace(
+            block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
+        )
+        block = recursive_replace(
+            block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
+        )
+
+        # overlong encoding became invalid in the 3.0 hard fork
+        if consensus_mode == ConsensusMode.HARD_FORK_3_0:
+            expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+        else:
+            expected_error = None
+
+        await _validate_and_add_block(empty_blockchain, block, expected_error=expected_error, skip_prevalidation=True)
 
 
 @pytest.mark.anyio

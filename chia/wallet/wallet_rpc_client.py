@@ -4,12 +4,9 @@ from collections.abc import Sequence
 from typing import Any, Optional, Union, cast
 
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
-from chia.data_layer.data_layer_wallet import Mirror
-from chia.data_layer.singleton_record import SingletonRecord
-from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -37,6 +34,8 @@ from chia.wallet.wallet_request_types import (
     CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CreateNewDL,
+    CreateNewDLResponse,
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
@@ -50,6 +49,25 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
     DIDUpdateRecoveryIDsResponse,
+    DLDeleteMirror,
+    DLDeleteMirrorResponse,
+    DLGetMirrors,
+    DLGetMirrorsResponse,
+    DLHistory,
+    DLHistoryResponse,
+    DLLatestSingleton,
+    DLLatestSingletonResponse,
+    DLNewMirror,
+    DLNewMirrorResponse,
+    DLOwnedSingletonsResponse,
+    DLSingletonsByRoot,
+    DLSingletonsByRootResponse,
+    DLStopTracking,
+    DLTrackNew,
+    DLUpdateMultiple,
+    DLUpdateMultipleResponse,
+    DLUpdateRoot,
+    DLUpdateRootResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
@@ -71,22 +89,45 @@ from chia.wallet.wallet_request_types import (
     GetTransactionMemoResponse,
     LogIn,
     LogInResponse,
+    NFTAddURI,
     NFTAddURIResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
+    NFTCountNFTs,
+    NFTCountNFTsResponse,
     NFTGetByDID,
     NFTGetByDIDResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
+    NFTGetNFTs,
+    NFTGetNFTsResponse,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
     NFTGetWalletsWithDIDsResponse,
+    NFTMintBulk,
     NFTMintBulkResponse,
+    NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetDIDBulk,
     NFTSetDIDBulkResponse,
+    NFTSetNFTDID,
     NFTSetNFTDIDResponse,
     NFTSetNFTStatus,
     NFTTransferBulk,
     NFTTransferBulkResponse,
+    NFTTransferNFT,
     NFTTransferNFTResponse,
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    PWAbsorbRewards,
+    PWAbsorbRewardsResponse,
+    PWJoinPool,
+    PWJoinPoolResponse,
+    PWSelfPool,
+    PWSelfPoolResponse,
+    PWStatus,
+    PWStatusResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -692,41 +733,47 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def pw_self_pool(self, wallet_id: int, fee: uint64) -> dict[str, Any]:
-        reply = await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee})
-        reply = parse_result_transactions(reply)
-        return reply
+    async def pw_self_pool(
+        self,
+        request: PWSelfPool,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWSelfPoolResponse:
+        return PWSelfPoolResponse.from_json_dict(
+            await self.fetch(
+                "pw_self_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def pw_join_pool(
-        self, wallet_id: int, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
-    ) -> dict[str, Any]:
-        request = {
-            "wallet_id": int(wallet_id),
-            "target_puzzlehash": target_puzzlehash.hex(),
-            "relative_lock_height": relative_lock_height,
-            "pool_url": pool_url,
-            "fee": fee,
-        }
-        reply = await self.fetch("pw_join_pool", request)
-        reply = parse_result_transactions(reply)
-        return reply
+        self,
+        request: PWJoinPool,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWJoinPoolResponse:
+        return PWJoinPoolResponse.from_json_dict(
+            await self.fetch(
+                "pw_join_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def pw_absorb_rewards(
-        self, wallet_id: int, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None
-    ) -> dict[str, Any]:
-        reply = await self.fetch(
-            "pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee, "max_spends_in_tx": max_spends_in_tx}
+        self,
+        request: PWAbsorbRewards,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PWAbsorbRewardsResponse:
+        return PWAbsorbRewardsResponse.from_json_dict(
+            await self.fetch(
+                "pw_absorb_rewards", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        reply["state"] = PoolWalletInfo.from_json_dict(reply["state"])
-        reply = parse_result_transactions(reply)
-        return reply
 
-    async def pw_status(self, wallet_id: int) -> tuple[PoolWalletInfo, list[TransactionRecord]]:
-        json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})
-        return (
-            PoolWalletInfo.from_json_dict(json_dict["state"]),
-            [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
-        )
+    async def pw_status(self, request: PWStatus) -> PWStatusResponse:
+        return PWStatusResponse.from_json_dict(await self.fetch("pw_status", request.to_json_dict()))
 
     # CATS
     async def create_new_cat_and_wallet(
@@ -986,211 +1033,97 @@ class WalletRpcClient(RpcClient):
 
     async def mint_nft(
         self,
-        wallet_id: int,
-        royalty_address: Optional[str],
-        target_address: Optional[str],
-        hash: str,
-        uris: list[str],
+        request: NFTMintNFTRequest,
         tx_config: TXConfig,
-        meta_hash: Optional[str] = "",
-        meta_uris: list[str] = [],
-        license_hash: Optional[str] = "",
-        license_uris: list[str] = [],
-        edition_total: Optional[int] = 1,
-        edition_number: Optional[int] = 1,
-        fee: int = 0,
-        royalty_percentage: int = 0,
-        did_id: Optional[str] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTMintNFTResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "royalty_address": royalty_address,
-            "target_address": target_address,
-            "hash": hash,
-            "uris": uris,
-            "meta_hash": meta_hash,
-            "meta_uris": meta_uris,
-            "license_hash": license_hash,
-            "license_uris": license_uris,
-            "edition_number": edition_number,
-            "edition_total": edition_total,
-            "royalty_percentage": royalty_percentage,
-            "did_id": did_id,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_mint_nft", request)
-        return json_deserialize_with_clvm_streamable(response, NFTMintNFTResponse)
+        return NFTMintNFTResponse.from_json_dict(
+            await self.fetch(
+                "nft_mint_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def add_uri_to_nft(
         self,
-        wallet_id: int,
-        nft_coin_id: str,
-        key: str,
-        uri: str,
-        fee: int,
+        request: NFTAddURI,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTAddURIResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "uri": uri,
-            "key": key,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_add_uri", request)
-        return json_deserialize_with_clvm_streamable(response, NFTAddURIResponse)
+        return NFTAddURIResponse.from_json_dict(
+            await self.fetch(
+                "nft_add_uri", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def nft_calculate_royalties(
         self,
-        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
-        fungible_asset_dict: dict[Any, uint64],
-    ) -> dict[str, list[dict[str, Any]]]:
-        request = {
-            "royalty_assets": [
-                {"asset": id, "royalty_address": royalty_info[0], "royalty_percentage": royalty_info[1]}
-                for id, royalty_info in royalty_assets_dict.items()
-            ],
-            "fungible_assets": [{"asset": name, "amount": amount} for name, amount in fungible_asset_dict.items()],
-        }
-        response = await self.fetch("nft_calculate_royalties", request)
-        del response["success"]
-        return response
+        request: NFTCalculateRoyalties,
+    ) -> NFTCalculateRoyaltiesResponse:
+        return NFTCalculateRoyaltiesResponse.from_json_dict(
+            await self.fetch("nft_calculate_royalties", request.to_json_dict())
+        )
 
-    async def get_nft_info(self, coin_id: str, latest: bool = True) -> dict[str, Any]:
-        request = {"coin_id": coin_id, "latest": latest}
-        response = await self.fetch("nft_get_info", request)
-        return response
+    async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
+        return NFTGetInfoResponse.from_json_dict(await self.fetch("nft_get_info", request.to_json_dict()))
 
     async def transfer_nft(
         self,
-        wallet_id: int,
-        nft_coin_id: str,
-        target_address: str,
-        fee: int,
+        request: NFTTransferNFT,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTTransferNFTResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "target_address": target_address,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_transfer_nft", request)
-        return json_deserialize_with_clvm_streamable(response, NFTTransferNFTResponse)
+        return NFTTransferNFTResponse.from_json_dict(
+            await self.fetch(
+                "nft_transfer_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def count_nfts(self, wallet_id: Optional[int]) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("nft_count_nfts", request)
-        return response
+    async def count_nfts(self, request: NFTCountNFTs) -> NFTCountNFTsResponse:
+        return NFTCountNFTsResponse.from_json_dict(await self.fetch("nft_count_nfts", request.to_json_dict()))
 
-    async def list_nfts(self, wallet_id: int, num: int = 50, start_index: int = 0) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "num": num, "start_index": start_index}
-        response = await self.fetch("nft_get_nfts", request)
-        return response
+    async def list_nfts(self, request: NFTGetNFTs) -> NFTGetNFTsResponse:
+        return NFTGetNFTsResponse.from_json_dict(await self.fetch("nft_get_nfts", request.to_json_dict()))
 
     async def get_nft_wallet_by_did(self, request: NFTGetByDID) -> NFTGetByDIDResponse:
         return NFTGetByDIDResponse.from_json_dict(await self.fetch("nft_get_by_did", request.to_json_dict()))
 
     async def set_nft_did(
         self,
-        wallet_id: int,
-        did_id: Optional[str],
-        nft_coin_id: str,
-        fee: int,
+        request: NFTSetNFTDID,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> NFTSetNFTDIDResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "nft_coin_id": nft_coin_id,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if did_id is not None:
-            request["did_id"] = did_id
-        response = await self.fetch("nft_set_nft_did", request)
-        return json_deserialize_with_clvm_streamable(response, NFTSetNFTDIDResponse)
+        return NFTSetNFTDIDResponse.from_json_dict(
+            await self.fetch(
+                "nft_set_nft_did", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def set_nft_status(self, request: NFTSetNFTStatus) -> None:
         await self.fetch("nft_set_nft_status", request.to_json_dict())
 
-    async def get_nft_wallet_did(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("nft_get_wallet_did", request)
-        return response
+    async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
+        return NFTGetWalletDIDResponse.from_json_dict(await self.fetch("nft_get_wallet_did", request.to_json_dict()))
 
     async def get_nft_wallets_with_dids(self) -> NFTGetWalletsWithDIDsResponse:
         return NFTGetWalletsWithDIDsResponse.from_json_dict(await self.fetch("nft_get_wallets_with_dids", {}))
 
     async def nft_mint_bulk(
         self,
-        wallet_id: int,
-        metadata_list: list[dict[str, Any]],
-        royalty_percentage: Optional[int],
-        royalty_address: Optional[str],
+        request: NFTMintBulk,
         tx_config: TXConfig,
-        target_list: Optional[list[str]] = None,
-        mint_number_start: Optional[int] = 1,
-        mint_total: Optional[int] = None,
-        xch_coins: Optional[list[dict[str, Any]]] = None,
-        xch_change_target: Optional[str] = None,
-        new_innerpuzhash: Optional[str] = None,
-        did_coin: Optional[dict[str, Any]] = None,
-        did_lineage_parent: Optional[str] = None,
-        mint_from_did: Optional[bool] = False,
-        fee: Optional[int] = 0,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = False,
     ) -> NFTMintBulkResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "metadata_list": metadata_list,
-            "target_list": target_list,
-            "royalty_percentage": royalty_percentage,
-            "royalty_address": royalty_address,
-            "mint_number_start": mint_number_start,
-            "mint_total": mint_total,
-            "xch_coins": xch_coins,
-            "xch_change_target": xch_change_target,
-            "new_innerpuzhash": new_innerpuzhash,
-            "did_coin": did_coin,
-            "did_lineage_parent": did_lineage_parent,
-            "mint_from_did": mint_from_did,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("nft_mint_bulk", request)
-        return json_deserialize_with_clvm_streamable(response, NFTMintBulkResponse)
+        return NFTMintBulkResponse.from_json_dict(
+            await self.fetch(
+                "nft_mint_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def set_nft_did_bulk(
         self,
@@ -1221,147 +1154,94 @@ class WalletRpcClient(RpcClient):
     # DataLayer
     async def create_new_dl(
         self,
-        root: bytes32,
-        fee: uint64,
+        request: CreateNewDL,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> tuple[list[TransactionRecord], bytes32]:
-        request = {
-            "root": root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("create_new_dl", request)
-        txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
-        launcher_id = bytes32.from_hexstr(response["launcher_id"])
-        return txs, launcher_id
+    ) -> CreateNewDLResponse:
+        return CreateNewDLResponse.from_json_dict(
+            await self.fetch(
+                "create_new_dl", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def dl_track_new(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
-        await self.fetch("dl_track_new", request)
+    async def dl_track_new(self, request: DLTrackNew) -> None:
+        await self.fetch("dl_track_new", request.to_json_dict())
 
-    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
-        request = {"launcher_id": launcher_id.hex()}
-        await self.fetch("dl_stop_tracking", request)
+    async def dl_stop_tracking(self, request: DLStopTracking) -> None:
+        await self.fetch("dl_stop_tracking", request.to_json_dict())
 
-    async def dl_latest_singleton(
-        self, launcher_id: bytes32, only_confirmed: bool = False
-    ) -> Optional[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "only_confirmed": only_confirmed}
-        response = await self.fetch("dl_latest_singleton", request)
-        return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
+    async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
+        return DLLatestSingletonResponse.from_json_dict(await self.fetch("dl_latest_singleton", request.to_json_dict()))
 
-    async def dl_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> list[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex(), "root": root.hex()}
-        response = await self.fetch("dl_singletons_by_root", request)
-        return [SingletonRecord.from_json_dict(single) for single in response["singletons"]]
+    async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
+        return DLSingletonsByRootResponse.from_json_dict(
+            await self.fetch("dl_singletons_by_root", request.to_json_dict())
+        )
 
     async def dl_update_root(
         self,
-        launcher_id: bytes32,
-        new_root: bytes32,
-        fee: uint64,
+        request: DLUpdateRoot,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> TransactionRecord:
-        request = {
-            "launcher_id": launcher_id.hex(),
-            "new_root": new_root.hex(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("dl_update_root", request)
-        return TransactionRecord.from_json_dict_convenience(response["tx_record"])
+    ) -> DLUpdateRootResponse:
+        return DLUpdateRootResponse.from_json_dict(
+            await self.fetch(
+                "dl_update_root", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def dl_update_multiple(
         self,
-        update_dictionary: dict[bytes32, bytes32],
-        fee: uint64,
+        request: DLUpdateMultiple,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        updates_as_strings = {str(lid): str(root) for lid, root in update_dictionary.items()}
-        request = {
-            "updates": updates_as_strings,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("dl_update_multiple", request)
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+    ) -> DLUpdateMultipleResponse:
+        return DLUpdateMultipleResponse.from_json_dict(
+            await self.fetch(
+                "dl_update_multiple", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def dl_history(
-        self,
-        launcher_id: bytes32,
-        min_generation: Optional[uint32] = None,
-        max_generation: Optional[uint32] = None,
-        num_results: Optional[uint32] = None,
-    ) -> list[SingletonRecord]:
-        request = {"launcher_id": launcher_id.hex()}
+    async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
+        return DLHistoryResponse.from_json_dict(await self.fetch("dl_history", request.to_json_dict()))
 
-        if min_generation is not None:
-            request["min_generation"] = str(min_generation)
-        if max_generation is not None:
-            request["max_generation"] = str(max_generation)
-        if num_results is not None:
-            request["num_results"] = str(num_results)
+    async def dl_owned_singletons(self) -> DLOwnedSingletonsResponse:
+        return DLOwnedSingletonsResponse.from_json_dict(await self.fetch("dl_owned_singletons", {}))
 
-        response = await self.fetch("dl_history", request)
-        return [SingletonRecord.from_json_dict(single) for single in response["history"]]
-
-    async def dl_owned_singletons(self) -> list[SingletonRecord]:
-        response = await self.fetch(path="dl_owned_singletons", request_json={})
-        return [SingletonRecord.from_json_dict(singleton) for singleton in response["singletons"]]
-
-    async def dl_get_mirrors(self, launcher_id: bytes32) -> list[Mirror]:
-        response = await self.fetch(path="dl_get_mirrors", request_json={"launcher_id": launcher_id.hex()})
-        return [Mirror.from_json_dict(mirror) for mirror in response["mirrors"]]
+    async def dl_get_mirrors(self, request: DLGetMirrors) -> DLGetMirrorsResponse:
+        return DLGetMirrorsResponse.from_json_dict(await self.fetch("dl_get_mirrors", request.to_json_dict()))
 
     async def dl_new_mirror(
         self,
-        launcher_id: bytes32,
-        amount: uint64,
-        urls: list[bytes],
-        fee: uint64 = uint64(0),
+        request: DLNewMirror,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        response = await self.fetch(
-            path="dl_new_mirror",
-            request_json={
-                "launcher_id": launcher_id.hex(),
-                "amount": amount,
-                "urls": [url.decode("utf8") for url in urls],
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            },
+    ) -> DLNewMirrorResponse:
+        return DLNewMirrorResponse.from_json_dict(
+            await self.fetch(
+                "dl_new_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_delete_mirror(
         self,
-        coin_id: bytes32,
-        fee: uint64 = uint64(0),
+        request: DLDeleteMirror,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        response = await self.fetch(
-            path="dl_delete_mirror",
-            request_json={
-                "coin_id": coin_id.hex(),
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                **timelock_info.to_json_dict(),
-            },
+    ) -> DLDeleteMirrorResponse:
+        return DLDeleteMirrorResponse.from_json_dict(
+            await self.fetch(
+                "dl_delete_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_verify_proof(self, request: DLProof) -> VerifyProofResponse:
-        response = await self.fetch(path="dl_verify_proof", request_json=request.to_json_dict())
-        return json_deserialize_with_clvm_streamable(response, VerifyProofResponse)
+        return VerifyProofResponse.from_json_dict(await self.fetch("dl_verify_proof", request.to_json_dict()))
 
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         response = await self.fetch("get_notifications", request.to_json_dict())

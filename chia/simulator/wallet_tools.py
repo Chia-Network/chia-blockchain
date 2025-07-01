@@ -5,7 +5,6 @@ from typing import Any, Optional
 from chia_rs import AugSchemeMPL, CoinSpend, ConsensusConstants, G1Element, G2Element, PrivateKey, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.consensus.condition_tools import (
     agg_sig_additional_data,
@@ -17,6 +16,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.util.casts import int_from_bytes, int_to_bytes
 from chia.util.hash import std_hash
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.derive_keys import master_sk_to_wallet_sk

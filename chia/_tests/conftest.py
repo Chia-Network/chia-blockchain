@@ -196,11 +196,12 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
+    HARD_FORK_3_0 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
 )
 def consensus_mode(request):
     return request.param
@@ -216,6 +217,16 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
+
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        ret = ret.replace(
+            HARD_FORK_HEIGHT=uint32(2),
+            PLOT_FILTER_128_HEIGHT=uint32(10),
+            PLOT_FILTER_64_HEIGHT=uint32(15),
+            PLOT_FILTER_32_HEIGHT=uint32(20),
+            HARD_FORK2_HEIGHT=uint32(2),
+        )
+
     return ret
 
 
@@ -1237,7 +1248,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
 ]:
     zero_bit_plot_filter_consts = test_constants_modified.replace(
         NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(0),
-        NUM_SPS_SUB_SLOT=uint32(8),
+        NUM_SPS_SUB_SLOT=uint8(8),
     )
 
     async with AsyncExitStack() as async_exit_stack:

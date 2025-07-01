@@ -4,14 +4,18 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Optional, final
 
-from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import Self, dataclass_transform
 
+from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.singleton_record import SingletonRecord
+from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -332,6 +336,34 @@ class DIDGetCurrentCoinInfoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class NFTCountNFTs(Streamable):
+    wallet_id: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCountNFTsResponse(Streamable):
+    wallet_id: Optional[uint32]
+    count: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetNFTs(Streamable):
+    wallet_id: Optional[uint32] = None
+    start_index: uint32 = uint32(0)
+    num: uint32 = uint32(50)
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetNFTsResponse(Streamable):
+    wallet_id: Optional[uint32]
+    nft_list: list[NFTInfo]
+
+
+@streamable
+@dataclass(frozen=True)
 class NFTGetByDID(Streamable):
     did_id: Optional[str] = None
 
@@ -340,6 +372,18 @@ class NFTGetByDID(Streamable):
 @dataclass(frozen=True)
 class NFTGetByDIDResponse(Streamable):
     wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetWalletDID(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetWalletDIDResponse(Streamable):
+    did_id: Optional[str]
 
 
 @streamable
@@ -365,12 +409,195 @@ class NFTGetWalletsWithDIDsResponse(Streamable):
     nft_wallets: list[NFTWalletWithDID]
 
 
+@streamable
+@dataclass(frozen=True)
+class NFTGetInfo(Streamable):
+    coin_id: str
+    latest: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetInfoResponse(Streamable):
+    nft_info: NFTInfo
+
+
+# utility for NFTCalculateRoyalties
+@streamable
+@dataclass(frozen=True)
+class RoyaltyAsset(Streamable):
+    asset: str
+    royalty_address: str
+    royalty_percentage: uint16
+
+
+# utility for NFTCalculateRoyalties
+@streamable
+@dataclass(frozen=True)
+class FungibleAsset(Streamable):
+    asset: Optional[str]
+    amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCalculateRoyalties(Streamable):
+    royalty_assets: list[RoyaltyAsset] = field(default_factory=list)
+    fungible_assets: list[FungibleAsset] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if len(set(a.asset for a in self.royalty_assets)) != len(self.royalty_assets):
+            raise ValueError("Multiple royalty assets with same name specified")
+        if len(set(a.asset for a in self.fungible_assets)) != len(self.fungible_assets):
+            raise ValueError("Multiple fungible assets with same name specified")
+
+
+# utility for NFTCalculateRoyaltiesResponse
+@streamable
+@dataclass(frozen=True)
+class RoyaltySummary(Streamable):
+    royalty_asset: str
+    fungible_asset: Optional[str]
+    royalty_address: str
+    royalty_amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCalculateRoyaltiesResponse(Streamable):
+    nft_info: list[RoyaltySummary]
+
+    # old response is a dict with arbitrary keys so we must override serialization for backwards compatibility
+    def to_json_dict(self) -> dict[str, Any]:
+        summary_dict: dict[str, Any] = {}
+        for info in self.nft_info:
+            summary_dict.setdefault(info.royalty_asset, [])
+            summary_dict[info.royalty_asset].append(
+                {
+                    "asset": info.fungible_asset,
+                    "address": info.royalty_address,
+                    "amount": info.royalty_amount,
+                }
+            )
+
+        return summary_dict
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> NFTCalculateRoyaltiesResponse:
+        # There's some awkwardness here because the canonical format of this response
+        # returns all of the asset information on the same level as the "success"
+        # key that gets automatically returned by the RPC
+        #
+        # This is an unfortunate design choice, but one we must preserve for
+        # backwards compatibility. This means the code below has some logic it
+        # probably shouldn't have ignoring "assets" named "success".
+        return cls(
+            [
+                RoyaltySummary(
+                    royalty_asset,
+                    summary["asset"],
+                    summary["address"],
+                    uint64(summary["amount"]),
+                )
+                for royalty_asset, summaries in json_dict.items()
+                if royalty_asset != "success"
+                for summary in summaries
+            ]
+        )
+
+
 # utility for NFTSetDIDBulk
 @streamable
 @dataclass(frozen=True)
 class NFTCoin(Streamable):
     nft_coin_id: str
     wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class PWStatus(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class PWStatusResponse(Streamable):
+    state: PoolWalletInfo
+    unconfirmed_transactions: list[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class DLTrackNew(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLStopTracking(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLLatestSingleton(Streamable):
+    launcher_id: bytes32
+    only_confirmed: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class DLLatestSingletonResponse(Streamable):
+    singleton: Optional[SingletonRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class DLSingletonsByRoot(Streamable):
+    launcher_id: bytes32
+    root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLSingletonsByRootResponse(Streamable):
+    singletons: list[SingletonRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class DLHistory(Streamable):
+    launcher_id: bytes32
+    min_generation: Optional[uint32] = None
+    max_generation: Optional[uint32] = None
+    num_results: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DLHistoryResponse(Streamable):
+    history: list[SingletonRecord]
+    count: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLOwnedSingletonsResponse(Streamable):
+    singletons: list[SingletonRecord]
+    count: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLGetMirrors(Streamable):
+    launcher_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLGetMirrorsResponse(Streamable):
+    mirrors: list[Mirror]
 
 
 @streamable
@@ -632,6 +859,47 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class NFTMintNFTRequest(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    royalty_address: Optional[str] = field(default_factory=default_raise)
+    target_address: Optional[str] = field(default_factory=default_raise)
+    uris: list[str] = field(default_factory=default_raise)
+    hash: bytes32 = field(default_factory=default_raise)
+    royalty_amount: uint16 = uint16(0)
+    meta_uris: list[str] = field(default_factory=list)
+    license_uris: list[str] = field(default_factory=list)
+    edition_number: uint64 = uint64(1)
+    edition_total: uint64 = uint64(1)
+    meta_hash: Optional[bytes32] = None
+    license_hash: Optional[bytes32] = None
+    did_id: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTMintNFTResponse(TransactionEndpointResponse):
+    wallet_id: uint32
+    spend_bundle: WalletSpendBundle
+    nft_id: str
+
+
+@streamable
+@kw_only_dataclass
+class NFTSetNFTDID(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    nft_coin_id: bytes32 = field(default_factory=default_raise)
+    did_id: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTSetNFTDIDResponse(TransactionEndpointResponse):
+    wallet_id: uint32
+    spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
 class NFTSetDIDBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
@@ -658,6 +926,221 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
     tx_num: uint16
     spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
+class CreateNewDL(TransactionEndpointRequest):
+    root: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class CreateNewDLResponse(TransactionEndpointResponse):
+    launcher_id: bytes32
+
+
+@streamable
+@kw_only_dataclass
+class DLUpdateRoot(TransactionEndpointRequest):
+    launcher_id: bytes32 = field(default_factory=default_raise)
+    new_root: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateRootResponse(TransactionEndpointResponse):
+    tx_record: TransactionRecord
+
+
+# utilities for DLUpdateMultiple
+@streamable
+@dataclass(frozen=True)
+class LauncherRootPair(Streamable):
+    launcher_id: bytes32
+    new_root: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateMultipleUpdates(Streamable):
+    launcher_root_pairs: list[LauncherRootPair]
+
+    def __post_init__(self) -> None:
+        if len(set(pair.launcher_id for pair in self.launcher_root_pairs)) < len(self.launcher_root_pairs):
+            raise ValueError("Multiple updates specified for a single launcher in `DLUpdateMultiple`")
+
+    # TODO: deprecate the kinda silly format of this RPC and delete this function
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            [
+                LauncherRootPair(
+                    bytes32.from_hexstr(key),
+                    bytes32.from_hexstr(value),
+                )
+                for key, value in json_dict.items()
+            ]
+        )
+
+
+@streamable
+@kw_only_dataclass
+class DLUpdateMultiple(TransactionEndpointRequest):
+    updates: DLUpdateMultipleUpdates = field(default_factory=default_raise)
+
+    # TODO: deprecate the kinda silly format of this RPC and delete this function
+    def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
+        return {"updates": {pair.launcher_id.hex(): pair.new_root.hex() for pair in self.updates.launcher_root_pairs}}
+
+
+@streamable
+@dataclass(frozen=True)
+class DLUpdateMultipleResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
+class DLNewMirror(TransactionEndpointRequest):
+    launcher_id: bytes32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    urls: list[str] = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLNewMirrorResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
+class DLDeleteMirror(TransactionEndpointRequest):
+    coin_id: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class DLDeleteMirrorResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTTransferNFT(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    target_address: str = field(default_factory=default_raise)
+    nft_coin_id: str = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTTransferNFTResponse(TransactionEndpointResponse):
+    wallet_id: uint32
+    spend_bundle: WalletSpendBundle
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTAddURI(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    uri: str = field(default_factory=default_raise)
+    key: str = field(default_factory=default_raise)
+    nft_coin_id: str = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTAddURIResponse(TransactionEndpointResponse):
+    wallet_id: uint32
+    spend_bundle: WalletSpendBundle
+
+
+# utility for NFTBulkMint
+@streamable
+@dataclass(frozen=True)
+class NFTMintMetadata(Streamable):
+    uris: list[str]
+    hash: bytes32
+    meta_uris: list[str] = field(default_factory=list)
+    license_uris: list[str] = field(default_factory=list)
+    edition_number: uint64 = uint64(1)
+    edition_total: uint64 = uint64(1)
+    meta_hash: Optional[bytes32] = None
+    license_hash: Optional[bytes32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTMintBulk(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    metadata_list: list[NFTMintMetadata] = field(default_factory=default_raise)
+    royalty_address: Optional[str] = None
+    royalty_percentage: Optional[uint16] = None
+    target_list: list[str] = field(default_factory=list)
+    mint_number_start: uint16 = uint16(1)
+    mint_total: Optional[uint16] = None
+    xch_coins: Optional[list[Coin]] = None
+    xch_change_target: Optional[str] = None
+    new_innerpuzhash: Optional[bytes32] = None
+    new_p2_puzhash: Optional[bytes32] = None
+    did_coin: Optional[Coin] = None
+    did_lineage_parent: Optional[bytes32] = None
+    mint_from_did: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTMintBulkResponse(TransactionEndpointResponse):
+    spend_bundle: WalletSpendBundle
+    nft_id_list: list[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class PWJoinPool(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    pool_url: str = field(default_factory=default_raise)
+    target_puzzlehash: bytes32 = field(default_factory=default_raise)
+    relative_lock_height: uint32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class PWJoinPoolResponse(TransactionEndpointResponse):
+    total_fee: uint64
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class PWSelfPool(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class PWSelfPoolResponse(TransactionEndpointResponse):
+    total_fee: uint64
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class PWAbsorbRewards(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    max_spends_in_tx: Optional[uint16] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class PWAbsorbRewardsResponse(TransactionEndpointResponse):
+    state: PoolWalletInfo
+    transaction: TransactionRecord
+    fee_transaction: Optional[TransactionRecord]
 
 
 @streamable
@@ -798,39 +1281,3 @@ class CancelOfferResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class CancelOffersResponse(TransactionEndpointResponse):
     pass
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTMintNFTResponse(TransactionEndpointResponse):
-    wallet_id: uint32
-    spend_bundle: WalletSpendBundle
-    nft_id: str
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTAddURIResponse(TransactionEndpointResponse):
-    wallet_id: uint32
-    spend_bundle: WalletSpendBundle
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTTransferNFTResponse(TransactionEndpointResponse):
-    wallet_id: uint32
-    spend_bundle: WalletSpendBundle
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTSetNFTDIDResponse(TransactionEndpointResponse):
-    wallet_id: uint32
-    spend_bundle: WalletSpendBundle
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTMintBulkResponse(TransactionEndpointResponse):
-    spend_bundle: WalletSpendBundle
-    nft_id_list: list[str]

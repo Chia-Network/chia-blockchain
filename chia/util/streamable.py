@@ -126,6 +126,10 @@ def is_type_Tuple(f_type: object) -> bool:
     return get_origin(f_type) is tuple or f_type is tuple
 
 
+def is_type_Dict(f_type: object) -> bool:
+    return get_origin(f_type) is dict or f_type is dict
+
+
 def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
     if item is None:
         return None
@@ -144,6 +148,12 @@ def convert_list(convert_func: ConvertFunctionType, items: list[Any]) -> list[An
     if not isinstance(items, list):
         raise InvalidTypeError(list, type(items))
     return [convert_func(item) for item in items]
+
+
+def convert_dict(
+    key_converter: ConvertFunctionType, value_converter: ConvertFunctionType, mapping: dict[Any, Any]
+) -> dict[Any, Any]:
+    return {key_converter(key): value_converter(value) for key, value in mapping.items()}
 
 
 def convert_hex_string(item: str) -> bytes:
@@ -213,6 +223,11 @@ def function_to_convert_one_item(
         convert_inner_func = function_to_convert_one_item(inner_type, json_parser)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
+    elif is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_converter = function_to_convert_one_item(inner_types[0], json_parser)
+        value_converter = function_to_convert_one_item(inner_types[1], json_parser)
+        return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
     elif hasattr(f_type, "from_json_dict"):
         if json_parser is None:
             json_parser = f_type.from_json_dict
@@ -257,6 +272,11 @@ def function_to_post_init_process_one_item(f_type: type[object]) -> ConvertFunct
         inner_type = get_args(f_type)[0]
         process_inner_func = function_to_post_init_process_one_item(inner_type)
         return lambda items: convert_list(process_inner_func, items)  # type: ignore[arg-type]
+    if is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_converter = function_to_post_init_process_one_item(inner_types[0])
+        value_converter = function_to_post_init_process_one_item(inner_types[1])
+        return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
     return lambda item: post_init_process_item(f_type, item)
 
 
@@ -365,6 +385,19 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: list[ParseFunctionType]) -
     return tuple(full_list)
 
 
+def parse_dict(
+    f: BinaryIO, key_parse_inner_type_f: ParseFunctionType, value_parse_inner_type_f: ParseFunctionType
+) -> dict[object, object]:
+    # We know this is a list of tuples but our parse_list hint doesn't help us here
+    keys_and_values: list[tuple[object, object]] = parse_list(  # type: ignore[assignment]
+        f, lambda inner_f: parse_tuple(inner_f, [key_parse_inner_type_f, value_parse_inner_type_f])
+    )
+    parsed_dict: dict[object, object] = dict(keys_and_values)
+    if len(parsed_dict) < len(keys_and_values):
+        raise ValueError("duplicate dict keys found when deserializing")
+    return parsed_dict
+
+
 def parse_str(f: BinaryIO) -> str:
     str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
@@ -399,6 +432,11 @@ def function_to_parse_one_item(f_type: type[Any]) -> ParseFunctionType:
         inner_types = get_args(f_type)
         list_parse_inner_type_f = [function_to_parse_one_item(_) for _ in inner_types]
         return lambda f: parse_tuple(f, list_parse_inner_type_f)
+    if is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_parse_inner_type_f = function_to_parse_one_item(inner_types[0])
+        value_parse_inner_type_f = function_to_parse_one_item(inner_types[1])
+        return lambda f: parse_dict(f, key_parse_inner_type_f, value_parse_inner_type_f)
     if f_type is str:
         return parse_str
     raise UnsupportedType(f"Type {f_type} does not have parse")
@@ -427,6 +465,21 @@ def stream_tuple(stream_inner_type_funcs: list[StreamFunctionType], item: Any, f
     assert len(stream_inner_type_funcs) == len(item)
     for i in range(len(item)):
         stream_inner_type_funcs[i](item[i], f)
+
+
+def stream_dict(
+    key_stream_inner_type_func: StreamFunctionType,
+    value_stream_inner_type_func: StreamFunctionType,
+    item: Any,
+    f: BinaryIO,
+) -> None:
+    return stream_list(
+        lambda inner_item, inner_f: stream_tuple(
+            [key_stream_inner_type_func, value_stream_inner_type_func], inner_item, inner_f
+        ),
+        list(item.items()),
+        f,
+    )
 
 
 def stream_str(item: Any, f: BinaryIO) -> None:
@@ -469,6 +522,11 @@ def function_to_stream_one_item(f_type: type[Any]) -> StreamFunctionType:
         for i in range(len(inner_types)):
             stream_inner_type_funcs.append(function_to_stream_one_item(inner_types[i]))
         return lambda item, f: stream_tuple(stream_inner_type_funcs, item, f)
+    elif is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_stream_inner_type_func = function_to_stream_one_item(inner_types[0])
+        value_stream_inner_type_func = function_to_stream_one_item(inner_types[1])
+        return lambda item, f: stream_dict(key_stream_inner_type_func, value_stream_inner_type_func, item, f)
     elif f_type is str:
         return stream_str
     elif f_type is bool:

@@ -1,6 +1,5 @@
 [mypy]
 files = benchmarks,build_scripts,chia,tools,*.py
-ignore_missing_imports = True
 show_error_codes = True
 warn_unused_ignores = True
 
@@ -30,3 +29,56 @@ no_implicit_optional = False
 warn_return_any = False
 no_implicit_reexport = False
 strict_equality = False
+
+# TODO: stop ignoring these and get hints for as many as possible
+
+[mypy-boto3.*]
+ignore_missing_imports = True
+
+[mypy-botocore.*]
+ignore_missing_imports = True
+
+[mypy-chia_puzzles_py.*]
+ignore_missing_imports = True
+
+[mypy-chiabip158.*]
+ignore_missing_imports = True
+
+[mypy-chiapos.*]
+ignore_missing_imports = True
+
+[mypy-chiavdf.*]
+ignore_missing_imports = True
+
+[mypy-clvm_tools_rs.*]
+ignore_missing_imports = True
+
+[mypy-colorama.*]
+ignore_missing_imports = True
+
+[mypy-dnslib.*]
+ignore_missing_imports = True
+
+[mypy-hsms.*]
+ignore_missing_imports = True
+
+[mypy-keyrings.cryptfile.*]
+ignore_missing_imports = True
+
+[mypy-lxml.*]
+ignore_missing_imports = True
+
+[mypy-miniupnpc.*]
+ignore_missing_imports = True
+
+[mypy-psutil.*]
+ignore_missing_imports = True
+
+[mypy-sortedcontainers.*]
+ignore_missing_imports = True
+
+[mypy-testconfig.*]
+ignore_missing_imports = True
+
+[mypy-zstd.*]
+ignore_missing_imports = True

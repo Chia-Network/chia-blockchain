@@ -41,6 +41,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -48,6 +49,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
@@ -155,7 +157,7 @@ class FullNode:
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
     _block_store: Optional[BlockStore] = None
-    _coin_store: Optional[CoinStore] = None
+    _coin_store: Optional[CoinStoreProtocol] = None
     _mempool_manager: Optional[MempoolManager] = None
     _init_weight_proof: Optional[asyncio.Task[None]] = None
     _blockchain: Optional[Blockchain] = None
@@ -263,15 +265,16 @@ class FullNode:
             log_coins = self.config.get("log_coins", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+            selected_network = self.config.get("selected_network")
+            height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
             self._blockchain = await Blockchain.create(
                 coin_store=self.coin_store,
                 block_store=self.block_store,
                 consensus_constants=self.constants,
-                blockchain_dir=self.db_path.parent,
+                height_map=height_map,
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
-                selected_network=self.config.get("selected_network"),
             )
 
             self._mempool_manager = MempoolManager(
@@ -304,10 +307,9 @@ class FullNode:
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             if peak is None:
                 self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-                num_unspent = await self.coin_store.num_unspent()
-                if num_unspent > 0:
+                if not await self.coin_store.is_empty():
                     self.log.error(
-                        f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                        "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
                         "This is a fatal error. The blockchain database may be corrupt"
                     )
                     raise RuntimeError("corrupt blockchain DB")
@@ -348,9 +350,9 @@ class FullNode:
             self.initialized = True
 
             try:
-                async with contextlib.AsyncExitStack() as exit_stack:
+                async with contextlib.AsyncExitStack() as aexit_stack:
                     if self.full_node_peers is not None:
-                        await exit_stack.enter_async_context(self.full_node_peers.manage())
+                        await aexit_stack.enter_async_context(self.full_node_peers.manage())
                     yield
             finally:
                 self._shut_down = True
@@ -417,7 +419,7 @@ class FullNode:
         return self._blockchain
 
     @property
-    def coin_store(self) -> CoinStore:
+    def coin_store(self) -> CoinStoreProtocol:
         assert self._coin_store is not None
         return self._coin_store
 

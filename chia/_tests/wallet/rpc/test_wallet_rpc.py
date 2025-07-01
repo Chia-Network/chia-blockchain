@@ -108,13 +108,20 @@ from chia.wallet.wallet_request_types import (
     DefaultCAT,
     DeleteKey,
     DIDGetPubkey,
+    FungibleAsset,
     GetNotifications,
     GetPrivateKey,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     LogIn,
+    NFTCalculateRoyalties,
+    NFTGetInfo,
+    NFTGetNFTs,
+    NFTMintNFTRequest,
+    NFTTransferNFT,
     PushTransactions,
     PushTX,
+    RoyaltyAsset,
     SetWalletResyncOnStartup,
     SplitCoins,
     VerifySignature,
@@ -1617,12 +1624,15 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     res = await wallet_1_rpc.create_new_nft_wallet(None)
     nft_wallet_id = res["wallet_id"]
     mint_res = await wallet_1_rpc.mint_nft(
-        nft_wallet_id,
-        None,
-        None,
-        "0xD4584AD463139FA8C0D9F68F4B59F185",
-        ["https://www.chia.net/img/branding/chia-logo.svg"],
-        DEFAULT_TX_CONFIG,
+        request=NFTMintNFTRequest(
+            wallet_id=nft_wallet_id,
+            royalty_address=None,
+            target_address=None,
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+            uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+            push=True,
+        ),
+        tx_config=DEFAULT_TX_CONFIG,
     )
 
     spend_bundle = mint_res.spend_bundle
@@ -1641,18 +1651,22 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     # Test with the hex version of nft_id
     nft_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
-    nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
+    with pytest.raises(ResponseFailureError, match="Invalid Coin ID format for 'coin_id'"):
+        await wallet_1_rpc.get_nft_info(NFTGetInfo("error"))
+    nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
+    assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
     # Test with the bech32m version of nft_id
     hmr_nft_id = encode_puzzle_hash(
         (await nft_wallet.get_current_nfts())[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
     )
-    nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
+    nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(hmr_nft_id))).nft_info
+    assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
 
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
-    await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0, DEFAULT_TX_CONFIG)
+    await wallet_1_rpc.transfer_nft(
+        NFTTransferNFT(wallet_id=nft_wallet_id, nft_coin_id=nft_id, target_address=addr, push=True), DEFAULT_TX_CONFIG
+    )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
@@ -1665,24 +1679,69 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     )[0].id
     nft_wallet_1 = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
     assert isinstance(nft_wallet_1, NFTWallet)
-    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id, False))).nft_info
     assert nft_info_1 == nft_info
-    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info_1["nft_coin_id"][2:] == (await nft_wallet_1.get_current_nfts())[0].coin.name().hex()
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
+    assert nft_info_1.nft_coin_id == (await nft_wallet_1.get_current_nfts())[0].coin.name()
     # Cross-check NFT
-    nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
+    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs(nft_wallet_id_1))).nft_list[0]
+    assert nft_info_1 == nft_info_2
+    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs())).nft_list[0]
     assert nft_info_1 == nft_info_2
 
     # Test royalty endpoint
+    with pytest.raises(ValueError, match="Multiple royalty assets with same name specified"):
+        await wallet_1_rpc.nft_calculate_royalties(
+            NFTCalculateRoyalties(
+                [
+                    RoyaltyAsset(
+                        "my asset",
+                        "my address",
+                        uint16(10000),
+                    ),
+                    RoyaltyAsset(
+                        "my asset",
+                        "some other address",
+                        uint16(11111),
+                    ),
+                ],
+                [],
+            )
+        )
+    with pytest.raises(ValueError, match="Multiple fungible assets with same name specified"):
+        await wallet_1_rpc.nft_calculate_royalties(
+            NFTCalculateRoyalties(
+                [],
+                [
+                    FungibleAsset(
+                        None,
+                        uint64(10000),
+                    ),
+                    FungibleAsset(
+                        None,
+                        uint64(11111),
+                    ),
+                ],
+            )
+        )
     royalty_summary = await wallet_1_rpc.nft_calculate_royalties(
-        {
-            "my asset": ("my address", uint16(10000)),
-        },
-        {
-            None: uint64(10000),
-        },
+        NFTCalculateRoyalties(
+            [
+                RoyaltyAsset(
+                    "my asset",
+                    "my address",
+                    uint16(10000),
+                )
+            ],
+            [
+                FungibleAsset(
+                    None,
+                    uint64(10000),
+                )
+            ],
+        )
     )
-    assert royalty_summary == {
+    assert royalty_summary.to_json_dict() == {
         "my asset": [
             {
                 "asset": None,
@@ -2386,12 +2445,15 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     nft_wallet_id = nft_wallet["wallet_id"]
     address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
     await wc.mint_nft(
-        nft_wallet_id,
+        request=NFTMintNFTRequest(
+            wallet_id=nft_wallet_id,
+            royalty_address=address,
+            target_address=address,
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+            uris=["http://test.nft"],
+            push=True,
+        ),
         tx_config=DEFAULT_TX_CONFIG,
-        royalty_address=address,
-        target_address=address,
-        hash="deadbeef",
-        uris=["http://test.nft"],
     )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)
