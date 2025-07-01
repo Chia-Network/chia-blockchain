@@ -54,6 +54,8 @@ from chia.wallet.wallet_request_types import (
     DIDUpdateMetadata,
     FungibleAsset,
     GetNotifications,
+    GetTransaction,
+    GetTransactions,
     GetWalletBalance,
     GetWallets,
     NFTAddURI,
@@ -182,7 +184,9 @@ async def get_transaction(
     async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
-        tx: TransactionRecord = await wallet_client.get_transaction(transaction_id=transaction_id)
+        tx: TransactionRecord = (
+            await wallet_client.get_transaction(GetTransaction(transaction_id=transaction_id))
+        ).transaction
 
         try:
             wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
@@ -230,9 +234,18 @@ async def get_transactions(
                 [TransactionType.INCOMING_CLAWBACK_RECEIVE, TransactionType.INCOMING_CLAWBACK_SEND]
             )
         )
-        txs: list[TransactionRecord] = await wallet_client.get_transactions(
-            wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse, type_filter=type_filter
-        )
+        txs = (
+            await wallet_client.get_transactions(
+                GetTransactions(
+                    uint32(wallet_id),
+                    start=uint16(offset),
+                    end=uint16(offset + limit),
+                    sort_key=sort_key.name,
+                    reverse=reverse,
+                    type_filter=type_filter,
+                )
+            )
+        ).transactions
 
         address_prefix = selected_network_address_prefix(config)
         if len(txs) == 0:
@@ -386,7 +399,7 @@ async def send(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_id))

@@ -43,6 +43,7 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    GetTransaction,
     GetWalletBalance,
     GetWallets,
     PWAbsorbRewards,
@@ -121,7 +122,7 @@ async def create(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_info.client.get_transaction(tx_record.name)
+            tx = (await wallet_info.client.get_transaction(GetTransaction(tx_record.name))).transaction
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(wallet_info.fingerprint, tx_record.name))
@@ -286,7 +287,7 @@ async def submit_tx_with_confirmation(
                 continue
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_record.name)
+                tx = (await wallet_client.get_transaction(GetTransaction(tx_record.name))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
