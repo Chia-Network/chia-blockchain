@@ -9,7 +9,6 @@ from typing import Optional
 from chia_rs import CoinSpend, G2Element, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
@@ -18,6 +17,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_item import UnspentLineageInfo
+from chia.util.casts import int_to_bytes
 
 # this is one week worth of blocks
 NUM_ITERS = 32256

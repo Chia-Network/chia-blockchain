@@ -615,7 +615,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
         bytes32(mirror_coin.name()),
         bytes32(launcher_id_2),
         uint64(mirror_coin.amount),
-        [b"foo", b"bar"],
+        ["foo", "bar"],
         True,
         wallet_environments.full_node.full_node.blockchain.get_peak_height(),
     )

@@ -73,6 +73,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import DLLatestSingleton
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 
 pytestmark = pytest.mark.data_layer
@@ -215,7 +216,7 @@ async def check_coin_state(wallet_node: WalletNode, coin_id: bytes32) -> bool:
 
 
 async def check_singleton_confirmed(dl: DataLayer, store_id: bytes32) -> bool:
-    return await dl.wallet_rpc.dl_latest_singleton(store_id, True) is not None
+    return (await dl.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton is not None
 
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:

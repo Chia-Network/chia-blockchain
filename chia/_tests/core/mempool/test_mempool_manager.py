@@ -23,7 +23,6 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from chiabip158 import PyBIP158
-from clvm.casts import int_to_bytes
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import Marks, datacases, invariant_check_mempool
@@ -70,6 +69,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.types.peer_info import PeerInfo
+from chia.util.casts import int_to_bytes
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
 from chia.wallet.conditions import AssertCoinAnnouncement
