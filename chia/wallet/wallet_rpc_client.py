@@ -106,6 +106,10 @@ from chia.wallet.wallet_request_types import (
     GetTimestampForHeightResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
+    GetWalletBalance,
+    GetWalletBalanceResponse,
+    GetWalletBalances,
+    GetWalletBalancesResponse,
     GetWallets,
     GetWalletsResponse,
     LogIn,
@@ -262,17 +266,11 @@ class WalletRpcClient(RpcClient):
         return GetWalletsResponse.from_json_dict(await self.fetch("get_wallets", request.to_json_dict()))
 
     # Wallet APIs
-    async def get_wallet_balance(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("get_wallet_balance", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(dict[str, Any], response["wallet_balance"])
+    async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
+        return GetWalletBalanceResponse.from_json_dict(await self.fetch("get_wallet_balance", request.to_json_dict()))
 
-    async def get_wallet_balances(self, wallet_ids: Optional[list[int]] = None) -> dict[str, dict[str, Any]]:
-        request = {"wallet_ids": wallet_ids}
-        response = await self.fetch("get_wallet_balances", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(dict[str, dict[str, Any]], response["wallet_balances"])
+    async def get_wallet_balances(self, request: GetWalletBalances) -> GetWalletBalancesResponse:
+        return GetWalletBalancesResponse.from_json_dict(await self.fetch("get_wallet_balances", request.to_json_dict()))
 
     async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
         request = {"transaction_id": transaction_id.hex()}

@@ -6,7 +6,7 @@ from typing import Any, Optional, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Self, dataclass_transform
 
 from chia.data_layer.data_layer_wallet import Mirror
@@ -32,6 +32,7 @@ from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamab
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -219,6 +220,59 @@ class WalletInfoResponse(WalletInfo):
 class GetWalletsResponse(Streamable):
     wallets: list[WalletInfoResponse]
     fingerprint: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalance(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalances(Streamable):
+    wallet_ids: Optional[list[uint32]] = None
+
+
+# utility for GetWalletBalanceResponse(s)
+@streamable
+@kw_only_dataclass
+class BalanceResponse(Balance):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_type: uint8 = field(default_factory=default_raise)
+    fingerprint: Optional[uint32] = None
+    asset_id: Optional[bytes32] = None
+    pending_approval_balance: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalanceResponse(Streamable):
+    wallet_balance: BalanceResponse
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalancesResponse(Streamable):
+    wallet_balances: list[BalanceResponse]
+
+    @property
+    def wallet_balances_dict(self) -> dict[uint32, BalanceResponse]:
+        return {response.wallet_id: response for response in self.wallet_balances}
+
+    # special dict format that streamable can't handle natively
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "wallet_balances": {
+                str(wallet_id): response.to_json_dict() for wallet_id, response in self.wallet_balances_dict.items()
+            }
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> GetWalletBalancesResponse:
+        return super().from_json_dict(
+            {"wallet_balances": [balance_response for balance_response in json_dict["wallet_balances"].values()]}
+        )
 
 
 @streamable

@@ -41,7 +41,14 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import GetWallets, PWAbsorbRewards, PWJoinPool, PWSelfPool, PWStatus
+from chia.wallet.wallet_request_types import (
+    GetWalletBalance,
+    GetWallets,
+    PWAbsorbRewards,
+    PWJoinPool,
+    PWSelfPool,
+    PWStatus,
+)
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -468,8 +475,8 @@ class TestPoolWalletRpc:
             assert len(asset_id) > 0
             await full_node_api.process_all_wallet_transactions(wallet=wallet)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 20
+            bal_0 = (await client.get_wallet_balance(GetWalletBalance(cat_0_id))).wallet_balance
+            assert bal_0.confirmed_wallet_balance == 20
 
         # Test creation of many pool wallets. Use untrusted since that is the more complicated protocol, but don't
         # run this code more than once, since it's slow.
@@ -535,8 +542,8 @@ class TestPoolWalletRpc:
             await add_blocks_in_batches(blocks[-3:], full_node_api.full_node)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == 2 * 1_750_000_000_000
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == 2 * 1_750_000_000_000
 
             # Claim 2 * 1.75, and farm a new 1.75
             absorb_txs = (
@@ -561,8 +568,8 @@ class TestPoolWalletRpc:
             new_status: PoolWalletInfo = (await client.pw_status(PWStatus(uint32(2)))).state
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == 1 * 1_750_000_000_000
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == 1 * 1_750_000_000_000
 
             # Claim another 1.75
             absorb_txs1 = (
@@ -575,8 +582,8 @@ class TestPoolWalletRpc:
 
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == 0
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == 0
 
             assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
@@ -590,8 +597,8 @@ class TestPoolWalletRpc:
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
 
             # Balance ignores non coinbase TX
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == 0
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == 0
 
             with pytest.raises(ValueError):
                 await client.pw_absorb_rewards(
@@ -626,8 +633,8 @@ class TestPoolWalletRpc:
         pool_expected_confirmed_balance = 0
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        main_bal = await client.get_wallet_balance(1)
-        assert main_bal["confirmed_wallet_balance"] == main_expected_confirmed_balance
+        main_bal = (await client.get_wallet_balance(GetWalletBalance(uint32(1)))).wallet_balance
+        assert main_bal.confirmed_wallet_balance == main_expected_confirmed_balance
 
         status: PoolWalletInfo = (await client.pw_status(PWStatus(uint32(2)))).state
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -650,10 +657,10 @@ class TestPoolWalletRpc:
             pool_expected_confirmed_balance += block_count * 1_750_000_000_000
             main_expected_confirmed_balance += block_count * 250_000_000_000
 
-            main_bal = await client.get_wallet_balance(1)
-            assert main_bal["confirmed_wallet_balance"] == main_expected_confirmed_balance
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == pool_expected_confirmed_balance
+            main_bal = (await client.get_wallet_balance(GetWalletBalance(uint32(1)))).wallet_balance
+            assert main_bal.confirmed_wallet_balance == main_expected_confirmed_balance
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == pool_expected_confirmed_balance
 
             # Claim
             absorb_txs = (
@@ -671,10 +678,10 @@ class TestPoolWalletRpc:
             new_status: PoolWalletInfo = (await client.pw_status(PWStatus(uint32(2)))).state
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
-            main_bal = await client.get_wallet_balance(1)
-            pool_bal = await client.get_wallet_balance(2)
-            assert pool_bal["confirmed_wallet_balance"] == pool_expected_confirmed_balance
-            assert main_bal["confirmed_wallet_balance"] == main_expected_confirmed_balance  # 10499999999999
+            main_bal = (await client.get_wallet_balance(GetWalletBalance(uint32(1)))).wallet_balance
+            pool_bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert pool_bal.confirmed_wallet_balance == pool_expected_confirmed_balance
+            assert main_bal.confirmed_wallet_balance == main_expected_confirmed_balance  # 10499999999999
 
     @pytest.mark.anyio
     async def test_absorb_pooling(
@@ -726,8 +733,8 @@ class TestPoolWalletRpc:
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
             # Pooled plots don't have balance
             main_expected_confirmed_balance += block_count * 250_000_000_000
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == 0
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == 0
 
             # Claim block_count * 1.75
             ret = await client.pw_absorb_rewards(
@@ -751,12 +758,12 @@ class TestPoolWalletRpc:
 
             await time_out_assert(20, status_updated)
             new_status = (await client.pw_status(PWStatus(uint32(2)))).state
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == 0
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == 0
 
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-            bal = await client.get_wallet_balance(2)
-            assert bal["confirmed_wallet_balance"] == 0
+            bal = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal.confirmed_wallet_balance == 0
             assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
             peak = full_node_api.full_node.blockchain.get_peak()
             assert peak is not None
@@ -798,8 +805,8 @@ class TestPoolWalletRpc:
                     status = (await client.pw_status(PWStatus(uint32(2)))).state
                     assert ret.fee_transaction is None
 
-            bal2 = await client.get_wallet_balance(2)
-            assert bal2["confirmed_wallet_balance"] == 0
+            bal2 = (await client.get_wallet_balance(GetWalletBalance(uint32(2)))).wallet_balance
+            assert bal2.confirmed_wallet_balance == 0
 
     @pytest.mark.anyio
     async def test_self_pooling_to_pooling(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
