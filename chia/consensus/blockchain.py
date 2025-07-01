@@ -564,7 +564,7 @@ class Blockchain:
                 if fork_add.confirmed_height == height and fork_add.is_coinbase
             ]
             tx_additions = [
-                (coin_id, fork_add.coin)
+                (coin_id, fork_add.coin, fork_add.same_as_parent)
                 for coin_id, fork_add in fork_info.additions_since_fork.items()
                 if fork_add.confirmed_height == height and not fork_add.is_coinbase
             ]
