@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional, final
+from typing import Any, BinaryIO, Optional, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -25,7 +25,9 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -43,6 +45,21 @@ def kw_only_dataclass(cls: type[Any]) -> type[Any]:
 
 def default_raise() -> Any:  # pragma: no cover
     raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
+
+
+@streamable
+@dataclass(frozen=True)
+class UserFriendlyTransactionRecord(TransactionRecord):
+    to_address: str
+    memos: dict[bytes32, list[bytes]]  # type: ignore[assignment]
+
+    def to_transaction_record(self) -> TransactionRecord:
+        return TransactionRecord.from_json_dict_convenience(self.to_json_dict())
+
+    @classmethod
+    def from_transaction_record(cls, tx: TransactionRecord, config: dict[str, Any]) -> Self:
+        dict_convenience = tx.to_json_dict_convenience(config)
+        return cls.from_json_dict(dict_convenience)
 
 
 @streamable
@@ -270,6 +287,95 @@ class GetWalletBalancesResponse(Streamable):
         return super().from_json_dict(
             {"wallet_balances": [balance_response for balance_response in json_dict["wallet_balances"].values()]}
         )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransaction(Streamable):
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionResponse(Streamable):
+    transaction: UserFriendlyTransactionRecord
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactions(Streamable):
+    wallet_id: uint32
+    start: Optional[uint16] = None
+    end: Optional[uint16] = None
+    sort_key: Optional[str] = None
+    reverse: bool = False
+    to_address: Optional[str] = None
+    type_filter: Optional[TransactionTypeFilter] = None
+    confirmed: Optional[bool] = None
+
+    def __post_init__(self) -> None:
+        if self.sort_key is not None and self.sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {self.sort_key}")
+
+
+# utility for GetTransactionsResponse
+class TransactionRecordMetadata:
+    content: dict[str, Any]
+    coin_id: bytes32
+    spent: bool
+
+    def __init__(self, content: dict[str, Any], coin_id: bytes32, spent: bool) -> None:
+        self.content = content
+        self.coin_id = coin_id
+        self.spent = spent
+
+    def __eq__(self, other: object) -> bool:
+        if (
+            isinstance(other, TransactionRecordMetadata)
+            and other.content == self.content
+            and other.coin_id == self.coin_id
+            and other.spent == self.spent
+        ):
+            return True
+        else:
+            return False
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> TransactionRecordMetadata:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **self.content,
+            "coin_id": "0x" + self.coin_id.hex(),
+            "spent": self.spent,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> TransactionRecordMetadata:
+        return TransactionRecordMetadata(
+            coin_id=bytes32.from_hexstr(json_dict["coin_id"]),
+            spent=json_dict["spent"],
+            content={k: v for k, v in json_dict.items() if k not in {"coin_id", "spent"}},
+        )
+
+
+# utility for GetTransactionsResponse
+@streamable
+@dataclass(frozen=True)
+class UserFriendlyTransactionRecordWithMetadata(UserFriendlyTransactionRecord):
+    metadata: Optional[TransactionRecordMetadata] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionsResponse(Streamable):
+    transactions: list[UserFriendlyTransactionRecordWithMetadata]
+    wallet_id: uint32
 
 
 @streamable
