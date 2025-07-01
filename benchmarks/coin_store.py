@@ -28,13 +28,14 @@ def make_coin() -> Coin:
     return Coin(rand_hash(), rand_hash(), uint64(1))
 
 
-def make_coins(num: int) -> tuple[list[Coin], list[bytes32]]:
-    additions: list[Coin] = []
+def make_coins(num: int) -> tuple[list[tuple[bytes32, Coin]], list[bytes32]]:
+    additions: list[tuple[bytes32, Coin]] = []
     hashes: list[bytes32] = []
     for i in range(num):
         c = make_coin()
-        additions.append(c)
-        hashes.append(c.name())
+        coin_id = c.name()
+        additions.append((coin_id, c))
+        hashes.append(coin_id)
 
     return additions, hashes
 
@@ -145,7 +146,7 @@ async def run_new_block_benchmark(version: int) -> None:
             # add one new coins
             c = make_coin()
             coin_id = c.name()
-            additions.append(c)
+            additions.append((coin_id, c))
             total_add += 1
 
             farmer_coin, pool_coin = rewards(uint32(height))

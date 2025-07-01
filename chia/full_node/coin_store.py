@@ -82,7 +82,7 @@ class CoinStore:
         height: uint32,
         timestamp: uint64,
         included_reward_coins: Collection[Coin],
-        tx_additions: Collection[Coin],
+        tx_additions: Collection[tuple[bytes32, Coin]],
         tx_removals: list[bytes32],
     ) -> None:
         """
@@ -93,10 +93,10 @@ class CoinStore:
 
         db_values_to_insert = []
 
-        for coin in tx_additions:
+        for coin_id, coin in tx_additions:
             db_values_to_insert.append(
                 (
-                    coin.name(),
+                    coin_id,
                     # confirmed_index
                     height,
                     # spent_index
@@ -216,23 +216,6 @@ class CoinStore:
                         coin_record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                         coins.append(coin_record)
                 return coins
-
-    async def get_all_coins(self, include_spent_coins: bool) -> list[CoinRecord]:
-        # WARNING: this should only be used for testing or in a simulation,
-        # running it on a synced testnet or mainnet node will most likely result in an OOM error.
-        coins = set()
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f"coin_parent, amount, timestamp FROM coin_record "
-                f"{'' if include_spent_coins else 'INDEXED BY coin_spent_index WHERE spent_index=0'}"
-                f" ORDER BY confirmed_index"
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
-                return list(coins)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
@@ -622,3 +605,12 @@ class CoinStore:
                 return UnspentLineageInfo(
                     coin_id=bytes32(coin_id), parent_id=bytes32(parent_id), parent_parent_id=bytes32(parent_parent_id)
                 )
+
+    async def is_empty(self) -> bool:
+        """
+        Returns True if the coin store is empty, False otherwise.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT coin_name FROM coin_record LIMIT 1") as cursor:
+                row = await cursor.fetchone()
+                return row is None or len(row) == 0

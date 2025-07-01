@@ -18,7 +18,7 @@ from chia.consensus.pot_iterations import (
 from chia.util.hash import std_hash
 
 test_constants = DEFAULT_CONSTANTS.replace(
-    NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=uint16(300), HARD_FORK2_HEIGHT=uint32(100000000)
+    NUM_SPS_SUB_SLOT=uint8(32), SUB_SLOT_TIME_TARGET=uint16(300), HARD_FORK2_HEIGHT=uint32(100000000)
 )
 
 
