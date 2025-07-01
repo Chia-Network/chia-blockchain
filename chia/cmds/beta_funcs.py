@@ -44,8 +44,7 @@ def prompt_for_beta_path(default_path: Path) -> Path:
         )
         test_path = Path(user_input) if user_input else default_path
         if not test_path.is_dir() and click.confirm(
-            f"\nDirectory {str(test_path)!r} doesn't exist.\n\nDo you want to create it?",
-            default=None,
+            f"\nDirectory {str(test_path)!r} doesn't exist.\n\nDo you want to create it?", default=None
         ):
             test_path.mkdir(parents=True)
 
@@ -92,13 +91,7 @@ def update_beta_config(enabled: bool, path: Path, metrics_log_interval: int, con
     if "beta" not in config:
         config["beta"] = {}
 
-    config["beta"].update(
-        {
-            "enabled": enabled,
-            "path": str(path),
-            "metrics_log_interval": metrics_log_interval,
-        }
-    )
+    config["beta"].update({"enabled": enabled, "path": str(path), "metrics_log_interval": metrics_log_interval})
 
 
 def validate_beta_path(beta_root_path: Path) -> None:

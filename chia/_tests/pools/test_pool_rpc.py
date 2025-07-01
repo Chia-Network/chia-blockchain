@@ -69,8 +69,7 @@ class TemporaryPoolPlot:
 
 @contextlib.asynccontextmanager
 async def manage_temporary_pool_plot(
-    bt: BlockTools,
-    p2_singleton_puzzle_hash: bytes32,
+    bt: BlockTools, p2_singleton_puzzle_hash: bytes32
 ) -> AsyncIterator[TemporaryPoolPlot]:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path: Path = Path(tmpdir)
@@ -220,13 +219,13 @@ async def process_plotnft_create(
             ">=#max_send_amount": 1,
             "<=#pending_change": 1,  # any amount decrease
             "<=#pending_coin_removal_count": 1,
-        },
+        }
     }
 
     if second_nft:
         post_block = post_block_balance_updates | {
             2: {
-                "set_remainder": True,  # TODO: sometimes this fails with pending_coin_removal_count
+                "set_remainder": True  # TODO: sometimes this fails with pending_coin_removal_count
             },
             3: {"init": True, "unspent_coin_count": 1},
         }
@@ -236,8 +235,7 @@ async def process_plotnft_create(
     await wallet_test_framework.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates=pre_block_balance_updates,
-                post_block_balance_updates=post_block,
+                pre_block_balance_updates=pre_block_balance_updates, post_block_balance_updates=post_block
             )
         ]
     )
@@ -279,10 +277,7 @@ async def create_new_plotnft(
 class TestPoolWalletRpc:
     @pytest.mark.anyio
     async def test_create_new_pool_wallet_self_farm(
-        self,
-        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
-        fee: uint64,
-        self_hostname: str,
+        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -332,10 +327,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.anyio
     async def test_create_new_pool_wallet_farm_to_pool(
-        self,
-        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
-        fee: uint64,
-        self_hostname: str,
+        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -386,11 +378,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.anyio
     async def test_create_multiple_pool_wallets(
-        self,
-        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
-        trusted: bool,
-        fee: uint64,
-        self_hostname: str,
+        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, trusted: bool, fee: uint64, self_hostname: str
     ) -> None:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
 
@@ -772,11 +760,7 @@ class TestPoolWalletRpc:
                         guarantee_transaction_block=True,
                     )
                     # Farm one more block to include the reward of the previous one
-                    blocks = bt.get_consecutive_blocks(
-                        1,
-                        block_list_input=blocks,
-                        guarantee_transaction_block=True,
-                    )
+                    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
                     await add_blocks_in_batches(blocks[-2:], full_node_api.full_node)
                     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -995,22 +979,9 @@ class TestPoolWalletRpc:
         await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_self_pooling)
         assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [
-            {
-                "num_environments": 1,
-                "blocks_needed": [10],
-            }
-        ],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [10]}], indirect=True)
     @pytest.mark.anyio
-    async def test_change_pools(
-        self,
-        fee: uint64,
-        wallet_environments: WalletTestFramework,
-    ) -> None:
+    async def test_change_pools(self, fee: uint64, wallet_environments: WalletTestFramework) -> None:
         """This tests Pool A -> escaping -> Pool B"""
 
         wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -1167,22 +1138,9 @@ class TestPoolWalletRpc:
         # Eventually, leaves pool
         assert await status_is_farming_to_pool()
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [
-            {
-                "num_environments": 1,
-                "blocks_needed": [10],
-            }
-        ],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [10]}], indirect=True)
     @pytest.mark.anyio
-    async def test_join_pool_twice(
-        self,
-        fee: uint64,
-        wallet_environments: WalletTestFramework,
-    ) -> None:
+    async def test_join_pool_twice(self, fee: uint64, wallet_environments: WalletTestFramework) -> None:
         wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
         wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
 
@@ -1209,22 +1167,12 @@ class TestPoolWalletRpc:
 
     @pytest.mark.parametrize(
         "wallet_environments",
-        [
-            {
-                "num_environments": 1,
-                "blocks_needed": [10],
-                "trusted": True,
-                "reuse_puzhash": False,
-            }
-        ],
+        [{"num_environments": 1, "blocks_needed": [10], "trusted": True, "reuse_puzhash": False}],
         indirect=True,
     )
     @pytest.mark.anyio
     async def test_join_pool_unsynced(
-        self,
-        fee: uint64,
-        wallet_environments: WalletTestFramework,
-        mocker: MockerFixture,
+        self, fee: uint64, wallet_environments: WalletTestFramework, mocker: MockerFixture
     ) -> None:
         wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
         wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client

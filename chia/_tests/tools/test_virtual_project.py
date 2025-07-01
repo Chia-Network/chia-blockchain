@@ -577,15 +577,6 @@ def test_parse_edges(tmp_path: Path) -> None:
     # Run the command
     runner = CliRunner()
     result = runner.invoke(
-        cli,
-        [
-            "print_edges",
-            "--directory",
-            str(chia_dir),
-            "--dependent-package",
-            "one",
-            "--provider-package",
-            "two",
-        ],
+        cli, ["print_edges", "--directory", str(chia_dir), "--dependent-package", "one", "--provider-package", "two"]
     )
     assert result.output.strip() == f"{chia_dir / 'module1.py'!s} (one) -> {chia_dir / 'module2.py'!s} (two)"

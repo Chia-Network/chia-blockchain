@@ -127,11 +127,7 @@ def generate_secure_bundle(
     if tail_str is None:
         bundle = WalletSpendBundle(
             [
-                make_spend(
-                    selected_coins[0],
-                    acs,
-                    Program.to(inner_solution),
-                ),
+                make_spend(selected_coins[0], acs, Program.to(inner_solution)),
                 *[make_spend(c, acs, Program.to([])) for c in non_primaries],
             ],
             G2Element(),
@@ -266,7 +262,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         real_blue_spend_replaced = real_blue_spend.replace(
             solution=Program.from_serialized(real_blue_spend.solution)
             .replace(ffrfrf=Program.to(-113), ffrfrr=Program.to([str_to_tail("blue"), []]))
-            .to_serialized(),
+            .to_serialized()
         )
         valid_spend = WalletSpendBundle(
             [real_blue_spend_replaced, *[spend for spend in valid_spend.coin_spends if spend != real_blue_spend]],

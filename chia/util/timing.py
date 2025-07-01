@@ -10,17 +10,9 @@ from typing import Callable, Optional, overload
 
 system_delays = {
     # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724
-    "github": {
-        "darwin": 20,
-        "linux": 1,
-        "win32": 10,
-    },
+    "github": {"darwin": 20, "linux": 1, "win32": 10},
     # arbitrarily selected
-    "local": {
-        "darwin": 2,
-        "linux": 1,
-        "win32": 1,
-    },
+    "local": {"darwin": 2, "linux": 1, "win32": 1},
 }
 
 

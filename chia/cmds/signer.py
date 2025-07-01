@@ -144,11 +144,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
         help="How to output the information to transfer to an external signer",
     )
     output_file: Sequence[str] = option(
-        "--output-file",
-        "-b",
-        type=str,
-        multiple=True,
-        help="The file(s) to output to (if --output-format=file)",
+        "--output-file", "-b", type=str, multiple=True, help="The file(s) to output to (if --output-format=file)"
     )
 
     def handle_clvm_output(self, outputs: list[Streamable]) -> None:

@@ -82,8 +82,7 @@ async def test_valid_message(
         return crawler.server.all_connections[full_node.server.node_id].get_peer_logging() in crawler.with_peak
 
     msg = make_msg(
-        ProtocolMessageTypes.new_peak,
-        NewPeak(bytes32.zeros, uint32(2), uint128(1), uint32(1), bytes32(b"\1" * 32)),
+        ProtocolMessageTypes.new_peak, NewPeak(bytes32.zeros, uint32(2), uint128(1), uint32(1), bytes32(b"\1" * 32))
     )
     assert await connection.send_message(msg)
     await time_out_assert(10, peer_added)

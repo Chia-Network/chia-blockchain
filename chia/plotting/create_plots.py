@@ -25,10 +25,7 @@ log = logging.getLogger(__name__)
 
 class PlotKeys:
     def __init__(
-        self,
-        farmer_public_key: G1Element,
-        pool_public_key: Optional[G1Element],
-        pool_contract_address: Optional[str],
+        self, farmer_public_key: G1Element, pool_public_key: Optional[G1Element], pool_contract_address: Optional[str]
     ):
         self.farmer_public_key = farmer_public_key
         self.pool_public_key = pool_public_key
@@ -148,10 +145,7 @@ async def resolve_plot_keys(
 
 
 async def create_plots(
-    args: Params,
-    keys: PlotKeys,
-    use_datetime: bool = True,
-    test_private_keys: Optional[list[PrivateKey]] = None,
+    args: Params, keys: PlotKeys, use_datetime: bool = True, test_private_keys: Optional[list[PrivateKey]] = None
 ) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir

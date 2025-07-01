@@ -36,14 +36,11 @@ class TransactionPushError(Exception):
 
 def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
     synthetic_secret_key: PrivateKey = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_secret_key(
-        PrivateKey.from_bytes(
-            secret_exponent_for_index(1).to_bytes(32, "big"),
-        ),
+        PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big")),
         p2_delegated_puzzle_or_hidden_puzzle.DEFAULT_HIDDEN_PUZZLE_HASH,
     )
     return AugSchemeMPL.sign(
-        synthetic_secret_key,
-        (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
+        synthetic_secret_key, (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
     )
 
 
@@ -60,10 +57,7 @@ async def make_and_spend_bundle(
     cost_log_msg: str = "",
 ):
     signature: G2Element = sign_delegated_puz(delegated_puzzle, coin)
-    spend_bundle = SpendBundle(
-        coinsols,
-        signature,
-    )
+    spend_bundle = SpendBundle(coinsols, signature)
     if cost_logger is not None:
         spend_bundle = cost_logger.add_cost(cost_log_msg, spend_bundle)
 
@@ -123,11 +117,7 @@ async def test_singleton_top_layer(version, cost_logger):
         delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)
         full_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
 
-        starting_coinsol = make_spend(
-            starting_coin,
-            starting_puzzle,
-            full_solution,
-        )
+        starting_coinsol = make_spend(starting_coin, starting_puzzle, full_solution)
 
         await make_and_spend_bundle(
             sim,
@@ -141,42 +131,21 @@ async def test_singleton_top_layer(version, cost_logger):
 
         # EVE
         singleton_eve: Coin = (await sim.all_non_reward_coins())[0]
-        launcher_coin: Coin = singleton_top_layer.generate_launcher_coin(
-            starting_coin,
-            START_AMOUNT,
-        )
+        launcher_coin: Coin = singleton_top_layer.generate_launcher_coin(starting_coin, START_AMOUNT)
         launcher_id: bytes32 = launcher_coin.name()
         # This delegated puzzle just recreates the coin exactly
         delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [
-                        ConditionOpcode.CREATE_COIN,
-                        adapted_puzzle_hash,
-                        singleton_eve.amount,
-                    ]
-                ],
-            )
+            (1, [[ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount]])
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         # Generate the lineage proof we will need from the launcher coin
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(launcher_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof,
-            singleton_eve.amount,
-            inner_solution,
+            lineage_proof, singleton_eve.amount, inner_solution
         )
 
-        singleton_eve_coinsol = make_spend(
-            singleton_eve,
-            puzzle_reveal,
-            full_solution,
-        )
+        singleton_eve_coinsol = make_spend(singleton_eve, puzzle_reveal, full_solution)
 
         await make_and_spend_bundle(
             sim,
@@ -194,16 +163,10 @@ async def test_singleton_top_layer(version, cost_logger):
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_eve_coinsol)
         # Same puzzle_reveal too
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof,
-            singleton.amount,
-            inner_solution,
+            lineage_proof, singleton.amount, inner_solution
         )
 
-        singleton_coinsol = make_spend(
-            singleton,
-            puzzle_reveal,
-            full_solution,
-        )
+        singleton_coinsol = make_spend(singleton, puzzle_reveal, full_solution)
 
         await make_and_spend_bundle(
             sim,
@@ -223,36 +186,18 @@ async def test_singleton_top_layer(version, cost_logger):
         p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
         p2_singleton_coin = p2_singleton_coin[0].coin
         assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
-            p2_singleton_coin,
-            adapted_puzzle_hash,
-            launcher_id,
+            p2_singleton_coin, adapted_puzzle_hash, launcher_id
         )
         delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount],
-                    assertion,
-                    announcement,
-                ],
-            )
+            (1, [[ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount], assertion, announcement])
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof,
-            singleton_eve.amount,
-            inner_solution,
+            lineage_proof, singleton_eve.amount, inner_solution
         )
-        singleton_claim_coinsol = make_spend(
-            singleton_child,
-            puzzle_reveal,
-            full_solution,
-        )
+        singleton_claim_coinsol = make_spend(singleton_child, puzzle_reveal, full_solution)
 
         await make_and_spend_bundle(
             sim,
@@ -269,9 +214,7 @@ async def test_singleton_top_layer(version, cost_logger):
         DELAY_TIME: uint64 = 1
         DELAY_PH: bytes32 = adapted_puzzle_hash
         p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_or_delay_puzzle(
-            launcher_id,
-            DELAY_TIME,
-            DELAY_PH,
+            launcher_id, DELAY_TIME, DELAY_PH
         )
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         ARBITRARY_AMOUNT: uint64 = 250000000000
@@ -279,38 +222,18 @@ async def test_singleton_top_layer(version, cost_logger):
         p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
         p2_singleton_coin = sorted(p2_singleton_coin, key=lambda x: x.coin.amount)[0].coin
         assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
-            p2_singleton_coin,
-            adapted_puzzle_hash,
-            launcher_id,
-            DELAY_TIME,
-            DELAY_PH,
+            p2_singleton_coin, adapted_puzzle_hash, launcher_id, DELAY_TIME, DELAY_PH
         )
         delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount],
-                    assertion,
-                    announcement,
-                ],
-            )
+            (1, [[ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount], assertion, announcement])
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof,
-            singleton_eve.amount,
-            inner_solution,
+            lineage_proof, singleton_eve.amount, inner_solution
         )
-        delay_claim_coinsol = make_spend(
-            singleton_child,
-            puzzle_reveal,
-            full_solution,
-        )
+        delay_claim_coinsol = make_spend(singleton_child, puzzle_reveal, full_solution)
 
         # Save the height so we can rewind after this
         save_height: uint64 = sim.get_height()  # The last coin solution before this point is singleton_claim_coinsol
@@ -327,11 +250,7 @@ async def test_singleton_top_layer(version, cost_logger):
         # TRY TO SPEND AWAY TOO SOON (Negative Test)
         await sim.rewind(save_height)
         to_delay_ph_coinsol: CoinSpend = singleton_top_layer.spend_to_delayed_puzzle(
-            p2_singleton_coin,
-            ARBITRARY_AMOUNT,
-            launcher_id,
-            DELAY_TIME,
-            DELAY_PH,
+            p2_singleton_coin, ARBITRARY_AMOUNT, launcher_id, DELAY_TIME, DELAY_PH
         )
         _result, error = await sim_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
         assert error == Err.ASSERT_SECONDS_RELATIVE_FAILED
@@ -355,19 +274,12 @@ async def test_singleton_top_layer(version, cost_logger):
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
         full_solution: Program = singleton_top_layer.solution_for_singleton(
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        multi_odd_coinsol = make_spend(
-            singleton_child,
-            puzzle_reveal,
-            full_solution,
-        )
+        multi_odd_coinsol = make_spend(singleton_child, puzzle_reveal, full_solution)
 
         await make_and_spend_bundle(
             sim,
@@ -391,19 +303,12 @@ async def test_singleton_top_layer(version, cost_logger):
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
         full_solution: Program = singleton_top_layer.solution_for_singleton(
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        no_odd_coinsol = make_spend(
-            singleton_child,
-            puzzle_reveal,
-            full_solution,
-        )
+        no_odd_coinsol = make_spend(singleton_child, puzzle_reveal, full_solution)
 
         await make_and_spend_bundle(
             sim,
@@ -422,70 +327,31 @@ async def test_singleton_top_layer(version, cost_logger):
             (
                 1,
                 [
-                    [
-                        ConditionOpcode.CREATE_COIN,
-                        singleton_child.puzzle_hash,
-                        2,
-                    ],
+                    [ConditionOpcode.CREATE_COIN, singleton_child.puzzle_hash, 2],
                     [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 1],
                 ],
             )
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
         full_solution: Program = singleton_top_layer.solution_for_singleton(
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        singleton_even_coinsol = make_spend(
-            singleton_child,
-            puzzle_reveal,
-            full_solution,
-        )
+        singleton_even_coinsol = make_spend(singleton_child, puzzle_reveal, full_solution)
 
-        await make_and_spend_bundle(
-            sim,
-            sim_client,
-            singleton_child,
-            delegated_puzzle,
-            [singleton_even_coinsol],
-        )
+        await make_and_spend_bundle(sim, sim_client, singleton_child, delegated_puzzle, [singleton_even_coinsol])
 
         # Now try a perfectly innocent spend
         evil_coin: Coin = next(filter(lambda c: c.amount == 2, (await sim.all_non_reward_coins())))
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [
-                        ConditionOpcode.CREATE_COIN,
-                        adapted_puzzle_hash,
-                        1,
-                    ],
-                ],
-            )
-        )
+        delegated_puzzle: Program = Program.to((1, [[ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 1]]))
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_even_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
-        full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof,
-            1,
-            inner_solution,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
+        full_solution: Program = singleton_top_layer.solution_for_singleton(lineage_proof, 1, inner_solution)
 
-        evil_coinsol = make_spend(
-            evil_coin,
-            puzzle_reveal,
-            full_solution,
-        )
+        evil_coinsol = make_spend(evil_coin, puzzle_reveal, full_solution)
 
         await make_and_spend_bundle(
             sim,
@@ -502,28 +368,17 @@ async def test_singleton_top_layer(version, cost_logger):
         await sim.rewind(save_height)
         conditions = [
             singleton_top_layer.MELT_CONDITION,
-            [
-                ConditionOpcode.CREATE_COIN,
-                adapted_puzzle_hash,
-                (singleton_child.amount - 1),
-            ],
+            [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, (singleton_child.amount - 1)],
         ]
         delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)
         inner_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
-            launcher_id,
-            adapted_puzzle,
-        )
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(launcher_id, adapted_puzzle)
         full_solution: Program = singleton_top_layer.solution_for_singleton(
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        melt_coinsol = make_spend(
-            singleton_child,
-            puzzle_reveal,
-            full_solution,
-        )
+        melt_coinsol = make_spend(singleton_child, puzzle_reveal, full_solution)
 
         await make_and_spend_bundle(
             sim,

@@ -19,14 +19,7 @@ def keys_cmd(ctx: click.Context) -> None:
 
 
 @keys_cmd.command("generate", help="Generates and adds a key to keychain")
-@click.option(
-    "--label",
-    "-l",
-    default=None,
-    help="Enter the label for the key",
-    type=str,
-    required=False,
-)
+@click.option("--label", "-l", default=None, help="Enter the label for the key", type=str, required=False)
 @click.pass_context
 def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     from chia.cmds.init_funcs import check_keys
@@ -52,18 +45,9 @@ def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     is_flag=True,
 )
 @click.option(
-    "--json",
-    "-j",
-    help=("Displays all the keys in keychain as JSON"),
-    default=False,
-    show_default=True,
-    is_flag=True,
+    "--json", "-j", help=("Displays all the keys in keychain as JSON"), default=False, show_default=True, is_flag=True
 )
-@click.option(
-    "--bech32m-prefix",
-    help=("Encode public keys in bech32m with a specified prefix"),
-    default=None,
-)
+@click.option("--bech32m-prefix", help=("Encode public keys in bech32m with a specified prefix"), default=None)
 @options.create_fingerprint()
 @click.pass_context
 def show_cmd(
@@ -95,14 +79,7 @@ def show_cmd(
     type=str,
     required=False,
 )
-@click.option(
-    "--label",
-    "-l",
-    default=None,
-    help="Enter the label for the key",
-    type=str,
-    required=False,
-)
+@click.option("--label", "-l", default=None, help="Enter the label for the key", type=str, required=False)
 @click.pass_context
 def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
     from chia.cmds.init_funcs import check_keys
@@ -132,13 +109,7 @@ def show_label_cmd() -> None:
 
 @label_cmd.command("set", help="Set the label of a key")
 @options.create_fingerprint(required=True)
-@click.option(
-    "--label",
-    "-l",
-    help="Enter the new label for the key",
-    type=str,
-    required=True,
-)
+@click.option("--label", "-l", help="Enter the new label for the key", type=str, required=True)
 def set_label_cmd(fingerprint: int, label: str) -> None:
     from chia.cmds.keys_funcs import set_key_label
 
@@ -199,12 +170,7 @@ def generate_and_print_cmd() -> None:
     is_flag=True,
 )
 @click.option(
-    "--json",
-    "-j",
-    help=("Write the signature output in JSON format"),
-    default=False,
-    show_default=True,
-    is_flag=True,
+    "--json", "-j", help=("Write the signature output in JSON format"), default=False, show_default=True, is_flag=True
 )
 def sign_cmd(
     message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool, json: bool
@@ -299,14 +265,7 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     show_default=True,
     is_flag=True,
 )
-@click.option(
-    "--show-progress",
-    "-P",
-    help="Show search progress",
-    default=False,
-    show_default=True,
-    is_flag=True,
-)
+@click.option("--show-progress", "-P", help="Show search progress", default=False, show_default=True, is_flag=True)
 @click.option(
     "--search-type",
     "-t",
@@ -426,14 +385,7 @@ def wallet_address_cmd(
         return
 
     derive_wallet_address(
-        context.root_path,
-        fingerprint,
-        index,
-        count,
-        prefix,
-        non_observer_derivation,
-        show_hd_path,
-        sk,
+        context.root_path, fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
     )
 
 
@@ -466,12 +418,7 @@ def wallet_address_cmd(
     is_flag=True,
 )
 @click.option(
-    "--show-private-keys",
-    "-s",
-    help="Display derived private keys",
-    default=False,
-    show_default=True,
-    is_flag=True,
+    "--show-private-keys", "-s", help="Display derived private keys", default=False, show_default=True, is_flag=True
 )
 @click.option(
     "--show-hd-path",
@@ -480,11 +427,7 @@ def wallet_address_cmd(
     show_default=True,
     is_flag=True,
 )
-@click.option(
-    "--bech32m-prefix",
-    help=("Encode public keys in bech32m with a specified prefix"),
-    default=None,
-)
+@click.option("--bech32m-prefix", help=("Encode public keys in bech32m with a specified prefix"), default=None)
 @click.pass_context
 def child_key_cmd(
     ctx: click.Context,

@@ -44,15 +44,7 @@ class CoinStore:
         amount: int = 1024,
         prefix=bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),
     ) -> Coin:
-        parent = bytes32(
-            [
-                a | b
-                for a, b in zip(
-                    prefix,
-                    birthday.height.to_bytes(32, "big"),
-                )
-            ],
-        )
+        parent = bytes32([a | b for a, b in zip(prefix, birthday.height.to_bytes(32, "big"))])
         # parent = birthday.height.to_bytes(32, "big")
         coin = Coin(parent, puzzle_hash, uint64(amount))
         self._add_coin_entry(coin, birthday)
@@ -75,13 +67,7 @@ class CoinStore:
             for puzzle_hash, amount, hint in spend.create_coin:
                 coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
                 name = coin.name()
-                ephemeral_db[name] = CoinRecord(
-                    coin,
-                    uint32(now.height),
-                    uint32(0),
-                    False,
-                    uint64(now.seconds),
-                )
+                ephemeral_db[name] = CoinRecord(coin, uint32(now.height), uint32(0), False, uint64(now.seconds))
 
         err = check_time_locks(
             ephemeral_db,
@@ -99,12 +85,7 @@ class CoinStore:
 
         return 0
 
-    def update_coin_store_for_spend_bundle(
-        self,
-        spend_bundle: SpendBundle,
-        now: CoinTimestamp,
-        max_cost: int,
-    ):
+    def update_coin_store_for_spend_bundle(self, spend_bundle: SpendBundle, now: CoinTimestamp, max_cost: int):
         err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
@@ -136,13 +117,7 @@ class CoinStore:
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
         name = coin.name()
         # assert name not in self._db
-        self._db[name] = CoinRecord(
-            coin,
-            uint32(birthday.height),
-            uint32(0),
-            False,
-            uint64(birthday.seconds),
-        )
+        self._db[name] = CoinRecord(coin, uint32(birthday.height), uint32(0), False, uint64(birthday.seconds))
         self._ph_index[coin.puzzle_hash].append(name)
 
     def coin_record(self, coin_id: bytes32) -> Optional[CoinRecord]:

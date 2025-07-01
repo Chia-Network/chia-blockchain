@@ -136,9 +136,7 @@ class FromDB:
         return s
 
 
-def wallet_type_name(
-    wallet_type: int,
-) -> str:
+def wallet_type_name(wallet_type: int) -> str:
     if wallet_type in {wt.value for wt in WalletType}:
         return f"{WalletType(wallet_type).name} ({wallet_type})"
     else:

@@ -39,12 +39,7 @@ def main() -> int:
         extras = ["upnp"]
 
         print("Downloading packages for Python version:")
-        lines = [
-            *sys.version.splitlines(),
-            "",
-            f"machine: {platform.machine()}",
-            f"platform: {platform.platform()}",
-        ]
+        lines = [*sys.version.splitlines(), "", f"machine: {platform.machine()}", f"platform: {platform.platform()}"]
         for line in lines:
             print(f"    {line}")
         print(flush=True)

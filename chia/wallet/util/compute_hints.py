@@ -22,9 +22,7 @@ class HintedCoin:
 
 
 def compute_spend_hints_and_additions(
-    cs: CoinSpend,
-    *,
-    max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+    cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
 ) -> tuple[dict[bytes32, HintedCoin], int]:
     cost, result_program = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
 

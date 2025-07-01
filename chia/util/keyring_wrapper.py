@@ -283,11 +283,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.set_password(
-                    MASTER_PASSPHRASE_SERVICE_NAME,
-                    MASTER_PASSPHRASE_USER_NAME,
-                    passphrase,
-                )
+                passphrase_store.set_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME, passphrase)
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
@@ -296,10 +292,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.delete_password(
-                    MASTER_PASSPHRASE_SERVICE_NAME,
-                    MASTER_PASSPHRASE_USER_NAME,
-                )
+                passphrase_store.delete_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
             except PasswordDeleteError:
                 if (
                     passphrase_store.get_credential(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
@@ -315,8 +308,7 @@ class KeyringWrapper:
         if passphrase_store is not None:
             try:
                 return passphrase_store.get_password(  # type: ignore[no-any-return]
-                    MASTER_PASSPHRASE_SERVICE_NAME,
-                    MASTER_PASSPHRASE_USER_NAME,
+                    MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME
                 )
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):

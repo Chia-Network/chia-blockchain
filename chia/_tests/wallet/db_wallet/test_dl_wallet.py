@@ -32,24 +32,12 @@ async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bo
 
 
 class TestDLWallet:
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [
-            {
-                "num_environments": 1,
-                "blocks_needed": [2],
-            }
-        ],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [2]}], indirect=True)
     @pytest.mark.limit_consensus_modes
     @pytest.mark.anyio
     async def test_initial_creation(self, wallet_environments: WalletTestFramework) -> None:
         env = wallet_environments.environments[0]
-        env.wallet_aliases = {
-            "xch": 1,
-            "dl": 2,
-        }
+        env.wallet_aliases = {"xch": 1, "dl": 2}
 
         dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
 
@@ -63,11 +51,7 @@ class TestDLWallet:
             async with dl_wallet.wallet_state_manager.new_action_scope(
                 wallet_environments.tx_config, push=True
             ) as action_scope:
-                launcher_id = await dl_wallet.generate_new_reporter(
-                    current_root,
-                    action_scope,
-                    fee=fee,
-                )
+                launcher_id = await dl_wallet.generate_new_reporter(current_root, action_scope, fee=fee)
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
@@ -91,11 +75,9 @@ class TestDLWallet:
                                 "pending_coin_removal_count": -2,
                                 "unspent_coin_count": -2,
                             },
-                            "dl": {
-                                "unspent_coin_count": 1,
-                            },
+                            "dl": {"unspent_coin_count": 1},
                         },
-                    ),
+                    )
                 ]
             )
 
@@ -104,24 +86,12 @@ class TestDLWallet:
         async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await action_scope.get_puzzle(dl_wallet.wallet_state_manager)
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [
-            {
-                "num_environments": 1,
-                "blocks_needed": [2],
-            }
-        ],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [2]}], indirect=True)
     @pytest.mark.limit_consensus_modes
     @pytest.mark.anyio
     async def test_get_owned_singletons(self, wallet_environments: WalletTestFramework) -> None:
         env = wallet_environments.environments[0]
-        env.wallet_aliases = {
-            "xch": 1,
-            "dl": 2,
-        }
+        env.wallet_aliases = {"xch": 1, "dl": 2}
 
         dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
 
@@ -162,11 +132,9 @@ class TestDLWallet:
                                 "pending_coin_removal_count": -2,
                                 "unspent_coin_count": -2,
                             },
-                            "dl": {
-                                "unspent_coin_count": 1,
-                            },
+                            "dl": {"unspent_coin_count": 1},
                         },
-                    ),
+                    )
                 ]
             )
 
@@ -176,29 +144,14 @@ class TestDLWallet:
         owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
         assert owned_launcher_ids == sorted(expected_launcher_ids)
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [
-            {
-                "num_environments": 2,
-                "blocks_needed": [1, 1],
-            }
-        ],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
     @pytest.mark.limit_consensus_modes
     @pytest.mark.anyio
     async def test_tracking_non_owned(self, wallet_environments: WalletTestFramework) -> None:
         env_0 = wallet_environments.environments[0]
         env_1 = wallet_environments.environments[1]
-        env_0.wallet_aliases = {
-            "xch": 1,
-            "dl": 2,
-        }
-        env_1.wallet_aliases = {
-            "xch": 1,
-            "dl": 2,
-        }
+        env_0.wallet_aliases = {"xch": 1, "dl": 2}
+        env_1.wallet_aliases = {"xch": 1, "dl": 2}
 
         dl_wallet_0 = await DataLayerWallet.create_new_dl_wallet(env_0.wallet_state_manager)
         dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(env_1.wallet_state_manager)
@@ -231,9 +184,7 @@ class TestDLWallet:
                             ">=#pending_change": 1,
                             "pending_coin_removal_count": 1,  # creation + launcher
                         },
-                        "dl": {
-                            "init": True,
-                        },
+                        "dl": {"init": True},
                     },
                     post_block_balance_updates={
                         "xch": {
@@ -243,11 +194,9 @@ class TestDLWallet:
                             "<=#pending_change": -1,
                             "pending_coin_removal_count": -1,
                         },
-                        "dl": {
-                            "unspent_coin_count": 1,
-                        },
+                        "dl": {"unspent_coin_count": 1},
                     },
-                ),
+                )
             ]
         )
 
@@ -266,17 +215,9 @@ class TestDLWallet:
             await wallet_environments.process_pending_states(
                 [
                     WalletStateTransition(
-                        pre_block_balance_updates={
-                            "dl": {
-                                "pending_coin_removal_count": 1,
-                            },
-                        },
-                        post_block_balance_updates={
-                            "dl": {
-                                "pending_coin_removal_count": -1,
-                            },
-                        },
-                    ),
+                        pre_block_balance_updates={"dl": {"pending_coin_removal_count": 1}},
+                        post_block_balance_updates={"dl": {"pending_coin_removal_count": -1}},
+                    )
                 ]
             )
 
@@ -295,24 +236,12 @@ class TestDLWallet:
         await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
         await time_out_assert(15, do_tips_match, True)
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [
-            {
-                "num_environments": 2,
-                "blocks_needed": [1, 1],
-            }
-        ],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
     @pytest.mark.limit_consensus_modes
     @pytest.mark.anyio
     async def test_lifecycle(self, wallet_environments: WalletTestFramework) -> None:
         env = wallet_environments.environments[0]
-        env.wallet_aliases = {
-            "xch": 1,
-            "dl": 2,
-        }
+        env.wallet_aliases = {"xch": 1, "dl": 2}
 
         dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
 
@@ -338,9 +267,7 @@ class TestDLWallet:
                             ">=#pending_change": 1,
                             "pending_coin_removal_count": 1,  # creation + launcher
                         },
-                        "dl": {
-                            "init": True,
-                        },
+                        "dl": {"init": True},
                     },
                     post_block_balance_updates={
                         "xch": {
@@ -350,11 +277,9 @@ class TestDLWallet:
                             "<=#pending_change": -1,
                             "pending_coin_removal_count": -1,
                         },
-                        "dl": {
-                            "unspent_coin_count": 1,
-                        },
+                        "dl": {"unspent_coin_count": 1},
                     },
-                ),
+                )
             ]
         )
 
@@ -414,9 +339,7 @@ class TestDLWallet:
                             "max_send_amount": -fee,
                             "pending_coin_removal_count": 2,
                         },
-                        "dl": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "dl": {"pending_coin_removal_count": 1},
                     },
                     post_block_balance_updates={
                         "xch": {
@@ -426,11 +349,9 @@ class TestDLWallet:
                             "pending_coin_removal_count": -2,
                             "unspent_coin_count": -2,
                         },
-                        "dl": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "dl": {"pending_coin_removal_count": -1},
                     },
-                ),
+                )
             ]
         )
 
@@ -455,17 +376,9 @@ class TestDLWallet:
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
-                    pre_block_balance_updates={
-                        "dl": {
-                            "pending_coin_removal_count": 1,
-                        },
-                    },
-                    post_block_balance_updates={
-                        "dl": {
-                            "pending_coin_removal_count": -1,
-                        },
-                    },
-                ),
+                    pre_block_balance_updates={"dl": {"pending_coin_removal_count": 1}},
+                    post_block_balance_updates={"dl": {"pending_coin_removal_count": -1}},
+                )
             ]
         )
 
@@ -482,29 +395,14 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
     return rec.confirmed and rec.root == root
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "blocks_needed": [3, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [3, 1]}], indirect=True)
 @pytest.mark.limit_consensus_modes
 @pytest.mark.anyio
 async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
     env_1 = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
-    env_2.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
+    env_1.wallet_aliases = {"xch": 1, "dl": 2}
+    env_2.wallet_aliases = {"xch": 1, "dl": 2}
 
     dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(env_1.wallet_state_manager)
     dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(env_2.wallet_state_manager)
@@ -533,9 +431,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,  # creation + launcher
                     },
-                    "dl": {
-                        "init": True,
-                    },
+                    "dl": {"init": True},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -545,11 +441,9 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                         "<=#pending_change": -1,
                         "pending_coin_removal_count": -1,
                     },
-                    "dl": {
-                        "unspent_coin_count": 1,
-                    },
+                    "dl": {"unspent_coin_count": 1},
                 },
-            ),
+            )
         ]
         * 2
     )
@@ -602,11 +496,9 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -3,
                         "unspent_coin_count": -2,
                     },
-                    "dl": {
-                        "unspent_coin_count": 1,
-                    },
+                    "dl": {"unspent_coin_count": 1},
                 },
-            ),
+            )
         ]
     )
 
@@ -643,9 +535,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "dl": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -655,12 +545,9 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                         "<=#pending_change": -1,
                         "pending_coin_removal_count": -2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": -1,
-                    },
+                    "dl": {"pending_coin_removal_count": -1, "unspent_coin_count": -1},
                 },
-            ),
+            )
         ]
     )
 
@@ -669,15 +556,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
 
 
 @pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [1],
-            "reuse_puzhash": True,
-        }
-    ],
-    indirect=True,
+    "wallet_environments", [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}], indirect=True
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
@@ -688,10 +567,7 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     wallet_node = wallet_environments.environments[0].node
 
     # Define wallet aliases
-    env.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "dl": 2}
 
     async with env.wallet_state_manager.lock:
         dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
@@ -770,14 +646,8 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "dl": {"pending_coin_removal_count": 1},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "dl": {"pending_coin_removal_count": -1},
-                },
+                pre_block_balance_updates={"xch": {}, "dl": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"xch": {}, "dl": {"pending_coin_removal_count": -1}},
             )
         ]
     )
@@ -795,14 +665,8 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "dl": {"pending_coin_removal_count": 1},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "dl": {"pending_coin_removal_count": -1},
-                },
+                pre_block_balance_updates={"xch": {}, "dl": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"xch": {}, "dl": {"pending_coin_removal_count": -1}},
             )
         ]
     )

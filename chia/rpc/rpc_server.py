@@ -13,24 +13,14 @@ from ssl import SSLContext
 from types import MethodType
 from typing import Any, Callable, ClassVar, Generic, Optional, TypeVar
 
-from aiohttp import (
-    ClientConnectorError,
-    ClientSession,
-    ClientWebSocketResponse,
-    WSMsgType,
-    web,
-)
+from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from chia_rs.sized_ints import uint16
 from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.util import wrap_http_handler
-from chia.server.server import (
-    ChiaServer,
-    ssl_context_for_client,
-    ssl_context_for_server,
-)
+from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
@@ -39,13 +29,7 @@ from chia.util.config import str2bool
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import WebServer, resolve
 from chia.util.task_referencer import create_referenced_task
-from chia.util.ws_message import (
-    WsRpcMessage,
-    create_payload,
-    create_payload_dict,
-    format_response,
-    pong,
-)
+from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -228,12 +212,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         if change in {"add_connection", "close_connection", "peer_changed_peak"}:
             data = await self.get_connections({})
             if data is not None:
-                payload = create_payload_dict(
-                    "get_connections",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                )
+                payload = create_payload_dict("get_connections", data, self.service_name, "wallet_ui")
                 payloads.append(payload)
         for payload in payloads:
             if "success" not in payload["data"]:
@@ -264,20 +243,13 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         }
 
     async def get_routes(self, request: dict[str, Any]) -> EndpointResult:
-        return {
-            "success": True,
-            "routes": list(self._get_routes().keys()),
-        }
+        return {"success": True, "routes": list(self._get_routes().keys())}
 
     async def get_network_info(self, _: dict[str, Any]) -> EndpointResult:
         network_name = self.net_config["selected_network"]
         address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
         genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
-        return {
-            "network_name": network_name,
-            "network_prefix": address_prefix,
-            "genesis_challenge": genesis_challenge,
-        }
+        return {"network_name": network_name, "network_prefix": address_prefix, "genesis_challenge": genesis_challenge}
 
     async def get_connections(self, request: dict[str, Any]) -> EndpointResult:
         request_node_type: Optional[NodeType] = None
@@ -320,14 +292,10 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         return {}
 
     async def healthz(self, request: dict[str, Any]) -> EndpointResult:
-        return {
-            "success": True,
-        }
+        return {"success": True}
 
     async def get_version(self, request: dict[str, Any]) -> EndpointResult:
-        return {
-            "version": __version__,
-        }
+        return {"version": __version__}
 
     async def get_log_level(self, request: dict[str, Any]) -> EndpointResult:
         logger = logging.getLogger()
@@ -339,11 +307,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         else:
             map = logging._nameToLevel
 
-        return {
-            "success": True,
-            "level": level_name,
-            "available_levels": list(map),
-        }
+        return {"success": True, "level": level_name, "available_levels": list(map)}
 
     async def reset_log_level(self, request: dict[str, Any]) -> EndpointResult:
         level_name = self.service_config.get("log_level", default_log_level)
@@ -356,10 +320,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
 
         status["success"] &= len(error_strings) == 0
 
-        return {
-            **status,
-            "errors": error_strings,
-        }
+        return {**status, "errors": error_strings}
 
     async def ws_api(self, message: WsRpcMessage) -> Optional[dict[str, object]]:
         """

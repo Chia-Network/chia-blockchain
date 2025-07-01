@@ -98,13 +98,7 @@ class FeeStat:  # TxConfirmStats
     fee_store: FeeStore
 
     def __init__(
-        self,
-        buckets: list[float],
-        max_periods: int,
-        decay: float,
-        scale: int,
-        fee_store: FeeStore,
-        my_type: str,
+        self, buckets: list[float], max_periods: int, decay: float, scale: int, fee_store: FeeStore, my_type: str
     ):
         self.buckets = buckets
         self.confirmed_average = [[] for _ in range(max_periods)]
@@ -257,20 +251,10 @@ class FeeStat:  # TxConfirmStats
         new_bucket_range = True
         passing = True
         pass_bucket: BucketResult = BucketResult(
-            start=0.0,
-            end=0.0,
-            within_target=0.0,
-            total_confirmed=0.0,
-            in_mempool=0.0,
-            left_mempool=0.0,
+            start=0.0, end=0.0, within_target=0.0, total_confirmed=0.0, in_mempool=0.0, left_mempool=0.0
         )
         fail_bucket: BucketResult = BucketResult(
-            start=0.0,
-            end=0.0,
-            within_target=0.0,
-            total_confirmed=0.0,
-            in_mempool=0.0,
-            left_mempool=0.0,
+            start=0.0, end=0.0, within_target=0.0, total_confirmed=0.0, in_mempool=0.0, left_mempool=0.0
         )
         for bucket in range(max_bucket_index, -1, -1):
             if new_bucket_range:
@@ -431,29 +415,10 @@ class FeeTracker:
         self.buckets = init_buckets()
 
         self.short_horizon = FeeStat(
-            self.buckets,
-            SHORT_BLOCK_PERIOD,
-            SHORT_DECAY,
-            SHORT_SCALE,
-            self.fee_store,
-            "short",
+            self.buckets, SHORT_BLOCK_PERIOD, SHORT_DECAY, SHORT_SCALE, self.fee_store, "short"
         )
-        self.med_horizon = FeeStat(
-            self.buckets,
-            MED_BLOCK_PERIOD,
-            MED_DECAY,
-            MED_SCALE,
-            self.fee_store,
-            "medium",
-        )
-        self.long_horizon = FeeStat(
-            self.buckets,
-            LONG_BLOCK_PERIOD,
-            LONG_DECAY,
-            LONG_SCALE,
-            self.fee_store,
-            "long",
-        )
+        self.med_horizon = FeeStat(self.buckets, MED_BLOCK_PERIOD, MED_DECAY, MED_SCALE, self.fee_store, "medium")
+        self.long_horizon = FeeStat(self.buckets, LONG_BLOCK_PERIOD, LONG_DECAY, LONG_SCALE, self.fee_store, "long")
         fee_backup: Optional[FeeTrackerBackup] = self.fee_store.get_stored_fee_data()
 
         if fee_backup is not None:

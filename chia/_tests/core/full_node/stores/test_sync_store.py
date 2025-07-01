@@ -89,9 +89,7 @@ async def test_increment_backtrack_syncing_increments(seeded_random: random.Rand
 
 
 @pytest.mark.anyio
-async def test_decrement_backtrack_syncing_does_nothing_when_not_present(
-    seeded_random: random.Random,
-) -> None:
+async def test_decrement_backtrack_syncing_does_nothing_when_not_present(seeded_random: random.Random) -> None:
     store = SyncStore()
     node_id = bytes32.random(r=seeded_random)
 

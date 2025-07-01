@@ -263,10 +263,7 @@ class DataLayerStore:
         )
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             launcher_id = launcher.name()
-            await conn.execute_insert(
-                "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
-                (launcher_id, launcher_bytes),
-            )
+            await conn.execute_insert("INSERT OR REPLACE INTO launchers VALUES (?, ?)", (launcher_id, launcher_bytes))
 
     async def get_launcher(self, launcher_id: bytes32) -> Optional[Coin]:
         """
@@ -328,18 +325,12 @@ class DataLayerStore:
             )
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO mirror_confirmations (coin_id, confirmed_at_height) VALUES (?, ?)",
-                (
-                    mirror.coin_id,
-                    mirror.confirmed_at_height,
-                ),
+                (mirror.coin_id, mirror.confirmed_at_height),
             )
 
     async def get_mirrors(self, launcher_id: bytes32) -> list[Mirror]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                "SELECT * from mirrors WHERE launcher_id=?",
-                (launcher_id,),
-            )
+            cursor = await conn.execute("SELECT * from mirrors WHERE launcher_id=?", (launcher_id,))
             rows = await cursor.fetchall()
             await cursor.close()
             mirrors: list[Mirror] = []
@@ -356,10 +347,7 @@ class DataLayerStore:
 
     async def get_mirror(self, coin_id: bytes32) -> Mirror:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                "SELECT * from mirrors WHERE coin_id=?",
-                (coin_id,),
-            )
+            cursor = await conn.execute("SELECT * from mirrors WHERE coin_id=?", (coin_id,))
             row = await cursor.fetchone()
             await cursor.close()
             assert row is not None
@@ -376,34 +364,21 @@ class DataLayerStore:
 
     async def rollback_to_block(self, height: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
-                "SELECT * from mirror_confirmations WHERE confirmed_at_height>?",
-                (height,),
-            )
+            cursor = await conn.execute("SELECT * from mirror_confirmations WHERE confirmed_at_height>?", (height,))
             rows = await cursor.fetchall()
             await cursor.close()
 
             for row in rows:
-                await conn.execute(
-                    "DELETE from mirror_confirmations WHERE coin_id=?",
-                    (row[0],),
-                )
-                await conn.execute(
-                    "DELETE from mirrors WHERE coin_id=?",
-                    (row[0],),
-                )
+                await conn.execute("DELETE from mirror_confirmations WHERE coin_id=?", (row[0],))
+                await conn.execute("DELETE from mirrors WHERE coin_id=?", (row[0],))
 
             cursor = await conn.execute(
-                "SELECT launcher_id from singleton_records WHERE confirmed_at_height>? AND generation=0",
-                (height,),
+                "SELECT launcher_id from singleton_records WHERE confirmed_at_height>? AND generation=0", (height,)
             )
             rows = await cursor.fetchall()
             await cursor.close()
             for row in rows:
-                await conn.execute(
-                    "DELETE from launchers WHERE id=?",
-                    (row[0],),
-                )
+                await conn.execute("DELETE from launchers WHERE id=?", (row[0],))
 
             await conn.execute(
                 "UPDATE singleton_records SET "

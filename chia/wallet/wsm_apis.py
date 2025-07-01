@@ -83,8 +83,7 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
 
     def to_standard(self) -> GetUnusedDerivationRecordResult:
         return GetUnusedDerivationRecordResult(
-            self.record.to_standard(),
-            self.create_more_puzzle_hashes_result.to_standard(),
+            self.record.to_standard(), self.create_more_puzzle_hashes_result.to_standard()
         )
 
 

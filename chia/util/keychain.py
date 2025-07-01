@@ -398,11 +398,7 @@ class Keychain:
             self.keyring_wrapper.keyring.set_label(fingerprint, label)
 
         try:
-            self.keyring_wrapper.keyring.set_key(
-                self.service,
-                get_private_key_user(self.user, index),
-                key_data,
-            )
+            self.keyring_wrapper.keyring.set_key(self.service, get_private_key_user(self.user, index), key_data)
         except Exception:
             if label is not None:
                 self.keyring_wrapper.keyring.delete_label(fingerprint)
@@ -644,10 +640,7 @@ class Keychain:
         passphrase can decrypt the contents
         """
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            current_passphrase,
-            new_passphrase,
-            passphrase_hint=passphrase_hint,
-            save_passphrase=save_passphrase,
+            current_passphrase, new_passphrase, passphrase_hint=passphrase_hint, save_passphrase=save_passphrase
         )
 
     @staticmethod

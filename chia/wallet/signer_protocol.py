@@ -33,22 +33,14 @@ class Spend(Streamable):
     @classmethod
     def from_coin_spend(cls, coin_spend: CoinSpend) -> Spend:
         return cls(
-            Coin(
-                coin_spend.coin.parent_coin_info,
-                coin_spend.coin.puzzle_hash,
-                uint64(coin_spend.coin.amount),
-            ),
+            Coin(coin_spend.coin.parent_coin_info, coin_spend.coin.puzzle_hash, uint64(coin_spend.coin.amount)),
             Program.from_serialized(coin_spend.puzzle_reveal),
             Program.from_serialized(coin_spend.solution),
         )
 
     def as_coin_spend(self) -> CoinSpend:
         return CoinSpend(
-            _Coin(
-                self.coin.parent_coin_id,
-                self.coin.puzzle_hash,
-                self.coin.amount,
-            ),
+            _Coin(self.coin.parent_coin_id, self.coin.puzzle_hash, self.coin.amount),
             self.puzzle.to_serialized(),
             self.solution.to_serialized(),
         )

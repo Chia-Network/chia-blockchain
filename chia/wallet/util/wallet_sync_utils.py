@@ -51,11 +51,7 @@ class PeerRequestException(Exception):
     pass
 
 
-async def subscribe_to_phs(
-    puzzle_hashes: list[bytes32],
-    peer: WSChiaConnection,
-    min_height: int,
-) -> list[CoinState]:
+async def subscribe_to_phs(puzzle_hashes: list[bytes32], peer: WSChiaConnection, min_height: int) -> list[CoinState]:
     """
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
@@ -69,9 +65,7 @@ async def subscribe_to_phs(
 
 
 async def subscribe_to_coin_updates(
-    coin_names: list[bytes32],
-    peer: WSChiaConnection,
-    min_height: int,
+    coin_names: list[bytes32], peer: WSChiaConnection, min_height: int
 ) -> list[CoinState]:
     """
     Tells full nodes that we are interested in coin ids, and returns the response.
@@ -112,11 +106,7 @@ def validate_additions(
             if len(coin_list_1) == 0:
                 # Verify exclusion proof for puzzle hash
                 assert puzzle_hash_proof is not None
-                not_included = confirm_not_included_already_hashed(
-                    root,
-                    coins[i][0],
-                    puzzle_hash_proof,
-                )
+                not_included = confirm_not_included_already_hashed(root, coins[i][0], puzzle_hash_proof)
                 if not_included is False:
                     return False
             else:
@@ -124,9 +114,7 @@ def validate_additions(
                     # Verify inclusion proof for coin list
                     assert coin_list_proof is not None
                     included = confirm_included_already_hashed(
-                        root,
-                        hash_coin_ids([c.name() for c in coin_list_1]),
-                        coin_list_proof,
+                        root, hash_coin_ids([c.name() for c in coin_list_1]), coin_list_proof
                     )
                     if included is False:
                         return False
@@ -135,11 +123,7 @@ def validate_additions(
                 try:
                     # Verify inclusion proof for puzzle hash
                     assert puzzle_hash_proof is not None
-                    included = confirm_included_already_hashed(
-                        root,
-                        coins[i][0],
-                        puzzle_hash_proof,
-                    )
+                    included = confirm_included_already_hashed(root, coins[i][0], puzzle_hash_proof)
                     if included is False:
                         return False
                 except AssertionError:
@@ -172,22 +156,14 @@ def validate_removals(
             coin = coins[i][1]
             if coin is None:
                 # Verifies merkle proof of exclusion
-                not_included = confirm_not_included_already_hashed(
-                    root,
-                    coins[i][0],
-                    proofs[i][1],
-                )
+                not_included = confirm_not_included_already_hashed(root, coins[i][0], proofs[i][1])
                 if not_included is False:
                     return False
             else:
                 # Verifies merkle proof of inclusion of coin name
                 if coins[i][0] != coin.name():
                     return False
-                included = confirm_included_already_hashed(
-                    root,
-                    coin.name(),
-                    proofs[i][1],
-                )
+                included = confirm_included_already_hashed(root, coin.name(), proofs[i][1])
                 if included is False:
                     return False
     return True
@@ -222,11 +198,7 @@ async def request_and_validate_additions(
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
         return False
-    result: bool = validate_additions(
-        additions_res.coins,
-        additions_res.proofs,
-        additions_root,
-    )
+    result: bool = validate_additions(additions_res.coins, additions_res.proofs, additions_root)
     peer_request_cache.add_to_additions_in_block(header_hash, puzzle_hash, height)
     return result
 
@@ -268,9 +240,7 @@ async def request_header_blocks(
 
 
 async def _fetch_header_blocks_inner(
-    all_peers: list[tuple[WSChiaConnection, bool]],
-    request_start: uint32,
-    request_end: uint32,
+    all_peers: list[tuple[WSChiaConnection, bool]], request_start: uint32, request_end: uint32
 ) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
     # We will modify this list, don't modify passed parameters.
     bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer[0].peer_capabilities]
@@ -301,10 +271,7 @@ async def _fetch_header_blocks_inner(
 
 
 async def fetch_header_blocks_in_range(
-    start: uint32,
-    end: uint32,
-    peer_request_cache: PeerRequestCache,
-    all_peers: list[tuple[WSChiaConnection, bool]],
+    start: uint32, end: uint32, peer_request_cache: PeerRequestCache, all_peers: list[tuple[WSChiaConnection, bool]]
 ) -> Optional[list[HeaderBlock]]:
     blocks: list[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
@@ -343,11 +310,7 @@ async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -
     assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
     assert solution_response.response.coin_name == coin.name()
 
-    return make_spend(
-        coin,
-        solution_response.response.puzzle,
-        solution_response.response.solution,
-    )
+    return make_spend(coin, solution_response.response.puzzle, solution_response.response.solution)
 
 
 async def fetch_coin_spend_for_coin_state(coin_state: CoinState, peer: WSChiaConnection) -> CoinSpend:

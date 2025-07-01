@@ -40,17 +40,10 @@ async def test_rpc_marshalling() -> None:
             [request.foofoo, str(request.barbar), request.bat.hex(), request.bam.qux], request.bam
         )
 
-    assert await test_rpc_endpoint(
-        None,
-        {
-            "foofoo": "foofoo",
-            "barbar": 1,
-            "bat": b"\xff",
-            "bam": {
-                "qux": "qux",
-            },
-        },
-    ) == {"qat": ["foofoo", "1", "ff", "qux"], "sub": {"qux": "qux"}}
+    assert await test_rpc_endpoint(None, {"foofoo": "foofoo", "barbar": 1, "bat": b"\xff", "bam": {"qux": "qux"}}) == {
+        "qat": ["foofoo", "1", "ff", "qux"],
+        "sub": {"qux": "qux"},
+    }
 
 
 @clvm_streamable
@@ -77,10 +70,6 @@ async def test_clvm_streamable_marshalling() -> None:
     async def test_rpc_endpoint(self: None, request: TestClvmRequestType) -> TestClvmResponseObject:
         return TestClvmResponseObject(request.sub)
 
-    assert await test_rpc_endpoint(
-        None,
-        {
-            "sub": "ffff83717578818180",
-            "CHIP-0029": True,
-        },
-    ) == {"sub": "ffff83717578818180"}
+    assert await test_rpc_endpoint(None, {"sub": "ffff83717578818180", "CHIP-0029": True}) == {
+        "sub": "ffff83717578818180"
+    }

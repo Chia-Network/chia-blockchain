@@ -77,14 +77,10 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     target_puzzle_hash: bytes32 = rand_hash()
     owner_pubkey: G1Element = rand_g1()
     current: MockPoolState = MockPoolState(
-        pool_url=pool_url,
-        target_puzzle_hash=target_puzzle_hash,
-        owner_pubkey=owner_pubkey,
+        pool_url=pool_url, target_puzzle_hash=target_puzzle_hash, owner_pubkey=owner_pubkey
     )
     current_state: MockPoolWalletInfo = MockPoolWalletInfo(
-        launcher_id=launcher_id,
-        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
-        current=current,
+        launcher_id=launcher_id, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, current=current
     )
 
     # No config data
@@ -142,14 +138,10 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
     target_puzzle_hash: bytes32 = rand_hash()
     owner_pubkey: G1Element = rand_g1()
     current: MockPoolState = MockPoolState(
-        pool_url=pool_url,
-        target_puzzle_hash=target_puzzle_hash,
-        owner_pubkey=owner_pubkey,
+        pool_url=pool_url, target_puzzle_hash=target_puzzle_hash, owner_pubkey=owner_pubkey
     )
     current_state: MockPoolWalletInfo = MockPoolWalletInfo(
-        launcher_id=launcher_id,
-        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
-        current=current,
+        launcher_id=launcher_id, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, current=current
     )
 
     # Existing config data with different values

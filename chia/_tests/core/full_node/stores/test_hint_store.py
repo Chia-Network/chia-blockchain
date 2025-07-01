@@ -164,12 +164,7 @@ async def test_hints_in_blockchain(
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
     }
-    tx = wt.generate_signed_transaction(
-        uint64(10),
-        wt.get_new_puzzlehash(),
-        coin_spent,
-        condition_dic=condition_dict,
-    )
+    tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin_spent, condition_dic=condition_dict)
 
     blocks = bt.get_consecutive_blocks(
         10, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx

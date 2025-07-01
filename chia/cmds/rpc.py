@@ -17,12 +17,7 @@ services: list[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", 
 
 
 async def call_endpoint(
-    service: str,
-    endpoint: str,
-    request: dict[str, Any],
-    config: dict[str, Any],
-    root_path: Path,
-    quiet: bool = False,
+    service: str, endpoint: str, request: dict[str, Any], config: dict[str, Any], root_path: Path, quiet: bool = False
 ) -> dict[str, Any]:
     if service == "daemon":
         return await call_daemon_command(endpoint, request, config, root_path=root_path, quiet=quiet)
@@ -31,11 +26,7 @@ async def call_endpoint(
 
 
 async def call_rpc_service_endpoint(
-    service: str,
-    endpoint: str,
-    request: dict[str, Any],
-    config: dict[str, Any],
-    root_path: Path,
+    service: str, endpoint: str, request: dict[str, Any], config: dict[str, Any], root_path: Path
 ) -> dict[str, Any]:
     from chia.rpc.rpc_client import RpcClient
 

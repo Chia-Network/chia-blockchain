@@ -43,10 +43,7 @@ def get_file_log_handler(
 
 
 def initialize_logging(
-    service_name: str,
-    logging_config: dict[str, Any],
-    root_path: Path,
-    beta_root_path: Optional[Path] = None,
+    service_name: str, logging_config: dict[str, Any], root_path: Path, beta_root_path: Optional[Path] = None
 ) -> None:
     log_backcompat = logging_config.get("log_backcompat", False)
     log_level = logging_config.get("log_level", default_log_level)
@@ -137,8 +134,5 @@ def initialize_service_logging(service_name: str, config: dict[str, Any], root_p
     beta_config = config.get("beta", {})
     beta_config_path = beta_config.get("path") if beta_config.get("enabled", False) else None
     initialize_logging(
-        service_name=service_name,
-        logging_config=logging_config,
-        root_path=root_path,
-        beta_root_path=beta_config_path,
+        service_name=service_name, logging_config=logging_config, root_path=root_path, beta_root_path=beta_config_path
     )

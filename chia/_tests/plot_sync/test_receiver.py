@@ -212,10 +212,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
 def test_default_values(seeded_random: random.Random) -> None:
     assert_default_values(
         Receiver(
-            get_dummy_connection(
-                NodeType.HARVESTER,
-                bytes32.random(seeded_random),
-            ),  # type:ignore[arg-type]
+            get_dummy_connection(NodeType.HARVESTER, bytes32.random(seeded_random)),  # type:ignore[arg-type]
             dummy_callback,  # type:ignore[arg-type]
         )
     )
@@ -329,11 +326,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
             uint8(HarvestingMode.CPU),
         )
     )
-    assert receiver.to_dict()["syncing"] == {
-        "initial": False,
-        "plot_files_processed": 0,
-        "plot_files_total": 1,
-    }
+    assert receiver.to_dict()["syncing"] == {"initial": False, "plot_files_processed": 0, "plot_files_total": 1}
 
 
 @pytest.mark.anyio

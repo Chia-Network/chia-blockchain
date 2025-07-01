@@ -26,19 +26,10 @@ def db_cmd() -> None:
     help="don't update config file to point to new database. When specifying a "
     "custom output file, the config will not be updated regardless",
 )
-@click.option(
-    "--force",
-    default=False,
-    is_flag=True,
-    help="force conversion despite warnings",
-)
+@click.option("--force", default=False, is_flag=True, help="force conversion despite warnings")
 @click.pass_context
 def db_upgrade_cmd(
-    ctx: click.Context,
-    in_db_path: Optional[str],
-    out_db_path: Optional[str],
-    no_update_config: bool,
-    force: bool,
+    ctx: click.Context, in_db_path: Optional[str], out_db_path: Optional[str], no_update_config: bool, force: bool
 ) -> None:
     try:
         db_upgrade_func(

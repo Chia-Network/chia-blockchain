@@ -49,16 +49,12 @@ class ParameterMissingError(StreamableError):
 
 class InvalidTypeError(StreamableError):
     def __init__(self, expected: type, actual: type):
-        super().__init__(
-            f"Invalid type: Expected {expected.__name__}, Actual: {actual.__name__}",
-        )
+        super().__init__(f"Invalid type: Expected {expected.__name__}, Actual: {actual.__name__}")
 
 
 class InvalidSizeError(StreamableError):
     def __init__(self, expected: int, actual: int):
-        super().__init__(
-            f"Invalid size: Expected {expected}, Actual: {actual}",
-        )
+        super().__init__(f"Invalid size: Expected {expected}, Actual: {actual}")
 
 
 class ConversionError(StreamableError):

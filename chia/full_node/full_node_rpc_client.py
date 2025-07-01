@@ -242,9 +242,7 @@ class FullNodeRpcClient(RpcClient):
         return converted
 
     async def get_mempool_item_by_tx_id(
-        self,
-        tx_id: bytes32,
-        include_pending: bool = False,
+        self, tx_id: bytes32, include_pending: bool = False
     ) -> Optional[dict[str, Any]]:
         try:
             response = await self.fetch(
@@ -285,10 +283,6 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
-    async def get_fee_estimate(
-        self,
-        target_times: Optional[list[int]],
-        cost: Optional[int],
-    ) -> dict[str, Any]:
+    async def get_fee_estimate(self, target_times: Optional[list[int]], cost: Optional[int]) -> dict[str, Any]:
         response = await self.fetch("get_fee_estimate", {"cost": cost, "target_times": target_times})
         return response

@@ -248,7 +248,7 @@ async def wallet_environments(
                                 max_send_amount=uint128(2_000_000_000_000 * blocks_needed),
                                 unspent_coin_count=uint32(2 * blocks_needed),
                                 pending_coin_removal_count=uint32(0),
-                            ),
+                            )
                         )
                     )
 
@@ -267,9 +267,7 @@ async def wallet_environments(
                     trusted_full_node,
                     [
                         WalletEnvironment(
-                            service=service,
-                            rpc_client=rpc_client,
-                            wallet_states={uint32(1): wallet_state},
+                            service=service, rpc_client=rpc_client, wallet_states={uint32(1): wallet_state}
                         )
                         for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
                     ],

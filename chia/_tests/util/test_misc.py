@@ -312,11 +312,7 @@ async def test_split_async_manager_raises_on_exit_without_entry() -> None:
         await split.exit()
 
 
-async def wait_for_valued_event_waiters(
-    event: ValuedEvent[T],
-    count: int,
-    timeout: float = 10,
-) -> None:
+async def wait_for_valued_event_waiters(event: ValuedEvent[T], count: int, timeout: float = 10) -> None:
     with anyio.fail_after(delay=adjusted_timeout(timeout)):
         for delay in backoff_times():
             if len(event._event._waiters) >= count:
@@ -410,15 +406,12 @@ async def test_valued_event_wait_raises_if_not_set() -> None:
 
 
 @pytest.mark.anyio
-async def test_recording_web_server_specified_response(
-    recording_web_server: RecordingWebServer,
-) -> None:
+async def test_recording_web_server_specified_response(recording_web_server: RecordingWebServer) -> None:
     expected_response = {"success": True, "magic": "asparagus"}
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            url=recording_web_server.web_server.url(),
-            json={"response": expected_response},
+            url=recording_web_server.web_server.url(), json={"response": expected_response}
         ) as response:
             response.raise_for_status()
             assert await response.json() == expected_response

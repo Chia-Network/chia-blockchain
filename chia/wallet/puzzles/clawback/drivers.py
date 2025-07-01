@@ -3,19 +3,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, Union
 
-from chia_puzzles_py.programs import (
-    AUGMENTED_CONDITION as AUGMENTED_CONDITION_BYTES,
-)
-from chia_puzzles_py.programs import (
-    AUGMENTED_CONDITION_HASH as AUGMENTED_CONDITION_HASH_BYTES,
-)
-from chia_puzzles_py.programs import (
-    P2_1_OF_N as P2_1_OF_N_BYTES,
-)
-from chia_puzzles_py.programs import (
-    P2_PUZZLE_HASH,
-    P2_PUZZLE_HASH_HASH,
-)
+from chia_puzzles_py.programs import AUGMENTED_CONDITION as AUGMENTED_CONDITION_BYTES
+from chia_puzzles_py.programs import AUGMENTED_CONDITION_HASH as AUGMENTED_CONDITION_HASH_BYTES
+from chia_puzzles_py.programs import P2_1_OF_N as P2_1_OF_N_BYTES
+from chia_puzzles_py.programs import P2_PUZZLE_HASH, P2_PUZZLE_HASH_HASH
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -104,11 +95,7 @@ def create_merkle_puzzle(timelock: uint64, sender_ph: bytes32, recipient_ph: byt
 
 
 def create_merkle_solution(
-    timelock: uint64,
-    sender_ph: bytes32,
-    recipient_ph: bytes32,
-    inner_puzzle: Program,
-    inner_solution: Program,
+    timelock: uint64, sender_ph: bytes32, recipient_ph: bytes32, inner_puzzle: Program, inner_solution: Program
 ) -> Program:
     """
     Recreates the full merkle tree of a p2_1_of_n clawback coin. It uses the timelock and each party's
@@ -148,11 +135,7 @@ def match_clawback_puzzle(
     if not isinstance(inner_solution, SerializedProgram):
         inner_solution = inner_solution.to_serialized()
     # Fetch Remark condition
-    conditions = conditions_for_solution(
-        inner_puzzle,
-        inner_solution,
-        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
-    )
+    conditions = conditions_for_solution(inner_puzzle, inner_solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8)
     metadata: Optional[ClawbackMetadata] = None
     new_puzhash: set[bytes32] = set()
     if conditions is not None:

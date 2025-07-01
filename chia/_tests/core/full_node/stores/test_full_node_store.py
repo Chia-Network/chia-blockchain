@@ -36,8 +36,7 @@ log = logging.getLogger(__name__)
 async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
     with TempKeyring() as keychain:
         patched_constants = blockchain_constants.replace(
-            DISCRIMINANT_SIZE_BITS=uint16(32),
-            SUB_SLOT_ITERS_STARTING=uint64(2**12),
+            DISCRIMINANT_SIZE_BITS=uint16(32), SUB_SLOT_ITERS_STARTING=uint64(2**12)
         )
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
@@ -45,8 +44,7 @@ async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncI
 @pytest.fixture(scope="function")
 async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
     patched_constants = blockchain_constants.replace(
-        DISCRIMINANT_SIZE_BITS=uint16(32),
-        SUB_SLOT_ITERS_STARTING=uint64(2**12),
+        DISCRIMINANT_SIZE_BITS=uint16(32), SUB_SLOT_ITERS_STARTING=uint64(2**12)
     )
     async with create_blockchain(patched_constants, db_version) as (bc1, _):
         yield bc1
@@ -70,10 +68,7 @@ async def test_unfinished_block_rank(
     num_duplicates: int,
     include_none: bool,
 ) -> None:
-    blocks = custom_block_tools.get_consecutive_blocks(
-        1,
-        guarantee_transaction_block=True,
-    )
+    blocks = custom_block_tools.get_consecutive_blocks(1, guarantee_transaction_block=True)
 
     assert blocks[-1].is_transaction_block()
     store = FullNodeStore(custom_block_tools.constants)
@@ -334,9 +329,7 @@ async def test_basic_store(
 
     assert (
         store.get_finished_sub_slots(
-            BlockchainMock({}),
-            None,
-            sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+            BlockchainMock({}), None, sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
         )
         == []
     )
@@ -395,14 +388,7 @@ async def test_basic_store(
 
     if peak.overflow:
         store.new_peak(
-            peak,
-            peak_full_block,
-            sub_slots[-2],
-            sub_slots[-1],
-            None,
-            blockchain,
-            next_sub_slot_iters,
-            next_difficulty,
+            peak, peak_full_block, sub_slots[-2], sub_slots[-1], None, blockchain, next_sub_slot_iters, next_difficulty
         )
     else:
         store.new_peak(
@@ -423,14 +409,7 @@ async def test_basic_store(
     assert slot_4 is not None
     assert slot_4[0] == sub_slots[4]
 
-    assert (
-        store.get_finished_sub_slots(
-            blockchain,
-            peak,
-            sub_slots[-1].challenge_chain.get_hash(),
-        )
-        == []
-    )
+    assert store.get_finished_sub_slots(blockchain, peak, sub_slots[-1].challenge_chain.get_hash()) == []
 
     # Test adding non genesis peak directly
     blocks = custom_block_tools.get_consecutive_blocks(
@@ -537,13 +516,7 @@ async def test_basic_store(
         1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
     ):
         sp = get_signage_point(
-            custom_block_tools.constants,
-            blockchain,
-            peak,
-            ss_start_iters,
-            uint8(i),
-            [],
-            peak.sub_slot_iters,
+            custom_block_tools.constants, blockchain, peak, ss_start_iters, uint8(i), [], peak.sub_slot_iters
         )
         assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
@@ -575,14 +548,7 @@ async def test_basic_store(
                 blockchain.constants, False, sb, blockchain
             )
             res = store.new_peak(
-                sb,
-                blocks[-1],
-                sp_sub_slot,
-                ip_sub_slot,
-                fork_block,
-                blockchain,
-                next_sub_slot_iters,
-                next_difficulty,
+                sb, blocks[-1], sp_sub_slot, ip_sub_slot, fork_block, blockchain, next_sub_slot_iters, next_difficulty
             )
             assert res.added_eos is None
             if sb.overflow and sp_sub_slot is not None:
@@ -659,8 +625,7 @@ async def test_basic_store(
     saved_sp_hash = None
     for slot_offset in range(1, len(finished_sub_slots)):
         for i in range(
-            1,
-            custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
+            1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
         ):
             sp = get_signage_point(
                 custom_block_tools.constants,
@@ -713,9 +678,7 @@ async def test_basic_store(
     # Get signage point by index
     assert (
         store.get_signage_point_by_index(
-            finished_sub_slots[0].challenge_chain.get_hash(),
-            uint8(4),
-            finished_sub_slots[0].reward_chain.get_hash(),
+            finished_sub_slots[0].challenge_chain.get_hash(), uint8(4), finished_sub_slots[0].reward_chain.get_hash()
         )
         is not None
     )
@@ -740,13 +703,7 @@ async def test_basic_store(
         1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
     ):
         sp = get_signage_point(
-            custom_block_tools.constants,
-            BlockchainMock({}, {}),
-            None,
-            uint128(0),
-            uint8(i),
-            [],
-            peak.sub_slot_iters,
+            custom_block_tools.constants, BlockchainMock({}, {}), None, uint128(0), uint8(i), [], peak.sub_slot_iters
         )
         assert store.new_signage_point(uint8(i), blockchain, None, peak.sub_slot_iters, sp)
 
@@ -771,8 +728,7 @@ async def test_basic_store(
 
     for slot_offset in range(1, len(finished_sub_slots) + 1):
         for i in range(
-            1,
-            custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
+            1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
         ):
             sp = get_signage_point(
                 custom_block_tools.constants,
@@ -826,13 +782,7 @@ async def test_basic_store(
             finished_sub_slots = []
 
         sp = get_signage_point(
-            custom_block_tools.constants,
-            blockchain,
-            sb,
-            uint128(0),
-            uint8(i),
-            finished_sub_slots,
-            peak.sub_slot_iters,
+            custom_block_tools.constants, blockchain, sb, uint128(0), uint8(i), finished_sub_slots, peak.sub_slot_iters
         )
         assert store.new_signage_point(uint8(i), empty_blockchain, sb, peak.sub_slot_iters, sp)
 
@@ -1136,8 +1086,7 @@ async def test_basic_store(
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_long_chain_slots(
-    empty_blockchain_with_original_constants: Blockchain,
-    default_1000_blocks: list[FullBlock],
+    empty_blockchain_with_original_constants: Blockchain, default_1000_blocks: list[FullBlock]
 ) -> None:
     blockchain = empty_blockchain_with_original_constants
     store = FullNodeStore(blockchain.constants)
@@ -1169,9 +1118,7 @@ async def test_long_chain_slots(
 
 
 @pytest.mark.anyio
-async def test_mark_requesting(
-    seeded_random: random.Random,
-) -> None:
+async def test_mark_requesting(seeded_random: random.Random) -> None:
     store = FullNodeStore(DEFAULT_CONSTANTS)
     a = bytes32.random(seeded_random)
     b = bytes32.random(seeded_random)

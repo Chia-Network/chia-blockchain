@@ -253,27 +253,15 @@ def parse_plot_info(memo: bytes) -> tuple[Union[G1Element, bytes32], G1Element, 
     # Parses the plot info bytes into keys
     if len(memo) == (48 + 48 + 32):
         # This is a public key memo
-        return (
-            G1Element.from_bytes(memo[:48]),
-            G1Element.from_bytes(memo[48:96]),
-            PrivateKey.from_bytes(memo[96:]),
-        )
+        return (G1Element.from_bytes(memo[:48]), G1Element.from_bytes(memo[48:96]), PrivateKey.from_bytes(memo[96:]))
     elif len(memo) == (32 + 48 + 32):
         # This is a pool_contract_puzzle_hash memo
-        return (
-            bytes32(memo[:32]),
-            G1Element.from_bytes(memo[32:80]),
-            PrivateKey.from_bytes(memo[80:]),
-        )
+        return (bytes32(memo[:32]), G1Element.from_bytes(memo[32:80]), PrivateKey.from_bytes(memo[80:]))
     else:
         raise ValueError(f"Invalid number of bytes {len(memo)}")
 
 
-def stream_plot_info_pk(
-    pool_public_key: G1Element,
-    farmer_public_key: G1Element,
-    local_master_sk: PrivateKey,
-):
+def stream_plot_info_pk(pool_public_key: G1Element, farmer_public_key: G1Element, local_master_sk: PrivateKey):
     # There are two ways to stream plot info: with a pool public key, or with a pool contract puzzle hash.
     # This one streams the public key, into bytes
     data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(local_master_sk)
@@ -281,11 +269,7 @@ def stream_plot_info_pk(
     return data
 
 
-def stream_plot_info_ph(
-    pool_contract_puzzle_hash: bytes32,
-    farmer_public_key: G1Element,
-    local_master_sk: PrivateKey,
-):
+def stream_plot_info_ph(pool_contract_puzzle_hash: bytes32, farmer_public_key: G1Element, local_master_sk: PrivateKey):
     # There are two ways to stream plot info: with a pool public key, or with a pool contract puzzle hash.
     # This one streams the pool contract puzzle hash, into bytes
     data = pool_contract_puzzle_hash + bytes(farmer_public_key) + bytes(local_master_sk)

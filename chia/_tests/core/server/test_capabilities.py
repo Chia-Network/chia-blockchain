@@ -25,15 +25,9 @@ from chia.server.capabilities import known_active_capabilities
             list(Capability),
         ],
         # all possible values
-        [
-            [(uint16(n), "1") for n in range(2**16)],
-            list(Capability),
-        ],
+        [[(uint16(n), "1") for n in range(2**16)], list(Capability)],
         # all possible invalid values
-        [
-            [(uint16(n), "1") for n in set(range(2**16)) - set(Capability)],
-            [],
-        ],
+        [[(uint16(n), "1") for n in set(range(2**16)) - set(Capability)], []],
         # single invalid
         [[(uint16(max(Capability) + 1), "1")], []],
         # a few invalid
@@ -41,20 +35,13 @@ from chia.server.capabilities import known_active_capabilities
     ],
 )
 @pytest.mark.parametrize(
-    argnames="duplicated",
-    argvalues=[False, True],
-    ids=lambda value: "duplicated" if value else "as-is",
+    argnames="duplicated", argvalues=[False, True], ids=lambda value: "duplicated" if value else "as-is"
 )
 @pytest.mark.parametrize(
-    argnames="disabled",
-    argvalues=[False, True],
-    ids=lambda value: "disabled" if value else "enabled",
+    argnames="disabled", argvalues=[False, True], ids=lambda value: "disabled" if value else "enabled"
 )
 def test_known_active_capabilities_filter(
-    values: list[tuple[uint16, str]],
-    expected: list[Capability],
-    duplicated: bool,
-    disabled: bool,
+    values: list[tuple[uint16, str]], expected: list[Capability], duplicated: bool, disabled: bool
 ) -> None:
     if duplicated:
         values *= 2

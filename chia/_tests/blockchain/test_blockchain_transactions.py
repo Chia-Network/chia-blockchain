@@ -323,10 +323,7 @@ class TestBlockchainTransactions:
 
         coin_2 = None
         for coin in run_and_get_removals_and_additions(
-            new_blocks[-1],
-            test_constants.MAX_BLOCK_COST_CLVM,
-            height=softfork_height,
-            constants=bt.constants,
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, height=softfork_height, constants=bt.constants
         )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
@@ -347,10 +344,7 @@ class TestBlockchainTransactions:
 
         coin_3 = None
         for coin in run_and_get_removals_and_additions(
-            new_blocks[-1],
-            test_constants.MAX_BLOCK_COST_CLVM,
-            height=softfork_height,
-            constants=bt.constants,
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, height=softfork_height, constants=bt.constants
         )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
@@ -571,10 +565,7 @@ class TestBlockchainTransactions:
         )
 
         # This condition requires block1 coinbase to be spent
-        block2_cvp = ConditionWithArgs(
-            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
-            [b"test"],
-        )
+        block2_cvp = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
         block2_spend_bundle = wallet_a.generate_signed_transaction(
             uint64(1000), receiver_puzzlehash, spend_coin_block_2, block2_dic
@@ -654,10 +645,7 @@ class TestBlockchainTransactions:
         )
 
         # This condition requires block1 coinbase to be spent
-        block2_cvp = ConditionWithArgs(
-            ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
-            [b"test"],
-        )
+        block2_cvp = ConditionWithArgs(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [b"test"])
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
         block2_spend_bundle = wallet_a.generate_signed_transaction(
             uint64(1000), receiver_puzzlehash, spend_coin_block_2, block2_dic
@@ -742,10 +730,7 @@ class TestBlockchainTransactions:
         )
 
         new_blocks = bt.get_consecutive_blocks(
-            1,
-            blocks,
-            farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_transaction_block=True,
+            1, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
@@ -809,10 +794,7 @@ class TestBlockchainTransactions:
         )
 
         new_blocks = bt.get_consecutive_blocks(
-            1,
-            blocks,
-            farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_transaction_block=True,
+            1, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 

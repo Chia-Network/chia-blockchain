@@ -82,12 +82,7 @@ class GenesisById(LimitationsProgram):
 
     @classmethod
     async def generate_issuance_bundle(
-        cls,
-        wallet,
-        _: dict,
-        amount: uint64,
-        action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
+        cls, wallet, _: dict, amount: uint64, action_scope: WalletActionScope, fee: uint64 = uint64(0)
     ) -> WalletSpendBundle:
         coins = await wallet.standard_wallet.select_coins(amount + fee, action_scope)
 

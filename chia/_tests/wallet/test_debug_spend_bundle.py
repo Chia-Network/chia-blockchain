@@ -47,21 +47,9 @@ def test_debug_spend_bundle(capsys: pytest.CaptureFixture[str]) -> None:
     debug_spend_bundle(
         WalletSpendBundle(
             [
-                make_spend(
-                    coin_bad_reveal,
-                    ACS,
-                    Program.to(None),
-                ),
-                make_spend(
-                    coin,
-                    ACS,
-                    solution,
-                ),
-                make_spend(
-                    child_coin,
-                    ACS,
-                    Program.to(None),
-                ),
+                make_spend(coin_bad_reveal, ACS, Program.to(None)),
+                make_spend(coin, ACS, solution),
+                make_spend(child_coin, ACS, Program.to(None)),
             ],
             sig,
         )

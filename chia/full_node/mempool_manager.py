@@ -76,8 +76,7 @@ class LineageInfoCache:
 
 
 def compute_assert_height(
-    removal_coin_records: dict[bytes32, CoinRecord],
-    conds: SpendBundleConditions,
+    removal_coin_records: dict[bytes32, CoinRecord], conds: SpendBundleConditions
 ) -> TimelockConditions:
     """
     Computes the most restrictive height- and seconds assertion in the spend bundle.
@@ -519,12 +518,7 @@ class MempoolManager:
             get_unspent_lineage_info_for_puzzle_hash = self.get_unspent_lineage_info_for_puzzle_hash
 
         err, item, remove_items = await self.validate_spend_bundle(
-            new_spend,
-            conds,
-            spend_name,
-            first_added_height,
-            get_coin_records,
-            get_unspent_lineage_info_for_puzzle_hash,
+            new_spend, conds, spend_name, first_added_height, get_coin_records, get_unspent_lineage_info_for_puzzle_hash
         )
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
@@ -608,8 +602,7 @@ class MempoolManager:
             coin_id = coin_spend.coin.name()
             removal_names_from_coin_spends.add(coin_id)
             eligibility_info = eligibility_and_additions.get(
-                coin_id,
-                EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
+                coin_id, EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None)
             )
 
             supports_dedup = eligibility_info.is_eligible_for_dedup
@@ -663,11 +656,7 @@ class MempoolManager:
                 # the same block.
                 assert self.peak.timestamp is not None
                 removal_record = CoinRecord(
-                    removal_coin,
-                    uint32(self.peak.height + 1),
-                    uint32(0),
-                    False,
-                    self.peak.timestamp,
+                    removal_coin, uint32(self.peak.height + 1), uint32(0), False, self.peak.timestamp
                 )
                 removal_record_dict[name] = removal_record
             else:
@@ -725,12 +714,7 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        tl_error: Optional[Err] = check_time_locks(
-            removal_record_dict,
-            conds,
-            self.peak.height,
-            self.peak.timestamp,
-        )
+        tl_error: Optional[Err] = check_time_locks(removal_record_dict, conds, self.peak.height, self.peak.timestamp)
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 
@@ -1020,11 +1004,7 @@ def optional_max(a: Optional[T], b: Optional[T]) -> Optional[T]:
     return max((v for v in [a, b] if v is not None), default=None)
 
 
-def can_replace(
-    conflicting_items: list[MempoolItem],
-    removal_names: set[bytes32],
-    new_item: MempoolItem,
-) -> bool:
+def can_replace(conflicting_items: list[MempoolItem], removal_names: set[bytes32], new_item: MempoolItem) -> bool:
     """
     This function implements the mempool replacement rules. Given a Mempool item
     we're attempting to insert into the mempool (new_item) and the set of existing

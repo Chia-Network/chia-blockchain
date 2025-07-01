@@ -121,11 +121,7 @@ class BlockStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
-                (
-                    block_bytes,
-                    int(block.is_fully_compactified()),
-                    header_hash,
-                ),
+                (block_bytes, int(block.is_fully_compactified()), header_hash),
             )
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
@@ -169,8 +165,7 @@ class BlockStore:
             )
 
     async def get_sub_epoch_challenge_segments(
-        self,
-        ses_block_hash: bytes32,
+        self, ses_block_hash: bytes32
     ) -> Optional[list[SubEpochChallengeSegment]]:
         cached: Optional[list[SubEpochChallengeSegment]] = self.ses_challenge_cache.get(ses_block_hash)
         if cached is not None:
@@ -178,8 +173,7 @@ class BlockStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?",
-                (ses_block_hash,),
+                "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?", (ses_block_hash,)
             ) as cursor:
                 row = await cursor.fetchone()
 
@@ -354,10 +348,7 @@ class BlockStore:
             return cached.prev_header_hash
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT prev_hash FROM full_blocks WHERE header_hash=?",
-                (header_hash,),
-            ) as cursor:
+            async with conn.execute("SELECT prev_hash FROM full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
                 row = await cursor.fetchone()
                 if row is None:
                     raise KeyError("missing block in chain")
@@ -422,8 +413,7 @@ class BlockStore:
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT block_record FROM full_blocks WHERE header_hash=?",
-                (header_hash,),
+                "SELECT block_record FROM full_blocks WHERE header_hash=?", (header_hash,)
             ) as cursor:
                 row = await cursor.fetchone()
         if row is None:
@@ -432,11 +422,7 @@ class BlockStore:
 
         return block_record
 
-    async def get_block_records_in_range(
-        self,
-        start: int,
-        stop: int,
-    ) -> dict[bytes32, BlockRecord]:
+    async def get_block_records_in_range(self, start: int, stop: int) -> dict[bytes32, BlockRecord]:
         """
         Returns a dictionary with all blocks in range between start and stop
         if present. Only blocks part of the main chain/current peak are returned.
@@ -457,11 +443,7 @@ class BlockStore:
 
         return ret
 
-    async def get_block_bytes_in_range(
-        self,
-        start: int,
-        stop: int,
-    ) -> list[bytes]:
+    async def get_block_bytes_in_range(self, start: int, stop: int) -> list[bytes]:
         """
         Returns a list with all full blocks in range between start and stop
         if present. Only includes blocks in the main chain, in the current peak.
@@ -471,8 +453,7 @@ class BlockStore:
         assert self.db_wrapper.db_version == 2
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? AND in_main_chain=1",
-                (start, stop),
+                "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? AND in_main_chain=1", (start, stop)
             ) as cursor:
                 rows: list[sqlite3.Row] = list(await cursor.fetchall())
                 if len(rows) != (stop - start) + 1:

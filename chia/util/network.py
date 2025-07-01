@@ -47,10 +47,7 @@ class WebServer:
     ) -> WebServer:
         app = web.Application(client_max_size=max_request_body_size, logger=logger)
         runner = web.AppRunner(
-            app,
-            access_log=None,
-            keepalive_timeout=keepalive_timeout,
-            shutdown_timeout=shutdown_timeout,
+            app, access_log=None, keepalive_timeout=keepalive_timeout, shutdown_timeout=shutdown_timeout
         )
 
         self = cls(
@@ -71,12 +68,7 @@ class WebServer:
 
     async def start(self) -> None:
         await self.runner.setup()
-        site = web.TCPSite(
-            self.runner,
-            self.hostname,
-            int(self.listen_port),
-            ssl_context=self._ssl_context,
-        )
+        site = web.TCPSite(self.runner, self.hostname, int(self.listen_port), ssl_context=self._ssl_context)
         await site.start()
 
         #

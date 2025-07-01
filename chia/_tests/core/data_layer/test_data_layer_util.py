@@ -39,9 +39,7 @@ def create_valid_proof_of_inclusion(layer_count: int, other_hash_side: Side) -> 
 
     for other_hash in other_hashes:
         new_layer = ProofOfInclusionLayer.from_hashes(
-            primary_hash=existing_hash,
-            other_hash_side=other_hash_side,
-            other_hash=other_hash,
+            primary_hash=existing_hash, other_hash_side=other_hash_side, other_hash=other_hash
         )
 
         layers.append(new_layer)
@@ -62,8 +60,7 @@ def valid_proof_of_inclusion_fixture(request: SubRequest, side: Side) -> ProofOf
 
 
 @pytest.fixture(
-    name="invalid_proof_of_inclusion",
-    params=["bad root hash", "bad other hash", "bad other side", "bad node hash"],
+    name="invalid_proof_of_inclusion", params=["bad root hash", "bad other hash", "bad other side", "bad node hash"]
 )
 def invalid_proof_of_inclusion_fixture(request: SubRequest, side: Side) -> ProofOfInclusion:
     valid_proof_of_inclusion = create_valid_proof_of_inclusion(layer_count=5, other_hash_side=side)
@@ -104,33 +101,17 @@ class RoundTripCase:
 @datacases(
     RoundTripCase(
         id="Root",
-        instance=Root(
-            store_id=bytes32.zeros,
-            node_hash=bytes32(b"\x01" * 32),
-            generation=3,
-            status=Status.PENDING,
-        ),
+        instance=Root(store_id=bytes32.zeros, node_hash=bytes32(b"\x01" * 32), generation=3, status=Status.PENDING),
     ),
-    RoundTripCase(
-        id="ClearPendingRootsRequest",
-        instance=ClearPendingRootsRequest(store_id=bytes32(b"\x12" * 32)),
-    ),
+    RoundTripCase(id="ClearPendingRootsRequest", instance=ClearPendingRootsRequest(store_id=bytes32(b"\x12" * 32))),
     RoundTripCase(
         id="ClearPendingRootsResponse success",
         instance=ClearPendingRootsResponse(
             success=True,
-            root=Root(
-                store_id=bytes32.zeros,
-                node_hash=bytes32(b"\x01" * 32),
-                generation=3,
-                status=Status.PENDING,
-            ),
+            root=Root(store_id=bytes32.zeros, node_hash=bytes32(b"\x01" * 32), generation=3, status=Status.PENDING),
         ),
     ),
-    RoundTripCase(
-        id="ClearPendingRootsResponse failure",
-        instance=ClearPendingRootsResponse(success=False, root=None),
-    ),
+    RoundTripCase(id="ClearPendingRootsResponse failure", instance=ClearPendingRootsResponse(success=False, root=None)),
 )
 def test_marshalling_round_trip(case: RoundTripCase) -> None:
     marshalled = case.instance.marshal()

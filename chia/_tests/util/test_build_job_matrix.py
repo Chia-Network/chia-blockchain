@@ -12,10 +12,7 @@ build_job_matrix_path = pathlib.Path(chia._tests.__file__).with_name("build-job-
 
 def run(args: list[str]) -> str:
     completed_process = subprocess.run(
-        [sys.executable, build_job_matrix_path, *args],
-        check=True,
-        encoding="utf-8",
-        stdout=subprocess.PIPE,
+        [sys.executable, build_job_matrix_path, *args], check=True, encoding="utf-8", stdout=subprocess.PIPE
     )
     return completed_process.stdout
 

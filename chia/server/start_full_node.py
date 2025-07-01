@@ -45,11 +45,7 @@ async def create_full_node_service(
     if service_config["enable_upnp"]:
         upnp_list = [service_config["port"]]
 
-    node = await FullNode.create(
-        service_config,
-        root_path=root_path,
-        consensus_constants=consensus_constants,
-    )
+    node = await FullNode.create(service_config, root_path=root_path, consensus_constants=consensus_constants)
     peer_api = FullNodeAPI(node)
 
     rpc_info: Optional[RpcInfo[FullNodeRpcApi]] = None

@@ -16,37 +16,15 @@ def test_timelock_args() -> None:
 
     runner = CliRunner()
 
-    result = runner.invoke(
-        test_cmd,
-        [
-            "--valid-at",
-            "0",
-            "--expires-at",
-            "0",
-        ],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(test_cmd, ["--valid-at", "0", "--expires-at", "0"], catch_exceptions=False)
 
     assert "0\n0\n" == result.output
 
-    result = runner.invoke(
-        test_cmd,
-        [
-            "--valid-at",
-            "4294967295",
-            "--expires-at",
-            "4294967295",
-        ],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(test_cmd, ["--valid-at", "4294967295", "--expires-at", "4294967295"], catch_exceptions=False)
 
     assert "4294967295\n4294967295\n" == result.output
 
-    result = runner.invoke(
-        test_cmd,
-        [],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(test_cmd, [], catch_exceptions=False)
 
     assert "None\nNone\n" == result.output
 
@@ -57,19 +35,11 @@ def test_timelock_args() -> None:
         print(condition_valid_times.min_time)
         print(condition_valid_times.max_time)
 
-    result = runner.invoke(
-        test_cmd_disabled,
-        [],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(test_cmd_disabled, [], catch_exceptions=False)
 
     assert "None\nNone\n" == result.output
 
-    result = runner.invoke(
-        test_cmd_disabled,
-        ["--help"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(test_cmd_disabled, ["--help"], catch_exceptions=False)
 
     assert "--valid-at" not in result.output
     assert "--expires-at" not in result.output

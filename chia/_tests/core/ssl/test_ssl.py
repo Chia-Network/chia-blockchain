@@ -101,12 +101,7 @@ class TestSSL:
         # Create valid cert (valid meaning signed with private CA)
         priv_crt = farmer_server.root_path / "valid.crt"
         priv_key = farmer_server.root_path / "valid.key"
-        generate_ca_signed_cert(
-            ca_private_crt_path.read_bytes(),
-            ca_private_key_path.read_bytes(),
-            priv_crt,
-            priv_key,
-        )
+        generate_ca_signed_cert(ca_private_crt_path.read_bytes(), ca_private_key_path.read_bytes(), priv_crt, priv_key)
 
         ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
         await establish_connection(farmer_server, self_hostname, ssl_context)
@@ -175,12 +170,7 @@ class TestSSL:
         # Create not authenticated cert
         pub_crt = full_node_server.root_path / "p2p.crt"
         pub_key = full_node_server.root_path / "p2p.key"
-        generate_ca_signed_cert(
-            chia_ca_crt_path.read_bytes(),
-            chia_ca_key_path.read_bytes(),
-            pub_crt,
-            pub_key,
-        )
+        generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
         ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
         await establish_connection(full_node_server, self_hostname, ssl_context)
 
@@ -192,11 +182,6 @@ class TestSSL:
         # Create not authenticated cert
         pub_crt = introducer_server.root_path / "p2p.crt"
         pub_key = introducer_server.root_path / "p2p.key"
-        generate_ca_signed_cert(
-            chia_ca_crt_path.read_bytes(),
-            chia_ca_key_path.read_bytes(),
-            pub_crt,
-            pub_key,
-        )
+        generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
         ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
         await establish_connection(introducer_server, self_hostname, ssl_context)

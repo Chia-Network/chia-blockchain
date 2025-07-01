@@ -271,9 +271,7 @@ class CrawlStore:
         self.host_to_records = {}
         self.host_to_reliability = {}
         log.warning("Loading peer reliability records...")
-        cursor = await self.crawl_db.execute(
-            "SELECT * from peer_reliability",
-        )
+        cursor = await self.crawl_db.execute("SELECT * from peer_reliability")
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
@@ -302,9 +300,7 @@ class CrawlStore:
             self.host_to_reliability[reliability.peer_id] = reliability
         log.warning("  - Done loading peer reliability records...")
         log.warning("Loading peer records...")
-        cursor = await self.crawl_db.execute(
-            "SELECT * from peer_records",
-        )
+        cursor = await self.crawl_db.execute("SELECT * from peer_records")
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
@@ -322,17 +318,12 @@ class CrawlStore:
                 peers.append(peer_id)
         self.reliable_peers = len(peers)
         log.warning("Deleting old good_peers from DB...")
-        cursor = await self.crawl_db.execute(
-            "DELETE from good_peers",
-        )
+        cursor = await self.crawl_db.execute("DELETE from good_peers")
         await cursor.close()
         log.warning(" - Done deleting old good_peers...")
         log.warning("Saving new good_peers to DB...")
         for peer_id in peers:
-            cursor = await self.crawl_db.execute(
-                "INSERT OR REPLACE INTO good_peers VALUES(?)",
-                (peer_id,),
-            )
+            cursor = await self.crawl_db.execute("INSERT OR REPLACE INTO good_peers VALUES(?)", (peer_id,))
             await cursor.close()
         await self.crawl_db.commit()
         log.warning(" - Done saving new good_peers to DB...")
@@ -370,9 +361,7 @@ class CrawlStore:
         await self.add_peer(record, reliability)
 
     async def get_good_peers(self) -> list[str]:  # This is for the DNS server
-        cursor = await self.crawl_db.execute(
-            "SELECT * from good_peers",
-        )
+        cursor = await self.crawl_db.execute("SELECT * from good_peers")
         rows = await cursor.fetchall()
         await cursor.close()
         result = [row[0] for row in rows]

@@ -38,8 +38,7 @@ async def test_simulation_farm_blocks_to_puzzlehash(
 @pytest.mark.anyio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 async def test_simulation_farm_blocks_to_wallet(
-    count: int,
-    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    count: int, simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -203,11 +202,7 @@ async def test_create_coins_with_amounts(
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     argnames="amounts",
-    argvalues=[
-        [0],
-        [5, -5],
-        [4, 0],
-    ],
+    argvalues=[[0], [5, -5], [4, 0]],
     ids=lambda amounts: ", ".join(str(amount) for amount in amounts),
 )
 async def test_create_coins_with_invalid_amounts_raises(

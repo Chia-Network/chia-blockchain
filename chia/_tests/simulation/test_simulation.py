@@ -60,11 +60,7 @@ async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimul
     with TempKeyring() as keychain:
         b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
         async with setup_full_node(
-            test_constants_modified,
-            "blockchain_test_3.db",
-            self_hostname,
-            b_tools,
-            db_version=2,
+            test_constants_modified, "blockchain_test_3.db", self_hostname, b_tools, db_version=2
         ) as service:
             yield service._api
 
@@ -155,8 +151,7 @@ class TestSimulation:
 
         # check node3 has synced to the proper height
         peak_height: uint32 = max(
-            full_system.node_1._node.blockchain.get_peak_height(),
-            full_system.node_2._node.blockchain.get_peak_height(),
+            full_system.node_1._node.blockchain.get_peak_height(), full_system.node_2._node.blockchain.get_peak_height()
         )
         # wait up to 10 mins for node3 to sync
         await time_out_assert(600, node_height_at_least, True, node3, peak_height)
@@ -233,12 +228,7 @@ class TestSimulation:
         async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             ph_2 = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(10)],
-                [ph_2],
-                action_scope,
-                uint64(0),
-            )
+            await wallet.generate_signed_transaction([uint64(10)], [ph_2], action_scope, uint64(0))
         [tx] = await wallet.wallet_state_manager.add_pending_transactions(action_scope.side_effects.transactions)
         # wait till out of mempool
         await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, None, tx.name)
@@ -270,11 +260,7 @@ class TestSimulation:
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
-    async def test_simulation_farm_blocks_to_puzzlehash(
-        self,
-        count,
-        simulator_and_wallet: OldSimulatorsAndWallets,
-    ):
+    async def test_simulation_farm_blocks_to_puzzlehash(self, count, simulator_and_wallet: OldSimulatorsAndWallets):
         [[full_node_api], _, _] = simulator_and_wallet
 
         # Starting at the beginning.
@@ -289,10 +275,7 @@ class TestSimulation:
     @pytest.mark.anyio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
     async def test_simulation_farm_blocks(
-        self,
-        self_hostname: str,
-        count,
-        simulator_and_wallet: OldSimulatorsAndWallets,
+        self, self_hostname: str, count, simulator_and_wallet: OldSimulatorsAndWallets
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -355,11 +338,7 @@ class TestSimulation:
         ],
     )
     async def test_simulation_farm_rewards(
-        self,
-        self_hostname: str,
-        amount: int,
-        coin_count: int,
-        simulator_and_wallet: OldSimulatorsAndWallets,
+        self, self_hostname: str, amount: int, coin_count: int, simulator_and_wallet: OldSimulatorsAndWallets
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -386,9 +365,7 @@ class TestSimulation:
 
     @pytest.mark.anyio
     async def test_wait_transaction_records_entered_mempool(
-        self,
-        self_hostname: str,
-        simulator_and_wallet: OldSimulatorsAndWallets,
+        self, self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets
     ) -> None:
         repeats = 50
         tx_amount = uint64(1)
@@ -426,10 +403,7 @@ class TestSimulation:
     @pytest.mark.parametrize(argnames="records_or_bundles_or_coins", argvalues=["records", "bundles", "coins"])
     @pytest.mark.anyio
     async def test_process_transactions(
-        self,
-        self_hostname: str,
-        simulator_and_wallet: OldSimulatorsAndWallets,
-        records_or_bundles_or_coins: str,
+        self, self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, records_or_bundles_or_coins: str
     ) -> None:
         repeats = 20
         tx_amount = uint64(1)
@@ -503,10 +477,7 @@ class TestSimulation:
         ids=lambda amounts: ", ".join(str(amount) for amount in amounts),
     )
     async def test_create_coins_with_invalid_amounts_raises(
-        self,
-        self_hostname: str,
-        amounts: list[uint64],
-        simulator_and_wallet: OldSimulatorsAndWallets,
+        self, self_hostname: str, amounts: list[uint64], simulator_and_wallet: OldSimulatorsAndWallets
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 

@@ -85,14 +85,7 @@ class TestKeysCommands:
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            [
-                "--root-path",
-                os.fspath(tmp_path),
-                "--keys-root-path",
-                os.fspath(keys_root_path),
-                "keys",
-                "generate",
-            ],
+            ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"],
             input="\n",
             catch_exceptions=False,
         )
@@ -133,14 +126,7 @@ class TestKeysCommands:
         runner = CliRunner()
         generate_result = runner.invoke(
             cli,
-            [
-                "--root-path",
-                os.fspath(tmp_path),
-                "--keys-root-path",
-                os.fspath(keys_root_path),
-                "keys",
-                "generate",
-            ],
+            ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"],
             input="\n",
             catch_exceptions=False,
         )
@@ -161,14 +147,7 @@ class TestKeysCommands:
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            [
-                "--root-path",
-                os.fspath(tmp_path),
-                "--keys-root-path",
-                os.fspath(keys_root_path),
-                "keys",
-                "generate",
-            ],
+            ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"],
             input="\n",
             catch_exceptions=False,
         )
@@ -204,22 +183,12 @@ class TestKeysCommands:
     ):
         keychain = empty_keyring
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         runner = CliRunner()
         # Generate a new config
         assert runner.invoke(cli, [*base_params, "init"], catch_exceptions=False).exit_code == 0
         # Run the command
-        result = runner.invoke(
-            cli,
-            [*base_params, "keys", *cmd_params],
-            catch_exceptions=False,
-            input=input_str,
-        )
+        result = runner.invoke(cli, [*base_params, "keys", *cmd_params], catch_exceptions=False, input=input_str)
         assert result.exit_code == 0
         # And make sure the label was set to the expected label
         assert_label(keychain, label, 0)
@@ -227,12 +196,7 @@ class TestKeysCommands:
     def test_set_label(self, keyring_with_one_public_one_private_key, tmp_path):
         keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         cmd_params = ["keys", "label", "set", "-f", TEST_FINGERPRINT]
         runner = CliRunner()
 
@@ -254,12 +218,7 @@ class TestKeysCommands:
     def test_delete_label(self, keyring_with_one_public_one_private_key, tmp_path):
         keychain = keyring_with_one_public_one_private_key
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         cmd_params = ["keys", "label", "delete", "-f", TEST_FINGERPRINT]
         runner = CliRunner()
         # Generate a new config
@@ -278,12 +237,7 @@ class TestKeysCommands:
         keychain = empty_keyring
         runner = CliRunner()
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         cmd_params = ["keys", "label", "show"]
         # Generate a new config
         assert runner.invoke(cli, [*base_params, "init"], catch_exceptions=False).exit_code == 0
@@ -319,12 +273,7 @@ class TestKeysCommands:
         assert len(keychain.get_all_public_keys()) == 2
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         runner = CliRunner()
         cmd_params = ["keys", "show"]
         # Generate a new config
@@ -359,12 +308,7 @@ class TestKeysCommands:
         assert len(keychain.get_all_public_keys()) == 3
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         runner = CliRunner()
         cmd_params = ["keys", "show", "--fingerprint", TEST_FINGERPRINT]
         # Generate a new config
@@ -388,12 +332,7 @@ class TestKeysCommands:
         assert len(keychain.get_all_public_keys()) == 2
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         runner = CliRunner()
         cmd_params = ["keys", "show", "--json"]
         # Generate a new config
@@ -417,12 +356,7 @@ class TestKeysCommands:
         assert len(keychain.get_all_private_keys()) == 1
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         runner = CliRunner()
         cmd_params = ["keys", "show", "--show-mnemonic-seed"]
         # Generate a new config
@@ -447,12 +381,7 @@ class TestKeysCommands:
         assert len(keychain.get_all_private_keys()) == 1
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
-        base_params = [
-            "--root-path",
-            os.fspath(tmp_path),
-            "--keys-root-path",
-            os.fspath(keys_root_path),
-        ]
+        base_params = ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path)]
         runner = CliRunner()
         cmd_params = ["keys", "show", "--show-mnemonic-seed", "--json"]
         # Generate a new config
@@ -488,14 +417,7 @@ class TestKeysCommands:
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            [
-                "--root-path",
-                os.fspath(tmp_path),
-                "--keys-root-path",
-                os.fspath(keys_root_path),
-                "keys",
-                "add",
-            ],
+            ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "add"],
             catch_exceptions=False,
             input=f"{TEST_MNEMONIC_SEED}\n\n",
         )
@@ -700,14 +622,7 @@ class TestKeysCommands:
         runner = CliRunner()
         result = runner.invoke(
             sign_cmd,
-            [
-                "--message",
-                message,
-                "--hd_path",
-                hd_path,
-                "--mnemonic-seed-filename",
-                mnemonic_seed_file,
-            ],
+            ["--message", message, "--hd_path", hd_path, "--mnemonic-seed-filename", mnemonic_seed_file],
             catch_exceptions=False,
         )
 

@@ -62,12 +62,7 @@ def add_block(
 ) -> None:
     conn.execute(
         "INSERT INTO full_blocks VALUES(?, ?, ?, NULL, 0, ?, NULL, NULL)",
-        (
-            header_hash,
-            prev_hash,
-            height,
-            in_main_chain,
-        ),
+        (header_hash, prev_hash, height, in_main_chain),
     )
 
 

@@ -189,10 +189,7 @@ class TestWalletRpcClient(TestRpcClient):
         )
         return NFTGetInfoResponse(nft_info)
 
-    async def nft_calculate_royalties(
-        self,
-        request: NFTCalculateRoyalties,
-    ) -> NFTCalculateRoyaltiesResponse:
+    async def nft_calculate_royalties(self, request: NFTCalculateRoyalties) -> NFTCalculateRoyaltiesResponse:
         self.add_to_log("nft_calculate_royalties", (request,))
         return NFTCalculateRoyaltiesResponse.from_json_dict(
             NFTWallet.royalty_calculation(
@@ -202,17 +199,12 @@ class TestWalletRpcClient(TestRpcClient):
         )
 
     async def get_spendable_coins(
-        self,
-        wallet_id: int,
-        coin_selection_config: CoinSelectionConfig,
+        self, wallet_id: int, coin_selection_config: CoinSelectionConfig
     ) -> tuple[list[CoinRecord], list[CoinRecord], list[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
         """
-        self.add_to_log(
-            "get_spendable_coins",
-            (wallet_id, coin_selection_config),
-        )
+        self.add_to_log("get_spendable_coins", (wallet_id, coin_selection_config))
         confirmed_records = [
             CoinRecord(
                 Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1234560000)),
@@ -291,23 +283,14 @@ class TestWalletRpcClient(TestRpcClient):
 class TestFullNodeRpcClient(TestRpcClient):
     client_type: type[FullNodeRpcClient] = field(init=False, default=FullNodeRpcClient)
 
-    async def get_fee_estimate(
-        self,
-        target_times: Optional[list[int]],
-        cost: Optional[int],
-    ) -> dict[str, Any]:
+    async def get_fee_estimate(self, target_times: Optional[list[int]], cost: Optional[int]) -> dict[str, Any]:
         return {}
 
     async def get_blockchain_state(self) -> dict[str, Any]:
         response: dict[str, Any] = {
             "peak": cast(BlockRecord, create_test_block_record()),
             "genesis_challenge_initialized": True,
-            "sync": {
-                "sync_mode": False,
-                "synced": True,
-                "sync_tip_height": 0,
-                "sync_progress_height": 0,
-            },
+            "sync": {"sync_mode": False, "synced": True, "sync_tip_height": 0, "sync_progress_height": 0},
             "difficulty": 1024,
             "sub_slot_iters": 147849216,
             "space": 29569289860555554816,
@@ -317,7 +300,7 @@ class TestFullNodeRpcClient(TestRpcClient):
             "mempool_min_fees": {
                 # We may give estimates for varying costs in the future
                 # This Dict sets us up for that in the future
-                "cost_5000000": 0,
+                "cost_5000000": 0
             },
             "mempool_max_total_cost": 550000000000,
             "block_max_cost": DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
@@ -400,9 +383,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
             raise ValueError(f"Invalid client type requested: {client_type.__name__}")
         # load variables from config file
         config = load_config(
-            root_path,
-            "config.yaml",
-            fill_missing_services=issubclass(client_type, DataLayerRpcClient),
+            root_path, "config.yaml", fill_missing_services=issubclass(client_type, DataLayerRpcClient)
         )
         self_hostname = config["self_hostname"]
         if rpc_port is None:
@@ -414,9 +395,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
 
     @asynccontextmanager
     async def test_get_wallet_client(
-        root_path: Path = default_root,
-        wallet_rpc_port: Optional[int] = None,
-        fingerprint: Optional[int] = None,
+        root_path: Path = default_root, wallet_rpc_port: Optional[int] = None, fingerprint: Optional[int] = None
     ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
         async with test_get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore

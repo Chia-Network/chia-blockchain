@@ -57,11 +57,7 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
     args = [executable_for_service("chia"), "version"]
     print(f"launching: {args}")
     chia_version_process = subprocess.run(
-        args,
-        capture_output=True,
-        encoding="utf-8",
-        timeout=adjusted_timeout(30),
-        check=False,
+        args, capture_output=True, encoding="utf-8", timeout=adjusted_timeout(30), check=False
     )
     assert chia_version_process.returncode == 0
     assert chia_version_process.stderr == ""
@@ -73,11 +69,7 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
     args = [executable_for_service("chia"), "plotters", "version"]
     print(f"launching: {args}")
     plotter_version_process = subprocess.run(
-        args,
-        capture_output=True,
-        encoding="utf-8",
-        timeout=adjusted_timeout(30),
-        check=False,
+        args, capture_output=True, encoding="utf-8", timeout=adjusted_timeout(30), check=False
     )
 
     print()
@@ -124,8 +116,4 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
 
     args = [executable_for_service("chia"), "init"]
     print(f"launching: {args}")
-    subprocess.run(
-        args,
-        check=True,
-        timeout=adjusted_timeout(30),
-    )
+    subprocess.run(args, check=True, timeout=adjusted_timeout(30))

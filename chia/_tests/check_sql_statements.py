@@ -51,12 +51,7 @@ ret = 0
 
 ret += check_create("INDEX", "chia/wallet")
 ret += check_create(
-    "INDEX",
-    "chia/full_node",
-    {
-        ("block_store.py", "is_fully_compactified"),
-        ("block_store.py", "height"),
-    },
+    "INDEX", "chia/full_node", {("block_store.py", "is_fully_compactified"), ("block_store.py", "height")}
 )
 ret += check_create("TABLE", "chia/wallet")
 ret += check_create(

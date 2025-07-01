@@ -49,11 +49,7 @@ class RpcClient:
 
     @classmethod
     async def create(
-        cls,
-        self_hostname: str,
-        port: uint16,
-        root_path: Optional[Path],
-        net_config: Optional[dict[str, Any]],
+        cls, self_hostname: str, port: uint16, root_path: Optional[Path], net_config: Optional[dict[str, Any]]
     ) -> Self:
         if (root_path is not None) != (net_config is not None):
             raise ValueError("Either both or neither of root_path and net_config must be provided")
@@ -94,12 +90,7 @@ class RpcClient:
         root_path: Optional[Path] = None,
         net_config: Optional[dict[str, Any]] = None,
     ) -> AsyncIterator[Self]:
-        self = await cls.create(
-            self_hostname=self_hostname,
-            port=port,
-            root_path=root_path,
-            net_config=net_config,
-        )
+        self = await cls.create(self_hostname=self_hostname, port=port, root_path=root_path, net_config=net_config)
         try:
             yield self
         finally:

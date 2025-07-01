@@ -47,11 +47,7 @@ def report_compression_fixture(record_property):
 
 
 def test_standard_puzzle(report_compression):
-    coin_spend = make_spend(
-        COIN,
-        puzzle_for_pk(G1Element()),
-        SOLUTION,
-    )
+    coin_spend = make_spend(COIN, puzzle_for_pk(G1Element()), SOLUTION)
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
     assert len(bytes(coin_spend)) > len(compressed)
     assert coin_spend == CoinSpend.from_bytes(decompress_object_with_puzzles(compressed))
@@ -70,9 +66,7 @@ def test_decompress_limit():
 
 def test_cat_puzzle(report_compression):
     coin_spend = make_spend(
-        COIN,
-        construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
-        SOLUTION,
+        COIN, construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), Program.to(1)), SOLUTION
     )
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
     assert len(bytes(coin_spend)) > len(compressed)
@@ -82,11 +76,7 @@ def test_cat_puzzle(report_compression):
 
 
 def test_offer_puzzle(report_compression):
-    coin_spend = make_spend(
-        COIN,
-        OFFER_MOD,
-        SOLUTION,
-    )
+    coin_spend = make_spend(COIN, OFFER_MOD, SOLUTION)
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
     assert len(bytes(coin_spend)) > len(compressed)
     assert coin_spend == CoinSpend.from_bytes(decompress_object_with_puzzles(compressed))
@@ -96,9 +86,7 @@ def test_offer_puzzle(report_compression):
 
 def test_nesting_puzzles(report_compression):
     coin_spend = make_spend(
-        COIN,
-        construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
-        SOLUTION,
+        COIN, construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())), SOLUTION
     )
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
     assert len(bytes(coin_spend)) > len(compressed)
@@ -109,11 +97,7 @@ def test_nesting_puzzles(report_compression):
 
 def test_unknown_wrapper(report_compression):
     unknown = Program.to([2, 2, []])  # (a 2 ())
-    coin_spend = make_spend(
-        COIN,
-        unknown.curry(puzzle_for_pk(G1Element())),
-        SOLUTION,
-    )
+    coin_spend = make_spend(COIN, unknown.curry(puzzle_for_pk(G1Element())), SOLUTION)
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
     assert len(bytes(coin_spend)) > len(compressed)
     assert coin_spend == CoinSpend.from_bytes(decompress_object_with_puzzles(compressed))
@@ -128,11 +112,7 @@ def test_lowest_best_version():
 
 
 def test_version_override():
-    coin_spend = make_spend(
-        COIN,
-        OFFER_MOD,
-        SOLUTION,
-    )
+    coin_spend = make_spend(COIN, OFFER_MOD, SOLUTION)
     spend_bundle = SpendBundle([coin_spend], G2Element())
     compressed = compress_object_with_puzzles(bytes(spend_bundle), LATEST_VERSION)
     compressed_earlier = compress_object_with_puzzles(bytes(spend_bundle), 1)

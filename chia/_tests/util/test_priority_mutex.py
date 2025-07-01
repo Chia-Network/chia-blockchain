@@ -107,10 +107,7 @@ def task_queued(mutex: PriorityMutex[MutexPriority], task: asyncio.Task[object])
 
 async def wait_queued(mutex: PriorityMutex[MutexPriority], task: asyncio.Task[object]) -> None:
     await time_out_assert_custom_interval(
-        timeout=1,
-        interval=0.001,
-        function=functools.partial(task_queued, mutex=mutex, task=task),
-        value=True,
+        timeout=1, interval=0.001, function=functools.partial(task_queued, mutex=mutex, task=task), value=True
     )
 
 
@@ -132,11 +129,7 @@ class Request:
 
         return self.acquisition_order < other.acquisition_order
 
-    async def acquire(
-        self,
-        mutex: PriorityMutex[MutexPriority],
-        wait_for: asyncio.Event,
-    ) -> None:
+    async def acquire(self, mutex: PriorityMutex[MutexPriority], wait_for: asyncio.Event) -> None:
         if self.done:
             raise Exception("attempting to reacquire a request")
 
@@ -435,8 +428,7 @@ def test_sane_all_in_order(case: SaneCase) -> None:
 
 
 async def create_acquire_tasks_in_controlled_order(
-    requests: list[Request],
-    mutex: PriorityMutex[MutexPriority],
+    requests: list[Request], mutex: PriorityMutex[MutexPriority]
 ) -> list[asyncio.Task[None]]:
     tasks: list[asyncio.Task[None]] = []
     release_event = asyncio.Event()

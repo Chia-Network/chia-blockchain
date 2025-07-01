@@ -36,9 +36,7 @@ from chia.wallet.wallet_request_types import GetTransactionMemo
 
 class TestWalletSimulator:
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 1, "blocks_needed": [10], "reuse_puzhash": True}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 1, "blocks_needed": [10], "reuse_puzhash": True}], indirect=True
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
@@ -61,11 +59,7 @@ class TestWalletSimulator:
         assert pool_rewards == 10
         assert farm_rewards == 10
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 1, "blocks_needed": [1]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_make_transaction(self, wallet_environments: WalletTestFramework) -> None:
@@ -75,12 +69,7 @@ class TestWalletSimulator:
         tx_amount = 10
 
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [bytes32.zeros],
-                action_scope,
-                uint64(0),
-            )
+            await wallet.generate_signed_transaction([uint64(tx_amount)], [bytes32.zeros], action_scope, uint64(0))
 
         await wallet_environments.process_pending_states(
             [
@@ -115,9 +104,7 @@ class TestWalletSimulator:
         assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
 
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}], indirect=True
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
@@ -130,12 +117,7 @@ class TestWalletSimulator:
         async with wallet.wallet_state_manager.new_action_scope(
             DEFAULT_TX_CONFIG.override(reuse_puzhash=True), push=True
         ) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [bytes32.zeros],
-                action_scope,
-                uint64(0),
-            )
+            await wallet.generate_signed_transaction([uint64(tx_amount)], [bytes32.zeros], action_scope, uint64(0))
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         assert len(tx.spend_bundle.coin_spends) == 1
@@ -169,9 +151,7 @@ class TestWalletSimulator:
         )
 
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [2, 1], "reuse_puzhash": True}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 2, "blocks_needed": [2, 1], "reuse_puzhash": True}], indirect=True
     )
     @pytest.mark.parametrize("number_of_coins", [1, 3])
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
@@ -223,10 +203,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -267,10 +244,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -321,9 +295,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 1, tx_amount * 2, CoinType.CLAWBACK)
 
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}], indirect=True
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
@@ -374,10 +346,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -433,10 +402,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -473,9 +439,7 @@ class TestWalletSimulator:
         assert merkle_coin.name() not in set(interested_coins)
 
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}], indirect=True
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
@@ -520,10 +484,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -566,10 +527,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -590,9 +548,7 @@ class TestWalletSimulator:
         assert next(iter(txs["transactions"][0]["memos"].values())) == b"Test".hex()
 
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}], indirect=True
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
@@ -641,10 +597,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -655,14 +608,8 @@ class TestWalletSimulator:
         # Farm a block to pass timelock
         await wallet_environments.process_pending_states(
             [
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -682,10 +629,7 @@ class TestWalletSimulator:
 
         await wallet_environments.process_pending_states(
             [
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
@@ -714,23 +658,13 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
 
         txs = await api_0.get_transactions(
-            dict(
-                type_filter={
-                    "values": [
-                        TransactionType.INCOMING_CLAWBACK_SEND.value,
-                    ],
-                    "mode": 1,
-                },
-                wallet_id=1,
-            )
+            dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND.value], "mode": 1}, wallet_id=1)
         )
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["confirmed"]
 
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}], indirect=True
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
@@ -778,10 +712,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -822,10 +753,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -883,10 +811,7 @@ class TestWalletSimulator:
 
         await wallet_environments.process_pending_states(
             [
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
                 WalletStateTransition(
                     pre_block_balance_updates={
                         1: {
@@ -960,10 +885,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -977,9 +899,7 @@ class TestWalletSimulator:
         assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
 
     @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": False}],
-        indirect=True,
+        "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": False}], indirect=True
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
@@ -1035,10 +955,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -1081,10 +998,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -1120,10 +1034,7 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
+                WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             ]
         )
 
@@ -1167,12 +1078,7 @@ class TestWalletSimulator:
         await env_2.node._start()
         await env_2.peer_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
 
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(),
-                WalletStateTransition(),
-            ]
-        )
+        await wallet_environments.process_pending_states([WalletStateTransition(), WalletStateTransition()])
 
         wsm_1 = env_1.node.wallet_state_manager
         wsm_2 = env_2.node.wallet_state_manager
@@ -1223,11 +1129,7 @@ class TestWalletSimulator:
         assert before_txs["sender"] == after_txs["sender"]
         assert before_txs["recipient"] == after_txs["recipient"]
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 1, "blocks_needed": [3]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [3]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_coinbase_reorg(self, wallet_environments: WalletTestFramework) -> None:
@@ -1322,10 +1224,7 @@ class TestWalletSimulator:
 
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-                [uint64(10)],
-                [bytes32(32 * b"0")],
-                action_scope,
-                uint64(0),
+                [uint64(10)], [bytes32(32 * b"0")], action_scope, uint64(0)
             )
         await full_node_api_0.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
 
@@ -1337,11 +1236,7 @@ class TestWalletSimulator:
         await wallet_server_0.start_client(PeerInfo(self_hostname, server_2.get_port()), wallet_0.on_connect)
         await full_node_api_2.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_make_transaction_hop(self, wallet_environments: WalletTestFramework) -> None:
@@ -1356,12 +1251,7 @@ class TestWalletSimulator:
         ) as action_scope:
             wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet_0.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [wallet_1_ph],
-                action_scope,
-                uint64(0),
-            )
+            await wallet_0.generate_signed_transaction([uint64(tx_amount)], [wallet_1_ph], action_scope, uint64(0))
 
         await wallet_environments.process_pending_states(
             [
@@ -1445,11 +1335,7 @@ class TestWalletSimulator:
             ]
         )
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_make_transaction_with_fee(self, wallet_environments: WalletTestFramework) -> None:
@@ -1465,12 +1351,7 @@ class TestWalletSimulator:
         ) as action_scope:
             wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet_0.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [wallet_1_ph],
-                action_scope,
-                uint64(tx_fee),
-            )
+            await wallet_0.generate_signed_transaction([uint64(tx_amount)], [wallet_1_ph], action_scope, uint64(tx_fee))
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
 
@@ -1515,11 +1396,7 @@ class TestWalletSimulator:
             ]
         )
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_make_transaction_with_memo(self, wallet_environments: WalletTestFramework) -> None:
@@ -1640,7 +1517,7 @@ class TestWalletSimulator:
                             "unspent_coin_count": wallet.max_send_quantity + 2,
                         }
                     },
-                ),
+                )
             ]
         )
 
@@ -1649,23 +1526,13 @@ class TestWalletSimulator:
 
         # 1) Generate transaction that is under the limit
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(max_sent_amount - 1)],
-                [ph],
-                action_scope,
-                uint64(0),
-            )
+            await wallet.generate_signed_transaction([uint64(max_sent_amount - 1)], [ph], action_scope, uint64(0))
 
         assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount - 1)
 
         # 2) Generate transaction that is equal to limit
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(max_sent_amount)],
-                [ph],
-                action_scope,
-                uint64(0),
-            )
+            await wallet.generate_signed_transaction([uint64(max_sent_amount)], [ph], action_scope, uint64(0))
 
         assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount)
 
@@ -1676,12 +1543,7 @@ class TestWalletSimulator:
             f"{max_sent_amount}. There may be other transactions pending or our minimum coin amount is too high.",
         ):
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-                await wallet.generate_signed_transaction(
-                    [uint64(max_sent_amount + 1)],
-                    [ph],
-                    action_scope,
-                    uint64(0),
-                )
+                await wallet.generate_signed_transaction([uint64(max_sent_amount + 1)], [ph], action_scope, uint64(0))
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -1697,12 +1559,7 @@ class TestWalletSimulator:
         tx_amount = 1_750_000_000_000
         tx_fee = 2_000_000_000_000
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [bytes32.zeros],
-                action_scope,
-                uint64(tx_fee),
-            )
+            await wallet.generate_signed_transaction([uint64(tx_amount)], [bytes32.zeros], action_scope, uint64(tx_fee))
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
 
@@ -1745,11 +1602,7 @@ class TestWalletSimulator:
 
         await time_out_assert(10, transaction_has_failed, True, stolen_tx.name)
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [4, 1]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [4, 1]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_tx_reorg(self, wallet_environments: WalletTestFramework) -> None:
@@ -1929,9 +1782,7 @@ class TestWalletSimulator:
         await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[0])
         await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[210])
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=1,
-            farm_to=puzzle_hashes[114],
-            guarantee_transaction_blocks=True,
+            count=1, farm_to=puzzle_hashes[114], guarantee_transaction_blocks=True
         )
 
         await full_node_api.wait_for_wallet_synced(env.node, peak_height=uint32(peak + 3))
@@ -1948,14 +1799,9 @@ class TestWalletSimulator:
         )
 
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=1,
-            farm_to=puzzle_hashes[50],
-            guarantee_transaction_blocks=True,
+            count=1, farm_to=puzzle_hashes[50], guarantee_transaction_blocks=True
         )
-        await full_node_api.farm_blocks_to_puzzlehash(
-            count=1,
-            guarantee_transaction_blocks=True,
-        )
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
         await full_node_api.wait_for_wallet_synced(env.node, peak_height=uint32(peak + 5))
         await env.change_balances(
@@ -1972,9 +1818,7 @@ class TestWalletSimulator:
 
         await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[113])
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=1,
-            farm_to=puzzle_hashes[209],
-            guarantee_transaction_blocks=True,
+            count=1, farm_to=puzzle_hashes[209], guarantee_transaction_blocks=True
         )
         await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
@@ -1991,11 +1835,7 @@ class TestWalletSimulator:
             }
         )
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 1, "blocks_needed": [1]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_sign_message(self, wallet_environments: WalletTestFramework) -> None:
@@ -2062,11 +1902,7 @@ class TestWalletSimulator:
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )
 
-    @pytest.mark.parametrize(
-        "wallet_environments",
-        [{"num_environments": 1, "blocks_needed": [2]}],
-        indirect=True,
-    )
+    @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [2]}], indirect=True)
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_transaction_options(self, wallet_environments: WalletTestFramework) -> None:
@@ -2136,10 +1972,7 @@ class TestWalletSimulator:
                 coin_list = list(coins)
                 assert len(coin_list) == 1
                 await wallet.generate_signed_transaction(
-                    [uint64(coin_list[0].amount / 2)],
-                    [coin_list[0].puzzle_hash],
-                    action_scope,
-                    coins=coins,
+                    [uint64(coin_list[0].amount / 2)], [coin_list[0].puzzle_hash], action_scope, coins=coins
                 )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
@@ -2158,8 +1991,7 @@ class TestWalletSimulator:
 
         # Our framework
         async with wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config,
-            push=False,
+            wallet_environments.tx_config, push=False
         ) as action_scope:
             await action_scope.get_puzzle_hash(wallet.wallet_state_manager, override_reuse_puzhash_with=False)
 

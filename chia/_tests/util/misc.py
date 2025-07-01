@@ -187,10 +187,7 @@ def measure_runtime(
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
     entry_file, entry_line = caller_file_and_line(
-        relative_to=(
-            pathlib.Path(chia.__file__).parent.parent,
-            pathlib.Path(chia._tests.__file__).parent.parent,
-        )
+        relative_to=(pathlib.Path(chia.__file__).parent.parent, pathlib.Path(chia._tests.__file__).parent.parent)
     )
 
     results_future: Future[RuntimeResults] = Future()
@@ -208,12 +205,7 @@ def measure_runtime(
                 duration -= overhead
 
             results = RuntimeResults(
-                start=start,
-                end=end,
-                duration=duration,
-                entry_file=entry_file,
-                entry_line=entry_line,
-                overhead=overhead,
+                start=start, end=end, duration=duration, entry_file=entry_file, entry_line=entry_line, overhead=overhead
             )
             results_future.set_result(results)
 
@@ -299,10 +291,7 @@ class _AssertRuntime:
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_file, self.entry_line = caller_file_and_line(
-            relative_to=(
-                pathlib.Path(chia.__file__).parent.parent,
-                pathlib.Path(chia._tests.__file__).parent.parent,
-            )
+            relative_to=(pathlib.Path(chia.__file__).parent.parent, pathlib.Path(chia._tests.__file__).parent.parent)
         )
 
         self.runtime_manager = measure_runtime(
@@ -314,10 +303,7 @@ class _AssertRuntime:
         return self.results_callable
 
     def __exit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        self, exc_type: Optional[type[BaseException]], exc: Optional[BaseException], traceback: Optional[TracebackType]
     ) -> None:
         if (
             self.entry_file is None
@@ -352,10 +338,7 @@ class _AssertRuntime:
                 label=self.label,
             )
 
-            ether.record_property(
-                data.tag,
-                json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
-            )
+            ether.record_property(data.tag, json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True))
 
         if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
@@ -410,8 +393,7 @@ class DataCase(Protocol):
 
 def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
     return pytest.mark.parametrize(
-        argnames=_name,
-        argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in cases],
+        argnames=_name, argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in cases]
     )
 
 
@@ -425,11 +407,7 @@ def named_datacases(name: str) -> DataCasesDecorator:
 
 def boolean_datacases(name: str, false: str, true: str) -> pytest.MarkDecorator:
     return pytest.mark.parametrize(
-        argnames=name,
-        argvalues=[
-            pytest.param(False, id=false),
-            pytest.param(True, id=true),
-        ],
+        argnames=name, argvalues=[pytest.param(False, id=false), pytest.param(True, id=true)]
     )
 
 
@@ -468,8 +446,7 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
     stream_handler = logging.StreamHandler(stream=file)
     log_date_format = "%Y-%m-%dT%H:%M:%S"
     file_log_formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-        datefmt=log_date_format,
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s", datefmt=log_date_format
     )
     stream_handler.setFormatter(file_log_formatter)
     logger.addHandler(hdlr=stream_handler)
@@ -588,26 +565,16 @@ class TestId:
         else:
             ids = tuple(rest.rstrip("]").split("-"))
 
-        return cls(
-            platform=platform,
-            test_path=tuple(test_path),
-            ids=ids,
-        )
+        return cls(platform=platform, test_path=tuple(test_path), ids=ids)
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> TestId:
         return cls(
-            platform=marshalled["platform"],
-            test_path=tuple(marshalled["test_path"]),
-            ids=tuple(marshalled["ids"]),
+            platform=marshalled["platform"], test_path=tuple(marshalled["test_path"]), ids=tuple(marshalled["ids"])
         )
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "platform": self.platform,
-            "test_path": self.test_path,
-            "ids": self.ids,
-        }
+        return {"platform": self.platform, "test_path": self.test_path, "ids": self.ids}
 
 
 T_ComparableEnum = TypeVar("T_ComparableEnum", bound="ComparableEnum")

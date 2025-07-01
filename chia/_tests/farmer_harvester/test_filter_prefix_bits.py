@@ -87,9 +87,7 @@ async def farmer_harvester_with_filter_size_9(
 @pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])
 @pytest.mark.anyio
 async def test_filter_prefix_bits_with_farmer_harvester(
-    farmer_harvester_with_filter_size_9: tuple[HarvesterService, FarmerAPI],
-    peak_height: uint32,
-    eligible_plots: int,
+    farmer_harvester_with_filter_size_9: tuple[HarvesterService, FarmerAPI], peak_height: uint32, eligible_plots: int
 ) -> None:
     state_change = None
     state_change_data = None

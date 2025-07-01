@@ -13,10 +13,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.nft_wallet.nft_puzzle_utils import create_nft_layer_puzzle_with_curry_params
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE_HASH,
-    SINGLETON_TOP_LAYER_MOD,
-)
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD
 
 ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()

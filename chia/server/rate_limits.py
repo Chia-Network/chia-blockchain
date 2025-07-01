@@ -102,7 +102,7 @@ class RateLimiter:
                         )
             else:  # pragma: no cover
                 log.warning(
-                    f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})",
+                    f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})"
                 )
 
             if isinstance(limits, Unlimited):

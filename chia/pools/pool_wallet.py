@@ -362,11 +362,7 @@ class PoolWallet:
 
     @classmethod
     async def create_from_db(
-        cls,
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        wallet_info: WalletInfo,
-        name: Optional[str] = None,
+        cls, wallet_state_manager: Any, wallet: Wallet, wallet_info: WalletInfo, name: Optional[str] = None
     ) -> PoolWallet:
         """
         This creates a PoolWallet from DB. However, all data is already handled by WalletPoolStore, so we don't need
@@ -437,19 +433,10 @@ class PoolWallet:
         return p2_singleton_puzzle_hash, launcher_coin_id
 
     async def generate_fee_transaction(
-        self,
-        fee: uint64,
-        action_scope: WalletActionScope,
-        extra_conditions: tuple[Condition, ...] = tuple(),
+        self, fee: uint64, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
-            [],
-            [],
-            action_scope,
-            fee=fee,
-            origin_id=None,
-            coins=None,
-            extra_conditions=extra_conditions,
+            [], [], action_scope, fee=fee, origin_id=None, coins=None, extra_conditions=extra_conditions
         )
 
     async def generate_travel_transactions(self, fee: uint64, action_scope: WalletActionScope) -> None:
@@ -603,11 +590,7 @@ class PoolWallet:
 
         genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])
 
-        launcher_cs: CoinSpend = make_spend(
-            launcher_coin,
-            genesis_launcher_puz,
-            genesis_launcher_solution,
-        )
+        launcher_cs: CoinSpend = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
 
         await standard_wallet.generate_signed_transaction(

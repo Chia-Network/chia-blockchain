@@ -103,10 +103,7 @@ def get_block_challenge(
     return challenge
 
 
-def prev_tx_block(
-    blocks: BlockRecordsProtocol,
-    prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]],
-) -> uint32:
+def prev_tx_block(blocks: BlockRecordsProtocol, prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]]) -> uint32:
     # todo add check to make sure we dont return tx block from same sp as block we are validating
     if prev_b is None:
         return uint32(0)

@@ -23,15 +23,9 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 )
 from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE_HASH as LAUNCHER_PUZZLE_HASH,
-)
-from chia.wallet.singleton import (
-    SINGLETON_TOP_LAYER_MOD as SINGLETON_MOD,
-)
-from chia.wallet.singleton import (
-    SINGLETON_TOP_LAYER_MOD_HASH,
-)
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH as LAUNCHER_PUZZLE_HASH
+from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD as SINGLETON_MOD
+from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD_HASH
 from chia.wallet.trading.offer import OFFER_MOD_HASH
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
@@ -154,10 +148,7 @@ def test_transfer_puzzle_builder() -> None:
         Program.to(metadata), NFT_METADATA_UPDATER_HASH, ownership_puzzle
     )
     puzzle = create_full_puzzle(
-        Program.to(["singleton_id"]).get_tree_hash(),
-        Program.to(metadata),
-        NFT_METADATA_UPDATER_HASH,
-        ownership_puzzle,
+        Program.to(["singleton_id"]).get_tree_hash(), Program.to(metadata), NFT_METADATA_UPDATER_HASH, ownership_puzzle
     )
     clvm_puzzle_hash = get_updated_nft_puzzle(clvm_nft_puzzle, solution.at("rrf"))
     unft = uncurry_nft.UncurriedNFT.uncurry(*puzzle.uncurry())

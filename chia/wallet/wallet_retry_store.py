@@ -60,8 +60,5 @@ class WalletRetryStore:
         :return None:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
-                "DELETE from retry_store WHERE fork_height>?",
-                (height,),
-            )
+            cursor = await conn.execute("DELETE from retry_store WHERE fork_height>?", (height,))
             await cursor.close()

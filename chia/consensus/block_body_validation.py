@@ -442,11 +442,7 @@ async def validate_block_body(
             # Ephemeral coin
             rem_coin: Coin = additions_dic[rem]
             new_unspent: CoinRecord = CoinRecord(
-                rem_coin,
-                height,
-                height,
-                False,
-                block.foliage_transaction_block.timestamp,
+                rem_coin, height, height, False, block.foliage_transaction_block.timestamp
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
@@ -497,11 +493,7 @@ async def validate_block_body(
             return Err.UNKNOWN_UNSPENT
         addition: ForkAdd = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
-            addition.coin,
-            addition.confirmed_height,
-            uint32(0),
-            False,
-            addition.timestamp,
+            addition.coin, addition.confirmed_height, uint32(0), False, addition.timestamp
         )
         removal_coin_records[new_coin_record.name] = new_coin_record
 
@@ -545,10 +537,7 @@ async def validate_block_body(
     # verify absolute/relative height/time conditions
     if conds is not None:
         error = check_time_locks(
-            removal_coin_records,
-            conds,
-            prev_transaction_block_height,
-            prev_transaction_block_timestamp,
+            removal_coin_records, conds, prev_transaction_block_height, prev_transaction_block_timestamp
         )
         if error is not None:
             return error

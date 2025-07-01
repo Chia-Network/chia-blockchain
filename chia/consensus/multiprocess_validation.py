@@ -30,10 +30,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
 from chia.consensus.get_block_challenge import get_block_challenge, prev_tx_block
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import (
-    is_overflow_block,
-    validate_pospace_and_get_required_iters,
-)
+from chia.consensus.pot_iterations import is_overflow_block, validate_pospace_and_get_required_iters
 from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
@@ -142,12 +139,7 @@ def _pre_validate_block(
             error_int = uint16(error.code.value)
 
         validation_time = time.monotonic() - validation_start
-        return PreValidationResult(
-            error_int,
-            required_iters,
-            conds,
-            uint32(validation_time * 1000),
-        )
+        return PreValidationResult(error_int, required_iters, conds, uint32(validation_time * 1000))
     except Exception:
         error_stack = traceback.format_exc()
         log.error(f"Exception: {error_stack}")
@@ -228,12 +220,7 @@ async def pre_validate_block(
 
     try:
         block_rec = block_to_block_record(
-            constants,
-            blockchain,
-            required_iters,
-            block,
-            sub_slot_iters=vs.ssi,
-            prev_ses_block=vs.prev_ses_block,
+            constants, blockchain, required_iters, block, sub_slot_iters=vs.ssi, prev_ses_block=vs.prev_ses_block
         )
     except ValueError:
         log.exception("block_to_block_record()")
@@ -258,14 +245,7 @@ async def pre_validate_block(
         return return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
 
     future = asyncio.get_running_loop().run_in_executor(
-        pool,
-        _pre_validate_block,
-        constants,
-        blockchain,
-        block,
-        previous_generators,
-        conds,
-        copy.copy(vs),
+        pool, _pre_validate_block, constants, blockchain, block, previous_generators, conds, copy.copy(vs)
     )
 
     if block_rec.sub_epoch_summary_included is not None:

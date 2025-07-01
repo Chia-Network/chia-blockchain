@@ -21,12 +21,7 @@ log = logging.getLogger(__name__)
 
 
 def get_name_puzzle_conditions(
-    generator: BlockGenerator,
-    max_cost: int,
-    *,
-    mempool_mode: bool,
-    height: uint32,
-    constants: ConsensusConstants,
+    generator: BlockGenerator, max_cost: int, *, mempool_mode: bool, height: uint32, constants: ConsensusConstants
 ) -> NPCResult:
     flags = get_flags_for_height_and_constants(height, constants) | DONT_VALIDATE_SIGNATURE
 

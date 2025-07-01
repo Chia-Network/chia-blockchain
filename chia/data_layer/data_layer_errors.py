@@ -17,8 +17,7 @@ class TreeGenerationIncrementingError(IntegrityError):
     def __init__(self, store_ids: list[bytes32]) -> None:
         super().__init__(
             build_message_with_hashes(
-                message="Found trees with generations not properly incrementing:",
-                bytes_objects=store_ids,
+                message="Found trees with generations not properly incrementing:", bytes_objects=store_ids
             )
         )
 
@@ -26,10 +25,7 @@ class TreeGenerationIncrementingError(IntegrityError):
 class NodeHashError(IntegrityError):
     def __init__(self, node_hashes: list[bytes32]) -> None:
         super().__init__(
-            build_message_with_hashes(
-                message="Found nodes with incorrect hashes:",
-                bytes_objects=node_hashes,
-            )
+            build_message_with_hashes(message="Found nodes with incorrect hashes:", bytes_objects=node_hashes)
         )
 
 

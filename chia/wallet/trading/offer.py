@@ -117,8 +117,7 @@ class Offer:
     # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
-        notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]],
-        driver_dict: dict[bytes32, PuzzleInfo],
+        notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]], driver_dict: dict[bytes32, PuzzleInfo]
     ) -> list[AssertPuzzleAnnouncement]:
         announcements: list[AssertPuzzleAnnouncement] = []
         for asset_id, payments in notarized_payments.items():
@@ -593,22 +592,13 @@ class Offer:
 
             additional_coin_spends.append(
                 make_spend(
-                    Coin(
-                        bytes32.zeros,
-                        puzzle_reveal.get_tree_hash(),
-                        uint64(0),
-                    ),
+                    Coin(bytes32.zeros, puzzle_reveal.get_tree_hash(), uint64(0)),
                     puzzle_reveal,
                     Program.to(inner_solutions),
                 )
             )
 
-        sb = WalletSpendBundle.aggregate(
-            [
-                WalletSpendBundle(additional_coin_spends, G2Element()),
-                self._bundle,
-            ]
-        )
+        sb = WalletSpendBundle.aggregate([WalletSpendBundle(additional_coin_spends, G2Element()), self._bundle])
         object.__setattr__(self, "_final_spend_bundle", sb)
         return sb
 

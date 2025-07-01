@@ -63,10 +63,7 @@ class TestPerformance:
                 conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
             spend_bundle = wallet_a.generate_signed_transaction(
-                100,
-                puzzle_hashes[0],
-                get_future_reward_coins(blocks[1 + i])[0],
-                condition_dic=conditions_dict,
+                100, puzzle_hashes[0], get_future_reward_coins(blocks[1 + i])[0], condition_dic=conditions_dict
             )
             assert spend_bundle is not None
 
@@ -74,10 +71,7 @@ class TestPerformance:
             await full_node_1.respond_transaction(respond_transaction_2, fake_peer)
 
             blocks = bt.get_consecutive_blocks(
-                1,
-                block_list_input=blocks,
-                guarantee_transaction_block=True,
-                transaction_data=spend_bundle,
+                1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
             )
             await full_node_1.full_node.add_block(blocks[-1], fake_peer)
 
@@ -130,10 +124,7 @@ class TestPerformance:
 
         current_blocks = await full_node_1.get_all_full_blocks()
         blocks = bt.get_consecutive_blocks(
-            1,
-            transaction_data=spend_bundle,
-            block_list_input=current_blocks,
-            guarantee_transaction_block=True,
+            1, transaction_data=spend_bundle, block_list_input=current_blocks, guarantee_transaction_block=True
         )
         block = blocks[-1]
         if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):

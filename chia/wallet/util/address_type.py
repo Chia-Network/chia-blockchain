@@ -38,8 +38,7 @@ def ensure_valid_address(address: str, *, allowed_types: set[AddressType], confi
         raise ValueError(f"Invalid address: {address}")
     # Match by prefix (hrp) and return the corresponding address type
     address_type = next(
-        (addr_type for (addr_type, addr_hrp) in ((a, a.hrp(config)) for a in allowed_types) if addr_hrp == hrp),
-        None,
+        (addr_type for (addr_type, addr_hrp) in ((a, a.hrp(config)) for a in allowed_types) if addr_hrp == hrp), None
     )
     if address_type is None:
         raise ValueError(

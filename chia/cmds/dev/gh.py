@@ -125,11 +125,7 @@ class TestCMD:
     )
     duplicates: int = option("-d", "--duplicates", help="Number of duplicates", type=int, default=1)
     oses: Sequence[Oses] = option(
-        "--os",
-        help="Operating systems to run on",
-        type=click.Choice(all_oses),
-        multiple=True,
-        default=all_oses,
+        "--os", help="Operating systems to run on", type=click.Choice(all_oses), multiple=True, default=all_oses
     )
     full_python_matrix: bool = option(
         "--full-python-matrix/--default-python-matrix", help="Run on all Python versions", default=False
@@ -144,13 +140,7 @@ class TestCMD:
 
         if self.ref is not None:
             await self.trigger_workflow(self.ref)
-            query = "+".join(
-                [
-                    "event=workflow_dispatch",
-                    f"branch={self.ref}",
-                    f"actor={username}",
-                ]
-            )
+            query = "+".join(["event=workflow_dispatch", f"branch={self.ref}", f"actor={username}"])
             run_url = f"https://github.com/Chia-Network/chia-blockchain/actions/workflows/test.yml?query={urllib.parse.quote(query)}"
             report(f"waiting a few seconds to load: {run_url}")
             await anyio.sleep(10)
@@ -262,12 +252,7 @@ class TestCMD:
 
     async def get_username(self) -> str:
         # https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user
-        stdout = await run_gh_api(
-            method="GET",
-            args=["/user"],
-            error="Failed to get username",
-            capture_stdout=True,
-        )
+        stdout = await run_gh_api(method="GET", args=["/user"], error="Failed to get username", capture_stdout=True)
 
         response = json.loads(stdout)
         username = response["login"]

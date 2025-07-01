@@ -300,10 +300,7 @@ class Farmer:
                 return
 
             # Sends a handshake to the harvester
-            handshake = harvester_protocol.HarvesterHandshake(
-                self.get_public_keys(),
-                self.pool_public_keys,
-            )
+            handshake = harvester_protocol.HarvesterHandshake(self.get_public_keys(), self.pool_public_keys)
             msg = make_msg(ProtocolMessageTypes.harvester_handshake, handshake)
             await peer.send_message(msg)
             self.harvester_handshake_task = None
@@ -693,10 +690,7 @@ class Farmer:
                 "have_farmer_sk": have_farmer_sk,
                 "have_pool_sk": have_pool_sk,
             }
-        return {
-            "farmer_target": self.farmer_target_encoded,
-            "pool_target": self.pool_target_encoded,
-        }
+        return {"farmer_target": self.farmer_target_encoded, "pool_target": self.pool_target_encoded}
 
     def set_reward_targets(self, farmer_target_encoded: Optional[str], pool_target_encoded: Optional[str]) -> None:
         with lock_and_load_config(self._root_path, "config.yaml") as config:

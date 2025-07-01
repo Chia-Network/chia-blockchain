@@ -115,16 +115,11 @@ def create_foliage(
     )
 
     foliage_data = FoliageBlockData(
-        reward_block_unfinished.get_hash(),
-        pool_target,
-        pool_target_signature,
-        farmer_reward_puzzlehash,
-        extension_data,
+        reward_block_unfinished.get_hash(), pool_target, pool_target_signature, farmer_reward_puzzlehash, extension_data
     )
 
     foliage_block_data_signature: G2Element = get_plot_signature(
-        foliage_data.get_hash(),
-        reward_block_unfinished.proof_of_space.plot_public_key,
+        foliage_data.get_hash(), reward_block_unfinished.proof_of_space.plot_public_key
     )
 
     prev_block_hash: bytes32 = constants.GENESIS_CHALLENGE

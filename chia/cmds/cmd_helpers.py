@@ -40,11 +40,7 @@ class NeedsWalletRPC:
         default=None,
     )
     fingerprint: Optional[int] = option(
-        "-f",
-        "--fingerprint",
-        help="Fingerprint of the wallet to use",
-        type=int,
-        default=None,
+        "-f", "--fingerprint", help="Fingerprint of the wallet to use", type=int, default=None
     )
 
     @asynccontextmanager
@@ -64,10 +60,7 @@ class NeedsWalletRPC:
 @command_helper
 class TransactionsIn:
     transaction_file_in: str = option(
-        "--transaction-file-in",
-        type=str,
-        help="Transaction file to use as input",
-        required=True,
+        "--transaction-file-in", type=str, help="Transaction file to use as input", required=True
     )
 
     @cached_property
@@ -115,10 +108,7 @@ class NeedsCoinSelectionConfig:
         default=cli_amount_none,
     )
     coins_to_exclude: Sequence[bytes32] = option(
-        "--exclude-coin",
-        multiple=True,
-        type=Bytes32ParamType(),
-        help="Exclude this coin from being spent.",
+        "--exclude-coin", multiple=True, type=Bytes32ParamType(), help="Exclude this coin from being spent."
     )
     amounts_to_exclude: Sequence[CliAmount] = option(
         "--exclude-amount",
@@ -212,8 +202,7 @@ class TransactionEndpoint:
 
     def load_condition_valid_times(self) -> ConditionValidTimes:
         return ConditionValidTimes(
-            min_time=uint64.construct_optional(self.valid_at),
-            max_time=uint64.construct_optional(self.expires_at),
+            min_time=uint64.construct_optional(self.valid_at), max_time=uint64.construct_optional(self.expires_at)
         )
 
     @transaction_endpoint_runner

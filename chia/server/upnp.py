@@ -25,7 +25,7 @@ except ImportError:
 class UPnP:
     _thread: Optional[threading.Thread] = None
     _queue: Queue[Union[tuple[Literal["remap", "release"], int], tuple[Literal["shutdown"]]]] = field(
-        default_factory=Queue,
+        default_factory=Queue
     )
     _upnp: Optional[miniupnpc.UPnP] = None
 

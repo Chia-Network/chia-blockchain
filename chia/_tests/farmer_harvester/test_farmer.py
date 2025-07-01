@@ -28,10 +28,7 @@ from chia.protocols.pool_protocol import PoolErrorCode
 from chia.server.aliases import FarmerService, HarvesterService
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.proof_of_space import (
-    generate_plot_public_key,
-    verify_and_get_quality_string,
-)
+from chia.types.blockchain_format.proof_of_space import generate_plot_public_key, verify_and_get_quality_string
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 
@@ -217,7 +214,7 @@ class NewProofOfSpaceCase:
                 {
                     p2_singleton_puzzle_hash: PrivateKey.from_bytes(
                         bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
-                    ),
+                    )
                 }
                 if has_valid_authentication_keys
                 else {}
@@ -233,8 +230,7 @@ class NewProofOfSpaceCase:
         pytest.param(StripOldEntriesCase([], 0, []), id="no_params"),
         pytest.param(StripOldEntriesCase([(1689491043.3493967, 1)], 1689491044, []), id="stripped"),
         pytest.param(
-            StripOldEntriesCase([(1689491043.3493967, 1)], 1689491043, [(1689491043.3493967, 1)]),
-            id="not_stripped",
+            StripOldEntriesCase([(1689491043.3493967, 1)], 1689491043, [(1689491043.3493967, 1)]), id="not_stripped"
         ),
     ],
 )
@@ -246,14 +242,7 @@ def test_strip_old_entries(case: StripOldEntriesCase) -> None:
     argnames="case",
     argvalues=[
         pytest.param(
-            IncrementPoolStatsCase(
-                std_hash(b"0"),
-                "xxx",
-                1689491043.3493967,
-                1,
-                1,
-                None,
-            ),
+            IncrementPoolStatsCase(std_hash(b"0"), "xxx", 1689491043.3493967, 1, 1, None),
             id="p2_singleton_puzzle_hash_not_exist",
         ),
         pytest.param(
@@ -557,8 +546,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
 )
 @pytest.mark.anyio
 async def test_farmer_new_proof_of_space_for_pool_stats(
-    harvester_farmer_environment: HarvesterFarmerEnvironment,
-    case: NewProofOfSpaceCase,
+    harvester_farmer_environment: HarvesterFarmerEnvironment, case: NewProofOfSpaceCase
 ) -> None:
     farmer_service, _farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
@@ -685,10 +673,7 @@ class DummyPoolResponse:
         return self
 
     async def __aexit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
     ) -> None:
         pass
 
@@ -1009,10 +994,7 @@ class DummyPoolInfoResponse:
         return self
 
     async def __aexit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
     ) -> None:
         pass
 
@@ -1035,10 +1017,7 @@ class PoolInfoCase(DataCase):
         "valid_response_without_redirect",
         initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
         pool_response=DummyPoolInfoResponse(
-            ok=True,
-            status=200,
-            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
-            pool_info=make_pool_info(),
+            ok=True, status=200, url=URL("https://endpoint-1.pool-domain.tld/some-path"), pool_info=make_pool_info()
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
@@ -1118,9 +1097,7 @@ class PoolInfoCase(DataCase):
         "failed_request_without_redirect",
         initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
         pool_response=DummyPoolInfoResponse(
-            ok=False,
-            status=500,
-            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
+            ok=False, status=500, url=URL("https://endpoint-1.pool-domain.tld/some-path")
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
@@ -1180,13 +1157,10 @@ async def test_farmer_pool_info_config_update(
     farmer_service._node.authentication_keys = {
         p2_singleton_puzzle_hash: PrivateKey.from_bytes(
             bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
-        ),
+        )
     }
     farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
-        p2_singleton_puzzle_hash,
-        overrides={
-            "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
-        },
+        p2_singleton_puzzle_hash, overrides={"next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL}
     )
     config = load_config(farmer_service.root_path, "config.yaml")
     config["pool"]["pool_list"] = [
@@ -1224,15 +1198,13 @@ class PartialSubmitHeaderCase(DataCase):
 @datacases(
     PartialSubmitHeaderCase(
         "additional version headers",
-        harvester_peer=DummyHarvesterPeer(
-            version="1.2.3.asdf42",
-        ),
+        harvester_peer=DummyHarvesterPeer(version="1.2.3.asdf42"),
         expected_headers={
             "User-Agent": f"Chia Blockchain v.{__version__}",
             "chia-farmer-version": __version__,
             "chia-harvester-version": "1.2.3.asdf42",
         },
-    ),
+    )
 )
 @pytest.mark.anyio
 async def test_farmer_additional_headers_on_partial_submit(
@@ -1255,8 +1227,7 @@ async def test_farmer_additional_headers_on_partial_submit(
     )
 
     mock_http_post = mocker.patch(
-        "aiohttp.ClientSession.post",
-        return_value=DummyPoolResponse(True, 200, new_difficulty=123),
+        "aiohttp.ClientSession.post", return_value=DummyPoolResponse(True, 200, new_difficulty=123)
     )
 
     peer = cast(WSChiaConnection, case.harvester_peer)

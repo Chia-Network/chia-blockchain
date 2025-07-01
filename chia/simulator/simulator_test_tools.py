@@ -69,11 +69,7 @@ def create_config(
 ) -> dict[str, Any]:
     # create chia directories
     create_default_chia_config(chia_root)
-    create_all_ssl(
-        chia_root,
-        private_ca_crt_and_key=private_ca_crt_and_key,
-        node_certs_and_keys=node_certs_and_keys,
-    )
+    create_all_ssl(chia_root, private_ca_crt_and_key=private_ca_crt_and_key, node_certs_and_keys=node_certs_and_keys)
     # load config
     config = load_config(chia_root, "config.yaml")
     config["full_node"]["send_uncompact_interval"] = 0
@@ -84,16 +80,7 @@ def create_config(
     config["full_node"]["dns_servers"] = []
     config["logging"]["log_stdout"] = True
     config["selected_network"] = "testnet0"
-    for service in [
-        "harvester",
-        "farmer",
-        "full_node",
-        "wallet",
-        "introducer",
-        "timelord",
-        "pool",
-        "simulator",
-    ]:
+    for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool", "simulator"]:
         config[service]["selected_network"] = "testnet0"
     config["daemon_port"] = find_available_listen_port("BlockTools daemon")
     config["full_node"]["port"] = 0

@@ -42,11 +42,7 @@ class AggSigParent(Condition):
 
     @classmethod
     def from_program(cls, program: Program, parent_id: Optional[bytes32] = None) -> AggSigParent:
-        return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-            parent_id,
-        )
+        return cls(G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom(), parent_id)
 
 
 @final
@@ -63,11 +59,7 @@ class AggSigPuzzle(Condition):
 
     @classmethod
     def from_program(cls, program: Program, puzzle_hash: Optional[bytes32] = None) -> AggSigPuzzle:
-        return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-            puzzle_hash,
-        )
+        return cls(G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom(), puzzle_hash)
 
 
 @final
@@ -84,11 +76,7 @@ class AggSigAmount(Condition):
 
     @classmethod
     def from_program(cls, program: Program, amount: Optional[uint64] = None) -> AggSigAmount:
-        return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-            amount,
-        )
+        return cls(G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom(), amount)
 
 
 @final
@@ -106,17 +94,9 @@ class AggSigPuzzleAmount(Condition):
 
     @classmethod
     def from_program(
-        cls,
-        program: Program,
-        puzzle_hash: Optional[bytes32] = None,
-        amount: Optional[uint64] = None,
+        cls, program: Program, puzzle_hash: Optional[bytes32] = None, amount: Optional[uint64] = None
     ) -> AggSigPuzzleAmount:
-        return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-            puzzle_hash,
-            amount,
-        )
+        return cls(G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom(), puzzle_hash, amount)
 
 
 @final
@@ -134,17 +114,9 @@ class AggSigParentAmount(Condition):
 
     @classmethod
     def from_program(
-        cls,
-        program: Program,
-        parent_id: Optional[bytes32] = None,
-        amount: Optional[uint64] = None,
+        cls, program: Program, parent_id: Optional[bytes32] = None, amount: Optional[uint64] = None
     ) -> AggSigParentAmount:
-        return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-            parent_id,
-            amount,
-        )
+        return cls(G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom(), parent_id, amount)
 
 
 @final
@@ -162,16 +134,10 @@ class AggSigParentPuzzle(Condition):
 
     @classmethod
     def from_program(
-        cls,
-        program: Program,
-        parent_id: Optional[bytes32] = None,
-        puzzle_hash: Optional[bytes32] = None,
+        cls, program: Program, parent_id: Optional[bytes32] = None, puzzle_hash: Optional[bytes32] = None
     ) -> AggSigParentPuzzle:
         return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-            parent_id,
-            puzzle_hash,
+            G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom(), parent_id, puzzle_hash
         )
 
 
@@ -188,10 +154,7 @@ class AggSigUnsafe(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AggSigUnsafe:
-        return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-        )
+        return cls(G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom())
 
 
 @final
@@ -209,16 +172,10 @@ class AggSigMe(Condition):
 
     @classmethod
     def from_program(
-        cls,
-        program: Program,
-        coin_id: Optional[bytes32] = None,
-        additional_data: Optional[bytes32] = None,
+        cls, program: Program, coin_id: Optional[bytes32] = None, additional_data: Optional[bytes32] = None
     ) -> AggSigMe:
         return cls(
-            G1Element.from_bytes(program.at("rf").as_atom()),
-            program.at("rrf").as_atom(),
-            coin_id,
-            additional_data,
+            G1Element.from_bytes(program.at("rf").as_atom()), program.at("rrf").as_atom(), coin_id, additional_data
         )
 
 
@@ -266,9 +223,7 @@ class ReserveFee(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> ReserveFee:
-        return cls(
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(uint64(program.at("rf").as_int()))
 
 
 @final
@@ -303,16 +258,9 @@ class AssertCoinAnnouncement(Condition):
 
     @classmethod
     def from_program(
-        cls,
-        program: Program,
-        asserted_id: Optional[bytes32] = None,
-        asserted_msg: Optional[bytes] = None,
+        cls, program: Program, asserted_id: Optional[bytes32] = None, asserted_msg: Optional[bytes] = None
     ) -> AssertCoinAnnouncement:
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-            asserted_id,
-            asserted_msg,
-        )
+        return cls(bytes32(program.at("rf").as_atom()), asserted_id, asserted_msg)
 
 
 @final
@@ -334,10 +282,7 @@ class CreateCoinAnnouncement(Condition):
 
     @classmethod
     def from_program(cls, program: Program, coin_id: Optional[bytes32] = None) -> CreateCoinAnnouncement:
-        return cls(
-            program.at("rf").as_atom(),
-            coin_id,
-        )
+        return cls(program.at("rf").as_atom(), coin_id)
 
 
 @final
@@ -372,16 +317,9 @@ class AssertPuzzleAnnouncement(Condition):
 
     @classmethod
     def from_program(
-        cls,
-        program: Program,
-        asserted_ph: Optional[bytes32] = None,
-        asserted_msg: Optional[bytes] = None,
+        cls, program: Program, asserted_ph: Optional[bytes32] = None, asserted_msg: Optional[bytes] = None
     ) -> AssertPuzzleAnnouncement:
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-            asserted_ph,
-            asserted_msg,
-        )
+        return cls(bytes32(program.at("rf").as_atom()), asserted_ph, asserted_msg)
 
 
 @final
@@ -403,10 +341,7 @@ class CreatePuzzleAnnouncement(Condition):
 
     @classmethod
     def from_program(cls, program: Program, puzzle_hash: Optional[bytes32] = None) -> CreatePuzzleAnnouncement:
-        return cls(
-            program.at("rf").as_atom(),
-            puzzle_hash,
-        )
+        return cls(program.at("rf").as_atom(), puzzle_hash)
 
 
 @final
@@ -645,9 +580,7 @@ class AssertConcurrentSpend(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertConcurrentSpend:
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-        )
+        return cls(bytes32(program.at("rf").as_atom()))
 
 
 @final
@@ -662,9 +595,7 @@ class AssertConcurrentPuzzle(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertConcurrentPuzzle:
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-        )
+        return cls(bytes32(program.at("rf").as_atom()))
 
 
 @final
@@ -679,9 +610,7 @@ class AssertMyCoinID(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertMyCoinID:
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-        )
+        return cls(bytes32(program.at("rf").as_atom()))
 
 
 @final
@@ -696,9 +625,7 @@ class AssertMyParentID(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertMyParentID:
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-        )
+        return cls(bytes32(program.at("rf").as_atom()))
 
 
 @final
@@ -713,9 +640,7 @@ class AssertMyPuzzleHash(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertMyPuzzleHash:
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-        )
+        return cls(bytes32(program.at("rf").as_atom()))
 
 
 @final
@@ -730,9 +655,7 @@ class AssertMyAmount(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertMyAmount:
-        return cls(
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(uint64(program.at("rf").as_int()))
 
 
 @final
@@ -747,9 +670,7 @@ class AssertMyBirthSeconds(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertMyBirthSeconds:
-        return cls(
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(uint64(program.at("rf").as_int()))
 
 
 @final
@@ -764,9 +685,7 @@ class AssertMyBirthHeight(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertMyBirthHeight:
-        return cls(
-            uint32(program.at("rf").as_int()),
-        )
+        return cls(uint32(program.at("rf").as_int()))
 
 
 @final
@@ -794,9 +713,7 @@ class AssertSecondsRelative(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertSecondsRelative:
-        return cls(
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(uint64(program.at("rf").as_int()))
 
 
 @final
@@ -811,9 +728,7 @@ class AssertSecondsAbsolute(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertSecondsAbsolute:
-        return cls(
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(uint64(program.at("rf").as_int()))
 
 
 @final
@@ -828,9 +743,7 @@ class AssertHeightRelative(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertHeightRelative:
-        return cls(
-            uint32(program.at("rf").as_int()),
-        )
+        return cls(uint32(program.at("rf").as_int()))
 
 
 @final
@@ -845,9 +758,7 @@ class AssertHeightAbsolute(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertHeightAbsolute:
-        return cls(
-            uint32(program.at("rf").as_int()),
-        )
+        return cls(uint32(program.at("rf").as_int()))
 
 
 @final
@@ -862,9 +773,7 @@ class AssertBeforeSecondsRelative(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertBeforeSecondsRelative:
-        return cls(
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(uint64(program.at("rf").as_int()))
 
 
 @final
@@ -879,9 +788,7 @@ class AssertBeforeSecondsAbsolute(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertBeforeSecondsAbsolute:
-        return cls(
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(uint64(program.at("rf").as_int()))
 
 
 @final
@@ -896,9 +803,7 @@ class AssertBeforeHeightRelative(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertBeforeHeightRelative:
-        return cls(
-            uint32(program.at("rf").as_int()),
-        )
+        return cls(uint32(program.at("rf").as_int()))
 
 
 @final
@@ -913,9 +818,7 @@ class AssertBeforeHeightAbsolute(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> AssertBeforeHeightAbsolute:
-        return cls(
-            uint32(program.at("rf").as_int()),
-        )
+        return cls(uint32(program.at("rf").as_int()))
 
 
 @final
@@ -931,10 +834,7 @@ class Softfork(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> Softfork:
-        return cls(
-            uint64(program.at("rf").as_int()),
-            list(program.at("rrf").as_iter()),
-        )
+        return cls(uint64(program.at("rf").as_int()), list(program.at("rrf").as_iter()))
 
 
 @final
@@ -949,9 +849,7 @@ class Remark(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> Remark:
-        return cls(
-            program.at("r"),
-        )
+        return cls(program.at("r"))
 
 
 @final
@@ -1036,11 +934,7 @@ class CreateAnnouncement(Condition):
             condition = CreatePuzzleAnnouncement.from_program(program, **kwargs)
             assert isinstance(condition, CreatePuzzleAnnouncement)
             origin_id = condition.puzzle_hash
-        return cls(
-            condition.msg,
-            coin_not_puzzle,
-            origin_id,
-        )
+        return cls(condition.msg, coin_not_puzzle, origin_id)
 
 
 @final
@@ -1090,12 +984,7 @@ class AssertAnnouncement(Condition):
             condition = AssertPuzzleAnnouncement.from_program(program, **kwargs)
             assert isinstance(condition, AssertPuzzleAnnouncement)
             asserted_origin_id = condition.asserted_ph
-        return cls(
-            coin_not_puzzle,
-            condition.msg_calc,
-            asserted_origin_id,
-            condition.asserted_msg,
-        )
+        return cls(coin_not_puzzle, condition.msg_calc, asserted_origin_id, condition.asserted_msg)
 
 
 TIMELOCK_TYPES = Union[
@@ -1268,12 +1157,7 @@ class Timelock(Condition):
         else:
             seconds_not_height = False
 
-        return cls(
-            after_not_before,
-            relative_not_absolute,
-            seconds_not_height,
-            uint64(program.at("rf").as_int()),
-        )
+        return cls(after_not_before, relative_not_absolute, seconds_not_height, uint64(program.at("rf").as_int()))
 
 
 CONDITION_DRIVERS: dict[bytes, type[Condition]] = {
@@ -1398,10 +1282,7 @@ def conditions_from_json_dicts(conditions: Iterable[dict[str, Any]]) -> list[Con
 
 def conditions_to_json_dicts(conditions: Iterable[Condition]) -> list[dict[str, Any]]:
     return [
-        {
-            "opcode": int_from_bytes(DRIVERS_TO_OPCODES[condition.__class__]),
-            "args": condition.to_json_dict(),
-        }
+        {"opcode": int_from_bytes(DRIVERS_TO_OPCODES[condition.__class__]), "args": condition.to_json_dict()}
         for condition in conditions
     ]
 

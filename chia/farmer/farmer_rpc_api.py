@@ -115,126 +115,28 @@ class FarmerRpcApi:
             missing_signage_points = change_data["missing_signage_points"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
             data["missing_signage_points"] = missing_signage_points
-            payloads.append(
-                create_payload_dict(
-                    "new_signage_point",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                )
-            )
-            payloads.append(
-                create_payload_dict(
-                    "new_signage_point",
-                    data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("new_signage_point", data, self.service_name, "wallet_ui"))
+            payloads.append(create_payload_dict("new_signage_point", data, self.service_name, "metrics"))
         elif change == "new_farming_info":
-            payloads.append(
-                create_payload_dict(
-                    "new_farming_info",
-                    change_data,
-                    self.service_name,
-                    "wallet_ui",
-                )
-            )
-            payloads.append(
-                create_payload_dict(
-                    "new_farming_info",
-                    change_data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("new_farming_info", change_data, self.service_name, "wallet_ui"))
+            payloads.append(create_payload_dict("new_farming_info", change_data, self.service_name, "metrics"))
         elif change == "harvester_update":
-            payloads.append(
-                create_payload_dict(
-                    "harvester_update",
-                    change_data,
-                    self.service_name,
-                    "wallet_ui",
-                )
-            )
-            payloads.append(
-                create_payload_dict(
-                    "harvester_update",
-                    change_data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("harvester_update", change_data, self.service_name, "wallet_ui"))
+            payloads.append(create_payload_dict("harvester_update", change_data, self.service_name, "metrics"))
         elif change == "harvester_removed":
-            payloads.append(
-                create_payload_dict(
-                    "harvester_removed",
-                    change_data,
-                    self.service_name,
-                    "wallet_ui",
-                )
-            )
-            payloads.append(
-                create_payload_dict(
-                    "harvester_removed",
-                    change_data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("harvester_removed", change_data, self.service_name, "wallet_ui"))
+            payloads.append(create_payload_dict("harvester_removed", change_data, self.service_name, "metrics"))
         elif change == "submitted_partial":
-            payloads.append(
-                create_payload_dict(
-                    "submitted_partial",
-                    change_data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
-            payloads.append(
-                create_payload_dict(
-                    "submitted_partial",
-                    change_data,
-                    self.service_name,
-                    "wallet_ui",
-                )
-            )
+            payloads.append(create_payload_dict("submitted_partial", change_data, self.service_name, "metrics"))
+            payloads.append(create_payload_dict("submitted_partial", change_data, self.service_name, "wallet_ui"))
         elif change == "failed_partial":
-            payloads.append(
-                create_payload_dict(
-                    "failed_partial",
-                    change_data,
-                    self.service_name,
-                    "wallet_ui",
-                )
-            )
+            payloads.append(create_payload_dict("failed_partial", change_data, self.service_name, "wallet_ui"))
         elif change == "proof":
-            payloads.append(
-                create_payload_dict(
-                    "proof",
-                    change_data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("proof", change_data, self.service_name, "metrics"))
         elif change == "add_connection":
-            payloads.append(
-                create_payload_dict(
-                    "add_connection",
-                    change_data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("add_connection", change_data, self.service_name, "metrics"))
         elif change == "close_connection":
-            payloads.append(
-                create_payload_dict(
-                    "close_connection",
-                    change_data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("close_connection", change_data, self.service_name, "metrics"))
 
         return payloads
 

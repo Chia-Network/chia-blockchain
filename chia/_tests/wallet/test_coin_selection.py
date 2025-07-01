@@ -105,12 +105,7 @@ class TestCoinSelection:
         ]
 
         result: set[Coin] = await select_coins(
-            uint128(0),
-            DEFAULT_COIN_SELECTION_CONFIG,
-            coin_list,
-            {},
-            logging.getLogger("test"),
-            uint128(0),
+            uint128(0), DEFAULT_COIN_SELECTION_CONFIG, coin_list, {}, logging.getLogger("test"), uint128(0)
         )
 
         assert len(result) > 0
@@ -308,12 +303,7 @@ class TestCoinSelection:
         # check for exact match
         target_amount = uint128(40)
         exact_match_result: set[Coin] = await select_coins(
-            spendable_amount,
-            DEFAULT_COIN_SELECTION_CONFIG,
-            coin_list,
-            {},
-            logging.getLogger("test"),
-            target_amount,
+            spendable_amount, DEFAULT_COIN_SELECTION_CONFIG, coin_list, {}, logging.getLogger("test"), target_amount
         )
         assert exact_match_result is not None
         assert sum(coin.amount for coin in exact_match_result) >= target_amount
@@ -322,12 +312,7 @@ class TestCoinSelection:
         # check for match of 2
         target_amount = uint128(153)
         match_2: set[Coin] = await select_coins(
-            spendable_amount,
-            DEFAULT_COIN_SELECTION_CONFIG,
-            coin_list,
-            {},
-            logging.getLogger("test"),
-            target_amount,
+            spendable_amount, DEFAULT_COIN_SELECTION_CONFIG, coin_list, {}, logging.getLogger("test"), target_amount
         )
         assert match_2 is not None
         assert sum(coin.amount for coin in match_2) == target_amount
@@ -335,12 +320,7 @@ class TestCoinSelection:
         # check for match of at least 3. it is random after all.
         target_amount = uint128(541)
         match_3: set[Coin] = await select_coins(
-            spendable_amount,
-            DEFAULT_COIN_SELECTION_CONFIG,
-            coin_list,
-            {},
-            logging.getLogger("test"),
-            target_amount,
+            spendable_amount, DEFAULT_COIN_SELECTION_CONFIG, coin_list, {}, logging.getLogger("test"), target_amount
         )
         assert match_3 is not None
         assert sum(coin.amount for coin in match_3) >= target_amount
@@ -349,12 +329,7 @@ class TestCoinSelection:
         # check for match of all
         target_amount = spendable_amount
         match_all: set[Coin] = await select_coins(
-            spendable_amount,
-            DEFAULT_COIN_SELECTION_CONFIG,
-            coin_list,
-            {},
-            logging.getLogger("test"),
-            target_amount,
+            spendable_amount, DEFAULT_COIN_SELECTION_CONFIG, coin_list, {}, logging.getLogger("test"), target_amount
         )
         assert match_all is not None
         assert sum(coin.amount for coin in match_all) == target_amount
@@ -584,12 +559,7 @@ class TestCoinSelection:
         # validate that a zero amount is handled correctly
         target_amount = uint128(0)
         zero_amount_result: set[Coin] = await select_coins(
-            spendable_amount,
-            DEFAULT_COIN_SELECTION_CONFIG,
-            coin_list,
-            {},
-            logging.getLogger("test"),
-            target_amount,
+            spendable_amount, DEFAULT_COIN_SELECTION_CONFIG, coin_list, {}, logging.getLogger("test"), target_amount
         )
         assert zero_amount_result is not None
         assert sum(coin.amount for coin in zero_amount_result) >= target_amount
@@ -597,10 +567,5 @@ class TestCoinSelection:
         # make sure that a failure is properly raised if we don't have any coins.
         with pytest.raises(ValueError):
             await select_coins(
-                uint128(0),
-                DEFAULT_COIN_SELECTION_CONFIG,
-                [],
-                {},
-                logging.getLogger("test"),
-                target_amount,
+                uint128(0), DEFAULT_COIN_SELECTION_CONFIG, [], {}, logging.getLogger("test"), target_amount
             )

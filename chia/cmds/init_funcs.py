@@ -165,12 +165,7 @@ def copy_files_rec(old_path: Path, new_path: Path) -> None:
             copy_files_rec(old_path_child, new_path_child)
 
 
-def migrate_from(
-    old_root: Path,
-    new_root: Path,
-    manifest: list[str],
-    do_not_migrate_settings: list[str],
-) -> int:
+def migrate_from(old_root: Path, new_root: Path, manifest: list[str], do_not_migrate_settings: list[str]) -> int:
     """
     Copy all the files in "manifest" to the new config directory.
     """
@@ -238,13 +233,7 @@ def init(
             print(f"** {root_path} does not exist. Executing core init **")
             # sanity check here to prevent infinite recursion
             if (
-                chia_init(
-                    root_path,
-                    fix_ssl_permissions=fix_ssl_permissions,
-                    testnet=testnet,
-                    v1_db=v1_db,
-                )
-                == 0
+                chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet, v1_db=v1_db) == 0
                 and root_path.exists()
             ):
                 return init(create_certs, root_path, fix_ssl_permissions)

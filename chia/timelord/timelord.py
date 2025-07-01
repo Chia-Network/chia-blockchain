@@ -100,11 +100,7 @@ class Timelord:
         self.chain_type_to_stream: dict[Chain, tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = {}
         self.chain_start_time: dict[Chain, float] = {}
         # Chains that currently don't have a vdf_client.
-        self.unspawned_chains: list[Chain] = [
-            Chain.CHALLENGE_CHAIN,
-            Chain.REWARD_CHAIN,
-            Chain.INFUSED_CHALLENGE_CHAIN,
-        ]
+        self.unspawned_chains: list[Chain] = [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN]
         # Chains that currently accept iterations.
         self.allows_iters: list[Chain] = []
         # Last peak received, None if it's already processed.
@@ -152,9 +148,7 @@ class Timelord:
     async def manage(self) -> AsyncIterator[None]:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
-            self._handle_client,
-            self.config["vdf_server"]["host"],
-            int(self.config["vdf_server"]["port"]),
+            self._handle_client, self.config["vdf_server"]["host"], int(self.config["vdf_server"]["port"])
         )
         self.last_state: LastState = LastState(self.constants)
         slow_bluebox = self.config.get("slow_bluebox", False)
@@ -165,10 +159,7 @@ class Timelord:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
                 self._executor_shutdown_tempfile = _create_shutdown_file()
-                self.bluebox_pool = ThreadPoolExecutor(
-                    max_workers=workers,
-                    thread_name_prefix="blue-box-",
-                )
+                self.bluebox_pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="blue-box-")
                 self.main_loop = create_referenced_task(
                     self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
                 )
@@ -611,13 +602,7 @@ class Timelord:
 
                     cc_info = cc_info.replace(number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
-                        challenge,
-                        cc_info,
-                        cc_proof,
-                        rc_info,
-                        rc_proof,
-                        icc_info,
-                        icc_proof,
+                        challenge, cc_info, cc_proof, rc_info, rc_proof, icc_info, icc_proof
                     )
                     msg = make_msg(ProtocolMessageTypes.new_infusion_point_vdf, response)
                     if self._server is not None:
@@ -636,9 +621,7 @@ class Timelord:
                         ip_total_iters
                         - ip_iters
                         + calculate_sp_iters(
-                            self.constants,
-                            block.sub_slot_iters,
-                            block.reward_chain_block.signage_point_index,
+                            self.constants, block.sub_slot_iters, block.reward_chain_block.signage_point_index
                         )
                         - (block.sub_slot_iters if overflow else 0)
                     )
@@ -823,15 +806,11 @@ class Timelord:
                 eos_deficit,
             )
             eos_bundle = EndOfSubSlotBundle(
-                cc_sub_slot,
-                icc_sub_slot,
-                rc_sub_slot,
-                SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
+                cc_sub_slot, icc_sub_slot, rc_sub_slot, SubSlotProofs(cc_proof, icc_ip_proof, rc_proof)
             )
             if self._server is not None:
                 msg = make_msg(
-                    ProtocolMessageTypes.new_end_of_sub_slot_vdf,
-                    timelord_protocol.NewEndOfSubSlotVDF(eos_bundle),
+                    ProtocolMessageTypes.new_end_of_sub_slot_vdf, timelord_protocol.NewEndOfSubSlotVDF(eos_bundle)
                 )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
@@ -993,11 +972,7 @@ class Timelord:
             while True:
                 try:
                     data = await reader.readexactly(4)
-                except (
-                    asyncio.IncompleteReadError,
-                    ConnectionResetError,
-                    Exception,
-                ) as e:
+                except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
                     log.warning(f"{type(e)} {e}")
                     async with self.lock:
                         self.vdf_failures.append((chain, proof_label))
@@ -1015,11 +990,7 @@ class Timelord:
                     length = int.from_bytes(data, "big")
                     proof = await reader.readexactly(length)
                     stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
-                except (
-                    asyncio.IncompleteReadError,
-                    ConnectionResetError,
-                    Exception,
-                ) as e:
+                except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
                     log.warning(f"{type(e)} {e}")
                     async with self.lock:
                         self.vdf_failures.append((chain, proof_label))
@@ -1050,16 +1021,8 @@ class Timelord:
                         f"Estimated IPS: {ips}, Chain: {chain}"
                     )
 
-                vdf_info: VDFInfo = VDFInfo(
-                    challenge,
-                    iterations_needed,
-                    output,
-                )
-                vdf_proof: VDFProof = VDFProof(
-                    witness_type,
-                    proof_bytes,
-                    self.bluebox_mode,
-                )
+                vdf_info: VDFInfo = VDFInfo(challenge, iterations_needed, output)
+                vdf_proof: VDFProof = VDFProof(witness_type, proof_bytes, self.bluebox_mode)
 
                 if not validate_vdf(vdf_proof, self.constants, initial_form, vdf_info):
                     log.error("Invalid proof of time!")
@@ -1109,8 +1072,7 @@ class Timelord:
                         # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
                         target_field_vdf = random.randint(1, 4)
                         info = next(
-                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
-                            None,
+                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf), None
                         )
                         if info is None:
                             # Nothing found with target_field_vdf, just pick the first VDFInfo.
@@ -1157,8 +1119,7 @@ class Timelord:
                         # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
                         target_field_vdf = random.randint(1, 4)
                         info = next(
-                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
-                            None,
+                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf), None
                         )
                         if info is None:
                             # Nothing found with target_field_vdf, just pick the first VDFInfo.

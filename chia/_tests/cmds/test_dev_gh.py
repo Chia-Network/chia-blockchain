@@ -58,9 +58,7 @@ async def test_invalid_only(case: InvalidOnlyCase) -> None:
 
 @pytest.mark.skip("considering inclusion, but not yet")
 @pytest.mark.anyio
-async def test_successfully_dispatches(
-    capsys: CaptureFixture[str],
-) -> None:
+async def test_successfully_dispatches(capsys: CaptureFixture[str]) -> None:
     cmd = TestCMD(
         # TODO: stop hardcoding here
         owner="chia-network",

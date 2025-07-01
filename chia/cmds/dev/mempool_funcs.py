@@ -10,11 +10,7 @@ from chia_rs import SpendBundle
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
-async def import_mempool_async(
-    rpc_port: Optional[int],
-    root_path: Path,
-    content: dict[str, Any],
-) -> None:
+async def import_mempool_async(rpc_port: Optional[int], root_path: Path, content: dict[str, Any]) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, _):
@@ -31,11 +27,7 @@ async def import_mempool_async(
         print(f"Successfully imported {success} mempool items, but failed to import {failed}")
 
 
-async def export_mempool_async(
-    rpc_port: Optional[int],
-    root_path: Path,
-    path: str,
-) -> None:
+async def export_mempool_async(rpc_port: Optional[int], root_path: Path, path: str) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, _):
@@ -48,10 +40,7 @@ async def export_mempool_async(
         print(f"Successfully exported {len(content['mempool_items'])} mempool items to {path}")
 
 
-async def create_block_async(
-    rpc_port: Optional[int],
-    root_path: Path,
-) -> None:
+async def create_block_async(rpc_port: Optional[int], root_path: Path) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, _):

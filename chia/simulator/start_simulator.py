@@ -44,11 +44,7 @@ async def create_full_node_simulator_service(
     service_config = config[SERVICE_NAME]
     constants = bt.constants
 
-    node = await FullNode.create(
-        config=service_config,
-        root_path=root_path,
-        consensus_constants=constants,
-    )
+    node = await FullNode.create(config=service_config, root_path=root_path, consensus_constants=constants)
 
     peer_api = FullNodeSimulator(node, bt, config)
     network_id = service_config["selected_network"]
@@ -76,9 +72,7 @@ class StartedSimulator:
 
 
 async def async_main(
-    test_mode: bool = False,
-    automated_testing: bool = False,
-    root_path: Optional[Path] = None,
+    test_mode: bool = False, automated_testing: bool = False, root_path: Optional[Path] = None
 ) -> StartedSimulator:
     root_path = resolve_root_path(override=root_path)
     # helping mypy out for now
@@ -110,20 +104,12 @@ async def async_main(
 
     # create block tools
     bt = BlockTools(
-        test_constants,
-        root_path,
-        config_overrides=overrides,
-        automated_testing=automated_testing,
-        plot_dir=plot_dir,
+        test_constants, root_path, config_overrides=overrides, automated_testing=automated_testing, plot_dir=plot_dir
     )
     await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
     await bt.setup_plots(num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE)
     # Everything after this is not simulator specific, excluding the if test_mode.
-    initialize_logging(
-        service_name=SERVICE_NAME,
-        logging_config=service_config["logging"],
-        root_path=root_path,
-    )
+    initialize_logging(service_name=SERVICE_NAME, logging_config=service_config["logging"], root_path=root_path)
     service = await create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
     if not test_mode:
         async with SignalHandlers.manage() as signal_handlers:

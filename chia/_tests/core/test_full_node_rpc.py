@@ -175,10 +175,7 @@ async def test1(
         ahr = ConditionOpcode.ASSERT_HEIGHT_RELATIVE  # to force pending/potential
         condition_dic = {ahr: [ConditionWithArgs(ahr, [int_to_bytes(100)])]}
         spend_bundle_pending = wallet.generate_signed_transaction(
-            coin_to_spend_pending.amount,
-            ph_receiver,
-            coin_to_spend_pending,
-            condition_dic=condition_dic,
+            coin_to_spend_pending.amount, ph_receiver, coin_to_spend_pending, condition_dic=condition_dic
         )
         await client.push_tx(spend_bundle_pending)
         # not strictly in the mempool
@@ -273,9 +270,7 @@ async def test1(
             ),
             ConditionWithArgs(
                 ConditionOpcode(b"<"),
-                [
-                    bytes.fromhex("a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee5479"),
-                ],
+                [bytes.fromhex("a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee5479")],
             ),
         ]
 
@@ -311,9 +306,7 @@ async def test1(
             ),
             ConditionWithArgs(
                 ConditionOpcode(b"<"),
-                [
-                    bytes.fromhex("4f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f"),
-                ],
+                [bytes.fromhex("4f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f")],
             ),
         ]
 
@@ -349,9 +342,7 @@ async def test1(
             ),
             ConditionWithArgs(
                 ConditionOpcode(b"<"),
-                [
-                    bytes.fromhex("617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f"),
-                ],
+                [bytes.fromhex("617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f")],
             ),
         ]
 
@@ -594,10 +585,7 @@ async def test_get_version(
         full_node_service_1.config,
     ) as client:
         version = await client.fetch("get_version", {})
-        assert version == {
-            "success": True,
-            "version": __version__,
-        }
+        assert version == {"success": True, "version": __version__}
 
 
 @pytest.mark.anyio
@@ -694,10 +682,7 @@ async def test_coin_name_not_in_request(one_node: SimulatorsAndWalletsServices, 
     [full_node_service], _, _ = one_node
     assert full_node_service.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
-        self_hostname,
-        full_node_service.rpc_server.listen_port,
-        full_node_service.root_path,
-        full_node_service.config,
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     ) as client:
         with pytest.raises(ValueError, match="No coin_name in request"):
             await client.fetch("get_mempool_items_by_coin_name", {})
@@ -708,10 +693,7 @@ async def test_coin_name_not_found_in_mempool(one_node: SimulatorsAndWalletsServ
     [full_node_service], _, _ = one_node
     assert full_node_service.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
-        self_hostname,
-        full_node_service.rpc_server.listen_port,
-        full_node_service.root_path,
-        full_node_service.config,
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     ) as client:
         empty_coin_name = bytes32.zeros
         mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
@@ -726,10 +708,7 @@ async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices
     full_node_api = full_node_service._api
     assert full_node_service.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
-        self_hostname,
-        full_node_service.rpc_server.listen_port,
-        full_node_service.root_path,
-        full_node_service.config,
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     ) as client:
         blocks = bt.get_consecutive_blocks(2)
         blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)

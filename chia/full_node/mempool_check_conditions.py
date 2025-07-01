@@ -3,12 +3,7 @@ from __future__ import annotations
 import logging
 
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
-from chia_rs import (
-    CoinSpend,
-    ConsensusConstants,
-    get_flags_for_height_and_constants,
-    run_chia_program,
-)
+from chia_rs import CoinSpend, ConsensusConstants, get_flags_for_height_and_constants, run_chia_program
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
 from chia_rs.sized_ints import uint64
 
@@ -76,12 +71,7 @@ def get_spends_for_block_with_conditions(
 
     flags = get_flags_for_height_and_constants(height, constants)
 
-    _, ret = run_chia_program(
-        bytes(generator.program),
-        bytes(args),
-        constants.MAX_BLOCK_COST_CLVM,
-        flags,
-    )
+    _, ret = run_chia_program(bytes(generator.program), bytes(args), constants.MAX_BLOCK_COST_CLVM, flags)
 
     spends: list[CoinSpendWithConditions] = []
 

@@ -162,12 +162,7 @@ class Daemon:
     net_config: dict[str, Any] = field(default_factory=dict)
 
     def get_command_mapping(self) -> dict[str, Any]:
-        return {
-            "get_routes": None,
-            "example_one": None,
-            "example_two": None,
-            "example_three": None,
-        }
+        return {"get_routes": None, "example_one": None, "example_two": None, "example_three": None}
 
     def is_service_running(self, service_name: str) -> bool:
         return WebSocketServer.is_service_running(cast(WebSocketServer, self), service_name)
@@ -207,9 +202,7 @@ test_key_data_2 = KeyData.from_mnemonic(
     "egg vivid spare immune awake code announce message"
 )
 
-success_response_data = {
-    "success": True,
-}
+success_response_data = {"success": True}
 
 plotter_request_ref = {
     "service": "chia_plotter",
@@ -236,10 +229,7 @@ plotter_request_ref = {
 
 
 def add_private_key_response_data(fingerprint: int) -> dict[str, object]:
-    return {
-        "success": True,
-        "fingerprint": fingerprint,
-    }
+    return {"success": True, "fingerprint": fingerprint}
 
 
 def fingerprint_missing_response_data(request_type: type[object]) -> dict[str, object]:
@@ -251,13 +241,7 @@ def fingerprint_missing_response_data(request_type: type[object]) -> dict[str, o
 
 
 def fingerprint_not_found_response_data(fingerprint: int) -> dict[str, object]:
-    return {
-        "success": False,
-        "error": "key not found",
-        "error_details": {
-            "fingerprint": fingerprint,
-        },
-    }
+    return {"success": False, "error": "key not found", "error_details": {"fingerprint": fingerprint}}
 
 
 def get_key_response_data(key: KeyData) -> dict[str, object]:
@@ -384,10 +368,7 @@ def mock_daemon_with_services_and_connections():
             "chia_plotter": [Service(True), Service(True)],
             "apple": [Service(True)],
         },
-        connections={
-            "apple": [1],
-            "banana": [1, 2],
-        },
+        connections={"apple": [1], "banana": [1, 2]},
         net_config={},
     )
 
@@ -476,19 +457,7 @@ async def test_daemon_passthru(get_daemon, bt):
                 assert message["data"]["blockchain_state"]["genesis_challenge_initialized"] is True
 
 
-@pytest.mark.parametrize(
-    "service, expected_result",
-    [
-        (
-            "my_refrigerator",
-            False,
-        ),
-        (
-            service_plotter,
-            False,
-        ),
-    ],
-)
+@pytest.mark.parametrize("service, expected_result", [("my_refrigerator", False), (service_plotter, False)])
 def test_is_service_running_no_services(mock_lonely_daemon, service, expected_result):
     daemon = mock_lonely_daemon
     assert daemon.is_service_running(service) == expected_result
@@ -497,26 +466,11 @@ def test_is_service_running_no_services(mock_lonely_daemon, service, expected_re
 @pytest.mark.parametrize(
     "service, expected_result",
     [
-        (
-            "my_refrigerator",
-            True,
-        ),
-        (
-            service_plotter,
-            True,
-        ),
-        (
-            "your_nose",
-            False,
-        ),
-        (
-            "the_river",
-            True,
-        ),
-        (
-            "the_clock",
-            False,
-        ),
+        ("my_refrigerator", True),
+        (service_plotter, True),
+        ("your_nose", False),
+        ("the_river", True),
+        ("the_clock", False),
     ],
 )
 def test_is_service_running_with_services(mock_daemon_with_services, service, expected_result):
@@ -526,28 +480,7 @@ def test_is_service_running_with_services(mock_daemon_with_services, service, ex
 
 @pytest.mark.parametrize(
     "service, expected_result",
-    [
-        (
-            "my_refrigerator",
-            True,
-        ),
-        (
-            service_plotter,
-            True,
-        ),
-        (
-            "apple",
-            True,
-        ),
-        (
-            "banana",
-            True,
-        ),
-        (
-            "orange",
-            False,
-        ),
-    ],
+    [("my_refrigerator", True), (service_plotter, True), ("apple", True), ("banana", True), ("orange", False)],
 )
 def test_is_service_running_with_services_and_connections(
     mock_daemon_with_services_and_connections, service, expected_result
@@ -585,10 +518,7 @@ async def test_running_services_with_services_and_connections(mock_daemon_with_s
 async def test_get_routes(mock_lonely_daemon):
     daemon = mock_lonely_daemon
     response = await daemon.get_routes({})
-    assert response == {
-        "success": True,
-        "routes": ["get_routes", "example_one", "example_two", "example_three"],
-    }
+    assert response == {"success": True, "routes": ["get_routes", "example_one", "example_two", "example_three"]}
 
 
 @pytest.mark.anyio
@@ -620,7 +550,7 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
                     {
                         "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
                         "hd_path": "m/12381/8444/2/0",
-                    },
+                    }
                 ],
                 test_key_data_2.fingerprint: [
                     {
@@ -641,8 +571,8 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
                     {
                         "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
                         "hd_path": "m/12381/8444/2/0",
-                    },
-                ],
+                    }
+                ]
             },
         },
     ),
@@ -683,10 +613,7 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
     WalletAddressCase(
         id="invalid fingerprint",
         request={"fingerprints": [999999]},
-        response={
-            "success": False,
-            "error": "key(s) not found for fingerprint(s) {999999}",
-        },
+        response={"success": False, "error": "key(s) not found for fingerprint(s) {999999}"},
     ),
     WalletAddressCase(
         id="missing private key hardened",
@@ -707,19 +634,15 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
                     {
                         "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
                         "hd_path": "m/12381/8444/2/0",
-                    },
-                ],
+                    }
+                ]
             },
         },
         pubkeys_only=True,
     ),
 )
 @pytest.mark.anyio
-async def test_get_wallet_addresses(
-    mock_daemon_with_config_and_keys,
-    monkeypatch,
-    case: WalletAddressCase,
-):
+async def test_get_wallet_addresses(mock_daemon_with_config_and_keys, monkeypatch, case: WalletAddressCase):
     daemon = mock_daemon_with_config_and_keys
 
     original_get_keys = Keychain.get_keys
@@ -765,42 +688,27 @@ async def test_get_wallet_addresses(
                 test_key_data.fingerprint: {
                     "farmer_public_key": bytes(master_sk_to_farmer_sk(test_key_data.private_key).get_g1()).hex(),
                     "pool_public_key": bytes(master_sk_to_pool_sk(test_key_data.private_key).get_g1()).hex(),
-                },
+                }
             },
         },
     ),
     KeysForPlotCase(
         id="invalid fingerprint",
         request={"fingerprints": [999999]},
-        response={
-            "success": False,
-            "error": "key(s) not found for fingerprint(s) {999999}",
-        },
+        response={"success": False, "error": "key(s) not found for fingerprint(s) {999999}"},
     ),
 )
 @pytest.mark.anyio
-async def test_get_keys_for_plotting(
-    mock_daemon_with_config_and_keys,
-    monkeypatch,
-    case: KeysForPlotCase,
-):
+async def test_get_keys_for_plotting(mock_daemon_with_config_and_keys, monkeypatch, case: KeysForPlotCase):
     daemon = mock_daemon_with_config_and_keys
     assert case.response == await daemon.get_keys_for_plotting(case.request)
 
 
 @datacases(
-    KeysForPlotCase(
-        id="invalid request format",
-        request={"fingerprints": test_key_data.fingerprint},
-        response={},
-    ),
+    KeysForPlotCase(id="invalid request format", request={"fingerprints": test_key_data.fingerprint}, response={})
 )
 @pytest.mark.anyio
-async def test_get_keys_for_plotting_error(
-    mock_daemon_with_config_and_keys,
-    monkeypatch,
-    case: KeysForPlotCase,
-):
+async def test_get_keys_for_plotting_error(mock_daemon_with_config_and_keys, monkeypatch, case: KeysForPlotCase):
     daemon = mock_daemon_with_config_and_keys
     with pytest.raises(ValueError, match="fingerprints must be a list of integer"):
         await daemon.get_keys_for_plotting(case.request)
@@ -854,21 +762,9 @@ async def test_is_running_no_services(mock_lonely_daemon, service_request, expec
             {"success": True, "service_name": "my_refrigerator", "is_running": True},
             None,
         ),
-        (
-            {"service": "your_nose"},
-            {"success": True, "service_name": "your_nose", "is_running": False},
-            None,
-        ),
-        (
-            {"service": "the_river"},
-            {"success": True, "service_name": "the_river", "is_running": True},
-            None,
-        ),
-        (
-            {"service": service_plotter},
-            {"success": True, "service_name": service_plotter, "is_running": True},
-            None,
-        ),
+        ({"service": "your_nose"}, {"success": True, "service_name": "your_nose", "is_running": False}, None),
+        ({"service": "the_river"}, {"success": True, "service_name": "the_river", "is_running": True}, None),
+        ({"service": service_plotter}, {"success": True, "service_name": service_plotter, "is_running": True}, None),
     ],
 )
 async def test_is_running_with_services(
@@ -893,26 +789,10 @@ async def test_is_running_with_services(
             {"success": True, "service_name": "my_refrigerator", "is_running": True},
             None,
         ),
-        (
-            {"service": "your_nose"},
-            {"success": True, "service_name": "your_nose", "is_running": False},
-            None,
-        ),
-        (
-            {"service": "apple"},
-            {"success": True, "service_name": "apple", "is_running": True},
-            None,
-        ),
-        (
-            {"service": "banana"},
-            {"success": True, "service_name": "banana", "is_running": True},
-            None,
-        ),
-        (
-            {"service": "orange"},
-            {"success": True, "service_name": "orange", "is_running": False},
-            None,
-        ),
+        ({"service": "your_nose"}, {"success": True, "service_name": "your_nose", "is_running": False}, None),
+        ({"service": "apple"}, {"success": True, "service_name": "apple", "is_running": True}, None),
+        ({"service": "banana"}, {"success": True, "service_name": "banana", "is_running": True}, None),
+        ({"service": "orange"}, {"success": True, "service_name": "orange", "is_running": False}, None),
     ],
 )
 async def test_is_running_with_services_and_connections(
@@ -936,20 +816,11 @@ async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keycha
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="the correct passphrase"
     )
 
-    bad_passphrase_case_response_data = {
-        "success": False,
-        "error": None,
-    }
+    bad_passphrase_case_response_data = {"success": False, "error": None}
 
-    missing_passphrase_response_data = {
-        "success": False,
-        "error": "missing key",
-    }
+    missing_passphrase_response_data = {"success": False, "error": "missing key"}
 
-    empty_passphrase_response_data = {
-        "success": False,
-        "error": None,
-    }
+    empty_passphrase_response_data = {"success": False, "error": None}
 
     # When: using the correct passphrase
     await ws.send_str(
@@ -993,15 +864,9 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
         "error": "'canxyz' is not in the mnemonic dictionary; may be misspelled",
     }
 
-    invalid_mnemonic_length_response_data = {
-        "success": False,
-        "error": "Invalid mnemonic length",
-    }
+    invalid_mnemonic_length_response_data = {"success": False, "error": "Invalid mnemonic length"}
 
-    invalid_mnemonic_response_data = {
-        "success": False,
-        "error": "Invalid order of mnemonic words",
-    }
+    invalid_mnemonic_response_data = {"success": False, "error": "Invalid order of mnemonic words"}
 
     # Expect the key hasn't been added yet
     assert keychain.get_private_key_by_fingerprint(test_key_data.fingerprint) is None
@@ -1048,9 +913,7 @@ async def test_add_private_key_label(daemon_connection_and_temp_keychain):
     # without `label` parameter
     key_data_0 = KeyData.generate()
     await assert_add_private_key_with_label(
-        key_data_0,
-        {"mnemonic": key_data_0.mnemonic_str()},
-        add_private_key_response_data(key_data_0.fingerprint),
+        key_data_0, {"mnemonic": key_data_0.mnemonic_str()}, add_private_key_response_data(key_data_0.fingerprint)
     )
     # with `label=None`
     key_data_1 = KeyData.generate()
@@ -1199,13 +1062,7 @@ async def test_key_renaming(daemon_connection_and_temp_keychain):
         assert_response(await ws.receive(), success_response_data)
 
         await ws.send_str(create_payload("get_key", {"fingerprint": key_data.fingerprint}, "test", "daemon"))
-        assert_response(
-            await ws.receive(),
-            {
-                "success": True,
-                "key": key_data.to_json_dict(),
-            },
-        )
+        assert_response(await ws.receive(), {"success": True, "key": key_data.to_json_dict()})
 
 
 @pytest.mark.anyio
@@ -1224,61 +1081,21 @@ async def test_key_label_deletion(daemon_connection_and_temp_keychain):
 @pytest.mark.parametrize(
     "method, parameter, response_data_dict",
     [
-        (
-            "set_label",
-            {"fingerprint": test_key_data.fingerprint, "label": "new_label"},
-            success_response_data,
-        ),
-        (
-            "set_label",
-            {"label": "new_label"},
-            fingerprint_missing_response_data(SetLabelRequest),
-        ),
-        (
-            "set_label",
-            {"fingerprint": test_key_data.fingerprint},
-            label_missing_response_data(SetLabelRequest),
-        ),
-        (
-            "set_label",
-            {"fingerprint": test_key_data.fingerprint, "label": ""},
-            label_empty_response_data,
-        ),
-        (
-            "set_label",
-            {"fingerprint": test_key_data.fingerprint, "label": "a" * 66},
-            label_too_long_response_data,
-        ),
-        (
-            "set_label",
-            {"fingerprint": test_key_data.fingerprint, "label": "a\nb"},
-            label_newline_or_tab_response_data,
-        ),
-        (
-            "set_label",
-            {"fingerprint": test_key_data.fingerprint, "label": "a\tb"},
-            label_newline_or_tab_response_data,
-        ),
+        ("set_label", {"fingerprint": test_key_data.fingerprint, "label": "new_label"}, success_response_data),
+        ("set_label", {"label": "new_label"}, fingerprint_missing_response_data(SetLabelRequest)),
+        ("set_label", {"fingerprint": test_key_data.fingerprint}, label_missing_response_data(SetLabelRequest)),
+        ("set_label", {"fingerprint": test_key_data.fingerprint, "label": ""}, label_empty_response_data),
+        ("set_label", {"fingerprint": test_key_data.fingerprint, "label": "a" * 66}, label_too_long_response_data),
+        ("set_label", {"fingerprint": test_key_data.fingerprint, "label": "a\nb"}, label_newline_or_tab_response_data),
+        ("set_label", {"fingerprint": test_key_data.fingerprint, "label": "a\tb"}, label_newline_or_tab_response_data),
         (
             "set_label",
             {"fingerprint": test_key_data.fingerprint, "label": "key_0"},
             label_exists_response_data(test_key_data.fingerprint, "key_0"),
         ),
-        (
-            "delete_label",
-            {"fingerprint": test_key_data.fingerprint},
-            success_response_data,
-        ),
-        (
-            "delete_label",
-            {},
-            fingerprint_missing_response_data(DeleteLabelRequest),
-        ),
-        (
-            "delete_label",
-            {"fingerprint": 123456},
-            fingerprint_not_found_response_data(123456),
-        ),
+        ("delete_label", {"fingerprint": test_key_data.fingerprint}, success_response_data),
+        ("delete_label", {}, fingerprint_missing_response_data(DeleteLabelRequest)),
+        ("delete_label", {"fingerprint": 123456}, fingerprint_not_found_response_data(123456)),
     ],
 )
 @pytest.mark.anyio
@@ -1323,19 +1140,12 @@ async def test_bad_json(daemon_connection_and_temp_keychain: tuple[aiohttp.Clien
 
 @datacases(
     RouteCase(
-        route="register_service",
-        description="no service name",
-        request={
-            "fred": "barney",
-        },
-        response={"success": False},
+        route="register_service", description="no service name", request={"fred": "barney"}, response={"success": False}
     ),
     RouteCase(
         route="register_service",
         description="chia_plotter",
-        request={
-            "service": "chia_plotter",
-        },
+        request={"service": "chia_plotter"},
         response={"success": True, "service": "chia_plotter", "queue": []},
     ),
     RouteCase(
@@ -1391,8 +1201,7 @@ async def test_bad_json(daemon_connection_and_temp_keychain: tuple[aiohttp.Clien
 )
 @pytest.mark.anyio
 async def test_misc_daemon_ws(
-    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    case: RouteCase,
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
@@ -1441,36 +1250,25 @@ async def test_commands_with_no_data(
     RouteCase(
         route="set_keyring_passphrase",
         description="no passphrase",
-        request={
-            "passphrase_hint": "this is a hint",
-            "save_passphrase": False,
-        },
+        request={"passphrase_hint": "this is a hint", "save_passphrase": False},
         response={"success": False, "error": "missing new_passphrase"},
     ),
     RouteCase(
         route="set_keyring_passphrase",
         description="incorrect type",
-        request={
-            "passphrase_hint": "this is a hint",
-            "save_passphrase": False,
-            "new_passphrase": True,
-        },
+        request={"passphrase_hint": "this is a hint", "save_passphrase": False, "new_passphrase": True},
         response={"success": False, "error": "missing new_passphrase"},
     ),
     RouteCase(
         route="set_keyring_passphrase",
         description="correct",
-        request={
-            "passphrase_hint": "this is a hint",
-            "new_passphrase": "this is a passphrase",
-        },
+        request={"passphrase_hint": "this is a hint", "new_passphrase": "this is a passphrase"},
         response={"success": True, "error": None},
     ),
 )
 @pytest.mark.anyio
 async def test_set_keyring_passphrase_ws(
-    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    case: RouteCase,
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
@@ -1533,30 +1331,19 @@ async def test_set_keyring_passphrase_ws(
     RouteCase(
         route="set_keyring_passphrase",
         description="no current passphrase",
-        request={
-            "save_passphrase": False,
-            "new_passphrase": "another new passphrase",
-        },
+        request={"save_passphrase": False, "new_passphrase": "another new passphrase"},
         response={"success": False, "error": "missing current_passphrase"},
     ),
     RouteCase(
         route="set_keyring_passphrase",
         description="incorrect current passphrase",
-        request={
-            "save_passphrase": False,
-            "current_passphrase": "none",
-            "new_passphrase": "another new passphrase",
-        },
+        request={"save_passphrase": False, "current_passphrase": "none", "new_passphrase": "another new passphrase"},
         response={"success": False, "error": "current passphrase is invalid"},
     ),
     RouteCase(
         route="set_keyring_passphrase",
         description="incorrect type",
-        request={
-            "save_passphrase": False,
-            "current_passphrase": False,
-            "new_passphrase": "another new passphrase",
-        },
+        request={"save_passphrase": False, "current_passphrase": False, "new_passphrase": "another new passphrase"},
         response={"success": False, "error": "missing current_passphrase"},
     ),
     RouteCase(
@@ -1572,8 +1359,7 @@ async def test_set_keyring_passphrase_ws(
 )
 @pytest.mark.anyio
 async def test_passphrase_apis(
-    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    case: RouteCase,
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 
@@ -1589,12 +1375,7 @@ async def test_passphrase_apis(
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
     )
 
-    payload = create_payload(
-        case.route,
-        case.request,
-        "service_name",
-        "daemon",
-    )
+    payload = create_payload(case.route, case.request, "service_name", "daemon")
     await ws.send_str(payload)
     response = await ws.receive()
     assert_response(response, case.response)
@@ -1653,8 +1434,7 @@ async def test_passphrase_apis(
 )
 @pytest.mark.anyio
 async def test_keychain_status_messages(
-    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    case: RouteStatusCase,
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteStatusCase
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 
@@ -1670,12 +1450,7 @@ async def test_keychain_status_messages(
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
     )
 
-    payload = create_payload(
-        case.route,
-        case.request,
-        "service_name",
-        "daemon",
-    )
+    payload = create_payload(case.route, case.request, "service_name", "daemon")
     await ws.send_str(payload)
     response = await ws.receive()
     assert_response(response, case.response)
@@ -1701,8 +1476,7 @@ async def test_keychain_status_messages(
 )
 @pytest.mark.anyio
 async def test_keyring_file_deleted(
-    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    case: RouteCase,
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 
@@ -1711,12 +1485,7 @@ async def test_keyring_file_deleted(
     )
     keychain.keyring_wrapper.keyring.keyring_path.unlink()
 
-    payload = create_payload(
-        case.route,
-        case.request,
-        "service_name",
-        "daemon",
-    )
+    payload = create_payload(case.route, case.request, "service_name", "daemon")
     await ws.send_str(payload)
     response = await ws.receive()
 
@@ -1745,11 +1514,7 @@ async def test_keyring_file_deleted(
     RouteCase(
         route="start_plotting",
         description="chiapos - both c and p",
-        request={
-            **plotter_request_ref,
-            "c": "hello",
-            "p": "goodbye",
-        },
+        request={**plotter_request_ref, "c": "hello", "p": "goodbye"},
         response={
             "success": False,
             "service_name": "chia_plotter",
@@ -1763,12 +1528,7 @@ async def test_plotter_errors(
 ) -> None:
     ws, _keychain = daemon_connection_and_temp_keychain
 
-    payload = create_payload(
-        case.route,
-        case.request,
-        "test_service_name",
-        "daemon",
-    )
+    payload = create_payload(case.route, case.request, "test_service_name", "daemon")
     await ws.send_str(payload)
     response = await ws.receive()
 
@@ -1788,9 +1548,7 @@ async def test_plotter_errors(
             "no_cpu_affinity": True,
             "e": False,
         },
-        response={
-            "success": True,
-        },
+        response={"success": True},
     ),
     RouteCase(
         route="start_plotting",
@@ -1813,9 +1571,7 @@ async def test_plotter_errors(
             "no_t1_direct": True,
             "no_t2_direct": True,
         },
-        response={
-            "success": True,
-        },
+        response={"success": True},
     ),
     RouteCase(
         route="start_plotting",
@@ -1831,9 +1587,7 @@ async def test_plotter_errors(
             "compress": 1,
             "disk_128": True,
         },
-        response={
-            "success": True,
-        },
+        response={"success": True},
     ),
     RouteCase(
         route="start_plotting",
@@ -1849,9 +1603,7 @@ async def test_plotter_errors(
             "compress": 1,
             "disk_16": True,
         },
-        response={
-            "success": True,
-        },
+        response={"success": True},
     ),
     RouteCase(
         route="start_plotting",
@@ -1865,9 +1617,7 @@ async def test_plotter_errors(
             "t2": "testing",
             "v": 128,
         },
-        response={
-            "success": True,
-        },
+        response={"success": True},
     ),
 )
 @pytest.mark.anyio
@@ -1889,12 +1639,7 @@ async def test_plotter_options(
     case.request["t"] = str(get_b_tools.root_path)
     case.request["d"] = str(get_b_tools.root_path)
 
-    payload_rpc = create_payload_dict(
-        case.route,
-        case.request,
-        "test_service_name",
-        "daemon",
-    )
+    payload_rpc = create_payload_dict(case.route, case.request, "test_service_name", "daemon")
     payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
     response = await ws.receive()
@@ -1952,20 +1697,10 @@ async def test_plotter_roundtrip(
 
     root_path = get_b_tools.root_path
 
-    plotting_request: dict[str, Any] = {
-        **plotter_request_ref,
-        "d": str(root_path),
-        "t": str(root_path),
-        "p": "xxx",
-    }
+    plotting_request: dict[str, Any] = {**plotter_request_ref, "d": str(root_path), "t": str(root_path), "p": "xxx"}
     plotting_request.pop("c", None)
 
-    payload_rpc = create_payload_dict(
-        "start_plotting",
-        plotting_request,
-        "test_service_name",
-        "daemon",
-    )
+    payload_rpc = create_payload_dict("start_plotting", plotting_request, "test_service_name", "daemon")
     payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
@@ -2024,18 +1759,9 @@ async def test_plotter_stop_plotting(
 
     root_path = get_b_tools.root_path
 
-    plotting_request: dict[str, Any] = {
-        **plotter_request_ref,
-        "d": str(root_path),
-        "t": str(root_path),
-    }
+    plotting_request: dict[str, Any] = {**plotter_request_ref, "d": str(root_path), "t": str(root_path)}
 
-    payload_rpc = create_payload_dict(
-        "start_plotting",
-        plotting_request,
-        "test_service_name",
-        "daemon",
-    )
+    payload_rpc = create_payload_dict("start_plotting", plotting_request, "test_service_name", "daemon")
     payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
@@ -2056,12 +1782,7 @@ async def test_plotter_stop_plotting(
     response = await ws.receive()
     assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "RUNNING")
 
-    payload_rpc = create_payload_dict(
-        "stop_plotting",
-        {"id": plot_id},
-        "service_name",
-        "daemon",
-    )
+    payload_rpc = create_payload_dict("stop_plotting", {"id": plot_id}, "service_name", "daemon")
 
     stop_plotting_request_id = payload_rpc["request_id"]
     payload = dict_to_json_str(payload_rpc)
@@ -2101,10 +1822,7 @@ async def test_plotter_stop_plotting(
     ChiaPlottersBladebitArgsCase(case_id="3", plot_type="cudaplot", hybrid_disk_mode=128),
 )
 def test_run_plotter_bladebit(
-    mocker: MockerFixture,
-    mock_daemon_with_config_and_keys,
-    bt: BlockTools,
-    case: ChiaPlottersBladebitArgsCase,
+    mocker: MockerFixture, mock_daemon_with_config_and_keys, bt: BlockTools, case: ChiaPlottersBladebitArgsCase
 ) -> None:
     root_path = bt.root_path
 

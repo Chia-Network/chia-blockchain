@@ -22,11 +22,5 @@ def create_fingerprint(required: bool = False) -> Callable[[FC], FC]:
 
 def create_fee(message: str = "Set the fees for the transaction, in XCH", required: bool = True) -> Callable[[FC], FC]:
     return click.option(
-        "-m",
-        "--fee",
-        help=message,
-        type=TransactionFeeParamType(),
-        default="0",
-        show_default=True,
-        required=required,
+        "-m", "--fee", help=message, type=TransactionFeeParamType(), default="0", show_default=True, required=required
     )

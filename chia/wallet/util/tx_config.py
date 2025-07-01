@@ -22,10 +22,7 @@ class CoinSelectionConfig:
 
     def to_json_dict(self) -> dict[str, Any]:
         return CoinSelectionConfigLoader(
-            self.min_coin_amount,
-            self.max_coin_amount,
-            self.excluded_coin_amounts,
-            self.excluded_coin_ids,
+            self.min_coin_amount, self.max_coin_amount, self.excluded_coin_amounts, self.excluded_coin_ids
         ).to_json_dict()
 
     # This function is purely for ergonomics
@@ -40,10 +37,7 @@ class TXConfig(CoinSelectionConfig):
     @property
     def coin_selection_config(self) -> CoinSelectionConfig:
         return CoinSelectionConfig(
-            self.min_coin_amount,
-            self.max_coin_amount,
-            self.excluded_coin_amounts,
-            self.excluded_coin_ids,
+            self.min_coin_amount, self.max_coin_amount, self.excluded_coin_amounts, self.excluded_coin_ids
         )
 
     def to_json_dict(self) -> dict[str, Any]:
@@ -74,10 +68,7 @@ class CoinSelectionConfigLoader(Streamable):
     excluded_coin_amounts: Optional[list[uint64]] = None
     excluded_coin_ids: Optional[list[bytes32]] = None
 
-    def autofill(
-        self,
-        **kwargs: Unpack[AutofillArgs],
-    ) -> CoinSelectionConfig:
+    def autofill(self, **kwargs: Unpack[AutofillArgs]) -> CoinSelectionConfig:
         constants: ConsensusConstants = kwargs["constants"]
         return CoinSelectionConfig(
             min_coin_amount=uint64(0) if self.min_coin_amount is None else self.min_coin_amount,
@@ -107,10 +98,7 @@ class CoinSelectionConfigLoader(Streamable):
 class TXConfigLoader(CoinSelectionConfigLoader):
     reuse_puzhash: Optional[bool] = None
 
-    def autofill(
-        self,
-        **kwargs: Unpack[AutofillArgs],
-    ) -> TXConfig:
+    def autofill(self, **kwargs: Unpack[AutofillArgs]) -> TXConfig:
         constants: ConsensusConstants = kwargs["constants"]
         if self.reuse_puzhash is None:
             config: dict[str, Any] = kwargs.get("config", {})
@@ -124,10 +112,7 @@ class TXConfigLoader(CoinSelectionConfigLoader):
             reuse_puzhash = self.reuse_puzhash
 
         autofilled_cs_config = CoinSelectionConfigLoader(
-            self.min_coin_amount,
-            self.max_coin_amount,
-            self.excluded_coin_amounts,
-            self.excluded_coin_ids,
+            self.min_coin_amount, self.max_coin_amount, self.excluded_coin_amounts, self.excluded_coin_ids
         ).autofill(constants=constants)
 
         return TXConfig(

@@ -58,13 +58,7 @@ class EventId:
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.option(
-    "--xml",
-    "xml_file",
-    required=True,
-    type=click.File(),
-    help="The benchmarks JUnit XML results file",
-)
+@click.option("--xml", "xml_file", required=True, type=click.File(), help="The benchmarks JUnit XML results file")
 @click.option(
     "--link-prefix",
     default="",
@@ -85,11 +79,7 @@ class EventId:
     show_default=True,
 )
 # TODO: anything but this pattern for output types
-@click.option(
-    "--markdown/--no-markdown",
-    help="Use markdown as output format",
-    show_default=True,
-)
+@click.option("--markdown/--no-markdown", help="Use markdown as output format", show_default=True)
 @click.option(
     "--percent-margin",
     default=15,
@@ -97,11 +87,7 @@ class EventId:
     help="Highlight results with maximums within this percent of the limit",
     show_default=True,
 )
-@click.option(
-    "--randomoji/--determimoji",
-    help="🍿",
-    show_default=True,
-)
+@click.option("--randomoji/--determimoji", help="🍿", show_default=True)
 # TODO: subcommands?
 @click.option(
     "--type",
@@ -111,12 +97,7 @@ class EventId:
     required=True,
     show_default=True,
 )
-@click.option(
-    "--limit",
-    "result_count_limit",
-    type=int,
-    help="Limit the number of results to output.",
-)
+@click.option("--limit", "result_count_limit", type=int, help="Limit the number of results to output.")
 def main(
     xml_file: TextIO,
     link_prefix: str,
@@ -173,10 +154,7 @@ def main(
         results = sorted(results, key=lambda result: max(result.durations) / result.limit, reverse=True)
         results = results[:result_count_limit]
 
-    handlers = {
-        BenchmarkData.tag: output_benchmark,
-        TimeOutAssertData.tag: output_time_out_assert,
-    }
+    handlers = {BenchmarkData.tag: output_benchmark, TimeOutAssertData.tag: output_time_out_assert}
     handler = handlers[data_type.tag]
     handler(
         link_line_separator=link_line_separator,

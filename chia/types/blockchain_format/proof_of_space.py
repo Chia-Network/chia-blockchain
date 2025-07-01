@@ -108,12 +108,7 @@ def verify_and_get_quality_string_v2(
     raise NotImplementedError
 
 
-def passes_plot_filter(
-    prefix_bits: int,
-    plot_id: bytes32,
-    challenge_hash: bytes32,
-    signage_point: bytes32,
-) -> bool:
+def passes_plot_filter(prefix_bits: int, plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bool:
     # this is possible when using non-mainnet constants with a low
     # NUMBER_ZERO_BITS_PLOT_FILTER constant and activating sufficient plot
     # filter reductions
@@ -147,17 +142,11 @@ def calculate_pos_challenge(plot_id: bytes32, challenge_hash: bytes32, signage_p
     return std_hash(calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
 
 
-def calculate_plot_id_pk(
-    pool_public_key: G1Element,
-    plot_public_key: G1Element,
-) -> bytes32:
+def calculate_plot_id_pk(pool_public_key: G1Element, plot_public_key: G1Element) -> bytes32:
     return std_hash(bytes(pool_public_key) + bytes(plot_public_key))
 
 
-def calculate_plot_id_ph(
-    pool_contract_puzzle_hash: bytes32,
-    plot_public_key: G1Element,
-) -> bytes32:
+def calculate_plot_id_ph(pool_contract_puzzle_hash: bytes32, plot_public_key: G1Element) -> bytes32:
     return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
 
 

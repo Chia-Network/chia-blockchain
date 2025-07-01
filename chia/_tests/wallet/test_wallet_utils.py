@@ -103,12 +103,7 @@ def test_add_states_to_race_cache() -> None:
 def test_cleanup_race_cache() -> None:
     cache = PeerRequestCache()
     cache.add_states_to_race_cache(coin_states)
-    expected_race_cache = {
-        0: {coin_states[0]},
-        1: {*coin_states[1:4]},
-        2: {*coin_states[4:6]},
-        20: {*coin_states[6:8]},
-    }
+    expected_race_cache = {0: {coin_states[0]}, 1: {*coin_states[1:4]}, 2: {*coin_states[4:6]}, 20: {*coin_states[6:8]}}
     assert_race_cache(cache, expected_race_cache)
     # Should not have an impact because 0 is the min height
     cache.cleanup_race_cache(min_height=0)
@@ -131,12 +126,7 @@ def test_cleanup_race_cache() -> None:
 def test_rollback_race_cache() -> None:
     cache = PeerRequestCache()
     cache.add_states_to_race_cache(coin_states)
-    expected_race_cache = {
-        0: {coin_states[0]},
-        1: {*coin_states[1:4]},
-        2: {*coin_states[4:6]},
-        20: {*coin_states[6:8]},
-    }
+    expected_race_cache = {0: {coin_states[0]}, 1: {*coin_states[1:4]}, 2: {*coin_states[4:6]}, 20: {*coin_states[6:8]}}
     assert_race_cache(cache, expected_race_cache)
     # Should not have an impact because 20 is the max height
     cache.rollback_race_cache(fork_height=20)

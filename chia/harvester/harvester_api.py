@@ -10,10 +10,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotSize, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
-from chia.consensus.pot_iterations import (
-    calculate_iterations_quality,
-    calculate_sp_interval_iters,
-)
+from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.harvester.harvester import Harvester
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
@@ -102,9 +99,7 @@ class HarvesterAPI:
             try:
                 plot_id = plot_info.prover.get_id()
                 sp_challenge_hash = calculate_pos_challenge(
-                    plot_id,
-                    new_challenge.challenge_hash,
-                    new_challenge.sp_hash,
+                    plot_id, new_challenge.challenge_hash, new_challenge.sp_hash
                 )
                 try:
                     quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
@@ -325,11 +320,9 @@ class HarvesterAPI:
                 return None
 
             # Look up local_sk from plot to save locked memory
-            (
-                pool_public_key_or_puzzle_hash,
-                farmer_public_key,
-                local_master_sk,
-            ) = parse_plot_info(plot_info.prover.get_memo())
+            (pool_public_key_or_puzzle_hash, farmer_public_key, local_master_sk) = parse_plot_info(
+                plot_info.prover.get_memo()
+            )
             local_sk = master_sk_to_local_sk(local_master_sk)
 
         if isinstance(pool_public_key_or_puzzle_hash, G1Element):

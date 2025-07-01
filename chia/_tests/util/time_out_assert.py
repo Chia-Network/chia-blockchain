@@ -95,10 +95,7 @@ async def time_out_assert_custom_interval(
 
     entry_file, entry_line = caller_file_and_line(
         distance=stack_distance + 1,
-        relative_to=(
-            pathlib.Path(chia.__file__).parent.parent,
-            pathlib.Path(chia._tests.__file__).parent.parent,
-        ),
+        relative_to=(pathlib.Path(chia.__file__).parent.parent, pathlib.Path(chia._tests.__file__).parent.parent),
     )
 
     timeout = adjusted_timeout(timeout=timeout)
@@ -127,32 +124,17 @@ async def time_out_assert_custom_interval(
     finally:
         if ether.record_property is not None:
             data = TimeOutAssertData(
-                duration=duration,
-                path=pathlib.Path(entry_file),
-                line=entry_line,
-                limit=timeout,
-                timed_out=timed_out,
+                duration=duration, path=pathlib.Path(entry_file), line=entry_line, limit=timeout, timed_out=timed_out
             )
 
-            ether.record_property(
-                data.tag,
-                json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
-            )
+            ether.record_property(data.tag, json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True))
 
 
 async def time_out_assert(
     timeout: int, function: Callable[..., Any], value: object = True, *args: object, **kwargs: object
 ) -> None:
     __tracebackhide__ = True
-    await time_out_assert_custom_interval(
-        timeout,
-        0.05,
-        function,
-        value,
-        *args,
-        **kwargs,
-        stack_distance=1,
-    )
+    await time_out_assert_custom_interval(timeout, 0.05, function, value, *args, **kwargs, stack_distance=1)
 
 
 async def time_out_assert_not_none(

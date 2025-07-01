@@ -50,21 +50,11 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "config_overrides": {},
-            "blocks_needed": [1],
-            "trusted": True,
-            "reuse_puzhash": True,
-        },
-    ],
+    [{"num_environments": 1, "config_overrides": {}, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
     indirect=True,
 )
 @pytest.mark.anyio
-async def test_balance_checking(
-    wallet_environments: WalletTestFramework,
-) -> None:
+async def test_balance_checking(wallet_environments: WalletTestFramework) -> None:
     env_0: WalletEnvironment = wallet_environments.environments[0]
     await env_0.check_balances()
     await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
@@ -83,10 +73,7 @@ async def test_balance_checking(
                 }
             }
         )
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "cat": 2}
     with pytest.raises(ValueError, match="Error before block was farmed"):
         await wallet_environments.process_pending_states([WalletStateTransition()])
 
@@ -103,11 +90,7 @@ async def test_balance_checking(
                             "unspent_coin_count": 2,
                         }
                     },
-                    post_block_balance_updates={
-                        "xch": {
-                            "confirmed_wallet_balance": 13,
-                        }
-                    },
+                    post_block_balance_updates={"xch": {"confirmed_wallet_balance": 13}},
                 )
             ]
         )
@@ -137,11 +120,7 @@ async def test_balance_checking(
                         "unspent_coin_count": 2,
                     }
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    }
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}},
             )
         ]
     )
@@ -194,82 +173,30 @@ async def test_balance_checking(
     await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
     await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.node, timeout=20)
     with pytest.raises(ValueError, match=r"\+ 2000000000000"):
-        await env_0.change_balances(
-            {
-                "xch": {
-                    "<#confirmed_wallet_balance": 2_000_000_000_000,
-                }
-            }
-        )
+        await env_0.change_balances({"xch": {"<#confirmed_wallet_balance": 2_000_000_000_000}})
 
     with pytest.raises(ValueError, match=r"\+ 2000000000000"):
-        await env_0.change_balances(
-            {
-                "xch": {
-                    ">#confirmed_wallet_balance": 2_000_000_000_000,
-                }
-            }
-        )
+        await env_0.change_balances({"xch": {">#confirmed_wallet_balance": 2_000_000_000_000}})
 
     with pytest.raises(ValueError, match=r"\+ 1999999999999"):
-        await env_0.change_balances(
-            {
-                "xch": {
-                    "<=#confirmed_wallet_balance": 1_999_999_999_999,
-                }
-            }
-        )
+        await env_0.change_balances({"xch": {"<=#confirmed_wallet_balance": 1_999_999_999_999}})
 
     with pytest.raises(ValueError, match=r"\+ 2000000000001"):
-        await env_0.change_balances(
-            {
-                "xch": {
-                    ">=#confirmed_wallet_balance": 2_000_000_000_001,
-                }
-            }
-        )
+        await env_0.change_balances({"xch": {">=#confirmed_wallet_balance": 2_000_000_000_001}})
 
     wallet_states_save = env_0.wallet_states.copy()
 
-    await env_0.change_balances(
-        {
-            "xch": {
-                "<#confirmed_wallet_balance": 2_000_000_000_001,
-                "set_remainder": True,
-            }
-        }
-    )
+    await env_0.change_balances({"xch": {"<#confirmed_wallet_balance": 2_000_000_000_001, "set_remainder": True}})
     await env_0.check_balances()
     env_0.wallet_states = wallet_states_save
 
-    await env_0.change_balances(
-        {
-            "xch": {
-                ">#confirmed_wallet_balance": 1_999_999_999_999,
-                "set_remainder": True,
-            }
-        }
-    )
+    await env_0.change_balances({"xch": {">#confirmed_wallet_balance": 1_999_999_999_999, "set_remainder": True}})
     await env_0.check_balances()
     env_0.wallet_states = wallet_states_save
 
-    await env_0.change_balances(
-        {
-            "xch": {
-                ">=#confirmed_wallet_balance": 2_000_000_000_000,
-                "set_remainder": True,
-            }
-        }
-    )
+    await env_0.change_balances({"xch": {">=#confirmed_wallet_balance": 2_000_000_000_000, "set_remainder": True}})
     await env_0.check_balances()
     env_0.wallet_states = wallet_states_save
 
-    await env_0.change_balances(
-        {
-            "xch": {
-                "<=#confirmed_wallet_balance": 2_000_000_000_000,
-                "set_remainder": True,
-            }
-        }
-    )
+    await env_0.change_balances({"xch": {"<=#confirmed_wallet_balance": 2_000_000_000_000, "set_remainder": True}})
     await env_0.check_balances()

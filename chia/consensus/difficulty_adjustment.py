@@ -11,10 +11,7 @@ from chia.util.significant_bits import count_significant_bits, truncate_to_signi
 
 
 def _get_blocks_at_height(
-    blocks: BlockRecordsProtocol,
-    prev_b: BlockRecord,
-    target_height: uint32,
-    max_num_blocks: uint32 = uint32(1),
+    blocks: BlockRecordsProtocol, prev_b: BlockRecord, target_height: uint32, max_num_blocks: uint32 = uint32(1)
 ) -> list[BlockRecord]:
     """
     Return a consecutive list of BlockRecords starting at target_height, returning a maximum of
@@ -52,9 +49,7 @@ def _get_blocks_at_height(
 
 
 def _get_second_to_last_transaction_block_in_previous_epoch(
-    constants: ConsensusConstants,
-    blocks: BlockRecordsProtocol,
-    last_b: BlockRecord,
+    constants: ConsensusConstants, blocks: BlockRecordsProtocol, last_b: BlockRecord
 ) -> BlockRecord:
     """
     Retrieves the second to last transaction block in the previous epoch.

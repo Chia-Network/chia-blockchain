@@ -188,10 +188,7 @@ class ChiaServer:
             # Public clients
             public_cert_path, public_key_path = public_ssl_paths(root_path, config)
             ssl_client_context = ssl_context_for_client(
-                ca_cert=chia_ca_crt_path,
-                ca_key=chia_ca_key_path,
-                cert_path=public_cert_path,
-                key_path=public_key_path,
+                ca_cert=chia_ca_crt_path, ca_key=chia_ca_key_path, cert_path=public_cert_path, key_path=public_key_path
             )
 
         if local_type in authenticated_server_types:
@@ -278,11 +275,7 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
-    async def start(
-        self,
-        prefer_ipv6: bool,
-        on_connect: Optional[ConnectionCallback] = None,
-    ) -> None:
+    async def start(self, prefer_ipv6: bool, on_connect: Optional[ConnectionCallback] = None) -> None:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
         if self.gc_task is None:
@@ -410,10 +403,7 @@ class ChiaServer:
         return False
 
     async def start_client(
-        self,
-        target_node: PeerInfo,
-        on_connect: Optional[ConnectionCallback] = None,
-        is_feeler: bool = False,
+        self, target_node: PeerInfo, on_connect: Optional[ConnectionCallback] = None, is_feeler: bool = False
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -594,10 +584,7 @@ class ChiaServer:
                 raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
 
     async def send_to_all(
-        self,
-        messages: list[Message],
-        node_type: NodeType,
-        exclude: Optional[bytes32] = None,
+        self, messages: list[Message], node_type: NodeType, exclude: Optional[bytes32] = None
     ) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():

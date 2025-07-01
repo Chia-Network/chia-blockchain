@@ -583,21 +583,14 @@ class FullNodeStore:
             )
 
         # Validate cc VDF
-        partial_cc_vdf_info = VDFInfo(
-            cc_challenge,
-            iters,
-            eos.challenge_chain.challenge_chain_end_of_slot_vdf.output,
-        )
+        partial_cc_vdf_info = VDFInfo(cc_challenge, iters, eos.challenge_chain.challenge_chain_end_of_slot_vdf.output)
         # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
         if eos.challenge_chain.challenge_chain_end_of_slot_vdf != partial_cc_vdf_info.replace(
             number_of_iterations=sub_slot_iters
         ):
             return None
         if not eos.proofs.challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
-            eos.proofs.challenge_chain_slot_proof,
-            self.constants,
-            cc_start_element,
-            partial_cc_vdf_info,
+            eos.proofs.challenge_chain_slot_proof, self.constants, cc_start_element, partial_cc_vdf_info
         ):
             return None
         if eos.proofs.challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
@@ -634,9 +627,7 @@ class FullNodeStore:
             assert eos.infused_challenge_chain.get_hash() == eos.reward_chain.infused_challenge_chain_sub_slot_hash
 
             partial_icc_vdf_info = VDFInfo(
-                icc_challenge,
-                iters,
-                eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
+                icc_challenge, iters, eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output
             )
             # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
             if eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != partial_icc_vdf_info.replace(
@@ -742,24 +733,14 @@ class FullNodeStore:
 
                 if check_from_start_of_ss:
                     # Check VDFs from start of sub slot
-                    cc_vdf_info_expected = VDFInfo(
-                        ss_challenge_hash,
-                        delta_iters,
-                        signage_point.cc_vdf.output,
-                    )
+                    cc_vdf_info_expected = VDFInfo(ss_challenge_hash, delta_iters, signage_point.cc_vdf.output)
 
-                    rc_vdf_info_expected = VDFInfo(
-                        ss_reward_hash,
-                        delta_iters,
-                        signage_point.rc_vdf.output,
-                    )
+                    rc_vdf_info_expected = VDFInfo(ss_reward_hash, delta_iters, signage_point.rc_vdf.output)
                 else:
                     # Check VDFs from curr
                     assert curr is not None
                     cc_vdf_info_expected = VDFInfo(
-                        ss_challenge_hash,
-                        uint64(sp_total_iters - curr.total_iters),
-                        signage_point.cc_vdf.output,
+                        ss_challenge_hash, uint64(sp_total_iters - curr.total_iters), signage_point.cc_vdf.output
                     )
                     rc_vdf_info_expected = VDFInfo(
                         curr.reward_infusion_new_challenge,
@@ -776,10 +757,7 @@ class FullNodeStore:
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
                     if not signage_point.cc_proof.normalized_to_identity and not validate_vdf(
-                        signage_point.cc_proof,
-                        self.constants,
-                        start_ele,
-                        cc_vdf_info_expected,
+                        signage_point.cc_proof, self.constants, start_ele, cc_vdf_info_expected
                     ):
                         self.add_to_future_sp(signage_point, index)
                         return False
@@ -1002,10 +980,7 @@ class FullNodeStore:
         return FullNodeStorePeakResult(new_eos, sorted(new_sps)[-4:], new_ips)
 
     def get_finished_sub_slots(
-        self,
-        block_records: BlockRecordsProtocol,
-        prev_b: Optional[BlockRecord],
-        last_challenge_to_add: bytes32,
+        self, block_records: BlockRecordsProtocol, prev_b: Optional[BlockRecord], last_challenge_to_add: bytes32
     ) -> Optional[list[EndOfSubSlotBundle]]:
         """
         Retrieves the EndOfSubSlotBundles that are in the store either:

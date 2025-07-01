@@ -96,7 +96,5 @@ class CROuterPuzzle:
             inner_solution = self._solve(also, solver, inner_puzzle, inner_solution)
 
         return solve_cr_layer(  # type: ignore[call-arg]
-            *vc_info,
-            coin.name(),
-            inner_solution,
+            *vc_info, coin.name(), inner_solution
         )

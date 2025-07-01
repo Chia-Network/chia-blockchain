@@ -81,11 +81,7 @@ def node_type_fixture(request: SubRequest) -> NodeType:
 
 
 @pytest.fixture(name="valid_node_values")
-async def valid_node_values_fixture(
-    data_store: DataStore,
-    store_id: bytes32,
-    node_type: NodeType,
-) -> dict[str, Any]:
+async def valid_node_values_fixture(data_store: DataStore, store_id: bytes32, node_type: NodeType) -> dict[str, Any]:
     await add_01234567_example(data_store=data_store, store_id=store_id)
 
     if node_type == NodeType.INTERNAL:

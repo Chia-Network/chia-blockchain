@@ -23,11 +23,7 @@ from chia.wallet.util.address_type import AddressType
 
 def test_plotnft_command_default_parsing() -> None:
     launcher_id = bytes32([1] * 32)
-    check_click_parsing(
-        GetLoginLinkCMD(launcher_id=launcher_id),
-        "--launcher_id",
-        launcher_id.hex(),
-    )
+    check_click_parsing(GetLoginLinkCMD(launcher_id=launcher_id), "--launcher_id", launcher_id.hex())
 
     burn_ph = bytes32.from_hexstr("0x000000000000000000000000000000000000000000000000000000000000dead")
     burn_address = encode_puzzle_hash(burn_ph, "xch")
@@ -83,10 +79,7 @@ def test_plotnft_command_default_parsing() -> None:
     )
 
     check_click_parsing(
-        InspectPlotNFTCMD(
-            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
-            id=5,
-        ),
+        InspectPlotNFTCMD(rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5),
         "--id",
         "5",
     )

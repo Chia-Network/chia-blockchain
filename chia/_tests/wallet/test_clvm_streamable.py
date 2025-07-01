@@ -164,42 +164,21 @@ class FooSpend(Streamable):
 
     @staticmethod
     def from_wallet_api(_from: Spend) -> FooSpend:
-        return FooSpend(
-            _from.coin,
-            Program.to((_from.puzzle, _from.solution)),
-        )
+        return FooSpend(_from.coin, Program.to((_from.puzzle, _from.solution)))
 
     @staticmethod
     def to_wallet_api(_from: FooSpend) -> Spend:
-        return Spend(
-            _from.coin,
-            _from.puzzle_and_solution.first(),
-            _from.puzzle_and_solution.rest(),
-        )
+        return Spend(_from.coin, _from.puzzle_and_solution.first(), _from.puzzle_and_solution.rest())
 
 
 def test_translation_layer() -> None:
     FOO_TRANSLATION = TranslationLayer(
-        [
-            TranslationLayerMapping(
-                Spend,
-                FooSpend,
-                FooSpend.from_wallet_api,
-                FooSpend.to_wallet_api,
-            )
-        ]
+        [TranslationLayerMapping(Spend, FooSpend, FooSpend.from_wallet_api, FooSpend.to_wallet_api)]
     )
 
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
-    spend = Spend(
-        coin,
-        Program.to("puzzle"),
-        Program.to("solution"),
-    )
-    foo_spend = FooSpend(
-        coin,
-        Program.to(("puzzle", "solution")),
-    )
+    spend = Spend(coin, Program.to("puzzle"), Program.to("solution"))
+    foo_spend = FooSpend(coin, Program.to(("puzzle", "solution")))
 
     byte_serialize_clvm_streamable(foo_spend) == byte_serialize_clvm_streamable(
         spend, translation_layer=FOO_TRANSLATION

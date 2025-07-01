@@ -71,13 +71,7 @@ async def run_new_block_benchmark(version: int) -> None:
             removals = all_unspent[:100]
             all_unspent = all_unspent[100:]
 
-            await coin_store.new_block(
-                uint32(height),
-                uint64(timestamp),
-                [pool_coin, farmer_coin],
-                additions,
-                removals,
-            )
+            await coin_store.new_block(uint32(height), uint64(timestamp), [pool_coin, farmer_coin], additions, removals)
 
             # 19 seconds per block
             timestamp += 19
@@ -111,13 +105,7 @@ async def run_new_block_benchmark(version: int) -> None:
             total_remove += 100
 
             start = monotonic()
-            await coin_store.new_block(
-                uint32(height),
-                uint64(timestamp),
-                [pool_coin, farmer_coin],
-                additions,
-                removals,
-            )
+            await coin_store.new_block(uint32(height), uint64(timestamp), [pool_coin, farmer_coin], additions, removals)
             stop = monotonic()
 
             # 19 seconds per block
@@ -162,13 +150,7 @@ async def run_new_block_benchmark(version: int) -> None:
             total_remove += 700
 
             start = monotonic()
-            await coin_store.new_block(
-                uint32(height),
-                uint64(timestamp),
-                [pool_coin, farmer_coin],
-                additions,
-                removals,
-            )
+            await coin_store.new_block(uint32(height), uint64(timestamp), [pool_coin, farmer_coin], additions, removals)
 
             stop = monotonic()
 
@@ -210,13 +192,7 @@ async def run_new_block_benchmark(version: int) -> None:
             total_remove += 2000
 
             start = monotonic()
-            await coin_store.new_block(
-                uint32(height),
-                uint64(timestamp),
-                [pool_coin, farmer_coin],
-                additions,
-                removals,
-            )
+            await coin_store.new_block(uint32(height), uint64(timestamp), [pool_coin, farmer_coin], additions, removals)
             stop = monotonic()
 
             # 19 seconds per block

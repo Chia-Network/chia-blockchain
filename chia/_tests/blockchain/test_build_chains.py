@@ -70,12 +70,7 @@ def validate_coins(constants: ConsensusConstants, blocks: list[FullBlock]) -> No
 
         if block.transactions_generator is not None:
             flags = get_flags_for_height_and_constants(block.height, constants)
-            additions, removals = additions_and_removals(
-                bytes(block.transactions_generator),
-                [],
-                flags,
-                constants,
-            )
+            additions, removals = additions_and_removals(bytes(block.transactions_generator), [], flags, constants)
 
             for rem in removals:
                 try:
@@ -165,16 +160,8 @@ def test_validate_default_1500(bt: BlockTools, default_1500_blocks: list[FullBlo
     validate_chain(bt, default_1500_blocks, seed=b"1500")
 
 
-def test_validate_default_10000(
-    bt: BlockTools,
-    default_10000_blocks: list[FullBlock],
-) -> None:
-    validate_chain(
-        bt,
-        default_10000_blocks,
-        seed=b"10000",
-        dummy_block_references=True,
-    )
+def test_validate_default_10000(bt: BlockTools, default_10000_blocks: list[FullBlock]) -> None:
+    validate_chain(bt, default_10000_blocks, seed=b"10000", dummy_block_references=True)
 
 
 def test_validate_default_2000_compact(bt: BlockTools, default_2000_blocks_compact: list[FullBlock]) -> None:

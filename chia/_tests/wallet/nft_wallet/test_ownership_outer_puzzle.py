@@ -54,17 +54,7 @@ def test_ownership_outer_puzzle() -> None:
     assert get_inner_puzzle(ownership_driver, uncurry_puzzle(ownership_puzzle)) == ACS
 
     # Set up for solve
-    inner_solution = Program.to(
-        [
-            [51, ACS.get_tree_hash(), 1],
-            [-10],
-        ]
-    )
-    solution: Program = solve_puzzle(
-        ownership_driver,
-        Solver({}),
-        ACS,
-        inner_solution,
-    )
+    inner_solution = Program.to([[51, ACS.get_tree_hash(), 1], [-10]])
+    solution: Program = solve_puzzle(ownership_driver, Solver({}), ACS, inner_solution)
     ownership_puzzle.run(solution)
     assert get_inner_solution(ownership_driver, solution) == inner_solution

@@ -53,16 +53,8 @@ solution_h = Program.to(
 solution_u = Program.to(
     [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u_synth, msg2]]
 )
-spend_h: CoinSpend = make_spend(
-    coin,
-    puzzle,
-    solution_h,
-)
-spend_u: CoinSpend = make_spend(
-    coin,
-    puzzle,
-    solution_u,
-)
+spend_h: CoinSpend = make_spend(coin, puzzle, solution_h)
+spend_u: CoinSpend = make_spend(coin, puzzle, solution_u)
 
 
 @pytest.mark.anyio
@@ -87,16 +79,7 @@ async def test_wsm_sign_transaction() -> None:
                 await wsm.sign_bundle([spend_h])
 
             await wsm.puzzle_store.add_derivation_paths(
-                [
-                    DerivationRecord(
-                        uint32(1),
-                        bytes32.zeros,
-                        pk1_h,
-                        WalletType.STANDARD_WALLET,
-                        uint32(1),
-                        True,
-                    )
-                ]
+                [DerivationRecord(uint32(1), bytes32.zeros, pk1_h, WalletType.STANDARD_WALLET, uint32(1), True)]
             )
 
             await wsm.puzzle_store.add_derivation_paths(
@@ -114,10 +97,7 @@ async def test_wsm_sign_transaction() -> None:
 
             signature: G2Element = ((await wsm.sign_bundle([spend_h]))[0]).aggregated_signature
             assert signature == AugSchemeMPL.aggregate(
-                [
-                    AugSchemeMPL.sign(sk1_h, msg1),
-                    AugSchemeMPL.sign(sk2_h_synth, msg2 + coin.name() + additional_data),
-                ]
+                [AugSchemeMPL.sign(sk1_h, msg1), AugSchemeMPL.sign(sk2_h_synth, msg2 + coin.name() + additional_data)]
             )
 
             with pytest.raises(
@@ -126,16 +106,7 @@ async def test_wsm_sign_transaction() -> None:
                 await wsm.sign_bundle([spend_u])
 
             await wsm.puzzle_store.add_derivation_paths(
-                [
-                    DerivationRecord(
-                        uint32(1),
-                        bytes32.zeros,
-                        pk1_u,
-                        WalletType.STANDARD_WALLET,
-                        uint32(1),
-                        False,
-                    )
-                ]
+                [DerivationRecord(uint32(1), bytes32.zeros, pk1_u, WalletType.STANDARD_WALLET, uint32(1), False)]
             )
 
             await wsm.puzzle_store.add_derivation_paths(
@@ -152,8 +123,5 @@ async def test_wsm_sign_transaction() -> None:
             )
             signature2: G2Element = ((await wsm.sign_bundle([spend_u]))[0]).aggregated_signature
             assert signature2 == AugSchemeMPL.aggregate(
-                [
-                    AugSchemeMPL.sign(sk1_u, msg1),
-                    AugSchemeMPL.sign(sk2_u_synth, msg2 + coin.name() + additional_data),
-                ]
+                [AugSchemeMPL.sign(sk1_u, msg1), AugSchemeMPL.sign(sk2_u_synth, msg2 + coin.name() + additional_data)]
             )

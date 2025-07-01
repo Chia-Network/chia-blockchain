@@ -27,27 +27,15 @@ async def test_basics() -> None:
         items = []
         for _ in range(2, 100):
             fee = uint64(10000000)
-            mempool_item = MempoolItemInfo(
-                cost,
-                fee,
-                uint32(i - 1),
-            )
+            mempool_item = MempoolItemInfo(cost, fee, uint32(i - 1))
             items.append(mempool_item)
 
             fee1 = uint64(200000)
-            mempool_item1 = MempoolItemInfo(
-                cost,
-                fee1,
-                uint32(i - 40),
-            )
+            mempool_item1 = MempoolItemInfo(cost, fee1, uint32(i - 40))
             items.append(mempool_item1)
 
             fee2 = uint64(0)
-            mempool_item2 = MempoolItemInfo(
-                cost,
-                fee2,
-                uint32(i - 270),
-            )
+            mempool_item2 = MempoolItemInfo(cost, fee2, uint32(i - 270))
             items.append(mempool_item2)
 
         fee_tracker.process_block(i, items)
@@ -78,11 +66,7 @@ async def test_fee_increase() -> None:
                 fee = uint64(0)
                 included_height = uint32(random.randint(i - 60, i - 1))
                 cost = uint64(5000000)
-                mempool_item = MempoolItemInfo(
-                    cost,
-                    fee,
-                    included_height,
-                )
+                mempool_item = MempoolItemInfo(cost, fee, included_height)
                 items.append(mempool_item)
 
             fee_tracker.process_block(i, items)

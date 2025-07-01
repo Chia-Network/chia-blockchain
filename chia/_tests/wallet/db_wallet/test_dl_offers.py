@@ -46,14 +46,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     wsm_maker = env_maker.wallet_state_manager
     wsm_taker = env_taker.wallet_state_manager
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "dl": 2}
+    env_taker.wallet_aliases = {"xch": 1, "dl": 2}
 
     dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker)
     dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker)
@@ -77,22 +71,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -110,22 +90,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
         [
             WalletStateTransition(),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
             ),
         ]
     )
@@ -168,7 +134,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                             {
                                 "launcher_id": "0x" + launcher_id_taker.hex(),
                                 "values_to_prove": ["0x" + taker_branch.hex()],
-                            },
+                            }
                         ],
                     }
                 }
@@ -184,12 +150,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
             {
                 "launcher_id": launcher_id_maker.hex(),
                 "new_root": maker_root.hex(),
-                "dependencies": [
-                    {
-                        "launcher_id": launcher_id_taker.hex(),
-                        "values_to_prove": [taker_branch.hex()],
-                    }
-                ],
+                "dependencies": [{"launcher_id": launcher_id_taker.hex(), "values_to_prove": [taker_branch.hex()]}],
             }
         ]
     }
@@ -210,7 +171,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                             {
                                 "launcher_id": "0x" + launcher_id_maker.hex(),
                                 "values_to_prove": ["0x" + maker_branch.hex()],
-                            },
+                            }
                         ],
                     },
                     "proofs_of_inclusion": [
@@ -236,22 +197,12 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
             {
                 "launcher_id": launcher_id_maker.hex(),
                 "new_root": maker_root.hex(),
-                "dependencies": [
-                    {
-                        "launcher_id": launcher_id_taker.hex(),
-                        "values_to_prove": [taker_branch.hex()],
-                    }
-                ],
+                "dependencies": [{"launcher_id": launcher_id_taker.hex(), "values_to_prove": [taker_branch.hex()]}],
             },
             {
                 "launcher_id": launcher_id_taker.hex(),
                 "new_root": taker_root.hex(),
-                "dependencies": [
-                    {
-                        "launcher_id": launcher_id_maker.hex(),
-                        "values_to_prove": [maker_branch.hex()],
-                    }
-                ],
+                "dependencies": [{"launcher_id": launcher_id_maker.hex(), "values_to_prove": [maker_branch.hex()]}],
             },
         ]
     }
@@ -260,14 +211,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "spendable_balance": -fee,
-                        "max_send_amount": -fee,
-                        "pending_coin_removal_count": 2,
-                    },
-                    "dl": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "xch": {"spendable_balance": -fee, "max_send_amount": -fee, "pending_coin_removal_count": 2},
+                    "dl": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -276,9 +221,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -2,
                         "unspent_coin_count": -2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": -1,
-                    },
+                    "dl": {"pending_coin_removal_count": -1},
                 },
             ),
             WalletStateTransition(
@@ -289,9 +232,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                         "max_send_amount": -fee,
                         "pending_coin_removal_count": 2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": 2,
-                    },
+                    "dl": {"pending_coin_removal_count": 2},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -299,9 +240,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -2,
                         "unspent_coin_count": -2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": -2,
-                    },
+                    "dl": {"pending_coin_removal_count": -2},
                 },
             ),
         ]
@@ -330,22 +269,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
         [
             WalletStateTransition(),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
             ),
         ]
     )
@@ -356,10 +281,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
 @pytest.mark.anyio
 async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "dl": 2}
 
     dl_wallet = await DataLayerWallet.create_new_dl_wallet(env_maker.wallet_state_manager)
     await env_maker.change_balances({"dl": {"init": True}})
@@ -376,23 +298,9 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+            )
         ]
     )
 
@@ -405,23 +313,9 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+            )
         ]
     )
 
@@ -444,10 +338,7 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
                     launcher_id.hex(): {
                         "new_root": "0x" + root.hex(),
                         "dependencies": [
-                            {
-                                "launcher_id": "0x" + launcher_id_2.hex(),
-                                "values_to_prove": ["0x" + addition.hex()],
-                            },
+                            {"launcher_id": "0x" + launcher_id_2.hex(), "values_to_prove": ["0x" + addition.hex()]}
                         ],
                     }
                 }
@@ -460,14 +351,8 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
 
     await env_maker.change_balances(
         {
-            "xch": {
-                "spendable_balance": -FEE,
-                "max_send_amount": -FEE,
-                "pending_coin_removal_count": 2,
-            },
-            "dl": {
-                "pending_coin_removal_count": 1,
-            },
+            "xch": {"spendable_balance": -FEE, "max_send_amount": -FEE, "pending_coin_removal_count": 2},
+            "dl": {"pending_coin_removal_count": 1},
         }
     )
     await env_maker.check_balances()
@@ -501,9 +386,7 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
                         "pending_coin_removal_count": -4,
                         "unspent_coin_count": -2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": -1,
-                    },
+                    "dl": {"pending_coin_removal_count": -1},
                 },
             )
         ]
@@ -521,14 +404,8 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
     wsm_maker = env_maker.wallet_state_manager
     wsm_taker = env_taker.wallet_state_manager
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "dl": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "dl": 2}
+    env_taker.wallet_aliases = {"xch": 1, "dl": 2}
 
     dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker)
     dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker)
@@ -557,22 +434,8 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -597,22 +460,8 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
         [
             WalletStateTransition(),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "dl": {
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}, "dl": {"set_remainder": True}},
             ),
         ]
     )
@@ -738,14 +587,8 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "spendable_balance": -fee,
-                        "max_send_amount": -fee,
-                        "pending_coin_removal_count": 2,
-                    },
-                    "dl": {
-                        "pending_coin_removal_count": 2,
-                    },
+                    "xch": {"spendable_balance": -fee, "max_send_amount": -fee, "pending_coin_removal_count": 2},
+                    "dl": {"pending_coin_removal_count": 2},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -754,9 +597,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                         "pending_coin_removal_count": -2,
                         "unspent_coin_count": -2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": -2,
-                    },
+                    "dl": {"pending_coin_removal_count": -2},
                 },
             ),
             WalletStateTransition(
@@ -767,9 +608,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": -fee,
                         "pending_coin_removal_count": 2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": 4,
-                    },
+                    "dl": {"pending_coin_removal_count": 4},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -777,9 +616,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                         "pending_coin_removal_count": -2,
                         "unspent_coin_count": -2,
                     },
-                    "dl": {
-                        "pending_coin_removal_count": -4,
-                    },
+                    "dl": {"pending_coin_removal_count": -4},
                 },
             ),
         ]

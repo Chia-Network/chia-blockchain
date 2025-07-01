@@ -167,11 +167,7 @@ class WalletTransactionStore:
         self.unconfirmed_txs.remove(get_light_transaction_record(current))
 
     async def increment_sent(
-        self,
-        tx_id: bytes32,
-        name: str,
-        send_status: MempoolInclusionStatus,
-        err: Optional[Err],
+        self, tx_id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
     ) -> bool:
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
@@ -239,9 +235,7 @@ class WalletTransactionStore:
         """
         current_time = int(time.time())
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                "SELECT transaction_record from transaction_record WHERE confirmed=0",
-            )
+            rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record WHERE confirmed=0")
         records = []
 
         for row in rows:
@@ -359,10 +353,7 @@ class WalletTransactionStore:
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
     async def get_transaction_count_for_wallet(
-        self,
-        wallet_id: int,
-        confirmed: Optional[bool] = None,
-        type_filter: Optional[TransactionTypeFilter] = None,
+        self, wallet_id: int, confirmed: Optional[bool] = None, type_filter: Optional[TransactionTypeFilter] = None
     ) -> int:
         confirmed_str = ""
         if confirmed is not None:
@@ -397,11 +388,7 @@ class WalletTransactionStore:
                 )
             else:
                 rows = await conn.execute_fetchall(
-                    "SELECT transaction_record FROM transaction_record WHERE wallet_id=? AND type=?",
-                    (
-                        wallet_id,
-                        type,
-                    ),
+                    "SELECT transaction_record FROM transaction_record WHERE wallet_id=? AND type=?", (wallet_id, type)
                 )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 

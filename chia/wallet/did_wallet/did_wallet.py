@@ -152,10 +152,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet_from_recovery(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        backup_data: str,
-        name: Optional[str] = None,
+        wallet_state_manager: Any, wallet: Wallet, backup_data: str, name: Optional[str] = None
     ):
         """
         Create a DID wallet from a backup file
@@ -265,12 +262,7 @@ class DIDWallet:
         return self
 
     @staticmethod
-    async def create(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        wallet_info: WalletInfo,
-        name: Optional[str] = None,
-    ):
+    async def create(wallet_state_manager: Any, wallet: Wallet, wallet_info: WalletInfo, name: Optional[str] = None):
         """
         Create a DID wallet based on the local database
         :param wallet_state_manager: Wallet state manager
@@ -342,11 +334,7 @@ class DIDWallet:
     async def get_unconfirmed_balance(self, record_list=None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
-    async def select_coins(
-        self,
-        amount: uint64,
-        action_scope: WalletActionScope,
-    ) -> set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
         try:
             async with action_scope.use() as interface:
                 coin = await self.get_coin()
@@ -607,38 +595,16 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
+        full_puzzle: Program = create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
+            [[parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount], coin.amount, innersol]
         )
         # Create an additional spend to confirm the change on-chain
-        new_full_puzzle: Program = create_singleton_puzzle(
-            new_inner_puzzle,
-            self.did_info.origin_coin.name(),
-        )
+        new_full_puzzle: Program = create_singleton_puzzle(new_inner_puzzle, self.did_info.origin_coin.name())
         new_full_sol = Program.to(
-            [
-                [
-                    coin.parent_coin_info,
-                    innerpuz.get_tree_hash(),
-                    coin.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
+            [[coin.parent_coin_info, innerpuz.get_tree_hash(), coin.amount], coin.amount, innersol]
         )
         new_coin = Coin(coin.name(), new_full_puzzle.get_tree_hash(), coin.amount)
         list_of_coinspends = [
@@ -721,22 +687,11 @@ class DIDWallet:
             innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
-        full_puzzle: Program = create_singleton_puzzle(
-            self.did_info.current_inner,
-            self.did_info.origin_coin.name(),
-        )
+        full_puzzle: Program = create_singleton_puzzle(self.did_info.current_inner, self.did_info.origin_coin.name())
         parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
+            [[parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount], coin.amount, innersol]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
@@ -774,21 +729,13 @@ class DIDWallet:
 
     # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
     async def create_message_spend(
-        self,
-        action_scope: WalletActionScope,
-        extra_conditions: tuple[Condition, ...] = tuple(),
+        self, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> None:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
         innerpuz: Program = self.did_info.current_inner
-        assert (
-            create_singleton_puzzle(
-                innerpuz,
-                self.did_info.origin_coin.name(),
-            ).get_tree_hash()
-            == coin.puzzle_hash
-        )
+        assert create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name()).get_tree_hash() == coin.puzzle_hash
         uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
         assert uncurried is not None
         _p2_puzzle, id_list_hash, num_of_backup_ids_needed, _, metadata = uncurried
@@ -809,22 +756,11 @@ class DIDWallet:
         innersol: Program = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
+        full_puzzle: Program = create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
+            [[parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount], coin.amount, innersol]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
@@ -862,22 +798,11 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
+        full_puzzle: Program = create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
+            [[parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount], coin.amount, innersol]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
@@ -947,23 +872,12 @@ class DIDWallet:
         innersol = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
+        full_puzzle: Program = create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
 
         fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
+            [[parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount], coin.amount, innersol]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
@@ -1013,11 +927,7 @@ class DIDWallet:
         info_dict = {}
         for attest in attest_data:
             info = attest.split(":")
-            info_dict[info[0]] = [
-                bytes.fromhex(info[2]),
-                bytes.fromhex(info[3]),
-                uint64(info[4]),
-            ]
+            info_dict[info[0]] = [bytes.fromhex(info[2]), bytes.fromhex(info[3]), uint64(info[4])]
             new_sb = WalletSpendBundle.from_bytes(bytes.fromhex(info[1]))
             spend_bundle_list.append(new_sb)
         # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
@@ -1027,13 +937,7 @@ class DIDWallet:
         info_list = []
         for entry in my_recovery_list:
             if entry.hex() in info_dict:
-                info_list.append(
-                    [
-                        info_dict[entry.hex()][0],
-                        info_dict[entry.hex()][1],
-                        info_dict[entry.hex()][2],
-                    ]
-                )
+                info_list.append([info_dict[entry.hex()][0], info_dict[entry.hex()][1], info_dict[entry.hex()][2]])
             else:
                 info_list.append([])
         message_spend_bundle = WalletSpendBundle.aggregate(spend_bundle_list)
@@ -1065,22 +969,11 @@ class DIDWallet:
         # full solution is (parent_info my_amount solution)
         assert self.did_info.current_inner is not None
         innerpuz: Program = self.did_info.current_inner
-        full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            self.did_info.origin_coin.name(),
-        )
+        full_puzzle: Program = create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
+            [[parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount], coin.amount, innersol]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
 
@@ -1280,9 +1173,7 @@ class DIDWallet:
         launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
         future_parent = LineageProof(
-            parent_name=eve_coin.parent_coin_info,
-            inner_puzzle_hash=did_inner_hash,
-            amount=uint64(eve_coin.amount),
+            parent_name=eve_coin.parent_coin_info, inner_puzzle_hash=did_inner_hash, amount=uint64(eve_coin.amount)
         )
         eve_parent = LineageProof(
             parent_name=launcher_coin.parent_coin_info,
@@ -1336,11 +1227,7 @@ class DIDWallet:
             interface.side_effects.transactions.append(did_record)
 
     async def generate_eve_spend(
-        self,
-        coin: Coin,
-        full_puzzle: Program,
-        innerpuz: Program,
-        extra_conditions: tuple[Condition, ...] = tuple(),
+        self, coin: Coin, full_puzzle: Program, innerpuz: Program, extra_conditions: tuple[Condition, ...] = tuple()
     ):
         assert self.did_info.origin_coin is not None
         uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
@@ -1354,11 +1241,7 @@ class DIDWallet:
         innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
-            [
-                [self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount],
-                coin.amount,
-                innersol,
-            ]
+            [[self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount], coin.amount, innersol]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())

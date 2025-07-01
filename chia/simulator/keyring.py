@@ -18,11 +18,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
         file_keyring_path = keyring_path_from_root(Path(temp_file_keyring_dir))
         os.makedirs(os.path.dirname(file_keyring_path), 0o700, True)
         with open(
-            os.open(
-                keyring_path_from_root(Path(temp_file_keyring_dir)),
-                os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
-                0o600,
-            ),
+            os.open(keyring_path_from_root(Path(temp_file_keyring_dir)), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600),
             "w",
         ) as f:
             f.write(

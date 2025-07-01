@@ -1355,9 +1355,7 @@ make_one_existing_take_one_reference = MakeAndTakeReference(
     maker_inclusions=[{"key": b"\x09".hex(), "value": b"\x01\x09".hex()}],
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
     trade_id="faea189031da8557299173e6731dafea53d85e116485ffaa8ff2070278145608",
-    maker_root_history=[
-        bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
-    ],
+    maker_root_history=[bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27")],
     taker_root_history=[
         bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
         bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
@@ -1418,9 +1416,7 @@ make_one_take_one_existing_reference = MakeAndTakeReference(
         bytes32.from_hexstr("6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27"),
         bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
     ],
-    taker_root_history=[
-        bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb"),
-    ],
+    taker_root_history=[bytes32.from_hexstr("42f08ebc0578f2cec7a9ad1c3038e74e0f30eba5c2f4cb1ee1c8fdb682c19dbb")],
 )
 
 
@@ -1600,18 +1596,8 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
     maker_request = {
-        "maker": [
-            {
-                "store_id": offer_setup.maker.id.hex(),
-                "inclusions": reference.maker_inclusions,
-            }
-        ],
-        "taker": [
-            {
-                "store_id": offer_setup.taker.id.hex(),
-                "inclusions": reference.taker_inclusions,
-            }
-        ],
+        "maker": [{"store_id": offer_setup.maker.id.hex(), "inclusions": reference.maker_inclusions}],
+        "taker": [{"store_id": offer_setup.taker.id.hex(), "inclusions": reference.taker_inclusions}],
         "fee": 0,
     }
     maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
@@ -1622,10 +1608,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     # assert maker_response == {"success": True, "offer": reference.make_offer_response}
     assert maker_response["success"] is True
 
-    taker_request = {
-        "offer": maker_response["offer"],
-        "fee": 0,
-    }
+    taker_request = {"offer": maker_response["offer"], "fee": 0}
     taker_response = await offer_setup.taker.api.take_offer(request=taker_request)
 
     # only check for success
@@ -1654,16 +1637,10 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     taker_history = taker_history_result["root_history"]
 
     assert [generation["confirmed"] for generation in maker_history] == [True] * len(maker_history)
-    assert [generation["root_hash"] for generation in maker_history] == [
-        bytes32.zeros,
-        *reference.maker_root_history,
-    ]
+    assert [generation["root_hash"] for generation in maker_history] == [bytes32.zeros, *reference.maker_root_history]
 
     assert [generation["confirmed"] for generation in taker_history] == [True] * len(taker_history)
-    assert [generation["root_hash"] for generation in taker_history] == [
-        bytes32.zeros,
-        *reference.taker_root_history,
-    ]
+    assert [generation["root_hash"] for generation in taker_history] == [bytes32.zeros, *reference.taker_root_history]
 
     # TODO: test maker and taker fees
 
@@ -1684,8 +1661,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 @pytest.mark.parametrize(argnames="maker_or_taker", argvalues=["maker", "taker"])
 @pytest.mark.anyio
 async def test_make_and_then_take_offer_invalid_inclusion_key(
-    reference: MakeAndTakeReference,
-    maker_or_taker: str,
+    reference: MakeAndTakeReference, maker_or_taker: str
 ) -> None:
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
     if maker_or_taker == "maker":
@@ -1711,18 +1687,10 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
 async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
 
-    verify_request = {
-        "offer": reference.make_offer_response,
-        "fee": 0,
-    }
+    verify_request = {"offer": reference.make_offer_response, "fee": 0}
     verify_response = await bare_data_layer_api.verify_offer(request=verify_request)
 
-    assert verify_response == {
-        "success": True,
-        "valid": True,
-        "error": None,
-        "fee": 0,
-    }
+    assert verify_response == {"success": True, "valid": True, "error": None, "fee": 0}
 
 
 @pytest.mark.anyio
@@ -1731,10 +1699,7 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
     broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
 
-    verify_request = {
-        "offer": broken_taker_offer,
-        "fee": 0,
-    }
+    verify_request = {"offer": broken_taker_offer, "fee": 0}
     verify_response = await bare_data_layer_api.verify_offer(request=verify_request)
 
     assert verify_response == {
@@ -1753,14 +1718,8 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
 
     maker_request = {
         "maker": [
-            {
-                "store_id": offer_setup.maker.id.hex(),
-                "inclusions": reference.maker_inclusions,
-            },
-            {
-                "store_id": bytes32.zeros.hex(),
-                "inclusions": [],
-            },
+            {"store_id": offer_setup.maker.id.hex(), "inclusions": reference.maker_inclusions},
+            {"store_id": bytes32.zeros.hex(), "inclusions": []},
         ],
         "taker": [],
         "fee": 0,
@@ -1792,18 +1751,8 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
     maker_request = {
-        "maker": [
-            {
-                "store_id": offer_setup.maker.id.hex(),
-                "inclusions": reference.maker_inclusions,
-            }
-        ],
-        "taker": [
-            {
-                "store_id": offer_setup.taker.id.hex(),
-                "inclusions": reference.taker_inclusions,
-            }
-        ],
+        "maker": [{"store_id": offer_setup.maker.id.hex(), "inclusions": reference.maker_inclusions}],
+        "taker": [{"store_id": offer_setup.taker.id.hex(), "inclusions": reference.taker_inclusions}],
         "fee": 0,
     }
     maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
@@ -1814,17 +1763,13 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     # assert maker_response == {"success": True, "offer": reference.make_offer_response}
     assert maker_response["success"] is True
 
-    cancel_request = {
-        "trade_id": maker_response["offer"]["trade_id"],
-        "secure": True,
-        "fee": None,
-    }
+    cancel_request = {"trade_id": maker_response["offer"]["trade_id"], "secure": True, "fee": None}
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
     for _ in range(10):
         if not (
             await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-                offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])),
+                offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"]))
             )
         )[1]:
             break
@@ -1833,10 +1778,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     else:  # pragma: no cover
         assert False, "offer was not cancelled"
 
-    taker_request = {
-        "offer": maker_response["offer"],
-        "fee": 0,
-    }
+    taker_request = {"offer": maker_response["offer"], "fee": 0}
 
     with pytest.raises(ValueError, match="This offer is no longer valid"):
         await offer_setup.taker.api.take_offer(request=taker_request)
@@ -1857,11 +1799,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     ],
 )
 @pytest.mark.parametrize(
-    argnames="secure",
-    argvalues=[
-        pytest.param(True, id="secure"),
-        pytest.param(False, id="insecure"),
-    ],
+    argnames="secure", argvalues=[pytest.param(True, id="secure"), pytest.param(False, id="insecure")]
 )
 @pytest.mark.anyio
 async def test_make_and_cancel_offer_then_update(
@@ -1872,18 +1810,8 @@ async def test_make_and_cancel_offer_then_update(
     initial_local_root = await offer_setup.maker.data_layer.get_local_root(store_id=offer_setup.maker.id)
 
     maker_request = {
-        "maker": [
-            {
-                "store_id": offer_setup.maker.id.hex(),
-                "inclusions": reference.maker_inclusions,
-            }
-        ],
-        "taker": [
-            {
-                "store_id": offer_setup.taker.id.hex(),
-                "inclusions": reference.taker_inclusions,
-            }
-        ],
+        "maker": [{"store_id": offer_setup.maker.id.hex(), "inclusions": reference.maker_inclusions}],
+        "taker": [{"store_id": offer_setup.taker.id.hex(), "inclusions": reference.taker_inclusions}],
         "fee": 0,
     }
     maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
@@ -1894,11 +1822,7 @@ async def test_make_and_cancel_offer_then_update(
     # assert maker_response == {"success": True, "offer": reference.make_offer_response}
     assert maker_response["success"] is True
 
-    cancel_request = {
-        "trade_id": maker_response["offer"]["trade_id"],
-        "secure": secure,
-        "fee": None,
-    }
+    cancel_request = {"trade_id": maker_response["offer"]["trade_id"], "secure": secure, "fee": None}
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
     if secure:
@@ -1954,24 +1878,13 @@ async def test_make_and_cancel_offer_then_update(
 )
 @pytest.mark.anyio
 async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
-    offer_setup: OfferSetup,
-    reference: MakeAndTakeReference,
+    offer_setup: OfferSetup, reference: MakeAndTakeReference
 ) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
     maker_request = {
-        "maker": [
-            {
-                "store_id": offer_setup.maker.id.hex(),
-                "inclusions": reference.maker_inclusions,
-            }
-        ],
-        "taker": [
-            {
-                "store_id": offer_setup.taker.id.hex(),
-                "inclusions": reference.taker_inclusions,
-            }
-        ],
+        "maker": [{"store_id": offer_setup.maker.id.hex(), "inclusions": reference.maker_inclusions}],
+        "taker": [{"store_id": offer_setup.taker.id.hex(), "inclusions": reference.taker_inclusions}],
         "fee": 0,
     }
     maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
@@ -1982,11 +1895,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     # assert maker_response == {"success": True, "offer": reference.make_offer_response}
     assert maker_response["success"] is True
 
-    cancel_request = {
-        "trade_id": maker_response["offer"]["trade_id"],
-        "secure": False,
-        "fee": None,
-    }
+    cancel_request = {"trade_id": maker_response["offer"]["trade_id"], "secure": False, "fee": None}
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
     # make sure there is no left over pending root by inserting and publishing
@@ -2079,12 +1988,7 @@ async def test_clear_pending_roots(
         value = b"abc"
 
         await data_store.insert(
-            key=key,
-            value=value,
-            store_id=store_id,
-            reference_node_hash=None,
-            side=None,
-            status=Status.PENDING,
+            key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.PENDING
         )
 
         pending_root = await data_store.get_pending_root(store_id=store_id)
@@ -2093,11 +1997,7 @@ async def test_clear_pending_roots(
         if layer == InterfaceLayer.direct:
             cleared_root = await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
         elif layer == InterfaceLayer.funcs:
-            cleared_root = await clear_pending_roots(
-                store_id=store_id,
-                rpc_port=rpc_port,
-                root_path=bt.root_path,
-            )
+            cleared_root = await clear_pending_roots(store_id=store_id, rpc_port=rpc_port, root_path=bt.root_path)
         elif layer == InterfaceLayer.cli:
             args: list[str] = [
                 sys.executable,
@@ -2131,10 +2031,7 @@ async def test_clear_pending_roots(
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(
-                self_hostname=self_hostname,
-                port=rpc_port,
-                root_path=bt.root_path,
-                net_config=bt.config,
+                self_hostname=self_hostname, port=rpc_port, root_path=bt.root_path, net_config=bt.config
             ) as client:
                 cleared_root = await client.clear_pending_roots(store_id=store_id)
         else:  # pragma: no cover
@@ -2175,9 +2072,7 @@ async def test_issue_15955_deadlock(
         key = b"\x00"
         value = b"\x01" * 10_000
         transaction_record = await data_layer.batch_update(
-            store_id=store_id,
-            changelist=[{"action": "insert", "key": key, "value": value}],
-            fee=uint64(0),
+            store_id=store_id, changelist=[{"action": "insert", "key": key, "value": value}], fee=uint64(0)
         )
         assert transaction_record is not None
         await full_node_api.process_transaction_records(records=[transaction_record])
@@ -2251,19 +2146,11 @@ async def test_maximum_full_file_count(
                 assert len(filenames) == expected_files_count
             for generation, hash in enumerate(root_hashes):
                 delta_path = get_delta_filename_path(
-                    data_layer.server_files_location,
-                    store_id,
-                    hash,
-                    generation + 1,
-                    group_files_by_store,
+                    data_layer.server_files_location, store_id, hash, generation + 1, group_files_by_store
                 )
                 assert delta_path.exists()
                 full_file_path = get_full_tree_filename_path(
-                    data_layer.server_files_location,
-                    store_id,
-                    hash,
-                    generation + 1,
-                    group_files_by_store,
+                    data_layer.server_files_location, store_id, hash, generation + 1, group_files_by_store
                 )
                 if generation + 1 > batch_count - maximum_full_file_count:
                     assert full_file_path.exists()
@@ -2273,10 +2160,7 @@ async def test_maximum_full_file_count(
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
-async def test_unsubscribe_unknown(
-    bare_data_layer_api: DataLayerRpcApi,
-    seeded_random: random.Random,
-) -> None:
+async def test_unsubscribe_unknown(bare_data_layer_api: DataLayerRpcApi, seeded_random: random.Random) -> None:
     with pytest.raises(RuntimeError, match="No subscription found for the given store_id."):
         await bare_data_layer_api.unsubscribe(request={"id": bytes32.random(seeded_random).hex(), "retain": False})
 
@@ -2334,19 +2218,11 @@ async def test_unsubscribe_removes_files(
         assert len(filenames) == 2 * update_count
         for generation, hash in enumerate(root_hashes):
             path = get_delta_filename_path(
-                data_layer.server_files_location,
-                store_id,
-                hash,
-                generation + 1,
-                group_files_by_store,
+                data_layer.server_files_location, store_id, hash, generation + 1, group_files_by_store
             )
             assert path.exists()
             path = get_full_tree_filename_path(
-                data_layer.server_files_location,
-                store_id,
-                hash,
-                generation + 1,
-                group_files_by_store,
+                data_layer.server_files_location, store_id, hash, generation + 1, group_files_by_store
             )
             assert path.exists()
 
@@ -2363,9 +2239,7 @@ async def test_unsubscribe_removes_files(
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_wallet_log_in_changes_active_fingerprint(
-    self_hostname: str,
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
-    layer: InterfaceLayer,
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, layer: InterfaceLayer
 ) -> None:
     wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -2394,10 +2268,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
             await data_rpc_api.wallet_log_in({"fingerprint": secondary_fingerprint})
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(
-                self_hostname=self_hostname,
-                port=rpc_port,
-                root_path=bt.root_path,
-                net_config=bt.config,
+                self_hostname=self_hostname, port=rpc_port, root_path=bt.root_path, net_config=bt.config
             ) as client:
                 await client.wallet_log_in(fingerprint=secondary_fingerprint)
         elif layer == InterfaceLayer.funcs:
@@ -2798,12 +2669,7 @@ async def test_pagination_rpcs(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
 
-        keys_reference = {
-            "total_pages": 2,
-            "total_bytes": 9,
-            "keys": [],
-            "root_hash": local_root["hash"],
-        }
+        keys_reference = {"total_pages": 2, "total_bytes": 9, "keys": [], "root_hash": local_root["hash"]}
 
         keys_paginated = await data_rpc_api.get_keys({"id": store_id.hex(), "page": 0, "max_page_size": 5})
         assert key2_hash < key1_hash
@@ -2823,10 +2689,10 @@ async def test_pagination_rpcs(
             "root_hash": local_root["hash"],
         }
         keys_values_paginated = await data_rpc_api.get_keys_values(
-            {"id": store_id.hex(), "page": 0, "max_page_size": 8},
+            {"id": store_id.hex(), "page": 0, "max_page_size": 8}
         )
         expected_kv = [
-            {"atom": None, "hash": "0x" + leaf_hash3.hex(), "key": "0x" + key3.hex(), "value": "0x" + value3.hex()},
+            {"atom": None, "hash": "0x" + leaf_hash3.hex(), "key": "0x" + key3.hex(), "value": "0x" + value3.hex()}
         ]
         assert keys_values_paginated == {**keys_values_reference, "keys_values": expected_kv}
 
@@ -2873,56 +2739,28 @@ async def test_pagination_rpcs(
         history = await data_rpc_api.get_root_history({"id": store_id.hex()})
         hash1 = history["root_history"][1]["root_hash"]
         hash2 = history["root_history"][2]["root_hash"]
-        diff_reference = {
-            "total_pages": 3,
-            "total_bytes": 13,
-            "diff": [],
-        }
+        diff_reference = {"total_pages": 3, "total_bytes": 13, "diff": []}
         diff_res = await data_rpc_api.get_kv_diff(
-            {
-                "id": store_id.hex(),
-                "hash_1": hash1.hex(),
-                "hash_2": hash2.hex(),
-                "page": 0,
-                "max_page_size": 5,
-            }
+            {"id": store_id.hex(), "hash_1": hash1.hex(), "hash_2": hash2.hex(), "page": 0, "max_page_size": 5}
         )
         expected_diff = [{"type": "DELETE", "key": key3.hex(), "value": value3.hex()}]
         assert diff_res == {**diff_reference, "diff": expected_diff}
 
         diff_res = await data_rpc_api.get_kv_diff(
-            {
-                "id": store_id.hex(),
-                "hash_1": hash1.hex(),
-                "hash_2": hash2.hex(),
-                "page": 1,
-                "max_page_size": 5,
-            }
+            {"id": store_id.hex(), "hash_1": hash1.hex(), "hash_2": hash2.hex(), "page": 1, "max_page_size": 5}
         )
         assert leaf_hash6 < leaf_hash7
         expected_diff = [{"type": "INSERT", "key": key6.hex(), "value": value6.hex()}]
         assert diff_res == {**diff_reference, "diff": expected_diff}
 
         diff_res = await data_rpc_api.get_kv_diff(
-            {
-                "id": store_id.hex(),
-                "hash_1": hash1.hex(),
-                "hash_2": hash2.hex(),
-                "page": 2,
-                "max_page_size": 5,
-            }
+            {"id": store_id.hex(), "hash_1": hash1.hex(), "hash_2": hash2.hex(), "page": 2, "max_page_size": 5}
         )
         expected_diff = [{"type": "INSERT", "key": key7.hex(), "value": value7.hex()}]
         assert diff_res == {**diff_reference, "diff": expected_diff}
 
         diff_res = await data_rpc_api.get_kv_diff(
-            {
-                "id": store_id.hex(),
-                "hash_1": hash1.hex(),
-                "hash_2": hash2.hex(),
-                "page": 3,
-                "max_page_size": 5,
-            }
+            {"id": store_id.hex(), "hash_1": hash1.hex(), "hash_2": hash2.hex(), "page": 3, "max_page_size": 5}
         )
         assert diff_res == diff_reference
 
@@ -2961,13 +2799,7 @@ async def test_pagination_rpcs(
         hash2 = history["root_history"][3]["root_hash"]
 
         diff_res = await data_rpc_api.get_kv_diff(
-            {
-                "id": store_id.hex(),
-                "hash_1": hash1.hex(),
-                "hash_2": hash2.hex(),
-                "page": 0,
-                "max_page_size": 100,
-            }
+            {"id": store_id.hex(), "hash_1": hash1.hex(), "hash_2": hash2.hex(), "page": 0, "max_page_size": 100}
         )
         assert leaf_hash6 < new_leaf_hash
         diff_reference = {
@@ -3000,13 +2832,7 @@ async def test_pagination_rpcs(
 
         with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
             diff_res = await data_rpc_api.get_kv_diff(
-                {
-                    "id": store_id.hex(),
-                    "hash_1": hash1.hex(),
-                    "hash_2": hash2.hex(),
-                    "page": 0,
-                    "max_page_size": 1,
-                }
+                {"id": store_id.hex(), "hash_1": hash1.hex(), "hash_2": hash2.hex(), "page": 0, "max_page_size": 1}
             )
 
 
@@ -3144,29 +2970,14 @@ async def test_pagination_cmds(
                     assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(
-                self_hostname=self_hostname,
-                port=rpc_port,
-                root_path=bt.root_path,
-                net_config=bt.config,
+                self_hostname=self_hostname, port=rpc_port, root_path=bt.root_path, net_config=bt.config
             ) as client:
-                keys = await client.get_keys(
-                    store_id=store_id,
-                    root_hash=None,
-                    page=0,
-                    max_page_size=max_page_size,
-                )
+                keys = await client.get_keys(store_id=store_id, root_hash=None, page=0, max_page_size=max_page_size)
                 keys_values = await client.get_keys_values(
-                    store_id=store_id,
-                    root_hash=None,
-                    page=0,
-                    max_page_size=max_page_size,
+                    store_id=store_id, root_hash=None, page=0, max_page_size=max_page_size
                 )
                 kv_diff = await client.get_kv_diff(
-                    store_id=store_id,
-                    hash_1=hash_1,
-                    hash_2=hash_2,
-                    page=0,
-                    max_page_size=max_page_size,
+                    store_id=store_id, hash_1=hash_1, hash_2=hash_2, page=0, max_page_size=max_page_size
                 )
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
@@ -3230,9 +3041,7 @@ async def test_pagination_cmds(
                 "total_pages": 2,
             }
             assert kv_diff == {
-                "diff": [
-                    {"key": "61616161", "type": "INSERT", "value": "61"},
-                ],
+                "diff": [{"key": "61616161", "type": "INSERT", "value": "61"}],
                 "success": True,
                 "total_bytes": 9,
                 "total_pages": 2,
@@ -3324,16 +3133,10 @@ async def test_unsubmitted_batch_update(
                 assert res == {"success": True}
             elif layer == InterfaceLayer.client:
                 async with DataLayerRpcClient.create_as_context(
-                    self_hostname=self_hostname,
-                    port=rpc_port,
-                    root_path=bt.root_path,
-                    net_config=bt.config,
+                    self_hostname=self_hostname, port=rpc_port, root_path=bt.root_path, net_config=bt.config
                 ) as client:
                     res = await client.update_data_store(
-                        store_id=store_id,
-                        changelist=changelist,
-                        fee=None,
-                        submit_on_chain=False,
+                        store_id=store_id, changelist=changelist, fee=None, submit_on_chain=False
                     )
                     assert res == {"success": True}
             else:  # pragma: no cover
@@ -3423,11 +3226,7 @@ async def test_unsubmitted_batch_update(
             update_tx_rec1 = res["tx_id"]
         elif layer == InterfaceLayer.funcs:
             res = await submit_pending_root_cmd(
-                store_id=store_id,
-                fee=None,
-                fingerprint=None,
-                rpc_port=rpc_port,
-                root_path=bt.root_path,
+                store_id=store_id, fee=None, fingerprint=None, rpc_port=rpc_port, root_path=bt.root_path
             )
             update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
         elif layer == InterfaceLayer.cli:
@@ -3463,10 +3262,7 @@ async def test_unsubmitted_batch_update(
             update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(
-                self_hostname=self_hostname,
-                port=rpc_port,
-                root_path=bt.root_path,
-                net_config=bt.config,
+                self_hostname=self_hostname, port=rpc_port, root_path=bt.root_path, net_config=bt.config
             ) as client:
                 res = await client.submit_pending_root(store_id=store_id, fee=None)
                 update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
@@ -3585,15 +3381,10 @@ async def test_multistore_update(
                 assert res == {"success": True}
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(
-                self_hostname=self_hostname,
-                port=rpc_port,
-                root_path=bt.root_path,
-                net_config=bt.config,
+                self_hostname=self_hostname, port=rpc_port, root_path=bt.root_path, net_config=bt.config
             ) as client:
                 res = await client.update_multiple_stores(
-                    store_updates=store_updates,
-                    submit_on_chain=submit_on_chain,
-                    fee=None,
+                    store_updates=store_updates, submit_on_chain=submit_on_chain, fee=None
                 )
 
             if submit_on_chain:
@@ -3609,19 +3400,12 @@ async def test_multistore_update(
                 update_tx_rec0 = res["tx_id"][0]
             elif layer == InterfaceLayer.funcs:
                 res = await submit_all_pending_roots_cmd(
-                    rpc_port=rpc_port,
-                    fee=None,
-                    fingerprint=None,
-                    root_path=bt.root_path,
+                    rpc_port=rpc_port, fee=None, fingerprint=None, root_path=bt.root_path
                 )
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             elif layer == InterfaceLayer.cli:
                 process = await run_cli_cmd(
-                    "data",
-                    "submit_all_pending_roots",
-                    "--data-rpc-port",
-                    str(rpc_port),
-                    root_path=bt.root_path,
+                    "data", "submit_all_pending_roots", "--data-rpc-port", str(rpc_port), root_path=bt.root_path
                 )
                 assert process.stdout is not None
                 raw_output = await process.stdout.read()
@@ -3629,10 +3413,7 @@ async def test_multistore_update(
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             elif layer == InterfaceLayer.client:
                 async with DataLayerRpcClient.create_as_context(
-                    self_hostname=self_hostname,
-                    port=rpc_port,
-                    root_path=bt.root_path,
-                    net_config=bt.config,
+                    self_hostname=self_hostname, port=rpc_port, root_path=bt.root_path, net_config=bt.config
                 ) as client:
                     res = await client.submit_all_pending_roots(fee=None)
 

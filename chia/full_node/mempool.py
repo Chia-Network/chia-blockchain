@@ -27,11 +27,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.eligible_coin_spends import (
-    IdenticalSpendDedup,
-    SingletonFastForward,
-    SkipDedup,
-)
+from chia.full_node.eligible_coin_spends import IdenticalSpendDedup, SingletonFastForward, SkipDedup
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -503,10 +499,7 @@ class Mempool:
         return self._total_cost + cost > self.mempool_info.max_size_in_cost
 
     def create_block_generator(
-        self,
-        constants: ConsensusConstants,
-        height: uint32,
-        timeout: float,
+        self, constants: ConsensusConstants, height: uint32, timeout: float
     ) -> Optional[NewBlockGenerator]:
         """
         height is needed in case we fast-forward a transaction and we need to
@@ -538,13 +531,7 @@ class Mempool:
         flags = get_flags_for_height_and_constants(height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
 
         err, conds = run_block_generator2(
-            block_program,
-            [],
-            constants.MAX_BLOCK_COST_CLVM,
-            flags,
-            spend_bundle.aggregated_signature,
-            None,
-            constants,
+            block_program, [], constants.MAX_BLOCK_COST_CLVM, flags, spend_bundle.aggregated_signature, None, constants
         )
 
         # this should not happen. This is essentially an assertion failure
@@ -800,11 +787,5 @@ class Mempool:
         assert block_cost == cost
 
         return NewBlockGenerator(
-            SerializedProgram.from_bytes(block_program),
-            [],
-            [],
-            signature,
-            additions,
-            removals,
-            uint64(block_cost),
+            SerializedProgram.from_bytes(block_program), [], [], signature, additions, removals, uint64(block_cost)
         )

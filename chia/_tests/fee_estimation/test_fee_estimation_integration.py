@@ -41,13 +41,7 @@ def make_mempoolitem() -> MempoolItem:
     fee = uint64(10000000)
     spends: list[SpendConditions] = []
     conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost, 0, 0, False, 0, 0)
-    mempool_item = MempoolItem(
-        spend_bundle,
-        fee,
-        conds,
-        spend_bundle.name(),
-        uint32(block_height),
-    )
+    mempool_item = MempoolItem(spend_bundle, fee, conds, spend_bundle.name(), uint32(block_height))
     return mempool_item
 
 

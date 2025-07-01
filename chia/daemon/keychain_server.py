@@ -233,10 +233,7 @@ class KeychainServer:
             }
         except ValueError as e:
             log.exception(e)
-            return {
-                "success": False,
-                "error": str(e),
-            }
+            return {"success": False, "error": str(e)}
 
         if isinstance(key, PrivateKey):
             fingerprint = key.get_g1().get_fingerprint()
@@ -293,11 +290,7 @@ class KeychainServer:
         try:
             request = request_type.from_json_dict(request_dict)
         except Exception as e:
-            return {
-                "success": False,
-                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": str(e)},
-            }
+            return {"success": False, "error": KEYCHAIN_ERR_MALFORMED_REQUEST, "error_details": {"message": str(e)}}
 
         try:
             return {"success": True, **request.run(keychain).to_json_dict()}
@@ -308,11 +301,7 @@ class KeychainServer:
                 "error_details": {"fingerprint": e.fingerprint},
             }
         except KeychainException as e:
-            return {
-                "success": False,
-                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": str(e)},
-            }
+            return {"success": False, "error": KEYCHAIN_ERR_MALFORMED_REQUEST, "error_details": {"message": str(e)}}
 
     async def get_all_private_keys(self, request: dict[str, Any]) -> dict[str, Any]:
         all_keys: list[dict[str, Any]] = []

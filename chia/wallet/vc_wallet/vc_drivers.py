@@ -81,11 +81,7 @@ STANDARD_BRICK_PUZZLE_HASH_HASH: bytes32 = Program.to(STANDARD_BRICK_PUZZLE_HASH
 # Covenant Layer #
 ##################
 def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program, inner_puzzle: Program) -> Program:
-    return COVENANT_LAYER.curry(
-        initial_puzzle_hash,
-        parent_morpher,
-        inner_puzzle,
-    )
+    return COVENANT_LAYER.curry(initial_puzzle_hash, parent_morpher, inner_puzzle)
 
 
 def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, Program, Program]]:
@@ -100,13 +96,7 @@ def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[by
 
 
 def solve_covenant_layer(lineage_proof: LineageProof, morpher_solution: Program, inner_solution: Program) -> Program:
-    solution: Program = Program.to(
-        [
-            lineage_proof.to_program(),
-            morpher_solution,
-            inner_solution,
-        ]
-    )
+    solution: Program = Program.to([lineage_proof.to_program(), morpher_solution, inner_solution])
     return solution
 
 
@@ -114,11 +104,7 @@ def create_std_parent_morpher(initial_puzzle_hash: bytes32) -> Program:
     """
     The standard PARENT_MORPHER for plain coins that want to prove an initial state
     """
-    return STD_COVENANT_PARENT_MORPHER.curry(
-        STD_COVENANT_PARENT_MORPHER_HASH,
-        COVENANT_LAYER_HASH,
-        initial_puzzle_hash,
-    )
+    return STD_COVENANT_PARENT_MORPHER.curry(STD_COVENANT_PARENT_MORPHER_HASH, COVENANT_LAYER_HASH, initial_puzzle_hash)
 
 
 ####################
@@ -139,13 +125,9 @@ def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Pro
 # Update w/ DID Transfer Program #
 ##################################
 def create_did_tp(
-    singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
-    singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
+    singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH, singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH
 ) -> Program:
-    return EML_DID_TP.curry(
-        singleton_mod_hash,
-        singleton_launcher_hash,
-    )
+    return EML_DID_TP.curry(singleton_mod_hash, singleton_launcher_hash)
 
 
 EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
@@ -161,14 +143,7 @@ def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[()]]:
 def solve_did_tp(
     provider_innerpuzhash: bytes32, my_coin_id: bytes32, new_metadata: Program, new_transfer_program: bytes32
 ) -> Program:
-    solution: Program = Program.to(
-        [
-            provider_innerpuzhash,
-            my_coin_id,
-            new_metadata,
-            new_transfer_program,
-        ]
-    )
+    solution: Program = Program.to([provider_innerpuzhash, my_coin_id, new_metadata, new_transfer_program])
     return solution
 
 
@@ -176,11 +151,7 @@ def solve_did_tp(
 # P2 Puzzle or Hidden Puzzle #
 ##############################
 def create_revocation_layer(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes32) -> Program:
-    return REVOCATION_LAYER.curry(
-        REVOCATION_LAYER_HASH,
-        hidden_puzzle_hash,
-        inner_puzzle_hash,
-    )
+    return REVOCATION_LAYER.curry(REVOCATION_LAYER_HASH, hidden_puzzle_hash, inner_puzzle_hash)
 
 
 def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, bytes32]]:
@@ -191,22 +162,14 @@ def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[
 
 
 def solve_revocation_layer(puzzle_reveal: Program, inner_solution: Program, hidden: bool = False) -> Program:
-    solution: Program = Program.to(
-        [
-            hidden,
-            puzzle_reveal,
-            inner_solution,
-        ]
-    )
+    solution: Program = Program.to([hidden, puzzle_reveal, inner_solution])
     return solution
 
 
 ########
 # MISC #
 ########
-def create_eml_covenant_morpher(
-    transfer_program_hash: bytes32,
-) -> Program:
+def create_eml_covenant_morpher(transfer_program_hash: bytes32) -> Program:
     """
     A PARENT_MORPHER for use in the covenant layer that proves the parent is a singleton -> EML -> Covenant stack
     """
@@ -264,12 +227,7 @@ def solve_std_vc_backdoor(
             eml_lineage_proof.to_program(),
             Program.to(eml_lineage_proof.parent_proof_hash),
             announcement_nonce,
-            Program.to(
-                [
-                    provider_innerpuzhash,
-                    coin_id,
-                ]
-            ),
+            Program.to([provider_innerpuzhash, coin_id]),
         ]
     )
     return solution
@@ -280,9 +238,7 @@ def solve_std_vc_backdoor(
 # (c (c 19 ()) (c 43 (q ())))
 GUARANTEED_NIL_TP: Program = Program.fromhex("ff04ffff04ff13ff8080ffff04ff2bffff01ff80808080")
 OWNERSHIP_LAYER_LAUNCHER: Program = construct_exigent_metadata_layer(
-    None,
-    GUARANTEED_NIL_TP,
-    P2_ANNOUNCED_DELEGATED_PUZZLE,
+    None, GUARANTEED_NIL_TP, P2_ANNOUNCED_DELEGATED_PUZZLE
 )
 GUARANTEED_NIL_TP_HASH: bytes32 = GUARANTEED_NIL_TP.get_tree_hash()
 OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
@@ -337,10 +293,7 @@ class VerifiedCredential(Streamable):
         launcher_coin: Coin = generate_launcher_coin(origin_coin, uint64(1))
 
         # Create the second puzzle for the first launch
-        curried_eve_singleton: Program = puzzle_for_singleton(
-            launcher_coin.name(),
-            OWNERSHIP_LAYER_LAUNCHER,
-        )
+        curried_eve_singleton: Program = puzzle_for_singleton(launcher_coin.name(), OWNERSHIP_LAYER_LAUNCHER)
         curried_eve_singleton_hash: bytes32 = curried_eve_singleton.get_tree_hash()
         launcher_solution = Program.to([curried_eve_singleton_hash, uint64(1), None])
 
@@ -349,15 +302,12 @@ class VerifiedCredential(Streamable):
         transfer_program: Program = create_tp_covenant_adapter(
             create_covenant_layer(
                 curried_eve_singleton_hash,
-                create_eml_covenant_morpher(
-                    inner_transfer_program.get_tree_hash(),
-                ),
+                create_eml_covenant_morpher(inner_transfer_program.get_tree_hash()),
                 inner_transfer_program,
             )
         )
         wrapped_inner_puzzle_hash: bytes32 = create_revocation_layer(
-            STANDARD_BRICK_PUZZLE_HASH,
-            new_inner_puzzle_hash,
+            STANDARD_BRICK_PUZZLE_HASH, new_inner_puzzle_hash
         ).get_tree_hash()
         metadata_layer_hash: bytes32 = construct_exigent_metadata_layer(
             Program.to((provider_id, None)),
@@ -379,11 +329,7 @@ class VerifiedCredential(Streamable):
             )
         )
         second_launcher_solution = Program.to([launch_dpuz, None])
-        second_launcher_coin: Coin = Coin(
-            launcher_coin.name(),
-            curried_eve_singleton_hash,
-            uint64(1),
-        )
+        second_launcher_coin: Coin = Coin(launcher_coin.name(), curried_eve_singleton_hash, uint64(1))
         first_launcher_announcement_hash = std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())
         second_launcher_announcement_hash = std_hash(second_launcher_coin.name() + launch_dpuz.get_tree_hash())
         create_launcher_conditions = Program.to(
@@ -402,22 +348,14 @@ class VerifiedCredential(Streamable):
         return (
             [primary_dpuz, *additional_dpuzs],
             [
-                make_spend(
-                    launcher_coin,
-                    SINGLETON_LAUNCHER,
-                    launcher_solution,
-                ),
+                make_spend(launcher_coin, SINGLETON_LAUNCHER, launcher_solution),
                 make_spend(
                     second_launcher_coin,
                     curried_eve_singleton,
                     solution_for_singleton(
                         LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(1)),
                         uint64(1),
-                        Program.to(
-                            [
-                                second_launcher_solution,
-                            ]
-                        ),
+                        Program.to([second_launcher_solution]),
                     ),
                 ),
             ],
@@ -439,10 +377,7 @@ class VerifiedCredential(Streamable):
     ####################################################################################################################
     # The methods in this section give insight into the structure of the puzzle stack that is considered a "VC"
     def construct_puzzle(self) -> Program:
-        return puzzle_for_singleton(
-            self.launcher_id,
-            self.construct_exigent_metadata_layer(),
-        )
+        return puzzle_for_singleton(self.launcher_id, self.construct_exigent_metadata_layer())
 
     def construct_exigent_metadata_layer(self) -> Program:
         return construct_exigent_metadata_layer(
@@ -453,26 +388,20 @@ class VerifiedCredential(Streamable):
 
     def construct_transfer_program(self) -> Program:
         curried_eve_singleton_hash: bytes32 = puzzle_for_singleton(
-            self.launcher_id,
-            OWNERSHIP_LAYER_LAUNCHER,
+            self.launcher_id, OWNERSHIP_LAYER_LAUNCHER
         ).get_tree_hash()
         inner_transfer_program: Program = create_did_tp()
 
         return create_tp_covenant_adapter(
             create_covenant_layer(
                 curried_eve_singleton_hash,
-                create_eml_covenant_morpher(
-                    inner_transfer_program.get_tree_hash(),
-                ),
+                create_eml_covenant_morpher(inner_transfer_program.get_tree_hash()),
                 inner_transfer_program,
-            ),
+            )
         )
 
     def wrap_inner_with_backdoor(self) -> Program:
-        return create_revocation_layer(
-            self.hidden_puzzle().get_tree_hash(),
-            self.inner_puzzle_hash,
-        )
+        return create_revocation_layer(self.hidden_puzzle().get_tree_hash(), self.inner_puzzle_hash)
 
     def hidden_puzzle(self) -> Program:
         return STANDARD_BRICK_PUZZLE
@@ -609,13 +538,7 @@ class VerifiedCredential(Streamable):
             )
 
         new_vc: Self = cls(
-            coin,
-            singleton_lineage_proof,
-            eml_lineage_proof,
-            launcher_id,
-            inner_puzzle_hash,
-            proof_provider,
-            proof_hash,
+            coin, singleton_lineage_proof, eml_lineage_proof, launcher_id, inner_puzzle_hash, proof_provider, proof_hash
         )
         if new_vc.construct_puzzle().get_tree_hash() != new_vc.coin.puzzle_hash:
             raise ValueError("Error getting new VC from coin spend, probably the child singleton is not a VC")
@@ -639,10 +562,7 @@ class VerifiedCredential(Streamable):
             [
                 -10,
                 self.eml_lineage_proof.to_program(),
-                [
-                    Program.to(self.eml_lineage_proof.parent_proof_hash),
-                    self.launcher_id,
-                ],
+                [Program.to(self.eml_lineage_proof.parent_proof_hash), self.launcher_id],
                 [
                     provider_innerpuzhash,
                     self.coin.name(),
@@ -662,10 +582,7 @@ class VerifiedCredential(Streamable):
             [
                 -10,
                 self.eml_lineage_proof.to_program(),
-                [
-                    Program.to(self.eml_lineage_proof.parent_proof_hash),
-                    self.launcher_id,
-                ],
+                [Program.to(self.eml_lineage_proof.parent_proof_hash), self.launcher_id],
                 None,
             ]
         )
@@ -676,10 +593,7 @@ class VerifiedCredential(Streamable):
             [
                 -10,
                 self.eml_lineage_proof.to_program(),
-                [
-                    Program.to(self.eml_lineage_proof.parent_proof_hash),
-                    self.launcher_id,
-                ],
+                [Program.to(self.eml_lineage_proof.parent_proof_hash), self.launcher_id],
                 ACS_TRANSFER_PROGRAM.get_tree_hash(),
             ]
         )
@@ -704,10 +618,7 @@ class VerifiedCredential(Streamable):
             uint64(self.coin.amount),
             Program.to(
                 [  # solve EML
-                    solve_revocation_layer(
-                        inner_puzzle,
-                        inner_solution,
-                    ),
+                    solve_revocation_layer(inner_puzzle, inner_solution)
                 ]
             ),
         )
@@ -730,11 +641,7 @@ class VerifiedCredential(Streamable):
 
         return (
             expected_announcement,
-            make_spend(
-                self.coin,
-                self.construct_puzzle(),
-                vc_solution,
-            ),
+            make_spend(self.coin, self.construct_puzzle(), vc_solution),
             self._next_vc(
                 new_inner_puzzle_hash,
                 self.proof_hash if new_proof_hash is None else new_proof_hash,
@@ -771,7 +678,7 @@ class VerifiedCredential(Streamable):
                             announcement_nonce,
                         ),
                         hidden=True,
-                    ),
+                    )
                 ]
             ),
         )
@@ -780,10 +687,7 @@ class VerifiedCredential(Streamable):
             std_hash(self.coin.name() + Program.to(None).get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash())
         )
 
-        return (
-            expected_announcement,
-            make_spend(self.coin, self.construct_puzzle(), vc_solution),
-        )
+        return (expected_announcement, make_spend(self.coin, self.construct_puzzle(), vc_solution))
 
     ####################################################################################################################
 

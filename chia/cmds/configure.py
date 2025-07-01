@@ -43,10 +43,7 @@ def configure(
         if set_node_introducer:
             try:
                 if set_node_introducer.index(":"):
-                    host, port = (
-                        ":".join(set_node_introducer.split(":")[:-1]),
-                        set_node_introducer.split(":")[-1],
-                    )
+                    host, port = (":".join(set_node_introducer.split(":")[:-1]), set_node_introducer.split(":")[-1])
                     config["full_node"]["introducer_peer"]["host"] = host
                     config["full_node"]["introducer_peer"]["port"] = int(port)
                     config["introducer"]["port"] = int(port)
@@ -57,10 +54,7 @@ def configure(
         if set_farmer_peer:
             try:
                 if set_farmer_peer.index(":"):
-                    host, port = (
-                        ":".join(set_farmer_peer.split(":")[:-1]),
-                        set_farmer_peer.split(":")[-1],
-                    )
+                    host, port = (":".join(set_farmer_peer.split(":")[:-1]), set_farmer_peer.split(":")[-1])
                     set_peer_info(config["harvester"], peer_type=NodeType.FARMER, peer_host=host, peer_port=int(port))
                     print("Farmer peer updated, make sure your harvester has the proper cert installed")
                     change_made = True
@@ -237,23 +231,12 @@ def configure(
 
 @click.command("configure", help="Modify configuration", no_args_is_help=True)
 @click.option(
-    "--testnet",
-    "-t",
-    help="configures for connection to testnet",
-    type=click.Choice(["true", "t", "false", "f"]),
+    "--testnet", "-t", help="configures for connection to testnet", type=click.Choice(["true", "t", "false", "f"])
 )
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
-@click.option(
-    "--set-fullnode-port",
-    help="Set the port to use for the fullnode, useful for testing",
-    type=str,
-)
-@click.option(
-    "--set-harvester-port",
-    help="Set the port to use for the harvester, useful for testing",
-    type=str,
-)
+@click.option("--set-fullnode-port", help="Set the port to use for the fullnode, useful for testing", type=str)
+@click.option("--set-harvester-port", help="Set the port to use for the harvester, useful for testing", type=str)
 @click.option(
     "--set-log-level",
     "--log-level",
@@ -262,39 +245,21 @@ def configure(
     type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]),
 )
 @click.option(
-    "--enable-upnp",
-    "--upnp",
-    "-upnp",
-    help="Enable or disable uPnP",
-    type=click.Choice(["true", "t", "false", "f"]),
+    "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
 )
-@click.option(
-    "--set_outbound-peer-count",
-    help="Update the target outbound peer count (default 8)",
-    type=str,
-)
+@click.option("--set_outbound-peer-count", help="Update the target outbound peer count (default 8)", type=str)
 @click.option("--set-peer-count", help="Update the target peer count (default 80)", type=str)
 @click.option("--set-peer-connect-timeout", help="Update the peer connect timeout (default 30)", type=str)
-@click.option(
-    "--crawler-db-path",
-    help="configures the path to the crawler database",
-    type=str,
-)
+@click.option("--crawler-db-path", help="configures the path to the crawler database", type=str)
 @click.option(
     "--crawler-minimum-version-count",
     help="configures how many of a particular version must be seen to be reported in logs",
     type=int,
 )
 @click.option(
-    "--seeder-domain-name",
-    help="configures the seeder domain_name setting. Ex: `seeder.example.com.`",
-    type=str,
+    "--seeder-domain-name", help="configures the seeder domain_name setting. Ex: `seeder.example.com.`", type=str
 )
-@click.option(
-    "--seeder-nameserver",
-    help="configures the seeder nameserver setting. Ex: `example.com.`",
-    type=str,
-)
+@click.option("--seeder-nameserver", help="configures the seeder nameserver setting. Ex: `example.com.`", type=str)
 @click.pass_context
 def configure_cmd(
     ctx: click.Context,

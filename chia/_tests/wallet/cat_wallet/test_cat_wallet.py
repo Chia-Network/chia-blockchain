@@ -43,16 +43,7 @@ def check_wallets(node: WalletNode) -> int:
     return len(node.wallet_state_manager.wallets.keys())
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.anyio
 async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
@@ -60,20 +51,12 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
     wsm = wallet_environments.environments[0].wallet_state_manager
     wallet = wallet_environments.environments[0].xch_wallet
     wallet_node = wallet_environments.environments[0].node
-    wallet_environments.environments[0].wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    wallet_environments.environments[0].wallet_aliases = {"xch": 1, "cat": 2}
     test_amount = 100
     test_fee = 10
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wsm,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(test_amount),
-            action_scope,
-            fee=uint64(test_fee),
+            wsm, wallet, {"identifier": "genesis_by_id"}, uint64(test_amount), action_scope, fee=uint64(test_fee)
         )
         # The next 2 lines are basically a noop, it just adds test coverage
         cat_wallet = await CATWallet.create(wsm, wallet, cat_wallet.wallet_info)
@@ -183,7 +166,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         "set_remainder": True,
                     },
                 },
-            ),
+            )
         ]
     )
 
@@ -208,19 +191,11 @@ async def test_cat_creation_unique_lineage_store(wallet_environments: WalletTest
 
     async with wsm.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet_1 = await CATWallet.create_new_cat_wallet(
-            wsm,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(100),
-            action_scope,
+            wsm, wallet, {"identifier": "genesis_by_id"}, uint64(100), action_scope
         )
     async with wsm.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet_2 = await CATWallet.create_new_cat_wallet(
-            wsm,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(200),
-            action_scope,
+            wsm, wallet, {"identifier": "genesis_by_id"}, uint64(200), action_scope
         )
 
     proofs_1 = await cat_wallet_1.lineage_store.get_all_lineage_proofs()
@@ -231,16 +206,7 @@ async def test_cat_creation_unique_lineage_store(wallet_environments: WalletTest
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.anyio
 async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     # Setup
@@ -252,22 +218,12 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     wallet2 = env_2.xch_wallet
     full_node_api = wallet_environments.full_node
 
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_2.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_1.wallet_aliases = {"xch": 1, "cat": 2}
+    env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(100),
-            action_scope,
+            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), action_scope
         )
 
     await wallet_environments.process_pending_states(
@@ -391,7 +347,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "max_send_amount": 0,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -402,7 +358,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "pending_change": 0,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
             ),
         ]
@@ -436,7 +392,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "max_send_amount": 15,
                         "pending_change": 0,
                         "unspent_coin_count": 1,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -448,7 +404,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "max_send_amount": -60,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -458,7 +414,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "max_send_amount": 45,
                         "pending_change": -45,
                         "unspent_coin_count": 0,
-                    },
+                    }
                 },
             ),
         ]
@@ -480,7 +436,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                 "max_send_amount": -15,
                 "pending_change": 0,
                 "unspent_coin_count": -1,
-            },
+            }
         }
     )
     await env_1.check_balances()
@@ -504,18 +460,11 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework)
     wsm = wallet_environments.environments[0].wallet_state_manager
     wallet = wallet_environments.environments[0].xch_wallet
 
-    wallet_environments.environments[0].wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    wallet_environments.environments[0].wallet_aliases = {"xch": 1, "cat": 2}
 
     async with wsm.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wsm,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(100),
-            action_scope,
+            wsm, wallet, {"identifier": "genesis_by_id"}, uint64(100), action_scope
         )
 
     await wallet_environments.process_pending_states(
@@ -525,11 +474,8 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework)
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
-            ),
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
+            )
         ]
     )
 
@@ -549,15 +495,7 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework)
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-            "reuse_puzhash": True,
-        }
-    ],
-    indirect=True,
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}], indirect=True
 )
 @pytest.mark.anyio
 async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> None:
@@ -569,22 +507,12 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
     wallet = env_1.xch_wallet
     wallet2 = env_2.xch_wallet
 
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_2.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_1.wallet_aliases = {"xch": 1, "cat": 2}
+    env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(100),
-            action_scope,
+            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), action_scope
         )
 
     await wallet_environments.process_pending_states(
@@ -607,10 +535,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                     },
                 },
             ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
         ]
     )
 
@@ -681,7 +606,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": 0,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -692,7 +617,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         "pending_change": 0,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
             ),
         ]
@@ -713,7 +638,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -723,14 +648,11 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         "<=#pending_change": -1,  # any amount decrease
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
             # No state changes should occur since this was an unspent eve CAT
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
         ]
     )
 
@@ -745,16 +667,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 3,
-            "blocks_needed": [1, 1, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 3, "blocks_needed": [1, 1, 1]}], indirect=True)
 @pytest.mark.anyio
 async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> None:
     # Setup
@@ -768,26 +681,13 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
     wallet_1 = env_1.xch_wallet
     wallet_2 = env_2.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_2.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "cat": 2}
+    env_1.wallet_aliases = {"xch": 1, "cat": 2}
+    env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet_0 = await CATWallet.create_new_cat_wallet(
-            wallet_node_0.wallet_state_manager,
-            wallet_0,
-            {"identifier": "genesis_by_id"},
-            uint64(100),
-            action_scope,
+            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100), action_scope
         )
 
     await wallet_environments.process_pending_states(
@@ -810,14 +710,8 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     },
                 },
             ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
         ]
     )
 
@@ -853,7 +747,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "pending_change": 20,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -863,7 +757,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "pending_change": -20,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -877,7 +771,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": 0,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -888,7 +782,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "pending_change": 0,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -902,7 +796,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": 0,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -913,7 +807,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "pending_change": 0,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
             ),
         ]
@@ -932,9 +826,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "cat": {},
-                },
+                pre_block_balance_updates={"cat": {}},
                 post_block_balance_updates={
                     "cat": {
                         "confirmed_wallet_balance": 35,
@@ -944,7 +836,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "pending_change": 0,
                         "unspent_coin_count": 2,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -956,7 +848,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": -60,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -966,7 +858,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": 45,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -978,7 +870,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": -20,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -988,7 +880,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": 0,
                         "unspent_coin_count": -1,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
         ]
@@ -1006,18 +898,13 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
             DEFAULT_TX_CONFIG, push=False
         ) as failed_action_scope:
             await cat_wallet_1.generate_signed_transaction(
-                [uint64(30)],
-                [cat_hash],
-                failed_action_scope,
-                memos=[[b"too"], [b"many"], [b"memos"]],
+                [uint64(30)], [cat_hash], failed_action_scope, memos=[[b"too"], [b"many"], [b"memos"]]
             )
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "cat": {},
-                },
+                pre_block_balance_updates={"cat": {}},
                 post_block_balance_updates={
                     "cat": {
                         "confirmed_wallet_balance": 30,
@@ -1027,7 +914,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "pending_change": 0,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -1039,7 +926,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": -45,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -1049,13 +936,10 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                         "max_send_amount": 15,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
         ]
     )
 
@@ -1089,18 +973,11 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
     wallet_node = env.node
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "cat": 2}
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(100000),
-            action_scope,
+            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000), action_scope
         )
 
     await wallet_environments.process_pending_states(
@@ -1152,7 +1029,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
                         "pending_change": 100000,
                         "pending_coin_removal_count": 1,
                         "unspent_coin_count": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -1162,7 +1039,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
                         "pending_change": -100000,
                         "pending_coin_removal_count": -1,
                         "unspent_coin_count": 49,
-                    },
+                    }
                 },
             )
         ]
@@ -1209,16 +1086,8 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
 @pytest.mark.parametrize(
     "wallet_environments",
     [
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-            "config_overrides": {"automatically_add_unknown_cats": True},
-        },
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-            "config_overrides": {"automatically_add_unknown_cats": False},
-        },
+        {"num_environments": 2, "blocks_needed": [1, 1], "config_overrides": {"automatically_add_unknown_cats": True}},
+        {"num_environments": 2, "blocks_needed": [1, 1], "config_overrides": {"automatically_add_unknown_cats": False}},
     ],
     indirect=True,
 )
@@ -1232,24 +1101,14 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
     wallet_1 = env_1.xch_wallet
     wallet_2 = env_2.xch_wallet
 
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_2.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_1.wallet_aliases = {"xch": 1, "cat": 2}
+    env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
     autodiscovery = wallet_node_1.config["automatically_add_unknown_cats"]
 
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wallet_node_1.wallet_state_manager,
-            wallet_1,
-            {"identifier": "genesis_by_id"},
-            uint64(100),
-            action_scope,
+            wallet_node_1.wallet_state_manager, wallet_1, {"identifier": "genesis_by_id"}, uint64(100), action_scope
         )
 
     await wallet_environments.process_pending_states(
@@ -1272,10 +1131,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
         ]
     )
 
@@ -1297,7 +1153,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                         "pending_change": 40,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -1307,7 +1163,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                         "pending_change": -40,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -1323,7 +1179,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                             "pending_change": 0,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": 0,
-                        },
+                        }
                     }
                     if autodiscovery
                     else {}
@@ -1356,7 +1212,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                         "pending_change": 30,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -1366,7 +1222,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                         "pending_change": -30,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -1381,7 +1237,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                             "pending_change": 0,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": 0,
-                        },
+                        }
                     }
                     if autodiscovery
                     else {
@@ -1416,9 +1272,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "cat": {},
-                },
+                pre_block_balance_updates={"cat": {}},
                 post_block_balance_updates={
                     "cat": {
                         "confirmed_wallet_balance": 5,
@@ -1428,7 +1282,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                         "pending_change": 0,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": 0,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -1440,7 +1294,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                         ">=#pending_change": 1,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -1450,7 +1304,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                         "<=#pending_change": -1,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
         ]
@@ -1460,13 +1314,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize(
     "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [1],
-            "config_overrides": {"automatically_add_unknown_cats": True},
-        },
-    ],
+    [{"num_environments": 1, "blocks_needed": [1], "config_overrides": {"automatically_add_unknown_cats": True}}],
     indirect=True,
 )
 @pytest.mark.anyio
@@ -1476,10 +1324,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
     wsm = env.wallet_state_manager
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "cat": 2}
 
     # Mint CAT to ourselves, immediately spend it to an unhinted puzzle hash that we have manually added to the DB
     # We should pick up this coin as balance even though it is unhinted because it is "change"
@@ -1495,11 +1340,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
     await wsm.puzzle_store.add_derivation_paths([change_derivation])
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         our_puzzle = await action_scope.get_puzzle(wallet.wallet_state_manager)
-    cat_puzzle = construct_cat_puzzle(
-        CAT_MOD,
-        Program.to(None).get_tree_hash(),
-        Program.to(1),
-    )
+    cat_puzzle = construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), Program.to(1))
     addr = encode_puzzle_hash(cat_puzzle.get_tree_hash(), "txch")
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
@@ -1553,13 +1394,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
                     [
                         [
                             None,
-                            (
-                                1,
-                                [
-                                    [51, inner_puzhash, cat_amount_1],
-                                    [51, bytes32.zeros, cat_amount_0 - cat_amount_1],
-                                ],
-                            ),
+                            (1, [[51, inner_puzhash, cat_amount_1], [51, bytes32.zeros, cat_amount_0 - cat_amount_1]]),
                             None,
                         ],
                         LineageProof(
@@ -1573,7 +1408,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
                     ]
                 ),
             ),
-        ],
+        ]
     )
     await env.rpc_client.push_tx(PushTX(eve_spend))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
@@ -1648,10 +1483,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
     wallet = env.xch_wallet
     simulator = wallet_environments.full_node
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "cat": 2}
 
     ACS = Program.to(1)
     ACS_TAIL = Program.to([])
@@ -1778,18 +1610,11 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework) -> No
     env = wallet_environments.environments[0]
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "cat": 2}
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            env.node.wallet_state_manager,
-            wallet,
-            {"identifier": "genesis_by_id"},
-            uint64(100),
-            action_scope,
+            env.node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), action_scope
         )
 
     await wallet_environments.process_pending_states(
@@ -1811,7 +1636,7 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework) -> No
                         "unspent_coin_count": 1,
                     },
                 },
-            ),
+            )
         ]
     )
 
@@ -1819,9 +1644,7 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework) -> No
     with pytest.raises(NewPuzzleHashError):
         async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             await cat_wallet.generate_signed_transaction(
-                [uint64(50)],
-                [await action_scope.get_puzzle_hash(cat_wallet.wallet_state_manager)],
-                action_scope,
+                [uint64(50)], [await action_scope.get_puzzle_hash(cat_wallet.wallet_state_manager)], action_scope
             )
 
     # Test new puzzle hash getting

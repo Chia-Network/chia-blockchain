@@ -52,11 +52,7 @@ class CacheEntry:
 
     @classmethod
     def from_disk_prover(cls, prover: DiskProver) -> CacheEntry:
-        (
-            pool_public_key_or_puzzle_hash,
-            farmer_public_key,
-            local_master_sk,
-        ) = parse_plot_info(prover.get_memo())
+        (pool_public_key_or_puzzle_hash, farmer_public_key, local_master_sk) = parse_plot_info(prover.get_memo())
 
         pool_public_key: Optional[G1Element] = None
         pool_contract_puzzle_hash: Optional[bytes32] = None

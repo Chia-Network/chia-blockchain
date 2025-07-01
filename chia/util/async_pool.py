@@ -74,17 +74,11 @@ class QueuedAsyncPool(Generic[J, R]):
         log: logging.Logger = logging.getLogger(__name__),
     ) -> AsyncIterator[QueuedAsyncPool[J, R]]:
         self = cls(
-            name=name,
-            job_queue=job_queue,
-            result_queue=result_queue,
-            worker_async_callable=worker_async_callable,
+            name=name, job_queue=job_queue, result_queue=result_queue, worker_async_callable=worker_async_callable
         )
 
         async with AsyncPool.managed(
-            name=self.name,
-            worker_async_callable=self.worker,
-            target_worker_count=target_worker_count,
-            log=log,
+            name=self.name, worker_async_callable=self.worker, target_worker_count=target_worker_count, log=log
         ):
             yield self
 
@@ -145,10 +139,7 @@ class AsyncPool:
         log: logging.Logger = logging.getLogger(__name__),
     ) -> AsyncIterator[AsyncPool]:
         self = cls(
-            name=name,
-            log=log,
-            worker_async_callable=worker_async_callable,
-            _target_worker_count=target_worker_count,
+            name=name, log=log, worker_async_callable=worker_async_callable, _target_worker_count=target_worker_count
         )
 
         if self._target_worker_count < 1:
@@ -195,10 +186,7 @@ class AsyncPool:
         self._started.set()
 
         self.log.debug(f"{self.name}: waiting with {len(self._workers)} workers: {list(self._workers.values())}")
-        done_workers, pending_workers = await asyncio.wait(
-            self._workers,
-            return_when=asyncio.FIRST_COMPLETED,
-        )
+        done_workers, pending_workers = await asyncio.wait(self._workers, return_when=asyncio.FIRST_COMPLETED)
         done_workers_by_id = {task: self._workers[task] for task in done_workers}
         self._workers = {task: self._workers[task] for task in pending_workers}
 

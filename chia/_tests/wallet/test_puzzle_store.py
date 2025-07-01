@@ -83,8 +83,7 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
         assert await db.index_for_pubkey(derivation_recs[4].pubkey) == 2
         assert await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) == 1
         assert await db.get_wallet_identifier_for_puzzle_hash(derivation_recs[2].puzzle_hash) == WalletIdentifier(
-            derivation_recs[2].wallet_id,
-            derivation_recs[2].wallet_type,
+            derivation_recs[2].wallet_id, derivation_recs[2].wallet_type
         )
         assert len(await db.get_all_puzzle_hashes()) == 2000
         assert await db.get_last_derivation_path() == 999

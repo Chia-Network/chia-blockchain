@@ -146,10 +146,7 @@ class Blockchain:
         else:
             cpu_count = available_logical_cores()
             num_workers = max(cpu_count - reserved_cores, 1)
-            self.pool = ThreadPoolExecutor(
-                max_workers=num_workers,
-                thread_name_prefix="block-validation-",
-            )
+            self.pool = ThreadPoolExecutor(max_workers=num_workers, thread_name_prefix="block-validation-")
             log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
@@ -275,10 +272,7 @@ class Blockchain:
             assert block.foliage_transaction_block is not None
             flags = get_flags_for_height_and_constants(block.height, self.constants)
             additions, removals = additions_and_removals(
-                bytes(block.transactions_generator),
-                block_generator.generator_refs,
-                flags,
-                self.constants,
+                bytes(block.transactions_generator), block_generator.generator_refs, flags, self.constants
             )
 
         fork_info.include_block(additions, removals, block, block.header_hash)
@@ -476,10 +470,7 @@ class Blockchain:
     # only to be called under short fork points
     # under deep reorgs this can cause OOM
     async def _reconsider_peak(
-        self,
-        block_record: BlockRecord,
-        genesis: bool,
-        fork_info: ForkInfo,
+        self, block_record: BlockRecord, genesis: bool, fork_info: ForkInfo
     ) -> tuple[list[BlockRecord], Optional[StateChangeSummary]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -573,11 +564,7 @@ class Blockchain:
             ]
             assert fetched_block_record.timestamp is not None
             await self.coin_store.new_block(
-                height,
-                fetched_block_record.timestamp,
-                included_reward_coins,
-                tx_additions,
-                tx_removals,
+                height, fetched_block_record.timestamp, included_reward_coins, tx_additions, tx_removals
             )
             if self._log_coins and (len(tx_removals) > 0 or len(tx_additions) > 0):
                 log.info(
@@ -739,12 +726,7 @@ class Blockchain:
         )
         expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
-            self.constants,
-            self,
-            unfinished_header_block,
-            False,
-            expected_vs,
-            skip_overflow_ss_validation,
+            self.constants, self, unfinished_header_block, False, expected_vs, skip_overflow_ss_validation
         )
         if error is not None:
             return required_iters, error.code
@@ -1001,8 +983,7 @@ class Blockchain:
         await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def get_sub_epoch_challenge_segments(
-        self,
-        ses_block_hash: bytes32,
+        self, ses_block_hash: bytes32
     ) -> Optional[list[SubEpochChallengeSegment]]:
         segments: Optional[list[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
             ses_block_hash
@@ -1055,10 +1036,7 @@ class Blockchain:
             reorg_chain: dict[uint32, bytes32]
             # Then we look up blocks up to fork point one at a time, backtracking
             reorg_chain, _ = await lookup_fork_chain(
-                self,
-                (peak.height, peak.header_hash),
-                (peak_block.height, peak_block.header_hash),
-                self.constants,
+                self, (peak.height, peak.header_hash), (peak_block.height, peak_block.header_hash), self.constants
             )
 
             remaining_refs = set()

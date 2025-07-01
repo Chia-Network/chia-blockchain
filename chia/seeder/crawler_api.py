@@ -108,9 +108,7 @@ class CrawlerAPI:
 
     @metadata.request(peer_required=True)
     async def request_mempool_transactions(
-        self,
-        request: full_node_protocol.RequestMempoolTransactions,
-        peer: WSChiaConnection,
+        self, request: full_node_protocol.RequestMempoolTransactions, peer: WSChiaConnection
     ) -> Optional[Message]:
         pass
 

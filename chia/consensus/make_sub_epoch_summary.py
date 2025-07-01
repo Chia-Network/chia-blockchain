@@ -47,13 +47,7 @@ def make_sub_epoch_summary(
     # This is not technically because more blocks can potentially be included than 2*MAX_SUB_SLOT_BLOCKS,
     # But assuming less than 128 overflow blocks get infused in the first 2 slots, it's not an issue
     if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1:
-        return SubEpochSummary(
-            constants.GENESIS_CHALLENGE,
-            constants.GENESIS_CHALLENGE,
-            uint8(0),
-            None,
-            None,
-        )
+        return SubEpochSummary(constants.GENESIS_CHALLENGE, constants.GENESIS_CHALLENGE, uint8(0), None, None)
     if prev_ses_block is None:
         curr: BlockRecord = prev_prev_block
         while curr.sub_epoch_summary_included is None:
@@ -145,11 +139,7 @@ def next_sub_epoch_summary(
             can_finish_epoch = False
     else:
         deficit = calculate_deficit(
-            constants,
-            uint32(prev_b.height + 1),
-            prev_b,
-            overflow,
-            len(block.finished_sub_slots),
+            constants, uint32(prev_b.height + 1), prev_b, overflow, len(block.finished_sub_slots)
         )
         can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
             constants,
@@ -198,10 +188,5 @@ def next_sub_epoch_summary(
         )
 
     return make_sub_epoch_summary(
-        constants,
-        blocks,
-        uint32(prev_b.height + 2),
-        prev_b,
-        next_difficulty,
-        next_sub_slot_iters,
+        constants, blocks, uint32(prev_b.height + 2), prev_b, next_difficulty, next_sub_slot_iters
     )

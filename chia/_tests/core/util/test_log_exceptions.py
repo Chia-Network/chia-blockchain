@@ -26,46 +26,28 @@ class ErrorCase:
     should_match: bool
 
 
-all_level_values = [
-    logging.CRITICAL,
-    logging.ERROR,
-    logging.WARNING,
-    logging.INFO,
-    logging.DEBUG,
-]
+all_level_values = [logging.CRITICAL, logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]
 all_levels = {logging.getLevelName(value): value for value in all_level_values}
 
 
-def test_consumes_exception(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_consumes_exception(logger: logging.Logger, caplog: pytest.LogCaptureFixture) -> None:
     with log_exceptions(log=logger, consume=True):
         raise Exception
 
 
-def test_propagates_exception(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_propagates_exception(logger: logging.Logger, caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(Exception, match=re.escape(exception_message)):
         with log_exceptions(log=logger, consume=False):
             raise Exception(exception_message)
 
 
-def test_propagates_exception_by_default(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_propagates_exception_by_default(logger: logging.Logger, caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(Exception, match=re.escape(exception_message)):
         with log_exceptions(log=logger):
             raise Exception(exception_message)
 
 
-def test_passed_message_is_used(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_passed_message_is_used(logger: logging.Logger, caplog: pytest.LogCaptureFixture) -> None:
     with log_exceptions(log=logger, consume=True, message=log_message):
         raise Exception
 
@@ -75,16 +57,8 @@ def test_passed_message_is_used(
     assert record.msg.startswith(f"{log_message}: ")
 
 
-@pytest.mark.parametrize(
-    argnames="level",
-    argvalues=all_levels.values(),
-    ids=all_levels.keys(),
-)
-def test_specified_level_is_used(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-    level: int,
-) -> None:
+@pytest.mark.parametrize(argnames="level", argvalues=all_levels.values(), ids=all_levels.keys())
+def test_specified_level_is_used(logger: logging.Logger, caplog: pytest.LogCaptureFixture, level: int) -> None:
     caplog.set_level(min(all_levels.values()))
     with log_exceptions(level=level, log=logger, consume=True):
         raise Exception
@@ -95,10 +69,7 @@ def test_specified_level_is_used(
     assert record.levelno == level
 
 
-def test_traceback_is_logged(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_traceback_is_logged(logger: logging.Logger, caplog: pytest.LogCaptureFixture) -> None:
     with log_exceptions(log=logger, consume=True, show_traceback=True):
         raise Exception
 
@@ -108,10 +79,7 @@ def test_traceback_is_logged(
     assert "\nTraceback " in record.msg
 
 
-def test_traceback_is_not_logged(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_traceback_is_not_logged(logger: logging.Logger, caplog: pytest.LogCaptureFixture) -> None:
     with log_exceptions(log=logger, consume=True, show_traceback=False):
         raise Exception
 
@@ -148,11 +116,7 @@ def test_traceback_is_not_logged(
 @pytest.mark.parametrize(argnames="consume", argvalues=[False, True], ids=["propagates", "consumes"])
 @pytest.mark.parametrize(argnames="show_traceback", argvalues=[False, True], ids=["no traceback", "with traceback"])
 def test_well_everything(
-    logger: logging.Logger,
-    caplog: pytest.LogCaptureFixture,
-    consume: bool,
-    case: ErrorCase,
-    show_traceback: bool,
+    logger: logging.Logger, caplog: pytest.LogCaptureFixture, consume: bool, case: ErrorCase, show_traceback: bool
 ) -> None:
     with contextlib.ExitStack() as exit_stack:
         if not consume or not case.should_match:

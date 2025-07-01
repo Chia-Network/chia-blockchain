@@ -50,20 +50,7 @@ def test_cat_outer_puzzle() -> None:
     inner_solution = Program.to([[51, ACS.get_tree_hash(), 100]])
     solution: Program = solve_puzzle(
         cr_driver,
-        Solver(
-            {
-                "coin": coin_as_hex,
-                "vc_authorizations": {
-                    coin.name().hex(): [
-                        "()",
-                        "()",
-                        "()",
-                        "()",
-                        "()",
-                    ],
-                },
-            },
-        ),
+        Solver({"coin": coin_as_hex, "vc_authorizations": {coin.name().hex(): ["()", "()", "()", "()", "()"]}}),
         ACS,
         inner_solution,
     )

@@ -42,14 +42,7 @@ async def test_basic_message_send_receive(mode: int, cost_logger: CostLogger) ->
             ),
         )
         only_sender = WalletSpendBundle(
-            [
-                make_spend(
-                    sender_coin.coin,
-                    ACS,
-                    Program.to([send_condition.to_program()]),
-                ),
-            ],
-            G2Element(),
+            [make_spend(sender_coin.coin, ACS, Program.to([send_condition.to_program()]))], G2Element()
         )
         result = await client.push_tx(only_sender)
         assert result == (MempoolInclusionStatus.FAILED, Err.MESSAGE_NOT_SENT_OR_RECEIVED)
@@ -66,14 +59,7 @@ async def test_basic_message_send_receive(mode: int, cost_logger: CostLogger) ->
             ),
         )
         only_receiver = WalletSpendBundle(
-            [
-                make_spend(
-                    receiver_coin.coin,
-                    ACS,
-                    Program.to([receive_condition.to_program()]),
-                ),
-            ],
-            G2Element(),
+            [make_spend(receiver_coin.coin, ACS, Program.to([receive_condition.to_program()]))], G2Element()
         )
         result = await client.push_tx(only_receiver)
         assert result == (MempoolInclusionStatus.FAILED, Err.MESSAGE_NOT_SENT_OR_RECEIVED)
@@ -125,47 +111,25 @@ def test_message_error_conditions() -> None:
             )
 
     with pytest.raises(ValueError, match="without committment information"):
-        MessageParticipant(
-            mode_integer=uint8(0b111),
-        ).necessary_args
+        MessageParticipant(mode_integer=uint8(0b111)).necessary_args
 
     with pytest.raises(ValueError, match="Must specify either mode_integer or both sender and receiver"):
-        SendMessage(
-            msg=b"foo",
-            sender=MessageParticipant(coin_id_committed=test_coin.name()),
-        )
+        SendMessage(msg=b"foo", sender=MessageParticipant(coin_id_committed=test_coin.name()))
 
     with pytest.raises(ValueError, match="Must specify either mode_integer or both sender and receiver"):
-        SendMessage(
-            msg=b"foo",
-            receiver=MessageParticipant(coin_id_committed=test_coin.name()),
-        )
+        SendMessage(msg=b"foo", receiver=MessageParticipant(coin_id_committed=test_coin.name()))
 
     with pytest.raises(AssertionError, match="don't match the sender's mode"):
-        SendMessage(
-            msg=b"foo",
-            mode_integer=uint8(0b111111),
-            sender=MessageParticipant(mode_integer=uint8(0b001)),
-        )
+        SendMessage(msg=b"foo", mode_integer=uint8(0b111111), sender=MessageParticipant(mode_integer=uint8(0b001)))
 
     with pytest.raises(AssertionError, match="don't match the receiver's mode"):
-        SendMessage(
-            msg=b"foo",
-            mode_integer=uint8(0b111111),
-            receiver=MessageParticipant(mode_integer=uint8(0b001)),
-        )
+        SendMessage(msg=b"foo", mode_integer=uint8(0b111111), receiver=MessageParticipant(mode_integer=uint8(0b001)))
 
     with pytest.raises(ValueError, match="Must specify either var_args or receiver"):
-        SendMessage(
-            msg=b"foo",
-            mode_integer=uint8(0b111111),
-        )
+        SendMessage(msg=b"foo", mode_integer=uint8(0b111111))
 
     with pytest.raises(ValueError, match="Must specify either var_args or sender"):
-        ReceiveMessage(
-            msg=b"foo",
-            mode_integer=uint8(0b111111),
-        )
+        ReceiveMessage(msg=b"foo", mode_integer=uint8(0b111111))
 
     with pytest.raises(AssertionError, match="do not match the specified arguments"):
         SendMessage(

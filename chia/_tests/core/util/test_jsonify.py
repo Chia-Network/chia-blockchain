@@ -24,14 +24,7 @@ def test_primitives() -> None:
         e: bytes32
         f: bool
 
-    t1 = PrimitivesTest(
-        uint32(123),
-        None,
-        "foobar",
-        b"\0\1\0\1",
-        bytes32(range(32)),
-        True,
-    )
+    t1 = PrimitivesTest(uint32(123), None, "foobar", b"\0\1\0\1", bytes32(range(32)), True)
 
     assert dict_with_types(t1.to_json_dict()) == {
         "a": (123, int),
@@ -42,14 +35,7 @@ def test_primitives() -> None:
         "f": (True, bool),
     }
 
-    t2 = PrimitivesTest(
-        uint32(0),
-        "set optional",
-        "foobar",
-        b"\0\1",
-        bytes32.zeros,
-        False,
-    )
+    t2 = PrimitivesTest(uint32(0), "set optional", "foobar", b"\0\1", bytes32.zeros, False)
 
     assert dict_with_types(t2.to_json_dict()) == {
         "a": (0, int),

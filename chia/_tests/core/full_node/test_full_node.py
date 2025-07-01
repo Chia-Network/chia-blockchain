@@ -218,18 +218,9 @@ async def test_block_compression(
 
     # Send a transaction to mempool
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(tx_size)],
-            [ph],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(tx_size)], [ph], action_scope)
     [tr] = action_scope.side_effects.transactions
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
+    await time_out_assert(10, full_node_2.full_node.mempool_manager.get_spendbundle, tr.spend_bundle, tr.name)
 
     # Farm a block
     await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -252,18 +243,9 @@ async def test_block_compression(
 
     # Send another tx
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(20_000)],
-            [ph],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(20_000)], [ph], action_scope)
     [tr] = action_scope.side_effects.transactions
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
+    await time_out_assert(10, full_node_2.full_node.mempool_manager.get_spendbundle, tr.spend_bundle, tr.name)
 
     # Farm a block
     await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -292,59 +274,23 @@ async def test_block_compression(
 
     # Send another 2 tx
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(30_000)],
-            [ph],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(30_000)], [ph], action_scope)
     [tr] = action_scope.side_effects.transactions
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
+    await time_out_assert(10, full_node_2.full_node.mempool_manager.get_spendbundle, tr.spend_bundle, tr.name)
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(40_000)],
-            [ph],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(40_000)], [ph], action_scope)
     [tr] = action_scope.side_effects.transactions
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
+    await time_out_assert(10, full_node_2.full_node.mempool_manager.get_spendbundle, tr.spend_bundle, tr.name)
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(50_000)],
-            [ph],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(50_000)], [ph], action_scope)
     [tr] = action_scope.side_effects.transactions
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
+    await time_out_assert(10, full_node_2.full_node.mempool_manager.get_spendbundle, tr.spend_bundle, tr.name)
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(3_000_000_000_000)],
-            [ph],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(3_000_000_000_000)], [ph], action_scope)
     [tr] = action_scope.side_effects.transactions
-    await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        tr.spend_bundle,
-        tr.name,
-    )
+    await time_out_assert(10, full_node_2.full_node.mempool_manager.get_spendbundle, tr.spend_bundle, tr.name)
 
     # Farm a block
     await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -365,11 +311,7 @@ async def test_block_compression(
 
     # Creates a standard_transaction and an anyone-can-spend tx
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(30_000)],
-            [Program.to(1).get_tree_hash()],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(30_000)], [Program.to(1).get_tree_hash()], action_scope)
     [tr] = action_scope.side_effects.transactions
     assert tr.spend_bundle is not None
     extra_spend = WalletSpendBundle(
@@ -384,18 +326,12 @@ async def test_block_compression(
     )
     new_spend_bundle = WalletSpendBundle.aggregate([tr.spend_bundle, extra_spend])
     new_tr = dataclasses.replace(
-        tr,
-        spend_bundle=new_spend_bundle,
-        additions=new_spend_bundle.additions(),
-        removals=new_spend_bundle.removals(),
+        tr, spend_bundle=new_spend_bundle, additions=new_spend_bundle.additions(), removals=new_spend_bundle.removals()
     )
     [new_tr] = await wallet.wallet_state_manager.add_pending_transactions([new_tr])
     assert new_tr.spend_bundle is not None
     await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        new_tr.spend_bundle,
-        new_tr.spend_bundle.name(),
+        10, full_node_2.full_node.mempool_manager.get_spendbundle, new_tr.spend_bundle, new_tr.spend_bundle.name()
     )
 
     # Farm a block
@@ -415,11 +351,7 @@ async def test_block_compression(
 
     # Make a standard transaction and an anyone-can-spend transaction
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-        await wallet.generate_signed_transaction(
-            [uint64(30_000)],
-            [Program.to(1).get_tree_hash()],
-            action_scope,
-        )
+        await wallet.generate_signed_transaction([uint64(30_000)], [Program.to(1).get_tree_hash()], action_scope)
     [tr] = action_scope.side_effects.transactions
     assert tr.spend_bundle is not None
     extra_spend = WalletSpendBundle(
@@ -434,18 +366,12 @@ async def test_block_compression(
     )
     new_spend_bundle = WalletSpendBundle.aggregate([tr.spend_bundle, extra_spend])
     new_tr = dataclasses.replace(
-        tr,
-        spend_bundle=new_spend_bundle,
-        additions=new_spend_bundle.additions(),
-        removals=new_spend_bundle.removals(),
+        tr, spend_bundle=new_spend_bundle, additions=new_spend_bundle.additions(), removals=new_spend_bundle.removals()
     )
     [new_tr] = await wallet.wallet_state_manager.add_pending_transactions([new_tr])
     assert new_tr.spend_bundle is not None
     await time_out_assert(
-        10,
-        full_node_2.full_node.mempool_manager.get_spendbundle,
-        new_tr.spend_bundle,
-        new_tr.spend_bundle.name(),
+        10, full_node_2.full_node.mempool_manager.get_spendbundle, new_tr.spend_bundle, new_tr.spend_bundle.name()
     )
 
     # Farm a block
@@ -482,14 +408,7 @@ async def test_block_compression(
                 futures: list[Awaitable[PreValidationResult]] = []
                 for block in all_blocks[:i]:
                     futures.append(
-                        await pre_validate_block(
-                            blockchain.constants,
-                            chain,
-                            block,
-                            blockchain.pool,
-                            None,
-                            vs,
-                        )
+                        await pre_validate_block(blockchain.constants, chain, block, blockchain.pool, None, vs)
                     )
                 results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 for result in results:
@@ -548,8 +467,7 @@ async def test_request_peers(
     async def have_msgs(full_node_peers: FullNodePeers) -> bool:
         assert full_node_peers.address_manager is not None
         await full_node_peers.address_manager.add_to_new_table(
-            [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time()) - 1000))],
-            None,
+            [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time()) - 1000))], None
         )
         assert server_2._port is not None
         msg_bytes = await full_node_peers.request_peers(PeerInfo("::1", server_2._port))
@@ -625,12 +543,7 @@ async def test_respond_end_of_sub_slot(
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
     num_sub_slots_added = len(blocks[-1].finished_sub_slots[:-2])
     await time_out_assert(
-        10,
-        time_out_messages(
-            incoming_queue,
-            "new_signage_point_or_end_of_sub_slot",
-            num_sub_slots_added,
-        ),
+        10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added)
     )
     # Already have sub slot
     await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(blocks[-1].finished_sub_slots[-3]), peer)
@@ -654,12 +567,7 @@ async def test_respond_end_of_sub_slot(
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
     num_sub_slots_added = len(blocks[-1].finished_sub_slots)
     await time_out_assert(
-        10,
-        time_out_messages(
-            incoming_queue,
-            "new_signage_point_or_end_of_sub_slot",
-            num_sub_slots_added,
-        ),
+        10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added)
     )
 
 
@@ -929,10 +837,7 @@ async def test_new_transaction_and_mempool(
     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
     wallet_ph = wallet_a.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
-        3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=wallet_ph,
-        pool_reward_puzzle_hash=wallet_ph,
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=wallet_ph, pool_reward_puzzle_hash=wallet_ph
     )
     for block in blocks:
         await full_node_1.full_node.add_block(block)
@@ -955,10 +860,7 @@ async def test_new_transaction_and_mempool(
         conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
     spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(100),
-        puzzle_hashes[0],
-        get_future_reward_coins(blocks[1])[0],
-        condition_dic=conditions_dict,
+        uint64(100), puzzle_hashes[0], get_future_reward_coins(blocks[1])[0], condition_dic=conditions_dict
     )
     assert spend_bundle is not None
     new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
@@ -970,10 +872,7 @@ async def test_new_transaction_and_mempool(
     await full_node_1.respond_transaction(respond_transaction_2, peer)
 
     blocks = bt.get_consecutive_blocks(
-        1,
-        block_list_input=blocks,
-        guarantee_transaction_block=True,
-        transaction_data=spend_bundle,
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
     )
     await full_node_1.full_node.add_block(blocks[-1], None)
 
@@ -1090,11 +989,7 @@ async def test_new_transaction_and_mempool(
 
     # Reorg the blockchain
     blocks = await full_node_1.get_all_full_blocks()
-    blocks = bt.get_consecutive_blocks(
-        2,
-        block_list_input=blocks[:-1],
-        guarantee_transaction_block=True,
-    )
+    blocks = bt.get_consecutive_blocks(2, block_list_input=blocks[:-1], guarantee_transaction_block=True)
     await add_blocks_in_batches(blocks[-2:], full_node_1.full_node)
     # Can now resubmit a transaction after the reorg
     status, err = await full_node_1.full_node.add_transaction(
@@ -1199,9 +1094,7 @@ async def test_respond_transaction_fail(
     await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 3))
     # Invalid transaction does not propagate
     spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(100_000_000_000_000),
-        receiver_puzzlehash,
-        blocks_new[-1].get_included_reward_coins()[0],
+        uint64(100_000_000_000_000), receiver_puzzlehash, blocks_new[-1].get_included_reward_coins()[0]
     )
 
     assert spend_bundle is not None
@@ -1230,9 +1123,7 @@ async def test_request_block(
         pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
     )
     spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(1123),
-        wallet_receiver.get_new_puzzlehash(),
-        blocks[-1].get_included_reward_coins()[0],
+        uint64(1123), wallet_receiver.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
     )
     blocks = bt.get_consecutive_blocks(
         1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
@@ -1283,9 +1174,7 @@ async def test_request_blocks(
     )
 
     spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(1123),
-        wallet_receiver.get_new_puzzlehash(),
-        blocks[-1].get_included_reward_coins()[0],
+        uint64(1123), wallet_receiver.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
     )
     blocks_t = bt.get_consecutive_blocks(
         1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
@@ -1827,13 +1716,7 @@ async def test_new_signage_point_or_end_of_sub_slot(
     peak = blockchain.get_peak()
     assert peak is not None
     sp = get_signage_point(
-        bt.constants,
-        blockchain,
-        peak,
-        peak.ip_sub_slot_total_iters(bt.constants),
-        uint8(11),
-        [],
-        peak.sub_slot_iters,
+        bt.constants, blockchain, peak, peak.ip_sub_slot_total_iters(bt.constants), uint8(11), [], peak.sub_slot_iters
     )
     assert sp.cc_vdf is not None
     assert sp.rc_vdf is not None
@@ -1894,12 +1777,8 @@ async def test_new_signage_point_caching(
     # Submit the sub slot, but not the last block
     blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
     for ss in blocks[-1].finished_sub_slots:
-        challenge_chain = ss.challenge_chain.replace(
-            new_difficulty=uint64(20),
-        )
-        slot2 = ss.replace(
-            challenge_chain=challenge_chain,
-        )
+        challenge_chain = ss.challenge_chain.replace(new_difficulty=uint64(20))
+        slot2 = ss.replace(challenge_chain=challenge_chain)
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot2), peer)
 
     second_blockchain = empty_blockchain
@@ -2015,11 +1894,7 @@ async def test_compact_protocol(
         cc_eos_count += 1
         timelord_protocol_finished.append(
             timelord_protocol.RespondCompactProofOfTime(
-                vdf_info,
-                vdf_proof,
-                block.header_hash,
-                block.height,
-                uint8(CompressibleVDFField.CC_EOS_VDF),
+                vdf_info, vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_EOS_VDF)
             )
         )
     blocks_2 = bt.get_consecutive_blocks(num_blocks=10, block_list_input=blocks, skip_slots=3)
@@ -2039,11 +1914,7 @@ async def test_compact_protocol(
             )
             timelord_protocol_finished.append(
                 timelord_protocol.RespondCompactProofOfTime(
-                    vdf_info,
-                    vdf_proof,
-                    block.header_hash,
-                    block.height,
-                    uint8(CompressibleVDFField.ICC_EOS_VDF),
+                    vdf_info, vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.ICC_EOS_VDF)
                 )
             )
     assert block.reward_chain_block.challenge_chain_sp_vdf is not None
@@ -2056,11 +1927,7 @@ async def test_compact_protocol(
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
-            vdf_info,
-            vdf_proof,
-            block.header_hash,
-            block.height,
-            uint8(CompressibleVDFField.CC_SP_VDF),
+            vdf_info, vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_SP_VDF)
         )
     )
     vdf_info, vdf_proof = get_vdf_info_and_proof(
@@ -2072,11 +1939,7 @@ async def test_compact_protocol(
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
-            vdf_info,
-            vdf_proof,
-            block.header_hash,
-            block.height,
-            uint8(CompressibleVDFField.CC_IP_VDF),
+            vdf_info, vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_IP_VDF)
         )
     )
 
@@ -2152,20 +2015,12 @@ async def test_compact_protocol_invalid_messages(
             assert wrong_vdf_proof != correct_vdf_proof
             timelord_protocol_invalid_messages.append(
                 timelord_protocol.RespondCompactProofOfTime(
-                    vdf_info,
-                    wrong_vdf_proof,
-                    block.header_hash,
-                    block.height,
-                    uint8(CompressibleVDFField.CC_EOS_VDF),
+                    vdf_info, wrong_vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_EOS_VDF)
                 )
             )
             full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
-                    block.height,
-                    block.header_hash,
-                    uint8(CompressibleVDFField.CC_EOS_VDF),
-                    vdf_info,
-                    wrong_vdf_proof,
+                    block.height, block.header_hash, uint8(CompressibleVDFField.CC_EOS_VDF), vdf_info, wrong_vdf_proof
                 )
             )
             if sub_slot.infused_challenge_chain is not None:
@@ -2210,20 +2065,12 @@ async def test_compact_protocol_invalid_messages(
                 sp_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
             timelord_protocol_invalid_messages.append(
                 timelord_protocol.RespondCompactProofOfTime(
-                    vdf_info,
-                    sp_vdf_proof,
-                    block.header_hash,
-                    block.height,
-                    uint8(CompressibleVDFField.CC_SP_VDF),
+                    vdf_info, sp_vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_SP_VDF)
                 )
             )
             full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
-                    block.height,
-                    block.header_hash,
-                    uint8(CompressibleVDFField.CC_SP_VDF),
-                    vdf_info,
-                    sp_vdf_proof,
+                    block.height, block.header_hash, uint8(CompressibleVDFField.CC_SP_VDF), vdf_info, sp_vdf_proof
                 )
             )
 
@@ -2240,30 +2087,18 @@ async def test_compact_protocol_invalid_messages(
             ip_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
         timelord_protocol_invalid_messages.append(
             timelord_protocol.RespondCompactProofOfTime(
-                vdf_info,
-                ip_vdf_proof,
-                block.header_hash,
-                block.height,
-                uint8(CompressibleVDFField.CC_IP_VDF),
+                vdf_info, ip_vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_IP_VDF)
             )
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
-                block.height,
-                block.header_hash,
-                uint8(CompressibleVDFField.CC_IP_VDF),
-                vdf_info,
-                ip_vdf_proof,
+                block.height, block.header_hash, uint8(CompressibleVDFField.CC_IP_VDF), vdf_info, ip_vdf_proof
             )
         )
 
         timelord_protocol_invalid_messages.append(
             timelord_protocol.RespondCompactProofOfTime(
-                wrong_vdf_info,
-                wrong_vdf_proof,
-                block.header_hash,
-                block.height,
-                uint8(CompressibleVDFField.CC_EOS_VDF),
+                wrong_vdf_info, wrong_vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_EOS_VDF)
             )
         )
         timelord_protocol_invalid_messages.append(
@@ -2277,29 +2112,17 @@ async def test_compact_protocol_invalid_messages(
         )
         timelord_protocol_invalid_messages.append(
             timelord_protocol.RespondCompactProofOfTime(
-                wrong_vdf_info,
-                wrong_vdf_proof,
-                block.header_hash,
-                block.height,
-                uint8(CompressibleVDFField.CC_SP_VDF),
+                wrong_vdf_info, wrong_vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_SP_VDF)
             )
         )
         timelord_protocol_invalid_messages.append(
             timelord_protocol.RespondCompactProofOfTime(
-                wrong_vdf_info,
-                wrong_vdf_proof,
-                block.header_hash,
-                block.height,
-                uint8(CompressibleVDFField.CC_IP_VDF),
+                wrong_vdf_info, wrong_vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_IP_VDF)
             )
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
-                block.height,
-                block.header_hash,
-                uint8(CompressibleVDFField.CC_EOS_VDF),
-                wrong_vdf_info,
-                wrong_vdf_proof,
+                block.height, block.header_hash, uint8(CompressibleVDFField.CC_EOS_VDF), wrong_vdf_info, wrong_vdf_proof
             )
         )
         full_node_protocol_invalid_messages.append(
@@ -2313,20 +2136,12 @@ async def test_compact_protocol_invalid_messages(
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
-                block.height,
-                block.header_hash,
-                uint8(CompressibleVDFField.CC_SP_VDF),
-                wrong_vdf_info,
-                wrong_vdf_proof,
+                block.height, block.header_hash, uint8(CompressibleVDFField.CC_SP_VDF), wrong_vdf_info, wrong_vdf_proof
             )
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
-                block.height,
-                block.header_hash,
-                uint8(CompressibleVDFField.CC_IP_VDF),
-                wrong_vdf_info,
-                wrong_vdf_proof,
+                block.height, block.header_hash, uint8(CompressibleVDFField.CC_IP_VDF), wrong_vdf_info, wrong_vdf_proof
             )
         )
     server_1 = full_node_1.full_node.server
@@ -2371,11 +2186,7 @@ async def test_respond_compact_proof_message_limit(
         )
         finished_compact_proofs.append(
             timelord_protocol.RespondCompactProofOfTime(
-                vdf_info,
-                vdf_proof,
-                block.header_hash,
-                block.height,
-                uint8(CompressibleVDFField.CC_IP_VDF),
+                vdf_info, vdf_proof, block.header_hash, block.height, uint8(CompressibleVDFField.CC_IP_VDF)
             )
         )
 
@@ -2429,13 +2240,7 @@ async def test_invalid_capability_can_connect(
 ) -> None:
     # TODO: consider not testing this against both DB v1 and v2?
 
-    [
-        _initiating_full_node_api,
-        _listening_full_node_api,
-        initiating_server,
-        listening_server,
-        _bt,
-    ] = two_nodes
+    [_initiating_full_node_api, _listening_full_node_api, initiating_server, listening_server, _bt] = two_nodes
 
     initiating_server._local_capabilities_for_handshake = custom_capabilities
 
@@ -2812,12 +2617,7 @@ async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname
 
     # make a non transaction block with fewer iterations than a, which should
     # replace it
-    chain_b = bt.get_consecutive_blocks(
-        1,
-        chain,
-        guarantee_transaction_block=False,
-        seed=b"{seed}",
-    )
+    chain_b = bt.get_consecutive_blocks(1, chain, guarantee_transaction_block=False, seed=b"{seed}")
 
     chain_a = bt.get_consecutive_blocks(
         1,
@@ -2920,9 +2720,7 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
 @pytest.mark.parametrize("block_creation", [0, 1, 2])
 @pytest.mark.anyio
 async def test_declare_proof_of_space_no_overflow(
-    blockchain_constants: ConsensusConstants,
-    self_hostname: str,
-    block_creation: int,
+    blockchain_constants: ConsensusConstants, self_hostname: str, block_creation: int
 ) -> None:
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"full_node.block_creation": block_creation}
@@ -2966,9 +2764,7 @@ async def test_declare_proof_of_space_no_overflow(
 @pytest.mark.parametrize("block_creation", [0, 1, 2])
 @pytest.mark.anyio
 async def test_declare_proof_of_space_overflow(
-    blockchain_constants: ConsensusConstants,
-    self_hostname: str,
-    block_creation: int,
+    blockchain_constants: ConsensusConstants, self_hostname: str, block_creation: int
 ) -> None:
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"full_node.block_creation": block_creation}
@@ -2980,9 +2776,7 @@ async def test_declare_proof_of_space_overflow(
         wallet = WalletTool(test_constants)
         coinbase_puzzlehash = wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            num_blocks=10,
-            farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_transaction_block=True,
+            num_blocks=10, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         await add_blocks_in_batches(blocks, full_node_api.full_node)
         _, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
@@ -3031,9 +2825,7 @@ async def test_add_unfinished_block_with_generator_refs(
             block_list_input=blocks,
             guarantee_transaction_block=True,
             transaction_data=wallet.generate_signed_transaction(
-                uint64(1000),
-                wallet_receiver.get_new_puzzlehash(),
-                blocks[-3].get_included_reward_coins()[0],
+                uint64(1000), wallet_receiver.get_new_puzzlehash(), blocks[-3].get_included_reward_coins()[0]
             ),
             block_refs=[blocks[-1].height, blocks[-2].height],
         )
@@ -3106,9 +2898,7 @@ async def test_add_unfinished_block_with_generator_refs(
             block_list_input=fork_blocks,
             guarantee_transaction_block=True,
             transaction_data=wallet.generate_signed_transaction(
-                uint64(1000),
-                wallet_receiver.get_new_puzzlehash(),
-                fork_blocks[-3].get_included_reward_coins()[0],
+                uint64(1000), wallet_receiver.get_new_puzzlehash(), fork_blocks[-3].get_included_reward_coins()[0]
             ),
             min_signage_point=blocks[-1].reward_chain_block.signage_point_index + 1,
             seed=b"random_seed",
@@ -3147,9 +2937,7 @@ def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
 
 
 async def declare_pos_unfinished_block(
-    full_node_api: FullNodeAPI,
-    dummy_peer: WSChiaConnection,
-    block: FullBlock,
+    full_node_api: FullNodeAPI, dummy_peer: WSChiaConnection, block: FullBlock
 ) -> UnfinishedBlock:
     blockchain = full_node_api.full_node.blockchain
     full_node_store = full_node_api.full_node.full_node_store
@@ -3189,14 +2977,7 @@ async def declare_pos_unfinished_block(
             diff = block.finished_sub_slots[0].challenge_chain.new_difficulty
 
     for eos in block.finished_sub_slots:
-        full_node_store.new_finished_sub_slot(
-            eos,
-            blockchain,
-            peak,
-            ssi if ssi is not None else None,
-            diff,
-            full_peak,
-        )
+        full_node_store.new_finished_sub_slot(eos, blockchain, peak, ssi if ssi is not None else None, diff, full_peak)
 
     if block.reward_chain_block.challenge_chain_sp_vdf is not None:
         sp = SignagePoint(
@@ -3270,10 +3051,7 @@ async def add_tx_to_mempool(
     )
 
     await time_out_assert(
-        20,
-        full_node_api.full_node.mempool_manager.get_spendbundle,
-        spend_bundle,
-        spend_bundle.name(),
+        20, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
     )
     return spend_bundle
 

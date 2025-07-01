@@ -123,10 +123,7 @@ def main(connection_limit: int = 25) -> None:
     asyncio.set_event_loop_policy(ChiaPolicy())
     shutdown_path = pathlib.Path(sys.argv[1])
     async_run(
-        async_main(
-            shutdown_path=shutdown_path,
-            out_path=shutdown_path.with_suffix(".out"),
-        ),
+        async_main(shutdown_path=shutdown_path, out_path=shutdown_path.with_suffix(".out")),
         connection_limit=connection_limit - 100,
     )
 

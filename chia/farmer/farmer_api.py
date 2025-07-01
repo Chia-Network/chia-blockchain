@@ -165,10 +165,7 @@ class FarmerAPI:
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
                     self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = []
                 self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
-                    (
-                        new_proof_of_space.plot_identifier,
-                        new_proof_of_space.proof,
-                    )
+                    (new_proof_of_space.plot_identifier, new_proof_of_space.proof)
                 )
                 self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
@@ -193,10 +190,7 @@ class FarmerAPI:
                 if pool_url == "":
                     # `pool_url == ""` means solo plotNFT farming
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "valid_partials",
-                        time.time(),
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "valid_partials", time.time()
                     )
                     return
 
@@ -206,14 +200,10 @@ class FarmerAPI:
                         f"check communication with the pool, skipping this partial to {pool_url}."
                     )
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "missing_partials",
-                        time.time(),
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "missing_partials", time.time()
                     )
                     self.farmer.state_changed(
-                        "failed_partial",
-                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                        "failed_partial", {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()}
                     )
                     return
 
@@ -233,14 +223,10 @@ class FarmerAPI:
                         f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['current_difficulty']}"
                     )
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "insufficient_partials",
-                        time.time(),
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "insufficient_partials", time.time()
                     )
                     self.farmer.state_changed(
-                        "failed_partial",
-                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                        "failed_partial", {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()}
                     )
                     return
 
@@ -251,14 +237,10 @@ class FarmerAPI:
                         f", check communication with the pool."
                     )
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "missing_partials",
-                        time.time(),
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "missing_partials", time.time()
                     )
                     self.farmer.state_changed(
-                        "failed_partial",
-                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                        "failed_partial", {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()}
                     )
                     return
 
@@ -296,14 +278,10 @@ class FarmerAPI:
                 if not isinstance(response, harvester_protocol.RespondSignatures):
                     self.farmer.log.error(f"Invalid response from harvester: {response}")
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "invalid_partials",
-                        time.time(),
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "invalid_partials", time.time()
                     )
                     self.farmer.state_changed(
-                        "failed_partial",
-                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                        "failed_partial", {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()}
                     )
                     return
 
@@ -330,14 +308,10 @@ class FarmerAPI:
                 if authentication_sk is None:
                     self.farmer.log.error(f"No authentication sk for {p2_singleton_puzzle_hash}")
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "missing_partials",
-                        time.time(),
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "missing_partials", time.time()
                     )
                     self.farmer.state_changed(
-                        "failed_partial",
-                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                        "failed_partial", {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()}
                     )
                     return
 
@@ -375,10 +349,7 @@ class FarmerAPI:
                             if not resp.ok:
                                 self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
                                 increment_pool_stats(
-                                    self.farmer.pool_state,
-                                    p2_singleton_puzzle_hash,
-                                    "invalid_partials",
-                                    time.time(),
+                                    self.farmer.pool_state, p2_singleton_puzzle_hash, "invalid_partials", time.time()
                                 )
                                 return
 
@@ -399,10 +370,7 @@ class FarmerAPI:
 
                                 if pool_response["error_code"] == PoolErrorCode.TOO_LATE.value:
                                     increment_pool_stats(
-                                        self.farmer.pool_state,
-                                        p2_singleton_puzzle_hash,
-                                        "stale_partials",
-                                        time.time(),
+                                        self.farmer.pool_state, p2_singleton_puzzle_hash, "stale_partials", time.time()
                                     )
                                 elif pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
                                     self.farmer.log.error(
@@ -427,10 +395,7 @@ class FarmerAPI:
                                 return
 
                             increment_pool_stats(
-                                self.farmer.pool_state,
-                                p2_singleton_puzzle_hash,
-                                "valid_partials",
-                                time.time(),
+                                self.farmer.pool_state, p2_singleton_puzzle_hash, "valid_partials", time.time()
                             )
                             new_difficulty = pool_response["new_difficulty"]
                             increment_pool_stats(
@@ -447,21 +412,13 @@ class FarmerAPI:
 
                     error_resp = {"error_code": uint16(PoolErrorCode.REQUEST_FAILED.value), "error_message": str(e)}
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "pool_errors",
-                        time.time(),
-                        value=error_resp,
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "pool_errors", time.time(), value=error_resp
                     )
                     increment_pool_stats(
-                        self.farmer.pool_state,
-                        p2_singleton_puzzle_hash,
-                        "invalid_partials",
-                        time.time(),
+                        self.farmer.pool_state, p2_singleton_puzzle_hash, "invalid_partials", time.time()
                     )
                     self.farmer.state_changed(
-                        "failed_partial",
-                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                        "failed_partial", {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()}
                     )
                     return
 
@@ -703,10 +660,7 @@ class FarmerAPI:
             return None
 
         if is_sp_signatures:
-            (
-                challenge_chain_sp,
-                challenge_chain_sp_harv_sig,
-            ) = response.message_signatures[0]
+            (challenge_chain_sp, challenge_chain_sp_harv_sig) = response.message_signatures[0]
             reward_chain_sp, reward_chain_sp_harv_sig = response.message_signatures[1]
             for sk in self.farmer.get_private_keys():
                 pk = sk.get_g1()
@@ -775,14 +729,10 @@ class FarmerAPI:
         else:
             # This is a response with block signatures
             for sk in self.farmer.get_private_keys():
-                (
-                    foliage_block_data_hash,
-                    foliage_sig_harvester,
-                ) = response.message_signatures[0]
-                (
-                    foliage_transaction_block_hash,
-                    foliage_transaction_block_sig_harvester,
-                ) = response.message_signatures[1]
+                (foliage_block_data_hash, foliage_sig_harvester) = response.message_signatures[0]
+                (foliage_transaction_block_hash, foliage_transaction_block_sig_harvester) = response.message_signatures[
+                    1
+                ]
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
                     agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot)
@@ -813,10 +763,6 @@ class FarmerAPI:
                     assert AugSchemeMPL.verify(agg_pk, foliage_block_data_hash, foliage_agg_sig)
                     assert AugSchemeMPL.verify(agg_pk, foliage_transaction_block_hash, foliage_block_agg_sig)
 
-                    return farmer_protocol.SignedValues(
-                        computed_quality_string,
-                        foliage_agg_sig,
-                        foliage_block_agg_sig,
-                    )
+                    return farmer_protocol.SignedValues(computed_quality_string, foliage_agg_sig, foliage_block_agg_sig)
 
         return None

@@ -76,16 +76,9 @@ def used_list_to_dp_list(used_list: list[int], wallet_id: int) -> list[Derivatio
 
 
 def test_check_addresses_used_contiguous() -> None:
-    ok_used_lists: list[list[int]] = [
-        [],
-        [1],
-        [0],
-        [1, 0],
-    ]
+    ok_used_lists: list[list[int]] = [[], [1], [0], [1, 0]]
 
-    bad_used_lists: list[list[int]] = [
-        [0, 1],
-    ]
+    bad_used_lists: list[list[int]] = [[0, 1]]
 
     for used_list in ok_used_lists:
         dp_list = used_list_to_dp_list(used_list, 1)

@@ -55,11 +55,7 @@ async def load_blocks_dont_validate(
         assert required_iters is not None
 
         sub_block = block_to_block_record(
-            constants,
-            BlockchainMock(sub_blocks, height_to_hash=height_to_hash),
-            required_iters,
-            block,
-            sub_slot_iters,
+            constants, BlockchainMock(sub_blocks, height_to_hash=height_to_hash), required_iters, block, sub_slot_iters
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
@@ -92,10 +88,7 @@ async def _test_map_summaries(
     assert wp is not None
     # sub epoch summaries validate hashes
     summaries_here, _, _ = _map_sub_epoch_summaries(
-        constants.SUB_EPOCH_BLOCKS,
-        constants.GENESIS_CHALLENGE,
-        wp.sub_epochs,
-        constants.DIFFICULTY_STARTING,
+        constants.SUB_EPOCH_BLOCKS, constants.GENESIS_CHALLENGE, wp.sub_epochs, constants.DIFFICULTY_STARTING
     )
     assert len(summaries_here) == len(orig_summaries)
 

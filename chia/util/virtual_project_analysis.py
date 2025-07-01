@@ -406,11 +406,7 @@ def print_virtual_dependency_graph(config: Config) -> None:
 
 @click.command("print_cycles", short_help="Output cycles found in the virtual dependency graph")
 @click.option(
-    "--ignore-cycles-in",
-    "ignore_cycles_in",
-    multiple=True,
-    type=str,
-    help="Ignore dependency cycles in a package",
+    "--ignore-cycles-in", "ignore_cycles_in", multiple=True, type=str, help="Ignore dependency cycles in a package"
 )
 @click.option(
     "--ignore-specific-file",
@@ -447,11 +443,7 @@ def print_cycles(config: Config) -> None:
 
 @click.command("check_config", short_help="Check the config is as specific as it can be")
 @click.option(
-    "--ignore-cycles-in",
-    "ignore_cycles_in",
-    multiple=True,
-    type=str,
-    help="Ignore dependency cycles in a package",
+    "--ignore-cycles-in", "ignore_cycles_in", multiple=True, type=str, help="Ignore dependency cycles in a package"
 )
 @click.option(
     "--ignore-specific-file",
@@ -500,18 +492,8 @@ def check_config(config: Config) -> None:
 
 
 @click.command("print_edges", short_help="Check for all of the ways a package immediately depends on another")
-@click.option(
-    "--dependent-package",
-    "from_package",
-    type=str,
-    help="The package that depends on the other",
-)
-@click.option(
-    "--provider-package",
-    "to_package",
-    type=str,
-    help="The package that the dependent package imports from",
-)
+@click.option("--dependent-package", "from_package", type=str, help="The package that depends on the other")
+@click.option("--provider-package", "to_package", type=str, help="The package that the dependent package imports from")
 @config
 def print_edges(config: Config, from_package: str, to_package: str) -> None:
     graph = build_dependency_graph(config.directory_parameters)

@@ -326,11 +326,7 @@ async def async_config_wizard(
     print(f"\nMake sure your CHIA_ROOT Environment Variable is set to: {root_path}")
 
 
-def print_coin_record(
-    name: str,
-    address_prefix: str,
-    coin_record: CoinRecord,
-) -> None:
+def print_coin_record(name: str, address_prefix: str, coin_record: CoinRecord) -> None:
     from datetime import datetime
 
     coin_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
@@ -366,11 +362,7 @@ async def print_coin_records(
             for j in range(num_per_screen):
                 if i + j >= len(coin_records):
                     break
-                print_coin_record(
-                    coin_record=coin_records[i + j],
-                    name=name,
-                    address_prefix=address_prefix,
-                )
+                print_coin_record(coin_record=coin_records[i + j], name=name, address_prefix=address_prefix)
             if i + num_per_screen <= len(coin_records) and paginate:
                 print("Press q to quit, or c to continue")
                 while True:
@@ -469,11 +461,7 @@ async def revert_block_height(
 
 
 async def farm_blocks(
-    rpc_port: Optional[int],
-    root_path: Path,
-    num_blocks: int,
-    transaction_blocks: bool,
-    target_address: str,
+    rpc_port: Optional[int], root_path: Path, num_blocks: int, transaction_blocks: bool, target_address: str
 ) -> None:
     """
     This function is used to generate new blocks.

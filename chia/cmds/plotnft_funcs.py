@@ -16,20 +16,11 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds.cmd_helpers import WalletClientInfo
-from chia.cmds.cmds_util import (
-    cli_confirm,
-    get_any_service_client,
-    transaction_status_msg,
-    transaction_submitted_msg,
-)
+from chia.cmds.cmds_util import cli_confirm, get_any_service_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
-from chia.pools.pool_config import (
-    PoolWalletConfig,
-    load_pool_config,
-    update_pool_config,
-)
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.rpc_client import ResponseFailureError
@@ -76,12 +67,7 @@ async def create_pool_args(pool_url: str) -> dict[str, Any]:
 
 
 async def create(
-    wallet_info: WalletClientInfo,
-    pool_url: Optional[str],
-    state: str,
-    fee: uint64,
-    *,
-    prompt: bool,
+    wallet_info: WalletClientInfo, pool_url: Optional[str], state: str, fee: uint64, *, prompt: bool
 ) -> None:
     target_puzzle_hash: Optional[bytes32]
     # Could use initial_pool_state_from_dict to simplify
@@ -107,13 +93,7 @@ async def create(
 
     try:
         tx_record: TransactionRecord = await wallet_info.client.create_new_pool_wallet(
-            target_puzzle_hash,
-            pool_url,
-            relative_lock_height,
-            "localhost:5000",
-            "new",
-            state,
-            fee,
+            target_puzzle_hash, pool_url, relative_lock_height, "localhost:5000", "new", state, fee
         )
         start = time.time()
         while time.time() - start < 10:
@@ -215,11 +195,7 @@ async def pprint_all_pool_wallet_state(
             print("")
 
 
-async def show(
-    wallet_info: WalletClientInfo,
-    root_path: Path,
-    wallet_id_passed_in: Optional[int],
-) -> None:
+async def show(wallet_info: WalletClientInfo, root_path: Path, wallet_id_passed_in: Optional[int]) -> None:
     summaries_response = await wallet_info.client.get_wallets()
     config = wallet_info.config
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
@@ -227,10 +203,7 @@ async def show(
     if wallet_id_passed_in is not None:
         await wallet_id_lookup_and_check(wallet_info.client, wallet_id_passed_in)
     try:
-        async with get_any_service_client(
-            client_type=FarmerRpcClient,
-            root_path=root_path,
-        ) as (farmer_client, _):
+        async with get_any_service_client(client_type=FarmerRpcClient, root_path=root_path) as (farmer_client, _):
             pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
             pool_state_dict = {
                 bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
@@ -316,12 +289,7 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
 
 
 async def join_pool(
-    *,
-    wallet_info: WalletClientInfo,
-    pool_url: str,
-    fee: uint64,
-    wallet_id: Optional[int],
-    prompt: bool,
+    *, wallet_info: WalletClientInfo, pool_url: str, fee: uint64, wallet_id: Optional[int], prompt: bool
 ) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
 
@@ -374,12 +342,7 @@ async def join_pool(
     )
 
     await submit_tx_with_confirmation(
-        msg,
-        prompt,
-        func,
-        wallet_info.client,
-        wallet_info.fingerprint,
-        selected_wallet_id,
+        msg, prompt, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id
     )
 
 
@@ -419,11 +382,7 @@ async def claim_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Op
     msg = f"\nWill claim rewards for wallet ID: {selected_wallet_id}."
     func = functools.partial(
         wallet_info.client.pw_absorb_rewards,
-        PWAbsorbRewards(
-            wallet_id=uint32(selected_wallet_id),
-            fee=fee,
-            push=True,
-        ),
+        PWAbsorbRewards(wallet_id=uint32(selected_wallet_id), fee=fee, push=True),
         DEFAULT_TX_CONFIG,
     )
     await submit_tx_with_confirmation(msg, False, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id)

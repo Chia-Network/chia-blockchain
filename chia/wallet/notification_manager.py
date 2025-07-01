@@ -27,9 +27,7 @@ class NotificationManager:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
-        db_wrapper: DBWrapper2,
-        name: Optional[str] = None,
+        wallet_state_manager: Any, db_wrapper: DBWrapper2, name: Optional[str] = None
     ) -> NotificationManager:
         self = NotificationManager()
         if name:
@@ -93,11 +91,7 @@ class NotificationManager:
         notification_puzzle: Program = construct_notification(target, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()
         notification_coin: Coin = Coin(origin_coin, notification_hash, amount)
-        notification_spend = make_spend(
-            notification_coin,
-            notification_puzzle,
-            Program.to(None),
-        )
+        notification_spend = make_spend(notification_coin, notification_puzzle, Program.to(None))
         extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
         await self.wallet_state_manager.main_wallet.generate_signed_transaction(
             [amount],

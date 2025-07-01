@@ -29,11 +29,7 @@ def make_child_solution(
     if new_coin is None:
         assert coin_spend is not None
         new_coin = compute_additions(coin_spend)[0]
-    sol: CoinSpend = make_spend(
-        new_coin,
-        puzzle_prog,
-        solution_prog,
-    )
+    sol: CoinSpend = make_spend(new_coin, puzzle_prog, solution_prog)
     return sol
 
 
@@ -127,11 +123,7 @@ class TestWalletPoolStore:
                 (101, solution_4),
             ]
             await store.rollback(100, 1)
-            assert await store.get_spends_for_wallet(1) == [
-                (100, solution_1),
-                (100, solution_2),
-                (100, solution_3),
-            ]
+            assert await store.get_spends_for_wallet(1) == [(100, solution_1), (100, solution_2), (100, solution_3)]
             with pytest.raises(ValueError):
                 await store.add_spend(1, solution_1, 105)
 

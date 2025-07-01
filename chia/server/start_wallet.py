@@ -46,12 +46,7 @@ def create_wallet_service(
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
     service_config.setdefault("short_sync_blocks_behind_threshold", 20)
 
-    node = WalletNode(
-        service_config,
-        root_path,
-        constants=updated_constants,
-        local_keychain=keychain,
-    )
+    node = WalletNode(service_config, root_path, constants=updated_constants, local_keychain=keychain)
     peer_api = WalletNodeAPI(node)
 
     rpc_info: Optional[RpcInfo[WalletRpcApi]] = None

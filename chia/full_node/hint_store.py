@@ -62,8 +62,7 @@ class HintStore:
             for batch in to_batches(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: tuple[bytes32, ...] = tuple(batch.entries)
                 cursor = await conn.execute(
-                    f"SELECT hint from hints WHERE coin_id IN ({'?,' * (len(batch.entries) - 1)}?)",
-                    coin_ids_db,
+                    f"SELECT hint from hints WHERE coin_id IN ({'?,' * (len(batch.entries) - 1)}?)", coin_ids_db
                 )
                 rows = await cursor.fetchall()
                 hints.extend([bytes32(row[0]) for row in rows if len(row[0]) == 32])
@@ -76,10 +75,7 @@ class HintStore:
             return None
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.executemany(
-                "INSERT OR IGNORE INTO hints VALUES(?, ?)",
-                coin_hint_list,
-            )
+            cursor = await conn.executemany("INSERT OR IGNORE INTO hints VALUES(?, ?)", coin_hint_list)
             await cursor.close()
 
     async def count_hints(self) -> int:

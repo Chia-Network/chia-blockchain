@@ -9,12 +9,7 @@ from chia_rs.sized_ints import uint64
 
 from chia.cmds.cmd_classes import ChiaCliContext, chia_command, option
 from chia.cmds.cmd_helpers import NeedsWalletRPC
-from chia.cmds.param_types import (
-    AddressParamType,
-    Bytes32ParamType,
-    CliAddress,
-    TransactionFeeParamType,
-)
+from chia.cmds.param_types import AddressParamType, Bytes32ParamType, CliAddress, TransactionFeeParamType
 from chia.util.errors import CliRpcConnectionError
 
 
@@ -24,12 +19,7 @@ def plotnft_cmd(ctx: click.Context) -> None:
     pass
 
 
-@chia_command(
-    group=plotnft_cmd,
-    name="show",
-    short_help="Show plotnft information",
-    help="Show plotnft information",
-)
+@chia_command(group=plotnft_cmd, name="show", short_help="Show plotnft information", help="Show plotnft information")
 class ShowPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     context: ChiaCliContext = field(default_factory=ChiaCliContext)
@@ -41,11 +31,7 @@ class ShowPlotNFTCMD:
         from chia.cmds.plotnft_funcs import show
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
-            await show(
-                wallet_info=wallet_info,
-                root_path=self.context.root_path,
-                wallet_id_passed_in=self.id,
-            )
+            await show(wallet_info=wallet_info, root_path=self.context.root_path, wallet_id_passed_in=self.id)
 
 
 @chia_command(
@@ -69,12 +55,7 @@ class GetLoginLinkCMD:
 # Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support
 # They will therefore not work with observer-only functionality
 # NOTE: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
-@chia_command(
-    group=plotnft_cmd,
-    name="create",
-    short_help="Create a plot NFT",
-    help="Create a plot NFT.",
-)
+@chia_command(group=plotnft_cmd, name="create", short_help="Create a plot NFT", help="Create a plot NFT.")
 class CreatePlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     pool_url: Optional[str] = option("-u", "--pool-url", help="HTTPS host:port of the pool to join", required=False)
@@ -116,12 +97,7 @@ class CreatePlotNFTCMD:
 
 
 # NOTE: tx_endpoint
-@chia_command(
-    group=plotnft_cmd,
-    name="join",
-    short_help="Join a plot NFT to a Pool",
-    help="Join a plot NFT to a Pool.",
-)
+@chia_command(group=plotnft_cmd, name="join", short_help="Join a plot NFT to a Pool", help="Join a plot NFT to a Pool.")
 class JoinPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     pool_url: str = option("-u", "--pool-url", help="HTTPS host:port of the pool to join", required=True)
@@ -179,12 +155,7 @@ class LeavePlotNFTCMD:
         from chia.cmds.plotnft_funcs import self_pool
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
-            await self_pool(
-                wallet_info=wallet_info,
-                fee=self.fee,
-                wallet_id=self.id,
-                prompt=not self.dont_prompt,
-            )
+            await self_pool(wallet_info=wallet_info, fee=self.fee, wallet_id=self.id, prompt=not self.dont_prompt)
 
 
 @chia_command(
@@ -208,10 +179,7 @@ class InspectPlotNFTCMD:
 
 # NOTE: tx_endpoint
 @chia_command(
-    group=plotnft_cmd,
-    name="claim",
-    short_help="Claim rewards from a plot NFT",
-    help="Claim rewards from a plot NFT",
+    group=plotnft_cmd, name="claim", short_help="Claim rewards from a plot NFT", help="Claim rewards from a plot NFT"
 )
 class ClaimPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
@@ -232,11 +200,7 @@ class ClaimPlotNFTCMD:
         from chia.cmds.plotnft_funcs import claim_cmd
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
-            await claim_cmd(
-                wallet_info=wallet_info,
-                fee=self.fee,
-                wallet_id=self.id,
-            )
+            await claim_cmd(wallet_info=wallet_info, fee=self.fee, wallet_id=self.id)
 
 
 @chia_command(

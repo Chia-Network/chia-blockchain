@@ -32,10 +32,7 @@ from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, resolve_root_path
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
 
-CONTEXT_SETTINGS = {
-    "help_option_names": ["-h", "--help"],
-    "show_default": True,
-}
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "show_default": True}
 
 
 @click.group(
@@ -56,10 +53,7 @@ CONTEXT_SETTINGS = {
 @click.option("--passphrase-file", type=click.File("r"), help="File to read the keyring passphrase from")
 @click.pass_context
 def cli(
-    ctx: click.Context,
-    root_path: str,
-    keys_root_path: str,
-    passphrase_file: Optional[TextIOWrapper] = None,
+    ctx: click.Context, root_path: str, keys_root_path: str, passphrase_file: Optional[TextIOWrapper] = None
 ) -> None:
     from pathlib import Path
 

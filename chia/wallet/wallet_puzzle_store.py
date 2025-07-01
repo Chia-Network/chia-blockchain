@@ -90,7 +90,7 @@ class WalletPuzzleStore:
                     record.wallet_id,
                     0,
                     hardened,
-                ),
+                )
             )
             self.last_derivation_index = (
                 record.index if self.last_derivation_index is None else max(self.last_derivation_index, record.index)
@@ -105,8 +105,7 @@ class WalletPuzzleStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
                 await conn.executemany(
-                    "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?, ?)",
-                    sql_records,
+                    "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?, ?)", sql_records
                 )
             ).close()
 
@@ -156,10 +155,7 @@ class WalletPuzzleStore:
         """
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
-                "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
-                (index,),
-            )
+            await conn.execute_insert("UPDATE derivation_paths SET used=1 WHERE derivation_index<=?", (index,))
 
     async def puzzle_hash_exists(self, puzzle_hash: bytes32) -> bool:
         """
@@ -387,9 +383,7 @@ class WalletPuzzleStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
-                conn,
-                "SELECT COUNT(*) FROM derivation_paths WHERE wallet_id=? AND used=1",
-                (wallet_id,),
+                conn, "SELECT COUNT(*) FROM derivation_paths WHERE wallet_id=? AND used=1", (wallet_id,)
             )
             row_count = 0 if row is None else row[0]
 

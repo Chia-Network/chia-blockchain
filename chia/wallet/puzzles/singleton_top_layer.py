@@ -11,12 +11,8 @@ from chia_puzzles_py.programs import (
     SINGLETON_TOP_LAYER,
     SINGLETON_TOP_LAYER_HASH,
 )
-from chia_puzzles_py.programs import (
-    SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES,
-)
-from chia_puzzles_py.programs import (
-    SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES,
-)
+from chia_puzzles_py.programs import SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES
+from chia_puzzles_py.programs import SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64

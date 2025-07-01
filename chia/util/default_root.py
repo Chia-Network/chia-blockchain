@@ -14,11 +14,7 @@ SIMULATOR_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_SIMULATOR_ROOT", "
 
 
 def resolve_root_path(*, override: Optional[Path]) -> Path:
-    candidates = [
-        override,
-        os.environ.get("CHIA_ROOT"),
-        "~/.chia/mainnet",
-    ]
+    candidates = [override, os.environ.get("CHIA_ROOT"), "~/.chia/mainnet"]
 
     for candidate in candidates:
         if candidate is not None:

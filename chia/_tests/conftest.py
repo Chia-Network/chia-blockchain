@@ -144,25 +144,14 @@ def seeded_random_fixture() -> random.Random:
 @pytest.fixture(name="benchmark_runner_overhead", scope="session")
 def benchmark_runner_overhead_fixture() -> float:
     return measure_overhead(
-        manager_maker=functools.partial(
-            _AssertRuntime,
-            gc_mode=GcMode.nothing,
-            seconds=math.inf,
-            print=False,
-        ),
+        manager_maker=functools.partial(_AssertRuntime, gc_mode=GcMode.nothing, seconds=math.inf, print=False),
         cycles=100,
     )
 
 
 @pytest.fixture(name="benchmark_runner")
-def benchmark_runner_fixture(
-    benchmark_runner_overhead: float,
-    benchmark_repeat: int,
-) -> BenchmarkRunner:
-    return BenchmarkRunner(
-        test_id=ether.test_id,
-        overhead=benchmark_runner_overhead,
-    )
+def benchmark_runner_fixture(benchmark_runner_overhead: float, benchmark_repeat: int) -> BenchmarkRunner:
+    return BenchmarkRunner(test_id=ether.test_id, overhead=benchmark_runner_overhead)
 
 
 @pytest.fixture(name="node_name_for_file")
@@ -199,10 +188,7 @@ class ConsensusMode(ComparableEnum):
     HARD_FORK_3_0 = 2
 
 
-@pytest.fixture(
-    scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-)
+@pytest.fixture(scope="session", params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0])
 def consensus_mode(request):
     return request.param
 
@@ -344,11 +330,7 @@ def default_10000_blocks(bt, consensus_mode):
         version = "_hardfork"
 
     return persistent_blocks(
-        10000,
-        f"test_blocks_10000_{saved_blocks_version}{version}.db",
-        bt,
-        seed=b"10000",
-        dummy_block_references=True,
+        10000, f"test_blocks_10000_{saved_blocks_version}{version}.db", bt, seed=b"10000", dummy_block_references=True
     )
 
 
@@ -535,9 +517,7 @@ def pytest_configure(config):
 
     else:
 
-        @pytest.fixture(
-            name="benchmark_repeat",
-        )
+        @pytest.fixture(name="benchmark_repeat")
         def benchmark_repeat_fixture() -> int:
             return 1
 
@@ -649,9 +629,7 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
 @pytest.fixture(scope="function")
 async def wallet_nodes(blockchain_constants, consensus_mode):
     async with setup_simulators_and_wallets(
-        2,
-        1,
-        blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
+        2, 1, blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000)
     ) as new:
         (nodes, _wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -855,17 +833,8 @@ async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
 
 @pytest.fixture(scope="function")
 async def farmer_one_harvester_simulator_wallet(
-    tmp_path: Path,
-    blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[
-    tuple[
-        HarvesterService,
-        FarmerService,
-        SimulatorFullNodeService,
-        WalletService,
-        BlockTools,
-    ]
-]:
+    tmp_path: Path, blockchain_constants: ConsensusConstants
+) -> AsyncIterator[tuple[HarvesterService, FarmerService, SimulatorFullNodeService, WalletService, BlockTools]]:
     async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as (nodes, wallets, bt):
         async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
             harvester_services,
@@ -1188,8 +1157,7 @@ HarvesterFarmerEnvironment = tuple[FarmerService, FarmerRpcClient, HarvesterServ
 
 @pytest.fixture(scope="function")
 async def harvester_farmer_environment(
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
-    self_hostname: str,
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools], self_hostname: str
 ) -> AsyncIterator[HarvesterFarmerEnvironment]:
     harvesters, farmer_service, bt = farmer_one_harvester
     harvester_service = harvesters[0]
@@ -1247,15 +1215,11 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     ]
 ]:
     zero_bit_plot_filter_consts = test_constants_modified.replace(
-        NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(0),
-        NUM_SPS_SUB_SLOT=uint8(8),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(0), NUM_SPS_SUB_SLOT=uint8(8)
     )
 
     async with AsyncExitStack() as async_exit_stack:
-        bt = await create_block_tools_async(
-            zero_bit_plot_filter_consts,
-            keychain=get_temp_keyring,
-        )
+        bt = await create_block_tools_async(zero_bit_plot_filter_consts, keychain=get_temp_keyring)
 
         config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
 
@@ -1295,20 +1259,14 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
 
 @pytest.fixture(name="recording_web_server")
 async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[RecordingWebServer]:
-    server = await RecordingWebServer.create(
-        hostname=self_hostname,
-        port=uint16(0),
-    )
+    server = await RecordingWebServer.create(hostname=self_hostname, port=uint16(0))
     try:
         yield server
     finally:
         await server.await_closed()
 
 
-@pytest.fixture(
-    scope="session",
-    params=[True, False],
-)
+@pytest.fixture(scope="session", params=[True, False])
 def use_delta_sync(request: SubRequest):
     return request.param
 
@@ -1402,7 +1360,7 @@ async def wallet_environments(
                             max_send_amount=uint128(2_000_000_000_000 * blocks_needed),
                             unspent_coin_count=uint32(2 * blocks_needed),
                             pending_coin_removal_count=uint32(0),
-                        ),
+                        )
                     )
                 )
 
@@ -1420,11 +1378,7 @@ async def wallet_environments(
                 client_node,
                 trusted_full_node,
                 [
-                    WalletEnvironment(
-                        service=service,
-                        rpc_client=rpc_client,
-                        wallet_states={uint32(1): wallet_state},
-                    )
+                    WalletEnvironment(service=service, rpc_client=rpc_client, wallet_states={uint32(1): wallet_state})
                     for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
                 ],
                 tx_config,

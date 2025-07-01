@@ -8,10 +8,7 @@ from chia.types.peer_info import UnresolvedPeerInfo
 
 log = logging.getLogger(__name__)
 
-PEER_INFO_MAPPING: dict[NodeType, str] = {
-    NodeType.FULL_NODE: "full_node_peer",
-    NodeType.FARMER: "farmer_peer",
-}
+PEER_INFO_MAPPING: dict[NodeType, str] = {NodeType.FULL_NODE: "full_node_peer", NodeType.FARMER: "farmer_peer"}
 
 
 def get_unresolved_peer_infos(service_config: dict[str, Any], peer_type: NodeType) -> set[UnresolvedPeerInfo]:

@@ -37,14 +37,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 
-DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
-    bytes32.zeros,
-    G1Element(),
-    None,
-    G1Element(),
-    uint8(20),
-    bytes(32 * 5),
-)
+DEFAULT_PROOF_OF_SPACE = ProofOfSpace(bytes32.zeros, G1Element(), None, G1Element(), uint8(20), bytes(32 * 5))
 DEFAULT_VDF_INFO = VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros))
 DEFAULT_VDF_PROOF = VDFProof(uint8(0), bytes(100), False)
 
@@ -106,11 +99,7 @@ class WalletBlockTools(BlockTools):
                 pool_reward_puzzle_hash if pool_reward_puzzle_hash is not None else self.pool_ph, uint32(0)
             )
 
-            (
-                full_block,
-                block_record,
-                new_timestamp,
-            ) = get_full_block_and_block_record(
+            (full_block, block_record, new_timestamp) = get_full_block_and_block_record(
                 constants,
                 blocks,
                 last_timestamp,
@@ -148,11 +137,7 @@ def load_block_list(
             if full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:  # pragma: no cover
                 sub_slot_iters = full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         blocks[full_block.header_hash] = block_to_block_record(
-            constants,
-            BlockCache(blocks),
-            uint64(1),
-            full_block,
-            sub_slot_iters,
+            constants, BlockCache(blocks), uint64(1), full_block, sub_slot_iters
         )
         height_to_hash[uint32(full_block.height)] = full_block.header_hash
     return height_to_hash, uint64(1), blocks
@@ -275,51 +260,23 @@ def get_full_block_and_block_record(
     if block_generator is not None:
         generator_hash = std_hash(block_generator.program)
 
-    foliage_data = FoliageBlockData(
-        bytes32.zeros,
-        pool_target,
-        G2Element(),
-        farmer_reward_puzzlehash,
-        bytes32.zeros,
-    )
+    foliage_data = FoliageBlockData(bytes32.zeros, pool_target, G2Element(), farmer_reward_puzzlehash, bytes32.zeros)
 
     transactions_info = TransactionsInfo(
-        generator_hash,
-        bytes32.zeros,
-        G2Element(),
-        fees,
-        uint64(constants.MAX_BLOCK_COST_CLVM),
-        additions[-2:],
+        generator_hash, bytes32.zeros, G2Element(), fees, uint64(constants.MAX_BLOCK_COST_CLVM), additions[-2:]
     )
 
     foliage_transaction_block = FoliageTransactionBlock(
-        prev_block_hash,
-        uint64(timestamp),
-        filter_hash,
-        additions_root,
-        removals_root,
-        transactions_info.get_hash(),
+        prev_block_hash, uint64(timestamp), filter_hash, additions_root, removals_root, transactions_info.get_hash()
     )
 
     foliage = Foliage(
-        prev_block_hash,
-        bytes32.zeros,
-        foliage_data,
-        G2Element(),
-        foliage_transaction_block.get_hash(),
-        G2Element(),
+        prev_block_hash, bytes32.zeros, foliage_data, G2Element(), foliage_transaction_block.get_hash(), G2Element()
     )
     unfinished_block = UnfinishedBlock(
         [],
         RewardChainBlockUnfinished(
-            uint128(1),
-            uint8(1),
-            bytes32.zeros,
-            DEFAULT_PROOF_OF_SPACE,
-            None,
-            G2Element(),
-            None,
-            G2Element(),
+            uint128(1), uint8(1), bytes32.zeros, DEFAULT_PROOF_OF_SPACE, None, G2Element(), None, G2Element()
         ),
         None,
         None,

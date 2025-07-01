@@ -75,12 +75,7 @@ class TestPotIterations:
 
         # Overflow
         sp_iters = sp_interval_iters * (test_constants.NUM_SPS_SUB_SLOT - 1)
-        ip_iters = calculate_ip_iters(
-            test_constants,
-            ssi,
-            uint8(test_constants.NUM_SPS_SUB_SLOT - 1),
-            required_iters,
-        )
+        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(test_constants.NUM_SPS_SUB_SLOT - 1), required_iters)
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
@@ -89,13 +84,7 @@ class TestPotIterations:
         Tests that the percentage of blocks won is proportional to the space of each farmer,
         with the assumption that all farmers have access to the same VDF speed.
         """
-        farmer_ks = {
-            uint8(32): 100,
-            uint8(33): 100,
-            uint8(34): 100,
-            uint8(35): 100,
-            uint8(36): 100,
-        }
+        farmer_ks = {uint8(32): 100, uint8(33): 100, uint8(34): 100, uint8(35): 100, uint8(36): 100}
         farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
         percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}

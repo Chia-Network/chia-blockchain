@@ -16,11 +16,7 @@ import pathlib
 
 import click
 
-log_levels = {
-    0: logging.ERROR,
-    1: logging.WARNING,
-    2: logging.INFO,
-}
+log_levels = {0: logging.ERROR, 1: logging.WARNING, 2: logging.INFO}
 
 
 ignores = {"__pycache__", ".pytest_cache"}

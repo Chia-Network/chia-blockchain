@@ -38,11 +38,7 @@ else:
 class CreateServiceProtocol(Protocol):
     @contextlib.asynccontextmanager
     async def __call__(
-        self,
-        self_hostname: str,
-        port: uint16,
-        root_path: Path,
-        net_config: dict[str, Any],
+        self, self_hostname: str, port: uint16, root_path: Path, net_config: dict[str, Any]
     ) -> AsyncIterator[RpcClient]:
         yield cast(RpcClient, None)  # pragma: no cover
 
@@ -100,8 +96,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
             "chia.timelord.timelord_launcher",
             "timelord_launcher",
             marks=pytest.mark.skipif(
-                sys.platform in {"win32", "cygwin"},
-                reason="windows is not supported by the timelord launcher",
+                sys.platform in {"win32", "cygwin"}, reason="windows is not supported by the timelord launcher"
             ),
         ),
         # TODO: fails...  starts creating plots etc
@@ -131,10 +126,7 @@ async def test_services_terminate(
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
     # TODO: make the wallet start up regardless so this isn't needed
-    with closing_chia_root_popen(
-        chia_root=chia_root,
-        args=[sys.executable, "-m", "chia.daemon.server"],
-    ):
+    with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]):
         # Make sure the daemon is running and responsive before starting other services.
         # This probably shouldn't be required.  For now, it helps at least with the
         # farmer.
@@ -143,10 +135,7 @@ async def test_services_terminate(
 
         async with contextlib.AsyncExitStack() as exit_stack:
             process = exit_stack.enter_context(
-                closing_chia_root_popen(
-                    chia_root=chia_root,
-                    args=[sys.executable, "-m", module_path],
-                )
+                closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", module_path])
             )
 
             if create_service is None:

@@ -67,7 +67,7 @@ def test_notifications_send(capsys: object, get_test_cli_clients: tuple[TestRpcC
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "send_notification": [(target_ph, bytes(msg, "utf8"), 20000000, 1000000000, True, test_condition_valid_times)],
+        "send_notification": [(target_ph, bytes(msg, "utf8"), 20000000, 1000000000, True, test_condition_valid_times)]
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -86,15 +86,7 @@ def test_notifications_get(capsys: object, get_test_cli_clients: tuple[TestRpcCl
     inst_rpc_client = NotificationsGetRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     target_ph = get_bytes32(1)
-    command_args = [
-        "wallet",
-        "notifications",
-        "get",
-        FINGERPRINT_ARG,
-        f"-i{target_ph}",
-        "-s10",
-        "-e10",
-    ]
+    command_args = ["wallet", "notifications", "get", FINGERPRINT_ARG, f"-i{target_ph}", "-s10", "-e10"]
     # these are various things that should be in the output
     assert_list = [
         "ID: 0101010101010101010101010101010101010101010101010101010101010101",

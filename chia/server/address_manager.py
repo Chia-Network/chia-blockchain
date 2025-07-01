@@ -42,15 +42,8 @@ log = logging.getLogger(__name__)
 
 # This is a Python port from 'CAddrInfo' class from Bitcoin core code.
 class ExtendedPeerInfo:
-    def __init__(
-        self,
-        addr: TimestampedPeerInfo,
-        src_peer: Optional[PeerInfo],
-    ):
-        self.peer_info: PeerInfo = PeerInfo(
-            addr.host,
-            addr.port,
-        )
+    def __init__(self, addr: TimestampedPeerInfo, src_peer: Optional[PeerInfo]):
+        self.peer_info: PeerInfo = PeerInfo(addr.host, addr.port)
         self.timestamp: int = addr.timestamp
         self.src: PeerInfo
         if src_peer is not None:
@@ -135,8 +128,7 @@ class ExtendedPeerInfo:
 
     def get_tried_bucket(self, key: int) -> int:
         hash1 = int.from_bytes(
-            bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[:8]),
-            byteorder="big",
+            bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[:8]), byteorder="big"
         )
         hash1 %= TRIED_BUCKETS_PER_GROUP
         hash2 = int.from_bytes(
@@ -533,10 +525,7 @@ class AddressManager:
 
     def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
         is_unique = False
-        peer_info = PeerInfo(
-            addr.host,
-            addr.port,
-        )
+        peer_info = PeerInfo(addr.host, addr.port)
         if peer_info.ip.is_private and not self.allow_private_subnets:
             return False
         (info, node_id) = self.find_(peer_info)
@@ -728,9 +717,7 @@ class AddressManager:
                 continue
             if not info.is_terrible():
                 cur_peer_info = TimestampedPeerInfo(
-                    info.peer_info.host,
-                    uint16(info.peer_info.port),
-                    uint64(info.timestamp),
+                    info.peer_info.host, uint16(info.peer_info.port), uint64(info.timestamp)
                 )
                 addr.append(cur_peer_info)
 
@@ -767,10 +754,7 @@ class AddressManager:
             return len(self.random_pos)
 
     async def add_to_new_table(
-        self,
-        addresses: list[TimestampedPeerInfo],
-        source: Optional[PeerInfo] = None,
-        penalty: int = 0,
+        self, addresses: list[TimestampedPeerInfo], source: Optional[PeerInfo] = None, penalty: int = 0
     ) -> bool:
         is_added = False
         async with self.lock:
@@ -780,24 +764,14 @@ class AddressManager:
         return is_added
 
     # Mark an entry as accessible.
-    async def mark_good(
-        self,
-        addr: PeerInfo,
-        test_before_evict: bool = True,
-        timestamp: int = -1,
-    ) -> None:
+    async def mark_good(self, addr: PeerInfo, test_before_evict: bool = True, timestamp: int = -1) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
             self.mark_good_(addr, test_before_evict, timestamp)
 
     # Mark an entry as connection attempted to.
-    async def attempt(
-        self,
-        addr: PeerInfo,
-        count_failures: bool,
-        timestamp: int = -1,
-    ) -> None:
+    async def attempt(self, addr: PeerInfo, count_failures: bool, timestamp: int = -1) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:

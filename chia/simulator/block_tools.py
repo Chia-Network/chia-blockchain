@@ -366,11 +366,7 @@ class BlockTools:
         # generator made it into the block.
         dummy_refs: list[uint32]
         if dummy_block_references and len(tx_block_heights) > 4:
-            dummy_refs = [
-                tx_block_heights[1],
-                tx_block_heights[len(tx_block_heights) // 2],
-                tx_block_heights[-2],
-            ]
+            dummy_refs = [tx_block_heights[1], tx_block_heights[len(tx_block_heights) // 2], tx_block_heights[-2]]
         else:
             dummy_refs = []
 
@@ -386,13 +382,7 @@ class BlockTools:
             block_refs = []
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(
-                program,
-                [],
-                block_refs,
-                transaction_data.aggregated_signature,
-                additions,
-                removals,
-                cost,
+                program, [], block_refs, transaction_data.aggregated_signature, additions, removals, cost
             )
 
         if include_transactions:
@@ -406,13 +396,7 @@ class BlockTools:
             program = simple_solution_generator(bundle).program
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(
-                program,
-                [],
-                block_refs + dummy_refs,
-                bundle.aggregated_signature,
-                additions,
-                removals,
-                cost,
+                program, [], block_refs + dummy_refs, bundle.aggregated_signature, additions, removals, cost
             )
 
         if dummy_block_references:
@@ -439,9 +423,7 @@ class BlockTools:
                 self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
                 self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
                 self.farmer_master_sk = await keychain_proxy.add_key(bytes_to_mnemonic(self.farmer_master_sk_entropy))
-                self.pool_master_sk = await keychain_proxy.add_key(
-                    bytes_to_mnemonic(self.pool_master_sk_entropy),
-                )
+                self.pool_master_sk = await keychain_proxy.add_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
             else:
                 sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
                 assert sk is not None
@@ -821,10 +803,7 @@ class BlockTools:
         # Get the challenge for that slot
         while True:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
-                constants,
-                blocks,
-                finished_sub_slots_at_sp,
-                latest_block.header_hash,
+                constants, blocks, finished_sub_slots_at_sp, latest_block.header_hash
             )
             prev_num_of_blocks = num_blocks
             if num_empty_slots_added < skip_slots:
@@ -917,11 +896,7 @@ class BlockTools:
                             block_refs=block_refs,
                         )
 
-                        (
-                            full_block,
-                            block_record,
-                            new_timestamp,
-                        ) = get_full_block_and_block_record(
+                        (full_block, block_record, new_timestamp) = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -1009,17 +984,9 @@ class BlockTools:
                 eos_iters = sub_slot_iters
                 cc_input = ClassgroupElement.get_default_element()
                 rc_challenge = slot_rc_challenge
-            cc_vdf, cc_proof = get_vdf_info_and_proof(
-                constants,
-                cc_input,
-                slot_cc_challenge,
-                eos_iters,
-            )
+            cc_vdf, cc_proof = get_vdf_info_and_proof(constants, cc_input, slot_cc_challenge, eos_iters)
             rc_vdf, rc_proof = get_vdf_info_and_proof(
-                constants,
-                ClassgroupElement.get_default_element(),
-                rc_challenge,
-                eos_iters,
+                constants, ClassgroupElement.get_default_element(), rc_challenge, eos_iters
             )
 
             eos_deficit: uint8 = (
@@ -1039,22 +1006,14 @@ class BlockTools:
             cc_vdf = VDFInfo(cc_vdf.challenge, sub_slot_iters, cc_vdf.output)
             if normalized_to_identity_cc_eos:
                 _, cc_proof = get_vdf_info_and_proof(
-                    constants,
-                    ClassgroupElement.get_default_element(),
-                    cc_vdf.challenge,
-                    sub_slot_iters,
-                    True,
+                    constants, ClassgroupElement.get_default_element(), cc_vdf.challenge, sub_slot_iters, True
                 )
             # generate sub_epoch_summary, and if the last block was the last block of the sub-epoch or epoch
             # include the hash in the next sub-slot
             sub_epoch_summary: Optional[SubEpochSummary] = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
                 sub_epoch_summary = next_sub_epoch_summary(
-                    constants,
-                    BlockCache(blocks),
-                    latest_block.required_iters,
-                    block_list[-1],
-                    False,
+                    constants, BlockCache(blocks), latest_block.required_iters, block_list[-1], False
                 )
             if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True
@@ -1084,28 +1043,16 @@ class BlockTools:
                 else:
                     # This means there are no blocks in this sub-slot
                     icc_eos_iters = sub_slot_iters
-                icc_eos_vdf = VDFInfo(
-                    icc_eos_vdf.challenge,
-                    icc_eos_iters,
-                    icc_eos_vdf.output,
-                )
+                icc_eos_vdf = VDFInfo(icc_eos_vdf.challenge, icc_eos_iters, icc_eos_vdf.output)
                 if normalized_to_identity_icc_eos:
                     _, icc_ip_proof = get_vdf_info_and_proof(
-                        constants,
-                        ClassgroupElement.get_default_element(),
-                        icc_eos_vdf.challenge,
-                        icc_eos_iters,
-                        True,
+                        constants, ClassgroupElement.get_default_element(), icc_eos_vdf.challenge, icc_eos_iters, True
                     )
                 icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_eos_vdf)
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_block.deficit == 0 else None
                 cc_sub_slot = ChallengeChainSubSlot(
-                    cc_vdf,
-                    icc_sub_slot_hash,
-                    ses_hash,
-                    new_sub_slot_iters,
-                    new_difficulty,
+                    cc_vdf, icc_sub_slot_hash, ses_hash, new_sub_slot_iters, new_difficulty
                 )
             else:
                 # No icc
@@ -1147,8 +1094,7 @@ class BlockTools:
                 and not skip_overflow
             ):
                 for signage_point_index in range(
-                    constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
-                    constants.NUM_SPS_SUB_SLOT,
+                    constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA, constants.NUM_SPS_SUB_SLOT
                 ):
                     if same_slot_as_last and signage_point_index <= min_signage_point:
                         # start farming blocks after min_signage_point
@@ -1212,11 +1158,7 @@ class BlockTools:
                             block_refs=block_refs,
                         )
 
-                        (
-                            full_block,
-                            block_record,
-                            new_timestamp,
-                        ) = get_full_block_and_block_record(
+                        (full_block, block_record, new_timestamp) = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -1353,15 +1295,10 @@ class BlockTools:
                 # Try each of the proofs of space
                 for required_iters, proof_of_space in qualified_proofs:
                     sp_iters: uint64 = calculate_sp_iters(
-                        constants,
-                        uint64(constants.SUB_SLOT_ITERS_STARTING),
-                        uint8(signage_point_index),
+                        constants, uint64(constants.SUB_SLOT_ITERS_STARTING), uint8(signage_point_index)
                     )
                     ip_iters = calculate_ip_iters(
-                        constants,
-                        uint64(constants.SUB_SLOT_ITERS_STARTING),
-                        uint8(signage_point_index),
-                        required_iters,
+                        constants, uint64(constants.SUB_SLOT_ITERS_STARTING), uint8(signage_point_index), required_iters
                     )
                     is_overflow = is_overflow_block(constants, uint8(signage_point_index))
                     if force_overflow and not is_overflow:
@@ -1392,17 +1329,11 @@ class BlockTools:
                     assert unfinished_block is not None
                     if not is_overflow:
                         cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
-                            constants,
-                            ClassgroupElement.get_default_element(),
-                            cc_challenge,
-                            ip_iters,
+                            constants, ClassgroupElement.get_default_element(), cc_challenge, ip_iters
                         )
                         cc_ip_vdf = cc_ip_vdf.replace(number_of_iterations=ip_iters)
                         rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-                            constants,
-                            ClassgroupElement.get_default_element(),
-                            rc_challenge,
-                            ip_iters,
+                            constants, ClassgroupElement.get_default_element(), rc_challenge, ip_iters
                         )
                         assert unfinished_block is not None
                         total_iters_sp = uint128(sub_slot_total_iters + sp_iters)
@@ -1441,10 +1372,7 @@ class BlockTools:
                             cc_slot,
                             None,
                             RewardChainSubSlot(
-                                rc_vdf,
-                                cc_slot.get_hash(),
-                                None,
-                                uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK),
+                                rc_vdf, cc_slot.get_hash(), None, uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
                             ),
                             SubSlotProofs(cc_proof, None, rc_proof),
                         )
@@ -1525,11 +1453,9 @@ class BlockTools:
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
 
                         # Look up local_sk from plot to save locked memory
-                        (
-                            pool_public_key_or_puzzle_hash,
-                            farmer_public_key,
-                            local_master_sk,
-                        ) = parse_plot_info(plot_info.prover.get_memo())
+                        (pool_public_key_or_puzzle_hash, farmer_public_key, local_master_sk) = parse_plot_info(
+                            plot_info.prover.get_memo()
+                        )
                         local_sk = master_sk_to_local_sk(local_master_sk)
 
                         if isinstance(pool_public_key_or_puzzle_hash, G1Element):
@@ -1573,43 +1499,18 @@ def get_signage_point(
         sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     )
 
-    (
-        cc_vdf_challenge,
-        rc_vdf_challenge,
-        cc_vdf_input,
-        rc_vdf_input,
-        cc_vdf_iters,
-        rc_vdf_iters,
-    ) = get_signage_point_vdf_info(
-        constants,
-        finished_sub_slots,
-        overflow,
-        latest_block,
-        blocks,
-        sp_total_iters,
-        sp_iters,
+    (cc_vdf_challenge, rc_vdf_challenge, cc_vdf_input, rc_vdf_input, cc_vdf_iters, rc_vdf_iters) = (
+        get_signage_point_vdf_info(
+            constants, finished_sub_slots, overflow, latest_block, blocks, sp_total_iters, sp_iters
+        )
     )
 
-    cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
-        constants,
-        cc_vdf_input,
-        cc_vdf_challenge,
-        cc_vdf_iters,
-    )
-    rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(
-        constants,
-        rc_vdf_input,
-        rc_vdf_challenge,
-        rc_vdf_iters,
-    )
+    cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(constants, cc_vdf_input, cc_vdf_challenge, cc_vdf_iters)
+    rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(constants, rc_vdf_input, rc_vdf_challenge, rc_vdf_iters)
     cc_sp_vdf = cc_sp_vdf.replace(number_of_iterations=sp_iters)
     if normalized_to_identity_cc_sp:
         _, cc_sp_proof = get_vdf_info_and_proof(
-            constants,
-            ClassgroupElement.get_default_element(),
-            cc_sp_vdf.challenge,
-            sp_iters,
-            True,
+            constants, ClassgroupElement.get_default_element(), cc_sp_vdf.challenge, sp_iters, True
         )
     return SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
 
@@ -1641,27 +1542,14 @@ def finish_block(
         new_ip_iters = ip_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
         rc_vdf_challenge = slot_rc_challenge
-    cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
-        constants,
-        cc_vdf_input,
-        cc_vdf_challenge,
-        new_ip_iters,
-    )
+    cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(constants, cc_vdf_input, cc_vdf_challenge, new_ip_iters)
     cc_ip_vdf = cc_ip_vdf.replace(number_of_iterations=ip_iters)
     if normalized_to_identity_cc_ip:
         _, cc_ip_proof = get_vdf_info_and_proof(
-            constants,
-            ClassgroupElement.get_default_element(),
-            cc_ip_vdf.challenge,
-            ip_iters,
-            True,
+            constants, ClassgroupElement.get_default_element(), cc_ip_vdf.challenge, ip_iters, True
         )
     deficit = calculate_deficit(
-        constants,
-        uint32(latest_block.height + 1),
-        latest_block,
-        is_overflow,
-        len(finished_sub_slots),
+        constants, uint32(latest_block.height + 1), latest_block, is_overflow, len(finished_sub_slots)
     )
 
     icc_ip_vdf, icc_ip_proof = get_icc(
@@ -1675,10 +1563,7 @@ def finish_block(
     )
 
     rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-        constants,
-        ClassgroupElement.get_default_element(),
-        rc_vdf_challenge,
-        new_ip_iters,
+        constants, ClassgroupElement.get_default_element(), rc_vdf_challenge, new_ip_iters
     )
     assert unfinished_block is not None
     sp_total_iters = uint128(
@@ -1787,11 +1672,7 @@ def load_block_list(
         assert required_iters is not None
 
         blocks[full_block.header_hash] = block_to_block_record(
-            constants,
-            cache,
-            required_iters,
-            full_block,
-            sub_slot_iters,
+            constants, cache, required_iters, full_block, sub_slot_iters
         )
         height_to_hash[uint32(full_block.height)] = full_block.header_hash
     return height_to_hash, uint64(difficulty), blocks
@@ -1846,12 +1727,7 @@ def get_icc(
         assert curr.finished_infused_challenge_slot_hashes is not None
         # First block in sub slot has deficit 0,1,2 or 3
         icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
-    return get_vdf_info_and_proof(
-        constants,
-        icc_input,
-        icc_challenge_hash,
-        icc_iters,
-    )
+    return get_vdf_info_and_proof(constants, icc_input, icc_challenge_hash, icc_iters)
 
 
 def get_full_block_and_block_record(
@@ -2054,9 +1930,7 @@ async def create_block_tools_async(
     bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
     await bt.setup_keys()
     await bt.setup_plots(
-        num_og_plots=num_og_plots,
-        num_pool_plots=num_pool_plots,
-        num_non_keychain_plots=num_non_keychain_plots,
+        num_og_plots=num_og_plots, num_pool_plots=num_pool_plots, num_non_keychain_plots=num_non_keychain_plots
     )
 
     return bt

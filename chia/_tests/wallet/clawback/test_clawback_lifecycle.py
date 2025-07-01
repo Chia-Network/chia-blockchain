@@ -67,10 +67,7 @@ class TestClawbackLifecycle:
     # Helper function
     def sign_coin_spend(self, coin_spend: CoinSpend, index: int) -> G2Element:
         synthetic_secret_key: PrivateKey = calculate_synthetic_secret_key(
-            PrivateKey.from_bytes(
-                secret_exponent_for_index(index).to_bytes(32, "big"),
-            ),
-            DEFAULT_HIDDEN_PUZZLE_HASH,
+            PrivateKey.from_bytes(secret_exponent_for_index(index).to_bytes(32, "big")), DEFAULT_HIDDEN_PUZZLE_HASH
         )
 
         conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
@@ -262,11 +259,7 @@ class TestClawbackLifecycle:
 
         clawback_puz = create_merkle_puzzle(timelock, sender_ph, recipient_ph)
 
-        sender_sol = solution_for_conditions(
-            [
-                [51, sender_ph, amount],
-            ]
-        )
+        sender_sol = solution_for_conditions([[51, sender_ph, amount]])
         # Test invalid puzzle
         has_exception = False
         try:

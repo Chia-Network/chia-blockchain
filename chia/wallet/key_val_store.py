@@ -44,8 +44,7 @@ class KeyValStore:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
-                (key, obj.stream_to_bytes()),
+                "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)", (key, obj.stream_to_bytes())
             )
             await cursor.close()
 

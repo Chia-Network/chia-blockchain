@@ -56,11 +56,7 @@ class HarvesterRpcApi:
 
     async def get_plots(self, _: dict[str, Any]) -> EndpointResult:
         plots, failed_to_open, not_found = self.service.get_plots()
-        return {
-            "plots": plots,
-            "failed_to_open_filenames": failed_to_open,
-            "not_found_filenames": not_found,
-        }
+        return {"plots": plots, "failed_to_open_filenames": failed_to_open, "not_found_filenames": not_found}
 
     async def refresh_plots(self, _: dict[str, Any]) -> EndpointResult:
         self.service.plot_manager.trigger_refresh()

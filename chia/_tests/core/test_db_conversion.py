@@ -55,11 +55,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
 
     with TempFile() as in_file, TempFile() as out_file:
         async with DBWrapper2.managed(
-            database=in_file,
-            reader_count=1,
-            db_version=1,
-            journal_mode="OFF",
-            synchronous="OFF",
+            database=in_file, reader_count=1, db_version=1, journal_mode="OFF", synchronous="OFF"
         ) as db_wrapper1:
             block_store1 = await BlockStore.create(db_wrapper1)
             coin_store1 = await CoinStore.create(db_wrapper1)

@@ -217,10 +217,7 @@ async def setup_seeder(root_path_populated_with_config: Path, database_uri: str)
     service_config["dns_port"] = 0
     service_config["crawler_db_path"] = database_uri
 
-    service = create_dns_server_service(
-        config,
-        root_path_populated_with_config,
-    )
+    service = create_dns_server_service(config, root_path_populated_with_config)
     async with service.run():
         yield service
 
@@ -276,22 +273,13 @@ async def setup_wallet_node(
 
         if full_node_port is not None:
             service_config.pop("full_node_peer", None)
-            service_config["full_node_peers"] = [
-                {
-                    "host": self_hostname,
-                    "port": full_node_port,
-                },
-            ]
+            service_config["full_node_peers"] = [{"host": self_hostname, "port": full_node_port}]
         else:
             service_config.pop("full_node_peer", None)
             service_config.pop("full_node_peers", None)
 
         service = create_wallet_service(
-            local_bt.root_path,
-            config,
-            consensus_constants,
-            keychain,
-            connect_to_daemon=False,
+            local_bt.root_path, config, consensus_constants, keychain, connect_to_daemon=False
         )
 
         try:
@@ -376,23 +364,13 @@ async def setup_farmer(
 
     if full_node_port:
         service_config.pop("full_node_peer", None)
-        service_config["full_node_peers"] = [
-            {
-                "host": self_hostname,
-                "port": full_node_port,
-            },
-        ]
+        service_config["full_node_peers"] = [{"host": self_hostname, "port": full_node_port}]
     else:
         service_config.pop("full_node_peer", None)
         service_config.pop("full_node_peers", None)
 
     service = create_farmer_service(
-        root_path,
-        root_config,
-        config_pool,
-        consensus_constants,
-        b_tools.local_keychain,
-        connect_to_daemon=False,
+        root_path, root_config, config_pool, consensus_constants, b_tools.local_keychain, connect_to_daemon=False
     )
 
     async with service.manage(start=start_service):
@@ -401,12 +379,7 @@ async def setup_farmer(
 
 @asynccontextmanager
 async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[IntroducerService, None]:
-    service = create_introducer_service(
-        bt.root_path,
-        bt.config,
-        advertised_port=port,
-        connect_to_daemon=False,
-    )
+    service = create_introducer_service(bt.root_path, bt.config, advertised_port=port, connect_to_daemon=False)
 
     async with service.manage():
         yield service
@@ -421,11 +394,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
         name="vdf_client_1",
     )
 
-    async def stop(
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
+    async def stop(signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop) -> None:
         await process_mgr.kill_processes()
 
     async with SignalHandlers.manage() as signal_handlers:
@@ -458,11 +427,7 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
             )
         )
 
-    async def stop(
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
+    async def stop(signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop) -> None:
         await process_mgr.kill_processes()
 
     signal_handlers = SignalHandlers()
@@ -497,12 +462,7 @@ async def setup_timelord(
     service_config["start_rpc_server"] = True
     service_config["rpc_port"] = uint16(0)
 
-    service = create_timelord_service(
-        root_path,
-        config,
-        consensus_constants,
-        connect_to_daemon=False,
-    )
+    service = create_timelord_service(root_path, config, consensus_constants, connect_to_daemon=False)
 
     async with service.manage():
         yield service

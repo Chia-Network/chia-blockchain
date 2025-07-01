@@ -78,11 +78,7 @@ class Wallet:
     wallet_id: uint32
 
     @staticmethod
-    async def create(
-        wallet_state_manager: Any,
-        info: WalletInfo,
-        name: str = __name__,
-    ) -> Wallet:
+    async def create(wallet_state_manager: Any, info: WalletInfo, name: str = __name__) -> Wallet:
         self = Wallet()
         self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
@@ -178,10 +174,7 @@ class Wallet:
         return puzzle_for_pk(G1Element.from_bytes(public_key))
 
     def make_solution(
-        self,
-        primaries: list[CreateCoin],
-        conditions: tuple[Condition, ...] = tuple(),
-        fee: uint64 = uint64(0),
+        self, primaries: list[CreateCoin], conditions: tuple[Condition, ...] = tuple(), fee: uint64 = uint64(0)
     ) -> Program:
         assert fee >= 0
         condition_list: list[Any] = [condition.to_program() for condition in conditions]
@@ -198,11 +191,7 @@ class Wallet:
         python_program[1].append(condition)
         return Program.to(python_program)
 
-    async def select_coins(
-        self,
-        amount: uint64,
-        action_scope: WalletActionScope,
-    ) -> set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
@@ -258,10 +247,7 @@ class Wallet:
                 raise ValueError(
                     f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {total_amount} mojos"
                 )
-            coins = await self.select_coins(
-                uint64(total_amount),
-                action_scope,
-            )
+            coins = await self.select_coins(uint64(total_amount), action_scope)
 
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
@@ -477,10 +463,7 @@ class Wallet:
         )
 
     async def get_coins_to_offer(
-        self,
-        asset_id: Optional[bytes32],
-        amount: uint64,
-        action_scope: WalletActionScope,
+        self, asset_id: Optional[bytes32], amount: uint64, action_scope: WalletActionScope
     ) -> set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
@@ -542,14 +525,10 @@ class Wallet:
                     )
                     if try_owner_sk.get_g1() == pk_parsed:
                         return PathHint(
-                            root_pubkey,
-                            [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)],
+                            root_pubkey, [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)]
                         )
             return None
-        return PathHint(
-            root_pubkey,
-            [uint64(12381), uint64(8444), uint64(2), uint64(index)],
-        )
+        return PathHint(root_pubkey, [uint64(12381), uint64(8444), uint64(2), uint64(index)])
 
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
@@ -624,10 +603,7 @@ class Wallet:
                     continue
             elif pk_fingerprint in sk_lookup:
                 responses.append(
-                    SigningResponse(
-                        bytes(AugSchemeMPL.sign(sk_lookup[pk_fingerprint], target.message)),
-                        target.hook,
-                    )
+                    SigningResponse(bytes(AugSchemeMPL.sign(sk_lookup[pk_fingerprint], target.message)), target.hook)
                 )
             else:  # Implicit if pk_fingerprint in sum_hint_lookup
                 signatures: list[G2Element] = []
@@ -638,20 +614,10 @@ class Wallet:
                 if partial_allowed:
                     # In multisig scenarios, we return everything as a component signature
                     for sig in signatures:
-                        responses.append(
-                            SigningResponse(
-                                bytes(sig),
-                                target.hook,
-                            )
-                        )
+                        responses.append(SigningResponse(bytes(sig), target.hook))
                 else:
                     # In the scenario where we are the only signer, we can collapse many responses into one
-                    responses.append(
-                        SigningResponse(
-                            bytes(AugSchemeMPL.aggregate(signatures)),
-                            target.hook,
-                        )
-                    )
+                    responses.append(SigningResponse(bytes(AugSchemeMPL.aggregate(signatures)), target.hook))
 
         # If we have the full set of signing responses for the instructions, aggregate them as much as possible
         if aggregate_responses_at_end:
@@ -663,8 +629,7 @@ class Wallet:
             for hook, group in grouped_responses.items():
                 new_responses.append(
                     SigningResponse(
-                        bytes(AugSchemeMPL.aggregate([G2Element.from_bytes(res.signature) for res in group])),
-                        hook,
+                        bytes(AugSchemeMPL.aggregate([G2Element.from_bytes(res.signature) for res in group])), hook
                     )
                 )
             responses = new_responses

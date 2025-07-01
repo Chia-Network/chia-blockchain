@@ -78,14 +78,7 @@ def rand_vdf_proof() -> VDFProof:
 
 
 def rand_full_block() -> FullBlock:
-    proof_of_space = ProofOfSpace(
-        rand_hash(),
-        rand_g1(),
-        None,
-        rand_g1(),
-        uint8(0),
-        rand_bytes(8 * 32),
-    )
+    proof_of_space = ProofOfSpace(rand_hash(), rand_g1(), None, rand_g1(), uint8(0), rand_bytes(8 * 32))
 
     reward_chain_block = RewardChainBlock(
         uint128(1),
@@ -104,46 +97,20 @@ def rand_full_block() -> FullBlock:
         True,
     )
 
-    pool_target = PoolTarget(
-        rand_hash(),
-        uint32(0),
-    )
+    pool_target = PoolTarget(rand_hash(), uint32(0))
 
-    foliage_block_data = FoliageBlockData(
-        rand_hash(),
-        pool_target,
-        rand_g2(),
-        rand_hash(),
-        rand_hash(),
-    )
+    foliage_block_data = FoliageBlockData(rand_hash(), pool_target, rand_g2(), rand_hash(), rand_hash())
 
-    foliage = Foliage(
-        rand_hash(),
-        rand_hash(),
-        foliage_block_data,
-        rand_g2(),
-        rand_hash(),
-        rand_g2(),
-    )
+    foliage = Foliage(rand_hash(), rand_hash(), foliage_block_data, rand_g2(), rand_hash(), rand_g2())
 
     foliage_transaction_block = FoliageTransactionBlock(
-        rand_hash(),
-        uint64(0),
-        rand_hash(),
-        rand_hash(),
-        rand_hash(),
-        rand_hash(),
+        rand_hash(), uint64(0), rand_hash(), rand_hash(), rand_hash(), rand_hash()
     )
 
     farmer_coin, pool_coin = rewards(uint32(0))
 
     transactions_info = TransactionsInfo(
-        rand_hash(),
-        rand_hash(),
-        rand_g2(),
-        uint64(0),
-        uint64(1),
-        [farmer_coin, pool_coin],
+        rand_hash(), rand_hash(), rand_g2(), uint64(0), uint64(1), [farmer_coin, pool_coin]
     )
 
     full_block = FullBlock(

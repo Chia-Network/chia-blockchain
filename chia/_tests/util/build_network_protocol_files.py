@@ -293,9 +293,7 @@ def main() -> None:
         path = tests_dir.joinpath(name)
         path.write_text(function())
         subprocess.run(
-            [sys.executable, "-m", "ruff", "format", os.fspath(path.relative_to(tests_dir))],
-            check=True,
-            cwd=tests_dir,
+            [sys.executable, "-m", "ruff", "format", os.fspath(path.relative_to(tests_dir))], check=True, cwd=tests_dir
         )
 
 

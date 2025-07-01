@@ -28,17 +28,10 @@ class ValueAndArgs:
     args: list[str]
 
 
+@pytest.mark.parametrize("id", [ValueAndArgs(1, []), ValueAndArgs(123, ["--id", "123"])])
+@pytest.mark.parametrize("show_unconfirmed", [ValueAndArgs(False, []), ValueAndArgs(True, ["--show-unconfirmed"])])
 @pytest.mark.parametrize(
-    "id",
-    [ValueAndArgs(1, []), ValueAndArgs(123, ["--id", "123"])],
-)
-@pytest.mark.parametrize(
-    "show_unconfirmed",
-    [ValueAndArgs(False, []), ValueAndArgs(True, ["--show-unconfirmed"])],
-)
-@pytest.mark.parametrize(
-    "paginate",
-    [ValueAndArgs(None, []), ValueAndArgs(True, ["--paginate"]), ValueAndArgs(False, ["--no-paginate"])],
+    "paginate", [ValueAndArgs(None, []), ValueAndArgs(True, ["--paginate"]), ValueAndArgs(False, ["--no-paginate"])]
 )
 def test_list_parsing(id: ValueAndArgs, show_unconfirmed: ValueAndArgs, paginate: ValueAndArgs) -> None:
     check_click_parsing(
@@ -76,15 +69,10 @@ def test_list_parsing(id: ValueAndArgs, show_unconfirmed: ValueAndArgs, paginate
 @pytest.mark.anyio
 async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
-    env.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "cat": 2}
 
     client_info = WalletClientInfo(
-        env.rpc_client,
-        env.wallet_state_manager.root_pubkey.get_fingerprint(),
-        env.wallet_state_manager.config,
+        env.rpc_client, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
     )
 
     wallet_coins = [cr.coin for cr in (await env.wallet_state_manager.coin_store.get_coin_records()).records]
@@ -92,10 +80,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     base_command = ListCMD(
         rpc_info=NeedsWalletRPC(client_info=client_info),
         coin_selection_config=NeedsCoinSelectionConfig(
-            min_coin_amount=cli_amount_none,
-            max_coin_amount=cli_amount_none,
-            coins_to_exclude=(),
-            amounts_to_exclude=(),
+            min_coin_amount=cli_amount_none, max_coin_amount=cli_amount_none, coins_to_exclude=(), amounts_to_exclude=()
         ),
         id=env.wallet_aliases["xch"],
         show_unconfirmed=True,
@@ -171,11 +156,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     CAT_AMOUNT = uint64(50)
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await CATWallet.create_new_cat_wallet(
-            env.wallet_state_manager,
-            env.xch_wallet,
-            {"identifier": "genesis_by_id"},
-            CAT_AMOUNT,
-            action_scope,
+            env.wallet_state_manager, env.xch_wallet, {"identifier": "genesis_by_id"}, CAT_AMOUNT, action_scope
         )
 
     # Test showing unconfirmed
@@ -217,10 +198,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             )
         ]
     )
@@ -264,18 +242,12 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     assert "Wallet not synced. Please wait." in output
 
 
-@pytest.mark.parametrize(
-    "id",
-    [ValueAndArgs(1, []), ValueAndArgs(123, ["--id", "123"])],
-)
+@pytest.mark.parametrize("id", [ValueAndArgs(1, []), ValueAndArgs(123, ["--id", "123"])])
 @pytest.mark.parametrize(
     "target_amount",
     [ValueAndArgs(None, []), ValueAndArgs(CliAmount(amount=Decimal("0.01"), mojos=False), ["--target-amount", "0.01"])],
 )
-@pytest.mark.parametrize(
-    "number_of_coins",
-    [ValueAndArgs(500, []), ValueAndArgs(1, ["--number-of-coins", "1"])],
-)
+@pytest.mark.parametrize("number_of_coins", [ValueAndArgs(500, []), ValueAndArgs(1, ["--number-of-coins", "1"])])
 @pytest.mark.parametrize(
     "input_coins",
     [
@@ -287,10 +259,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
         ),
     ],
 )
-@pytest.mark.parametrize(
-    "largest_first",
-    [ValueAndArgs(False, []), ValueAndArgs(True, ["--largest-first"])],
-)
+@pytest.mark.parametrize("largest_first", [ValueAndArgs(False, []), ValueAndArgs(True, ["--largest-first"])])
 def test_combine_parsing(
     id: ValueAndArgs,
     target_amount: ValueAndArgs,
@@ -315,29 +284,16 @@ def test_combine_parsing(
     )
 
 
+@pytest.mark.parametrize("id", [ValueAndArgs(1, []), ValueAndArgs(123, ["--id", "123"])])
+@pytest.mark.parametrize("number_of_coins", [ValueAndArgs(1, ["--number-of-coins", "1"])])
 @pytest.mark.parametrize(
-    "id",
-    [ValueAndArgs(1, []), ValueAndArgs(123, ["--id", "123"])],
+    "amount_per_coin", [ValueAndArgs(CliAmount(amount=Decimal("0.01"), mojos=False), ["--amount-per-coin", "0.01"])]
 )
 @pytest.mark.parametrize(
-    "number_of_coins",
-    [ValueAndArgs(1, ["--number-of-coins", "1"])],
-)
-@pytest.mark.parametrize(
-    "amount_per_coin",
-    [ValueAndArgs(CliAmount(amount=Decimal("0.01"), mojos=False), ["--amount-per-coin", "0.01"])],
-)
-@pytest.mark.parametrize(
-    "target_coin_id",
-    [
-        ValueAndArgs(bytes32([0] * 32), ["--target-coin-id", bytes32([0] * 32).hex()]),
-    ],
+    "target_coin_id", [ValueAndArgs(bytes32([0] * 32), ["--target-coin-id", bytes32([0] * 32).hex()])]
 )
 def test_split_parsing(
-    id: ValueAndArgs,
-    number_of_coins: ValueAndArgs,
-    amount_per_coin: ValueAndArgs,
-    target_coin_id: ValueAndArgs,
+    id: ValueAndArgs, number_of_coins: ValueAndArgs, amount_per_coin: ValueAndArgs, target_coin_id: ValueAndArgs
 ) -> None:
     check_click_parsing(
         SplitCMD(

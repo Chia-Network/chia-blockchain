@@ -99,13 +99,7 @@ class TestNftStore:
             puzzle = Program.to(["A Test puzzle"])
             coin = Coin(a_bytes32, a_bytes32, uint64(1))
             nft = NFTCoinInfo(
-                a_bytes32,
-                coin,
-                LineageProof(a_bytes32, a_bytes32, uint64(1)),
-                puzzle,
-                uint32(1),
-                a_bytes32,
-                uint32(10),
+                a_bytes32, coin, LineageProof(a_bytes32, a_bytes32, uint64(1)), puzzle, uint32(1), a_bytes32, uint32(10)
             )
             # Test save
             await db.save_nft(uint32(1), a_bytes32, nft)

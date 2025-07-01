@@ -88,11 +88,7 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {dict(row)}")
 
 
-async def _dot_dump(
-    data_store: DataStore,
-    store_id: bytes32,
-    root_hash: bytes32,
-) -> str:
+async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
     terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
     internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
@@ -119,13 +115,7 @@ async def _dot_dump(
             f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
         )
 
-    lines = [
-        "digraph {",
-        *dot_nodes,
-        *dot_connections,
-        *dot_pair_boxes,
-        "}",
-    ]
+    lines = ["digraph {", *dot_nodes, *dot_connections, *dot_pair_boxes, "}"]
 
     return "\n".join(lines)
 
@@ -192,11 +182,7 @@ class TerminalNode:
 
     @classmethod
     def from_key_value(cls, key: bytes, value: bytes) -> TerminalNode:
-        return cls(
-            hash=leaf_hash(key=key, value=value),
-            key=key,
-            value=value,
-        )
+        return cls(hash=leaf_hash(key=key, value=value), key=key, value=value)
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
@@ -216,11 +202,7 @@ class ProofOfInclusionLayer:
     combined_hash: bytes32
 
     @classmethod
-    def from_internal_node(
-        cls,
-        internal_node: InternalNode,
-        traversal_child_hash: bytes32,
-    ) -> ProofOfInclusionLayer:
+    def from_internal_node(cls, internal_node: InternalNode, traversal_child_hash: bytes32) -> ProofOfInclusionLayer:
         return ProofOfInclusionLayer(
             other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
             other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
@@ -230,9 +212,7 @@ class ProofOfInclusionLayer:
     @classmethod
     def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> ProofOfInclusionLayer:
         combined_hash = calculate_internal_hash(
-            hash=primary_hash,
-            other_hash_side=other_hash_side,
-            other_hash=other_hash,
+            hash=primary_hash, other_hash_side=other_hash_side, other_hash=other_hash
         )
 
         return cls(other_hash_side=other_hash_side, other_hash=other_hash, combined_hash=combined_hash)
@@ -434,16 +414,10 @@ class KeyValue:
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> KeyValue:
-        return cls(
-            key=hexstr_to_bytes(marshalled["key"]),
-            value=hexstr_to_bytes(marshalled["value"]),
-        )
+        return cls(key=hexstr_to_bytes(marshalled["key"]), value=hexstr_to_bytes(marshalled["value"]))
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "key": self.key.hex(),
-            "value": self.value.hex(),
-        }
+        return {"key": self.key.hex(), "value": self.value.hex()}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -459,10 +433,7 @@ class OfferStore:
         )
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "store_id": self.store_id.hex(),
-            "inclusions": [key_value.marshal() for key_value in self.inclusions],
-        }
+        return {"store_id": self.store_id.hex(), "inclusions": [key_value.marshal() for key_value in self.inclusions]}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -556,10 +527,7 @@ class StoreProofs:
         )
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "store_id": self.store_id.hex(),
-            "proofs": [proof.marshal() for proof in self.proofs],
-        }
+        return {"store_id": self.store_id.hex(), "proofs": [proof.marshal() for proof in self.proofs]}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -594,16 +562,10 @@ class MakeOfferResponse:
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> MakeOfferResponse:
-        return cls(
-            success=marshalled["success"],
-            offer=Offer.unmarshal(marshalled["offer"]),
-        )
+        return cls(success=marshalled["success"], offer=Offer.unmarshal(marshalled["offer"]))
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "success": self.success,
-            "offer": self.offer.marshal(),
-        }
+        return {"success": self.success, "offer": self.offer.marshal()}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -619,10 +581,7 @@ class TakeOfferRequest:
         )
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "offer": self.offer.marshal(),
-            "fee": None if self.fee is None else int(self.fee),
-        }
+        return {"offer": self.offer.marshal(), "fee": None if self.fee is None else int(self.fee)}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -632,16 +591,10 @@ class TakeOfferResponse:
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> TakeOfferResponse:
-        return cls(
-            success=marshalled["success"],
-            trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
-        )
+        return cls(success=marshalled["success"], trade_id=bytes32.from_hexstr(marshalled["trade_id"]))
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "success": self.success,
-            "trade_id": self.trade_id.hex(),
-        }
+        return {"success": self.success, "trade_id": self.trade_id.hex()}
 
 
 @final
@@ -699,14 +652,10 @@ class CancelOfferResponse:
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> CancelOfferResponse:
-        return cls(
-            success=marshalled["success"],
-        )
+        return cls(success=marshalled["success"])
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "success": self.success,
-        }
+        return {"success": self.success}
 
 
 @final
@@ -716,14 +665,10 @@ class ClearPendingRootsRequest:
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> ClearPendingRootsRequest:
-        return cls(
-            store_id=bytes32.from_hexstr(marshalled["store_id"]),
-        )
+        return cls(store_id=bytes32.from_hexstr(marshalled["store_id"]))
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "store_id": self.store_id.hex(),
-        }
+        return {"store_id": self.store_id.hex()}
 
 
 @final
@@ -745,10 +690,7 @@ class ClearPendingRootsResponse:
         )
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "success": self.success,
-            "root": None if self.root is None else self.root.marshal(),
-        }
+        return {"success": self.success, "root": None if self.root is None else self.root.marshal()}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -768,10 +710,7 @@ class PluginRemote:
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> PluginRemote:
-        return cls(
-            url=marshalled["url"],
-            headers=marshalled.get("headers", {}),
-        )
+        return cls(url=marshalled["url"], headers=marshalled.get("headers", {}))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -780,12 +719,7 @@ class PluginStatus:
     downloaders: dict[str, dict[str, Any]]
 
     def marshal(self) -> dict[str, Any]:
-        return {
-            "plugin_status": {
-                "uploaders": self.uploaders,
-                "downloaders": self.downloaders,
-            }
-        }
+        return {"plugin_status": {"uploaders": self.uploaders, "downloaders": self.downloaders}}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -961,11 +895,7 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
     return verified_keys
 
 
-async def dl_verify_proof(
-    dlproof: DLProof,
-    wallet_node: WalletNode,
-    peer: WSChiaConnection,
-) -> VerifyProofResponse:
+async def dl_verify_proof(dlproof: DLProof, wallet_node: WalletNode, peer: WSChiaConnection) -> VerifyProofResponse:
     """Verify a proof of inclusion for a DL singleton"""
 
     coin_id = dlproof.coin_id

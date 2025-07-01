@@ -82,12 +82,7 @@ def find_vdf_client() -> pathlib.Path:
 
 
 async def spawn_process(
-    host: str,
-    port: int,
-    counter: int,
-    process_mgr: VDFClientProcessMgr,
-    *,
-    prefer_ipv6: bool,
+    host: str, port: int, counter: int, process_mgr: VDFClientProcessMgr, *, prefer_ipv6: bool
 ) -> None:
     path_to_vdf_client = find_vdf_client()
     first_10_seconds = True
@@ -141,13 +136,7 @@ async def spawn_all_processes(config: dict, net_config: dict, process_mgr: VDFCl
         log.info("Process_count set to 0, stopping TLauncher.")
         return
     awaitables = [
-        spawn_process(
-            hostname,
-            port,
-            i,
-            process_mgr,
-            prefer_ipv6=net_config.get("prefer_ipv6", False),
-        )
+        spawn_process(hostname, port, i, process_mgr, prefer_ipv6=net_config.get("prefer_ipv6", False))
         for i in range(process_count)
     ]
     await asyncio.gather(*awaitables)
@@ -156,11 +145,7 @@ async def spawn_all_processes(config: dict, net_config: dict, process_mgr: VDFCl
 async def async_main(config: dict[str, Any], net_config: dict[str, Any]) -> None:
     process_mgr = VDFClientProcessMgr()
 
-    async def stop(
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
+    async def stop(signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop) -> None:
         await process_mgr.kill_processes()
 
     async with SignalHandlers.manage() as signal_handlers:

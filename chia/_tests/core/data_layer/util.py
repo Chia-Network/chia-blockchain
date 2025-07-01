@@ -190,22 +190,16 @@ class ChiaRoot:
 
 @overload
 def create_valid_node_values(
-    node_type: Literal[NodeType.INTERNAL],
-    left_hash: bytes32,
-    right_hash: bytes32,
+    node_type: Literal[NodeType.INTERNAL], left_hash: bytes32, right_hash: bytes32
 ) -> dict[str, Any]: ...
 
 
 @overload
-def create_valid_node_values(
-    node_type: Literal[NodeType.TERMINAL],
-) -> dict[str, Any]: ...
+def create_valid_node_values(node_type: Literal[NodeType.TERMINAL]) -> dict[str, Any]: ...
 
 
 def create_valid_node_values(
-    node_type: NodeType,
-    left_hash: Optional[bytes32] = None,
-    right_hash: Optional[bytes32] = None,
+    node_type: NodeType, left_hash: Optional[bytes32] = None, right_hash: Optional[bytes32] = None
 ) -> dict[str, Any]:
     if node_type == NodeType.INTERNAL:
         assert left_hash is not None

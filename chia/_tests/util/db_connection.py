@@ -13,9 +13,7 @@ from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 
 @asynccontextmanager
 async def DBConnection(
-    db_version: int,
-    foreign_keys: Optional[bool] = None,
-    row_factory: Optional[type[aiosqlite.Row]] = None,
+    db_version: int, foreign_keys: Optional[bool] = None, row_factory: Optional[type[aiosqlite.Row]] = None
 ) -> AsyncIterator[DBWrapper2]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(

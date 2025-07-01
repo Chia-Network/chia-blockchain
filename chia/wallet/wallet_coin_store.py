@@ -151,12 +151,7 @@ class WalletCoinStore:
     async def set_spent(self, coin_name: bytes32, height: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
-                "UPDATE coin_record SET spent_height=?,spent=? WHERE coin_name=?",
-                (
-                    height,
-                    1,
-                    coin_name.hex(),
-                ),
+                "UPDATE coin_record SET spent_height=?,spent=? WHERE coin_name=?", (height, 1, coin_name.hex())
             )
         self.total_count_cache.cache.clear()
 
@@ -259,11 +254,7 @@ class WalletCoinStore:
             records.append(self.coin_record_from_row(row))
             coin_id_to_record[bytes32.fromhex(row[0])] = records[-1]
 
-        return GetCoinRecordsResult(
-            records,
-            coin_id_to_record,
-            total_count,
-        )
+        return GetCoinRecordsResult(records, coin_id_to_record, total_count)
 
     async def get_coin_records_between(
         self, wallet_id: int, start: int, end: int, reverse: bool = False, coin_type: CoinType = CoinType.NORMAL
@@ -298,8 +289,7 @@ class WalletCoinStore:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM coin_record WHERE coin_type=? AND wallet_id=? AND spent_height=0",
-                (coin_type, wallet_id),
+                "SELECT * FROM coin_record WHERE coin_type=? AND wallet_id=? AND spent_height=0", (coin_type, wallet_id)
             )
         return {self.coin_record_from_row(row) for row in rows}
 
@@ -338,10 +328,7 @@ class WalletCoinStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM coin_record WHERE confirmed_height>?", (height,))).close()
             await (
-                await conn.execute(
-                    "UPDATE coin_record SET spent_height = 0, spent = 0 WHERE spent_height>?",
-                    (height,),
-                )
+                await conn.execute("UPDATE coin_record SET spent_height = 0, spent = 0 WHERE spent_height>?", (height,))
             ).close()
         self.total_count_cache.cache.clear()
 

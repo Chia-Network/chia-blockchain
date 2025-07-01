@@ -172,40 +172,17 @@ class TestWalletRpc:
                 singleton_record,
             ]
             assert (
-                await client.dl_history(
-                    DLHistory(
-                        launcher_id,
-                        min_generation=uint32(1),
-                        max_generation=uint32(1),
-                    )
-                )
+                await client.dl_history(DLHistory(launcher_id, min_generation=uint32(1), max_generation=uint32(1)))
             ).history == [new_singleton_record]
             assert (
-                await client.dl_history(
-                    DLHistory(
-                        launcher_id,
-                        max_generation=uint32(0),
-                        num_results=uint32(1),
-                    )
-                )
+                await client.dl_history(DLHistory(launcher_id, max_generation=uint32(0), num_results=uint32(1)))
             ).history == [singleton_record]
             assert (
-                await client.dl_history(
-                    DLHistory(
-                        launcher_id,
-                        min_generation=uint32(1),
-                        num_results=uint32(1),
-                    )
-                )
+                await client.dl_history(DLHistory(launcher_id, min_generation=uint32(1), num_results=uint32(1)))
             ).history == [new_singleton_record]
             assert (
                 await client.dl_history(
-                    DLHistory(
-                        launcher_id,
-                        min_generation=uint32(1),
-                        max_generation=uint32(1),
-                        num_results=uint32(1),
-                    )
+                    DLHistory(launcher_id, min_generation=uint32(1), max_generation=uint32(1), num_results=uint32(1))
                 )
             ).history == [new_singleton_record]
 
@@ -285,14 +262,7 @@ class TestWalletRpc:
                 if tx.spend_bundle is not None:
                     additions.extend(tx.spend_bundle.additions())
             mirror_coin = next(c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash())
-            mirror = Mirror(
-                mirror_coin.name(),
-                launcher_id,
-                uint64(1000),
-                ["foo", "bar"],
-                True,
-                uint32(height + 1),
-            )
+            mirror = Mirror(mirror_coin.name(), launcher_id, uint64(1000), ["foo", "bar"], True, uint32(height + 1))
             await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([mirror]), DLGetMirrors(launcher_id))
             await client.dl_delete_mirror(
                 DLDeleteMirror(coin_id=mirror_coin.name(), fee=uint64(2000000000000), push=True), DEFAULT_TX_CONFIG
@@ -319,11 +289,7 @@ class TestWalletRpc:
             value=b"value",
             node_hash=bytes32([1] * 32),
             layers=[
-                ProofLayer(
-                    other_hash_side=uint8(0),
-                    other_hash=bytes32([1] * 32),
-                    combined_hash=bytes32([1] * 32),
-                ),
+                ProofLayer(other_hash_side=uint8(0), other_hash=bytes32([1] * 32), combined_hash=bytes32([1] * 32))
             ],
         )
         fake_coin_id = bytes32([5] * 32)
@@ -340,10 +306,7 @@ class TestWalletRpc:
 
         assert wallet_service.rpc_server is not None
         client = await WalletRpcClient.create(
-            self_hostname,
-            wallet_service.rpc_server.listen_port,
-            wallet_service.root_path,
-            wallet_service.config,
+            self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
         )
 
         with pytest.raises(ValueError, match="No peer connected"):

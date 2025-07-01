@@ -90,24 +90,9 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
         await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction([10], [ph1], action_scope, 0)
     [tx] = action_scope.side_effects.transactions
 
-    await time_out_assert(
-        10,
-        full_node_api_0.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
-    await time_out_assert(
-        10,
-        full_node_api_1.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
-    await time_out_assert(
-        10,
-        full_node_api_2.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
+    await time_out_assert(10, full_node_api_0.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+    await time_out_assert(10, full_node_api_1.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+    await time_out_assert(10, full_node_api_2.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
 
     # Farm another block
     for i in range(1, 8):
@@ -116,11 +101,7 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
     print(f"Funds: {funds}")
-    await time_out_assert(
-        10,
-        wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance,
-        (funds - 10),
-    )
+    await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, (funds - 10))
     await time_out_assert(20, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, 10)
 
 
@@ -164,45 +145,15 @@ async def test_mempool_tx_sync(three_nodes_two_wallets, self_hostname, seeded_ra
         )
     [tx] = action_scope.side_effects.transactions
 
-    await time_out_assert(
-        10,
-        full_node_api_0.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
-    await time_out_assert(
-        10,
-        full_node_api_1.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
-    await time_out_assert(
-        10,
-        full_node_api_2.full_node.mempool_manager.get_spendbundle,
-        None,
-        tx.name,
-    )
+    await time_out_assert(10, full_node_api_0.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+    await time_out_assert(10, full_node_api_1.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+    await time_out_assert(10, full_node_api_2.full_node.mempool_manager.get_spendbundle, None, tx.name)
 
     # make a final connection.
     # wallet0 <-> sever0 <-> server1 <-> server2
 
     await server_1.start_client(PeerInfo(self_hostname, server_2.get_port()), None)
 
-    await time_out_assert(
-        10,
-        full_node_api_0.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
-    await time_out_assert(
-        10,
-        full_node_api_1.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
-    await time_out_assert(
-        10,
-        full_node_api_2.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.name,
-    )
+    await time_out_assert(10, full_node_api_0.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+    await time_out_assert(10, full_node_api_1.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+    await time_out_assert(10, full_node_api_2.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)

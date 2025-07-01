@@ -212,8 +212,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                         async_exit_stack.enter_context(self.upnp.manage(self._upnp_ports))
 
                     await self._server.start(
-                        prefer_ipv6=self.config.get("prefer_ipv6", False),
-                        on_connect=self._on_connect_callback,
+                        prefer_ipv6=self.config.get("prefer_ipv6", False), on_connect=self._on_connect_callback
                     )
                     try:
                         self._advertised_port = self._server.get_port()
@@ -286,10 +285,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         signal_handlers.setup_sync_signal_handler(handler=self._accept_signal)
 
     def _accept_signal(
-        self,
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
+        self, signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop
     ) -> None:
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully

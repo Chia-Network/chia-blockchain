@@ -48,11 +48,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                     t1 = time.time()
                     if not slow_mode:
                         await data_store.insert(
-                            key=key,
-                            value=value,
-                            store_id=store_id,
-                            reference_node_hash=reference_node_hash,
-                            side=side,
+                            key=key, value=value, store_id=store_id, reference_node_hash=reference_node_hash, side=side
                         )
                     else:
                         await data_store.insert(
@@ -71,12 +67,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                     if not slow_mode:
                         await data_store.autoinsert(key=key, value=value, store_id=store_id)
                     else:
-                        await data_store.autoinsert(
-                            key=key,
-                            value=value,
-                            store_id=store_id,
-                            use_optimized=False,
-                        )
+                        await data_store.autoinsert(key=key, value=value, store_id=store_id, use_optimized=False)
                     t2 = time.time()
                     autoinsert_time += t2 - t1
                     autoinsert_count += 1

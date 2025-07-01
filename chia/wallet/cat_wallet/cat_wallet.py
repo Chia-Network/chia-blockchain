@@ -132,11 +132,7 @@ class CATWallet:
 
         try:
             spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
-                self,
-                cat_tail_info,
-                amount,
-                action_scope,
-                fee,
+                self, cat_tail_info, amount, action_scope, fee
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
@@ -259,25 +255,12 @@ class CATWallet:
         if next_layer is not None:
             if AssetType(next_layer.type()) in potential_subclasses:
                 return await potential_subclasses[AssetType(next_layer.type())].create_from_puzzle_info(
-                    wallet_state_manager,
-                    wallet,
-                    puzzle_driver,
-                    name,
-                    potential_subclasses,
+                    wallet_state_manager, wallet, puzzle_driver, name, potential_subclasses
                 )
-        return await cls.get_or_create_wallet_for_cat(
-            wallet_state_manager,
-            wallet,
-            puzzle_driver["tail"].hex(),
-            name,
-        )
+        return await cls.get_or_create_wallet_for_cat(wallet_state_manager, wallet, puzzle_driver["tail"].hex(), name)
 
     @staticmethod
-    async def create(
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        wallet_info: WalletInfo,
-    ) -> CATWallet:
+    async def create(wallet_state_manager: WalletStateManager, wallet: Wallet, wallet_info: WalletInfo) -> CATWallet:
         self = CATWallet()
 
         self.log = logging.getLogger(__name__)
@@ -354,12 +337,7 @@ class CATWallet:
 
     async def set_tail_program(self, tail_program: str) -> None:
         assert Program.fromhex(tail_program).get_tree_hash() == self.cat_info.limitations_program_hash
-        await self.save_info(
-            CATInfo(
-                self.cat_info.limitations_program_hash,
-                Program.fromhex(tail_program),
-            )
-        )
+        await self.save_info(CATInfo(self.cat_info.limitations_program_hash, Program.fromhex(tail_program)))
 
     async def coin_added(
         self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: Optional[CATCoinData]
@@ -404,8 +382,7 @@ class CATWallet:
             self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {data.inner_puzzle}")
 
             await self.add_lineage(
-                coin_name,
-                LineageProof(data.parent_coin_id, data.inner_puzzle.get_tree_hash(), data.amount),
+                coin_name, LineageProof(data.parent_coin_id, data.inner_puzzle.get_tree_hash(), data.amount)
             )
         else:
             # The parent is not a CAT which means we need to scrub all of its children from our DB
@@ -491,11 +468,7 @@ class CATWallet:
 
         return list(await self.get_max_spendable_coins(set(result)))
 
-    async def select_coins(
-        self,
-        amount: uint64,
-        action_scope: WalletActionScope,
-    ) -> set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
@@ -559,10 +532,7 @@ class CATWallet:
             action_scope.config.tx_config, push=False
         ) as inner_action_scope:
             if fee > amount_to_claim:
-                chia_coins = await self.standard_wallet.select_coins(
-                    fee,
-                    action_scope,
-                )
+                chia_coins = await self.standard_wallet.select_coins(fee, action_scope)
                 origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
                     [],
@@ -575,10 +545,7 @@ class CATWallet:
                     extra_conditions=extra_conditions,
                 )
             else:
-                chia_coins = await self.standard_wallet.select_coins(
-                    fee,
-                    action_scope,
-                )
+                chia_coins = await self.standard_wallet.select_coins(fee, action_scope)
                 origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
@@ -625,10 +592,7 @@ class CATWallet:
         payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
         if coins is None:
-            cat_coins = await self.select_coins(
-                uint64(starting_amount),
-                action_scope,
-            )
+            cat_coins = await self.select_coins(uint64(starting_amount), action_scope)
         else:
             cat_coins = coins
 
@@ -673,13 +637,7 @@ class CATWallet:
         for coin in cat_coins:
             if cat_discrepancy is not None:
                 cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.to(None),
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+                    opcode=Program.to(51), args=[Program.to(None), Program.to(-113), tail_reveal, tail_solution]
                 )
                 if first:
                     extra_conditions = (*extra_conditions, cat_condition)
@@ -695,27 +653,22 @@ class CATWallet:
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
                         innersol = self.standard_wallet.make_solution(
-                            primaries=primaries,
-                            conditions=(*extra_conditions, announcement),
+                            primaries=primaries, conditions=(*extra_conditions, announcement)
                         )
                     elif regular_chia_to_claim > fee:  # pragma: no cover
                         xch_announcement = await self.create_tandem_xch_tx(
-                            fee,
-                            uint64(regular_chia_to_claim),
-                            action_scope,
+                            fee, uint64(regular_chia_to_claim), action_scope
                         )
                         assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
-                            primaries=primaries,
-                            conditions=(*extra_conditions, xch_announcement, announcement),
+                            primaries=primaries, conditions=(*extra_conditions, xch_announcement, announcement)
                         )
                     else:
                         # TODO: what about when they are equal?
                         raise Exception("Equality not handled")
                 else:
                     innersol = self.standard_wallet.make_solution(
-                        primaries=primaries,
-                        conditions=(*extra_conditions, announcement),
+                        primaries=primaries, conditions=(*extra_conditions, announcement)
                     )
             else:
                 innersol = self.standard_wallet.make_solution(
@@ -836,10 +789,7 @@ class CATWallet:
         return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
 
     async def get_coins_to_offer(
-        self,
-        asset_id: Optional[bytes32],
-        amount: uint64,
-        action_scope: WalletActionScope,
+        self, asset_id: Optional[bytes32], amount: uint64, action_scope: WalletActionScope
     ) -> set[Coin]:
         balance = await self.get_confirmed_balance()
         if balance < amount:

@@ -93,10 +93,7 @@ class CostLogger:
         return spend_bundle
 
     def log_cost_statistics(self) -> str:
-        merged_dict = {
-            "standard cost": self.cost_dict,
-            "no puzzle reveals": self.cost_dict_no_puzs,
-        }
+        merged_dict = {"standard cost": self.cost_dict, "no puzzle reveals": self.cost_dict_no_puzs}
         return json.dumps(merged_dict, indent=2)
 
 
@@ -207,19 +204,13 @@ class SpendSim:
         await self.mempool_manager.new_peak(self.block_records[-1], spent_coins_ids)
 
     def new_coin_record(self, coin: Coin, coinbase: bool = False) -> CoinRecord:
-        return CoinRecord(
-            coin,
-            uint32(self.block_height + 1),
-            uint32(0),
-            coinbase,
-            self.timestamp,
-        )
+        return CoinRecord(coin, uint32(self.block_height + 1), uint32(0), coinbase, self.timestamp)
 
     async def all_non_reward_coins(self) -> list[Coin]:
         coins = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                "SELECT puzzle_hash,coin_parent,amount from coin_record WHERE coinbase=0 AND spent_index==0 ",
+                "SELECT puzzle_hash,coin_parent,amount from coin_record WHERE coinbase=0 AND spent_index==0 "
             )
             rows = await cursor.fetchall()
 
@@ -466,10 +457,7 @@ class SimClient:
         """
         names: list[bytes32] = await self.service.hint_store.get_coin_ids(hint)
 
-        kwargs: dict[str, Any] = {
-            "include_spent_coins": False,
-            "names": names,
-        }
+        kwargs: dict[str, Any] = {"include_spent_coins": False, "names": names}
         if start_height:
             kwargs["start_height"] = uint32(start_height)
         if end_height:

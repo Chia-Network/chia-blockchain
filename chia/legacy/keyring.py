@@ -76,10 +76,7 @@ def get_key_data(keyring: LegacyKeyring, index: int) -> KeyData:
     entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
 
     return KeyData(
-        fingerprint=uint32(fingerprint),
-        public_key=public_key,
-        label=None,
-        secrets=KeyDataSecrets.from_entropy(entropy),
+        fingerprint=uint32(fingerprint), public_key=public_key, label=None, secrets=KeyDataSecrets.from_entropy(entropy)
     )
 
 

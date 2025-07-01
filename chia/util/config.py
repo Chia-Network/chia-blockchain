@@ -62,16 +62,11 @@ def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
 
 @contextlib.contextmanager
 def lock_and_load_config(
-    root_path: Path,
-    filename: Union[str, Path],
-    fill_missing_services: bool = False,
+    root_path: Path, filename: Union[str, Path], fill_missing_services: bool = False
 ) -> Iterator[dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
         config = _load_config_maybe_locked(
-            root_path=root_path,
-            filename=filename,
-            acquire_lock=False,
-            fill_missing_services=fill_missing_services,
+            root_path=root_path, filename=filename, acquire_lock=False, fill_missing_services=fill_missing_services
         )
         yield config
 
@@ -152,10 +147,7 @@ def _load_config_maybe_locked(
 
 
 def load_config_cli(
-    root_path: Path,
-    filename: str,
-    sub_config: Optional[str] = None,
-    fill_missing_services: bool = False,
+    root_path: Path, filename: str, sub_config: Optional[str] = None, fill_missing_services: bool = False
 ) -> dict[str, Any]:
     """
     Loads configuration from the specified filename, in the config directory,
@@ -264,10 +256,7 @@ start_methods: dict[method_strings, method_values] = {
 }
 
 
-def process_config_start_method(
-    config: dict[str, Any],
-    log: logging.Logger,
-) -> method_values:
+def process_config_start_method(config: dict[str, Any], log: logging.Logger) -> method_values:
     from_config: object = config.get("multiprocessing_start_method")
 
     choice: method_strings

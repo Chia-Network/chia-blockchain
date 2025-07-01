@@ -83,10 +83,7 @@ def test_start_daemon(tmp_path: Path, empty_keyring: Any, mocker: MockerFixture)
     )
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        ["--root-path", str(tmp_path), "init"],
-    )
+    result = runner.invoke(cli, ["--root-path", str(tmp_path), "init"])
     assert result.exit_code == 0
     result = runner.invoke(cli, ["--root-path", str(tmp_path), "start", "daemon", "-s"])
     assert result.exit_code == 0

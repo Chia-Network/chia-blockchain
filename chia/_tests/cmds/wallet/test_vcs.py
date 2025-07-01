@@ -44,10 +44,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     # set RPC Client
     class VcsMintRpcClient(TestWalletRpcClient):
         async def vc_mint(
-            self,
-            request: VCMint,
-            tx_config: TXConfig,
-            timelock_info: ConditionValidTimes = ConditionValidTimes(),
+            self, request: VCMint, tx_config: TXConfig, timelock_info: ConditionValidTimes = ConditionValidTimes()
         ) -> VCMintResponse:
             self.add_to_log(
                 "vc_mint", (request.did_id, tx_config, request.target_address, request.fee, request.push, timelock_info)
@@ -90,10 +87,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
         "150",
     ]
     # these are various things that should be in the output
-    assert_list = [
-        f"New VC with launcher ID minted: {get_bytes32(3).hex()}",
-        f"Transaction {get_bytes32(2).hex()}",
-    ]
+    assert_list = [f"New VC with launcher ID minted: {get_bytes32(3).hex()}", f"Transaction {get_bytes32(2).hex()}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "vc_mint": [(did_id, DEFAULT_TX_CONFIG, target_addr, 500000000000, True, test_condition_valid_times)]
@@ -146,10 +140,7 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: tuple[TestRpcCl
     # set RPC Client
     class VcsUpdateProofsRpcClient(TestWalletRpcClient):
         async def vc_spend(
-            self,
-            request: VCSpend,
-            tx_config: TXConfig,
-            timelock_info: ConditionValidTimes = ConditionValidTimes(),
+            self, request: VCSpend, tx_config: TXConfig, timelock_info: ConditionValidTimes = ConditionValidTimes()
         ) -> VCSpendResponse:
             self.add_to_log(
                 "vc_spend",
@@ -187,10 +178,7 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: tuple[TestRpcCl
         "150",
     ]
     # these are various things that should be in the output
-    assert_list = [
-        "Proofs successfully updated!",
-        f"Transaction {get_bytes32(2).hex()}",
-    ]
+    assert_list = ["Proofs successfully updated!", f"Transaction {get_bytes32(2).hex()}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "vc_spend": [
@@ -277,10 +265,7 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             )
 
         async def vc_revoke(
-            self,
-            request: VCRevoke,
-            tx_config: TXConfig,
-            timelock_info: ConditionValidTimes = ConditionValidTimes(),
+            self, request: VCRevoke, tx_config: TXConfig, timelock_info: ConditionValidTimes = ConditionValidTimes()
         ) -> VCRevokeResponse:
             self.add_to_log("vc_revoke", (request.vc_parent_id, tx_config, request.fee, request.push, timelock_info))
             return VCRevokeResponse([STD_UTX], [STD_TX])
@@ -342,15 +327,7 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: tuple[TestRpcC
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> list[TransactionRecord]:
             self.add_to_log(
-                "crcat_approve_pending",
-                (
-                    wallet_id,
-                    min_amount_to_claim,
-                    tx_config,
-                    fee,
-                    push,
-                    timelock_info,
-                ),
+                "crcat_approve_pending", (wallet_id, min_amount_to_claim, tx_config, fee, push, timelock_info)
             )
             return [STD_TX]
 

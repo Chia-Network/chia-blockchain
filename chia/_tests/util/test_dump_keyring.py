@@ -25,16 +25,8 @@ class KeyringCase:
 
 
 @datacases(
-    KeyringCase(
-        id="empty",
-        args=[],
-        regex="\\{\\}\n",
-    ),
-    KeyringCase(
-        id="empty, pretty",
-        args=["--pretty-print"],
-        regex="\\{\\}\n\n",
-    ),
+    KeyringCase(id="empty", args=[], regex="\\{\\}\n"),
+    KeyringCase(id="empty, pretty", args=["--pretty-print"], regex="\\{\\}\n\n"),
     KeyringCase(
         id="empty, full",
         args=["--full-payload"],

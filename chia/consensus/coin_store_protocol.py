@@ -51,33 +51,21 @@ class CoinStoreProtocol(Protocol):
         """
 
     async def get_coin_records_by_puzzle_hash(
-        self,
-        include_spent_coins: bool,
-        puzzle_hash: bytes32,
-        start_height: uint32 = ...,
-        end_height: uint32 = ...,
+        self, include_spent_coins: bool, puzzle_hash: bytes32, start_height: uint32 = ..., end_height: uint32 = ...
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a specific puzzle hash
         """
 
     async def get_coin_records_by_puzzle_hashes(
-        self,
-        coins: bool,
-        puzzle_hashes: list[bytes32],
-        start_height: uint32 = ...,
-        end_height: uint32 = ...,
+        self, coins: bool, puzzle_hashes: list[bytes32], start_height: uint32 = ..., end_height: uint32 = ...
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a list of puzzle hashes
         """
 
     async def get_coin_records_by_names(
-        self,
-        include_spent_coins: bool,
-        names: list[bytes32],
-        start_height: uint32 = ...,
-        end_height: uint32 = ...,
+        self, include_spent_coins: bool, names: list[bytes32], start_height: uint32 = ..., end_height: uint32 = ...
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a list of coin names
@@ -96,11 +84,7 @@ class CoinStoreProtocol(Protocol):
         """
 
     async def get_coin_records_by_parent_ids(
-        self,
-        include_spent_coins: bool,
-        parent_ids: list[bytes32],
-        start_height: uint32 = ...,
-        end_height: uint32 = ...,
+        self, include_spent_coins: bool, parent_ids: list[bytes32], start_height: uint32 = ..., end_height: uint32 = ...
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a list of parent ids

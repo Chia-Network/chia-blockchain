@@ -247,10 +247,7 @@ class WebSocketServer:
         signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
 
     async def _accept_signal(
-        self,
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
+        self, signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop
     ) -> None:
         self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
         await self.stop()
@@ -381,11 +378,7 @@ class WebSocketServer:
             exceptions_to_process=asyncio.CancelledError,
         ):
             while True:
-                with log_exceptions(
-                    log=self.log,
-                    consume=True,
-                    message="Unexpected exception, continuing:",
-                ):
+                with log_exceptions(log=self.log, consume=True, message="Unexpected exception, continuing:"):
                     await asyncio.sleep(30)
 
                     for service_name, connections in self.connections.items():
@@ -550,9 +543,7 @@ class WebSocketServer:
         return response
 
     async def validate_keyring_passphrase(
-        self,
-        websocket: WebSocketResponse,
-        request: dict[str, Any],
+        self, websocket: WebSocketResponse, request: dict[str, Any]
     ) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
@@ -596,10 +587,7 @@ class WebSocketServer:
         try:
             assert new_passphrase is not None  # mypy, I love you
             Keychain.set_master_passphrase(
-                current_passphrase,
-                new_passphrase,
-                passphrase_hint=passphrase_hint,
-                save_passphrase=save_passphrase,
+                current_passphrase, new_passphrase, passphrase_hint=passphrase_hint, save_passphrase=save_passphrase
             )
         except KeychainCurrentPassphraseIsInvalid:
             error = "current passphrase is invalid"
@@ -716,10 +704,7 @@ class WebSocketServer:
                 "farmer_public_key": bytes(farmer_public_key).hex(),
                 "pool_public_key": bytes(pool_public_key).hex(),
             }
-        response: dict[str, Any] = {
-            "success": True,
-            "keys": keys_for_plot,
-        }
+        response: dict[str, Any] = {"success": True, "keys": keys_for_plot}
         return response
 
     def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> dict[str, Any]:
@@ -743,10 +728,7 @@ class WebSocketServer:
         return item
 
     def prepare_plot_state_message(self, state: PlotEvent, id):
-        message = {
-            "state": state,
-            "queue": self.extract_plot_queue(id),
-        }
+        message = {"state": state, "queue": self.extract_plot_queue(id)}
         return message
 
     def extract_plot_queue(self, id=None) -> list[dict]:
@@ -767,11 +749,7 @@ class WebSocketServer:
             exceptions_to_process=asyncio.CancelledError,
         ):
             while True:
-                with log_exceptions(
-                    log=self.log,
-                    consume=True,
-                    message="Unexpected exception, continuing:",
-                ):
+                with log_exceptions(log=self.log, consume=True, message="Unexpected exception, continuing:"):
                     message = await self.state_changed_msg_queue.get()
                     await self._state_changed(message)
 
@@ -1217,11 +1195,7 @@ class WebSocketServer:
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
-        response = {
-            "success": True,
-            "ids": ids,
-            "service_name": service_name,
-        }
+        response = {"success": True, "ids": ids, "service_name": service_name}
 
         return response
 
@@ -1368,11 +1342,7 @@ class WebSocketServer:
 
         response: dict[str, Any] = {"success": True}
         if service == service_plotter:
-            response = {
-                "success": True,
-                "service": service,
-                "queue": self.extract_plot_queue(),
-            }
+            response = {"success": True, "service": service, "queue": self.extract_plot_queue()}
         else:
             if self.ping_job is None:
                 self.ping_job = create_referenced_task(self.ping_task())
@@ -1436,12 +1406,7 @@ def launch_plotter(
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
     process = subprocess.Popen(
-        service_array,
-        shell=False,
-        stderr=outfile,
-        stdout=outfile,
-        startupinfo=startupinfo,
-        creationflags=creationflags,
+        service_array, shell=False, stderr=outfile, stdout=outfile, startupinfo=startupinfo, creationflags=creationflags
     )
 
     pid_path = pid_path_for_service(root_path, service_name, id)
@@ -1498,11 +1463,7 @@ def launch_service(root_path: Path, service_command) -> tuple[subprocess.Popen, 
 
 
 async def kill_processes(
-    processes: list[subprocess.Popen],
-    root_path: Path,
-    service_name: str,
-    id: str,
-    delay_before_kill: int = 15,
+    processes: list[subprocess.Popen], root_path: Path, service_name: str, id: str, delay_before_kill: int = 15
 ) -> bool:
     pid_path = pid_path_for_service(root_path, service_name, id)
 
@@ -1581,12 +1542,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 beta_metrics.start_logging()
 
             ws_server = WebSocketServer(
-                root_path,
-                ca_crt_path,
-                ca_key_path,
-                crt_path,
-                key_path,
-                run_check_keys_on_unlock=wait_for_unlock,
+                root_path, ca_crt_path, ca_key_path, crt_path, key_path, run_check_keys_on_unlock=wait_for_unlock
             )
             async with SignalHandlers.manage() as signal_handlers:
                 await ws_server.setup_process_global_state(signal_handlers=signal_handlers)

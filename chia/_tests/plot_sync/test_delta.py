@@ -28,11 +28,7 @@ def dummy_plot(path: str) -> Plot:
 
 
 @pytest.mark.parametrize(
-    ["delta"],
-    [
-        pytest.param(PathListDelta(), id="path list"),
-        pytest.param(PlotListDelta(), id="plot list"),
-    ],
+    ["delta"], [pytest.param(PathListDelta(), id="path list"), pytest.param(PlotListDelta(), id="plot list")]
 )
 def test_list_delta(delta: DeltaType) -> None:
     assert delta.empty()

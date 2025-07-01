@@ -56,10 +56,7 @@ async def initial_blocks(bt: BlockTools, block_count: int = 4) -> list[FullBlock
 
 
 async def check_spend_bundle_validity(
-    bt: BlockTools,
-    blocks: list[FullBlock],
-    spend_bundle: SpendBundle,
-    expected_err: Optional[Err] = None,
+    bt: BlockTools, blocks: list[FullBlock], spend_bundle: SpendBundle, expected_err: Optional[Err] = None
 ) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     """
     This test helper create an extra block after the given blocks that contains the given
@@ -151,13 +148,7 @@ class TestConditions:
         assert new_block.transactions_info.cost - block_base_cost == expected_cost
 
     @pytest.mark.anyio
-    @pytest.mark.parametrize(
-        "condition, expected_cost",
-        [
-            ("((90 1337))", 13370000),
-            ("((90 30000))", 300000000),
-        ],
-    )
+    @pytest.mark.parametrize("condition, expected_cost", [("((90 1337))", 13370000), ("((90 30000))", 300000000)])
     async def test_softfork_condition(
         self, condition: str, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
@@ -498,10 +489,7 @@ class TestConditions:
         ],
     )
     async def test_agg_sig_illegal_suffix(
-        self,
-        opcode: ConditionOpcode,
-        bt: BlockTools,
-        consensus_mode: ConsensusMode,
+        self, opcode: ConditionOpcode, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         c = bt.constants
 

@@ -286,10 +286,7 @@ class TestNewPeak:
 
                 block_record = b1.block_record(block_1.header_hash)
                 sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-                    bt.constants,
-                    len(block_1.finished_sub_slots) > 0,
-                    b1.block_record(block_1.prev_header_hash),
-                    b1,
+                    bt.constants, len(block_1.finished_sub_slots) > 0, b1.block_record(block_1.prev_header_hash), b1
                 )
 
                 timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
@@ -596,10 +593,7 @@ def get_recent_reward_challenges(blockchain: Blockchain) -> list[tuple[bytes32, 
     return list(reversed(recent_rc))
 
 
-def timelord_peak_from_block(
-    blockchain: Blockchain,
-    block: FullBlock,
-) -> timelord_protocol.NewPeakTimelord:
+def timelord_peak_from_block(blockchain: Blockchain, block: FullBlock) -> timelord_protocol.NewPeakTimelord:
     peak = blockchain.block_record(block.header_hash)
     _, difficulty = get_next_sub_slot_iters_and_difficulty(blockchain.constants, False, peak, blockchain)
     ses: Optional[SubEpochSummary] = next_sub_epoch_summary(

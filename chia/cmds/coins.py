@@ -6,10 +6,7 @@ from typing import Optional
 import click
 from chia_rs.sized_bytes import bytes32
 
-from chia.cmds.cmd_classes import (
-    chia_command,
-    option,
-)
+from chia.cmds.cmd_classes import chia_command, option
 from chia.cmds.cmd_helpers import (
     NeedsCoinSelectionConfig,
     NeedsWalletRPC,
@@ -26,12 +23,7 @@ def coins_cmd(ctx: click.Context) -> None:
     pass
 
 
-@chia_command(
-    group=coins_cmd,
-    name="list",
-    short_help="List all coins",
-    help="List all coins",
-)
+@chia_command(group=coins_cmd, name="list", short_help="List all coins", help="List all coins")
 class ListCMD:
     rpc_info: NeedsWalletRPC
     coin_selection_config: NeedsCoinSelectionConfig
@@ -63,12 +55,7 @@ class ListCMD:
             )
 
 
-@chia_command(
-    group=coins_cmd,
-    name="combine",
-    short_help="Combine dust coins",
-    help="Combine dust coins",
-)
+@chia_command(group=coins_cmd, name="combine", short_help="Combine dust coins", help="Combine dust coins")
 class CombineCMD(TransactionEndpoint):
     id: int = option(
         "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
@@ -90,10 +77,7 @@ class CombineCMD(TransactionEndpoint):
         help="The number of coins we are combining.",
     )
     input_coins: Sequence[bytes32] = option(
-        "--input-coin",
-        multiple=True,
-        help="Only combine coins with these ids.",
-        type=Bytes32ParamType(),
+        "--input-coin", multiple=True, help="Only combine coins with these ids.", type=Bytes32ParamType()
     )
     largest_first: bool = option(
         "--largest-first/--smallest-first",
@@ -128,22 +112,13 @@ class CombineCMD(TransactionEndpoint):
             )
 
 
-@chia_command(
-    group=coins_cmd,
-    name="split",
-    short_help="Split up larger coins",
-    help="Split up larger coins",
-)
+@chia_command(group=coins_cmd, name="split", short_help="Split up larger coins", help="Split up larger coins")
 class SplitCMD(TransactionEndpoint):
     id: int = option(
         "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
     )
     number_of_coins: int = option(
-        "-n",
-        "--number-of-coins",
-        type=int,
-        help="The number of coins we are creating.",
-        required=True,
+        "-n", "--number-of-coins", type=int, help="The number of coins we are creating.", required=True
     )
     amount_per_coin: CliAmount = option(
         "-a",

@@ -30,12 +30,7 @@ class WalletPoolStore:
 
         return self
 
-    async def add_spend(
-        self,
-        wallet_id: int,
-        spend: CoinSpend,
-        height: uint32,
-    ) -> None:
+    async def add_spend(self, wallet_id: int, spend: CoinSpend, height: uint32) -> None:
         """
         Appends (or replaces) entries in the DB. The new list must be at least as long as the existing list, and the
         parent of the first spend must already be present in the DB. Note that this is not committed to the DB
@@ -78,12 +73,7 @@ class WalletPoolStore:
 
             cursor = await conn.execute(
                 "INSERT OR IGNORE INTO pool_state_transitions VALUES (?, ?, ?, ?)",
-                (
-                    transition_index + 1,
-                    wallet_id,
-                    height,
-                    serialized_spend,
-                ),
+                (transition_index + 1, wallet_id, height, serialized_spend),
             )
             await cursor.close()
 

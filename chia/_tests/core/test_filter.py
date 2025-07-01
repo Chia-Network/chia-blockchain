@@ -16,10 +16,7 @@ async def test_basic_filter_test(simulator_and_wallet):
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     blocks = bt.get_consecutive_blocks(
-        10,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=ph,
-        pool_reward_puzzle_hash=ph,
+        10, guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph, pool_reward_puzzle_hash=ph
     )
     for i in range(1, num_blocks):
         byte_array_tx: list[bytes] = []

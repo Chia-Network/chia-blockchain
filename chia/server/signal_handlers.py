@@ -17,19 +17,13 @@ from chia.util.task_referencer import create_referenced_task
 
 class Handler(Protocol):
     def __call__(
-        self,
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
+        self, signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop
     ) -> None: ...
 
 
 class AsyncHandler(Protocol):
     async def __call__(
-        self,
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
+        self, signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop
     ) -> None: ...
 
 
@@ -61,9 +55,7 @@ class SignalHandlers:
     ) -> None:
         self.remove_done_handlers()
 
-        task = create_referenced_task(
-            handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
-        )
+        task = create_referenced_task(handler(signal_=signal_, stack_frame=stack_frame, loop=loop))
         self.tasks.append(task)
 
     def threadsafe_sync_signal_handler_for_async(
@@ -80,7 +72,7 @@ class SignalHandlers:
                 stack_frame=stack_frame,
                 loop=loop,
                 handler=handler,
-            ),
+            )
         )
 
     def setup_sync_signal_handler(self, handler: Handler) -> None:
@@ -103,8 +95,7 @@ class SignalHandlers:
         else:
             for signal_ in [signal.SIGINT, signal.SIGTERM]:
                 loop.add_signal_handler(
-                    signal_,
-                    functools.partial(handler, signal_=signal_, stack_frame=None, loop=loop),
+                    signal_, functools.partial(handler, signal_=signal_, stack_frame=None, loop=loop)
                 )
 
     def setup_async_signal_handler(self, handler: AsyncHandler) -> None:

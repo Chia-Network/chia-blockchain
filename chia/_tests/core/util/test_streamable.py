@@ -270,12 +270,7 @@ def test_convert_primitive_failures(input_dict: dict[str, Any], error: Any) -> N
         [StreamableFromDict1, {"a": 1, "b": "2"}, ParameterMissingError, "1 field missing for StreamableFromDict1: c"],
         [StreamableFromDict1, {"a": 1}, ParameterMissingError, "2 fields missing for StreamableFromDict1: b, c"],
         [StreamableFromDict1, {}, ParameterMissingError, "3 fields missing for StreamableFromDict1: a, b, c"],
-        [
-            StreamableFromDict1,
-            {"a": 1, "b": "2", "c": "asd"},
-            ValueError,
-            "invalid hex",
-        ],
+        [StreamableFromDict1, {"a": 1, "b": "2", "c": "asd"}, ValueError, "invalid hex"],
         [
             StreamableFromDict1,
             {"a": 1, "b": "2", "c": "00" * G1Element.SIZE},

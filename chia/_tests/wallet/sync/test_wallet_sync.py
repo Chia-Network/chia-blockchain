@@ -1610,8 +1610,7 @@ async def test_bad_peak_mismatch(
 
         # create the node respond with the lighter header block
         header_block_msg = make_msg(
-            ProtocolMessageTypes.respond_block_header,
-            wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
+            ProtocolMessageTypes.respond_block_header, wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1])
         )
         f2: asyncio.Future[Optional[Message]] = asyncio.Future()
         f2.set_result(header_block_msg)
@@ -1651,9 +1650,7 @@ async def test_long_sync_untrusted_break(
     sync_canceled = False
 
     async def register_for_ph_updates(
-        self: object,
-        request: wallet_protocol.RegisterForPhUpdates,
-        peer: WSChiaConnection,
+        self: object, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> None:
         nonlocal sync_canceled
         # Just sleep a long time here to simulate a long-running untrusted sync

@@ -118,25 +118,11 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     wsm = env.wallet_state_manager
 
     async with wsm.new_action_scope(
-        wallet_environments.tx_config,
-        push=False,
-        merge_spends=False,
-        sign=False,
-        extra_spends=[],
+        wallet_environments.tx_config, push=False, merge_spends=False, sign=False, extra_spends=[]
     ) as action_scope:
         coins = list(await wsm.main_wallet.select_coins(uint64(2_000_000_000_000), action_scope))
-        await wsm.main_wallet.generate_signed_transaction(
-            [uint64(0)],
-            [bytes32.zeros],
-            action_scope,
-            coins={coins[0]},
-        )
-        await wsm.main_wallet.generate_signed_transaction(
-            [uint64(0)],
-            [bytes32.zeros],
-            action_scope,
-            coins={coins[1]},
-        )
+        await wsm.main_wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope, coins={coins[0]})
+        await wsm.main_wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope, coins={coins[1]})
 
     created_txs = action_scope.side_effects.transactions
 
@@ -163,11 +149,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     extra_spend = WalletSpendBundle([extra_coin_spend], G2Element())
 
     new_txs = await wsm.add_pending_transactions(
-        created_txs,
-        push=False,
-        merge_spends=False,
-        sign=False,
-        extra_spends=[extra_spend],
+        created_txs, push=False, merge_spends=False, sign=False, extra_spends=[extra_spend]
     )
     bundles = flatten_spend_bundles(new_txs)
     assert len(bundles) == 2
@@ -180,11 +162,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     assert extra_coin_spend in [spend for bundle in bundles for spend in bundle.coin_spends]
 
     new_txs = await wsm.add_pending_transactions(
-        created_txs,
-        push=False,
-        merge_spends=True,
-        sign=False,
-        extra_spends=[extra_spend],
+        created_txs, push=False, merge_spends=True, sign=False, extra_spends=[extra_spend]
     )
     bundles = flatten_spend_bundles(new_txs)
     assert len(bundles) == 1
@@ -221,17 +199,11 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
     # Some transaction, doesn't matter what
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         await env_1.xch_wallet.generate_signed_transaction(
-            [uint64(1)],
-            [await action_scope.get_puzzle_hash(env_1.wallet_state_manager)],
-            action_scope,
+            [uint64(1)], [await action_scope.get_puzzle_hash(env_1.wallet_state_manager)], action_scope
         )
 
     await env_2.rpc_client.push_transactions(
-        PushTransactions(
-            transactions=action_scope.side_effects.transactions,
-            sign=False,
-        ),
-        wallet_environments.tx_config,
+        PushTransactions(transactions=action_scope.side_effects.transactions, sign=False), wallet_environments.tx_config
     )
 
     await wallet_environments.process_pending_states(
@@ -240,21 +212,17 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
                 pre_block_balance_updates={},
                 post_block_balance_updates={
                     1: {
-                        "unspent_coin_count": 1,  # We just split a coin so no other balance changes
+                        "unspent_coin_count": 1  # We just split a coin so no other balance changes
                     }
                 },
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
                     1: {
-                        "pending_coin_removal_count": 1,  # not sure if this is desirable
+                        "pending_coin_removal_count": 1  # not sure if this is desirable
                     }
                 },
-                post_block_balance_updates={
-                    1: {
-                        "pending_coin_removal_count": -1,
-                    }
-                },
+                post_block_balance_updates={1: {"pending_coin_removal_count": -1}},
             ),
         ]
     )
@@ -365,10 +333,7 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Test `from_zero` fills in gaps
     async with wsm.puzzle_store.db_wrapper.writer() as conn:
-        await conn.execute(
-            "DELETE FROM derivation_paths WHERE derivation_index=?",
-            (0,),
-        )
+        await conn.execute("DELETE FROM derivation_paths WHERE derivation_index=?", (0,))
     assert await get_puzzle_hash_state() == expected_state
     assert (
         len(list(await wsm.puzzle_store.get_all_puzzle_hashes())) == (expected_state.highest_index) * 2
@@ -415,10 +380,7 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Test no existing derivation paths
     async with wsm.puzzle_store.db_wrapper.writer() as conn:
-        await conn.execute(
-            "DELETE FROM derivation_paths WHERE derivation_index=?",
-            (0,),
-        )
+        await conn.execute("DELETE FROM derivation_paths WHERE derivation_index=?", (0,))
     with pytest.raises(ValueError):
         await rpc_client.extend_derivation_index(0)
 

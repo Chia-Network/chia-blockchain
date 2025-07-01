@@ -23,11 +23,7 @@ def _create_shutdown_file() -> IO[bytes]:
 
 
 class WalletWeightProofHandler:
-    def __init__(
-        self,
-        constants: ConsensusConstants,
-        multiprocessing_context: BaseContext,
-    ):
+    def __init__(self, constants: ConsensusConstants, multiprocessing_context: BaseContext):
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO[bytes] = _create_shutdown_file()

@@ -65,15 +65,7 @@ def test_randomized() -> None:
 
 @pytest.mark.parametrize(
     "blob, expected",
-    [
-        (b"", 0),
-        (b"\x00", 0),
-        (b"\x7f", 127),
-        (b"\x80", -128),
-        (b"\xff", -1),
-        (b"\x00\x80", 128),
-        (b"\xff\x7f", -129),
-    ],
+    [(b"", 0), (b"\x00", 0), (b"\x7f", 127), (b"\x80", -128), (b"\xff", -1), (b"\x00\x80", 128), (b"\xff\x7f", -129)],
 )
 def test_int_from_bytes_explicit(blob: bytes, expected: int) -> None:
     assert int_from_bytes(blob) == expected

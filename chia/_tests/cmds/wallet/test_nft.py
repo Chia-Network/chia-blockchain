@@ -51,9 +51,7 @@ def test_nft_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     # these are various things that should be in the output
     assert_list = [f"Successfully created an NFT wallet with id 4 on key {FINGERPRINT}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {
-        "create_new_nft_wallet": [(did_id, "test")],
-    }
+    expected_calls: logType = {"create_new_nft_wallet": [(did_id, "test")]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -76,7 +74,7 @@ def test_nft_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     ]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-i{did_id}"], assert_list)
     expected_calls: logType = {
-        "sign_message_by_id": [(did_id, message.hex())],  # xch std
+        "sign_message_by_id": [(did_id, message.hex())]  # xch std
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -121,11 +119,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 ),
             )
             return NFTMintNFTResponse(
-                [STD_UTX],
-                [STD_TX],
-                uint32(request.wallet_id),
-                WalletSpendBundle([], G2Element()),
-                bytes32.zeros.hex(),
+                [STD_UTX], [STD_TX], uint32(request.wallet_id), WalletSpendBundle([], G2Element()), bytes32.zeros.hex()
             )
 
     inst_rpc_client = NFTCreateRpcClient()
@@ -252,7 +246,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 test_condition_valid_times,
                 (),
             )
-        ],
+        ]
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -282,12 +276,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                     extra_conditions,
                 ),
             )
-            return NFTTransferNFTResponse(
-                [STD_UTX],
-                [STD_TX],
-                request.wallet_id,
-                WalletSpendBundle([], G2Element()),
-            )
+            return NFTTransferNFTResponse([STD_UTX], [STD_TX], request.wallet_id, WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = NFTTransferRpcClient()
     nft_coin_id = get_bytes32(2).hex()
@@ -326,7 +315,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 test_condition_valid_times,
                 (),
             )
-        ],
+        ]
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -370,17 +359,7 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     inst_rpc_client = NFTListRpcClient()
     launcher_ids = [bytes32([i] * 32).hex() for i in range(50, 60)]
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = [
-        "wallet",
-        "nft",
-        "list",
-        FINGERPRINT_ARG,
-        "-i4",
-        "--num",
-        "10",
-        "--start-index",
-        "50",
-    ]
+    command_args = ["wallet", "nft", "list", FINGERPRINT_ARG, "-i4", "--num", "10", "--start-index", "50"]
     # these are various things that should be in the output
     assert_list = [
         "https://example.com/data",
@@ -388,9 +367,7 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
         *launcher_ids,
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {
-        "list_nfts": [(4, 10, 50)],
-    }
+    expected_calls: logType = {"list_nfts": [(4, 10, 50)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -419,12 +396,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                     extra_conditions,
                 ),
             )
-            return NFTSetNFTDIDResponse(
-                [STD_UTX],
-                [STD_TX],
-                request.wallet_id,
-                WalletSpendBundle([], G2Element()),
-            )
+            return NFTSetNFTDIDResponse([STD_UTX], [STD_TX], request.wallet_id, WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = NFTSetDidRpcClient()
     nft_coin_id = get_bytes32(2)
@@ -463,7 +435,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 test_condition_valid_times,
                 (),
             )
-        ],
+        ]
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -476,21 +448,12 @@ def test_nft_get_info(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     inst_rpc_client = TestWalletRpcClient()
     nft_coin_id = get_bytes32(2).hex()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = [
-        "wallet",
-        "nft",
-        "get_info",
-        FINGERPRINT_ARG,
-        "--nft-coin-id",
-        nft_coin_id,
-    ]
+    command_args = ["wallet", "nft", "get_info", FINGERPRINT_ARG, "--nft-coin-id", nft_coin_id]
     # these are various things that should be in the output
     assert_list = [
         f"Current NFT coin ID:       {nft_coin_id}",
         "Owner DID:                 did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {
-        "get_nft_info": [(nft_coin_id, True)],
-    }
+    expected_calls: logType = {"get_nft_info": [(nft_coin_id, True)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

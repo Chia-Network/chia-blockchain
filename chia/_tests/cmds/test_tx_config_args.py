@@ -24,10 +24,7 @@ def test_coin_selection_args() -> None:
     ) -> None:
         print(
             CMDCoinSelectionConfigLoader(
-                min_coin_amount,
-                max_coin_amount,
-                list(amounts_to_exclude),
-                list(coins_to_exclude),
+                min_coin_amount, max_coin_amount, list(amounts_to_exclude), list(coins_to_exclude)
             )
             .to_coin_selection_config(1)
             .to_json_dict()
@@ -76,11 +73,7 @@ def test_coin_selection_args() -> None:
         r"'0x1111111111111111111111111111111111111111111111111111111111111111']}" in result.output
     )
 
-    result = runner.invoke(
-        test_cmd,
-        [],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(test_cmd, [], catch_exceptions=False)
 
     assert (
         r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "
@@ -106,47 +99,27 @@ def test_tx_config_args() -> None:
         ) -> None:
             print(
                 CMDTXConfigLoader(
-                    min_coin_amount,
-                    max_coin_amount,
-                    list(amounts_to_exclude),
-                    list(coins_to_exclude),
-                    reuse,
+                    min_coin_amount, max_coin_amount, list(amounts_to_exclude), list(coins_to_exclude), reuse
                 )
                 .to_tx_config(1, config, 1234567890)
                 .to_json_dict()
             )
 
-        result = runner.invoke(
-            test_cmd,
-            [
-                "--reuse-puzhash",
-            ],
-            catch_exceptions=False,
-        )
+        result = runner.invoke(test_cmd, ["--reuse-puzhash"], catch_exceptions=False)
 
         assert (
             r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "
             r"'excluded_coin_ids': [], 'reuse_puzhash': True}" in result.output
         )
 
-        result = runner.invoke(
-            test_cmd,
-            [
-                "--new-address",
-            ],
-            catch_exceptions=False,
-        )
+        result = runner.invoke(test_cmd, ["--new-address"], catch_exceptions=False)
 
         assert (
             r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "
             r"'excluded_coin_ids': [], 'reuse_puzhash': False}" in result.output
         )
 
-        result = runner.invoke(
-            test_cmd,
-            [],
-            catch_exceptions=False,
-        )
+        result = runner.invoke(test_cmd, [], catch_exceptions=False)
 
         assert (
             r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "

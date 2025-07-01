@@ -15,9 +15,7 @@ if shell is not None:
         shell = None
 
 
-@click.group(
-    help="Generate shell completion",
-)
+@click.group(help="Generate shell completion")
 def completion() -> None:
     pass
 

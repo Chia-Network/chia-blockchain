@@ -17,10 +17,7 @@ class BlockCache:
     _block_records: dict[bytes32, BlockRecord]
     _height_to_hash: dict[uint32, bytes32]
 
-    def __init__(
-        self,
-        blocks: dict[bytes32, BlockRecord],
-    ):
+    def __init__(self, blocks: dict[bytes32, BlockRecord]):
         self._block_records = blocks
         self._height_to_hash = {block.height: hh for hh, block in blocks.items()}
 

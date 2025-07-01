@@ -33,25 +33,18 @@ class CATLineageStore:
     async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                f"INSERT OR REPLACE INTO {self.table_name} VALUES(?, ?)",
-                (coin_id.hex(), bytes(lineage)),
+                f"INSERT OR REPLACE INTO {self.table_name} VALUES(?, ?)", (coin_id.hex(), bytes(lineage))
             )
             await cursor.close()
 
     async def remove_lineage_proof(self, coin_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
-                f"DELETE FROM {self.table_name} WHERE coin_id=?;",
-                (coin_id.hex(),),
-            )
+            cursor = await conn.execute(f"DELETE FROM {self.table_name} WHERE coin_id=?;", (coin_id.hex(),))
             await cursor.close()
 
     async def get_lineage_proof(self, coin_id: bytes32) -> Optional[LineageProof]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                f"SELECT * FROM {self.table_name} WHERE coin_id=?;",
-                (coin_id.hex(),),
-            )
+            cursor = await conn.execute(f"SELECT * FROM {self.table_name} WHERE coin_id=?;", (coin_id.hex(),))
             row = await cursor.fetchone()
             await cursor.close()
 

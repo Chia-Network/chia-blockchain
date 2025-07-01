@@ -179,12 +179,7 @@ def check_cmd(
     from chia.plotting.check_plots import check_plots
 
     check_plots(
-        ChiaCliContext.set_default(ctx).root_path,
-        num,
-        challenge_start,
-        grep_string,
-        list_duplicates,
-        debug_show_memo,
+        ChiaCliContext.set_default(ctx).root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo
     )
 
 

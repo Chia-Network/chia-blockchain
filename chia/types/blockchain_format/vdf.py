@@ -20,10 +20,7 @@ __all__ = ["VDFInfo", "VDFProof"]
 
 @lru_cache(maxsize=200)
 def get_discriminant(challenge: bytes32, size_bites: int) -> int:
-    return int(
-        create_discriminant(challenge, size_bites),
-        16,
-    )
+    return int(create_discriminant(challenge, size_bites), 16)
 
 
 @lru_cache(maxsize=1000)
@@ -37,12 +34,7 @@ def verify_vdf(
 ) -> bool:
     # TODO: chiavdf needs hinted
     return verify_n_wesolowski(  # type:ignore[no-any-return]
-        str(disc),
-        input_el,
-        output,
-        number_of_iterations,
-        discriminant_size,
-        witness_type,
+        str(disc), input_el, output, number_of_iterations, discriminant_size, witness_type
     )
 
 

@@ -91,12 +91,7 @@ async def setup_two_nodes(
             constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
         )
         async with setup_full_node(
-            consensus_constants,
-            "blockchain_test.db",
-            self_hostname,
-            bt1,
-            simulator=False,
-            db_version=db_version,
+            consensus_constants, "blockchain_test.db", self_hostname, bt1, simulator=False, db_version=db_version
         ) as service1:
             async with setup_full_node(
                 consensus_constants,
@@ -186,7 +181,7 @@ async def setup_simulators_and_wallets(
                             port=service.rpc_server.listen_port,
                             root_path=service.root_path,
                             net_config=service.config,
-                        ),
+                        )
                     )
                     wallets.append(WalletEnvironment(service=service, rpc_client=rpc_client))
 

@@ -82,9 +82,7 @@ class SyncTimeCommand:
     async def run(self) -> None:
         config = load_config(self.context.root_path, "config.yaml", "data_layer", fill_missing_services=True)
         initialize_logging(
-            service_name="data_layer_testing",
-            logging_config=config["logging"],
-            root_path=self.context.root_path,
+            service_name="data_layer_testing", logging_config=config["logging"], root_path=self.context.root_path
         )
 
         if self.restart_all:
@@ -227,11 +225,7 @@ class SyncTimeCommand:
     async def wait_for_wallet_synced(self) -> None:
         print_date("waiting for wallet to sync")
         while True:
-            run_result = await self.run_chia(
-                "wallet",
-                "show",
-                stdout=asyncio.subprocess.PIPE,
-            )
+            run_result = await self.run_chia("wallet", "show", stdout=asyncio.subprocess.PIPE)
             assert run_result.stdout is not None, "must not be none due to piping it in the exec call"
             if "Sync status: Synced" not in run_result.stdout:
                 await asyncio.sleep(1)

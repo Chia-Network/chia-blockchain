@@ -21,21 +21,14 @@ async def test_node_update_fails(data_store: DataStore, store_id: bytes32) -> No
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^updates not allowed to the node table$"):
             await writer.execute(
-                "UPDATE node SET value = :value WHERE hash == :hash",
-                {
-                    "hash": node.hash,
-                    "value": node.value,
-                },
+                "UPDATE node SET value = :value WHERE hash == :hash", {"hash": node.hash, "value": node.value}
             )
 
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
 async def test_node_hash_must_be_32(
-    data_store: DataStore,
-    store_id: bytes32,
-    length: int,
-    valid_node_values: dict[str, Any],
+    data_store: DataStore, store_id: bytes32, length: int, valid_node_values: dict[str, Any]
 ) -> None:
     valid_node_values["hash"] = bytes([0] * length)
 
@@ -52,9 +45,7 @@ async def test_node_hash_must_be_32(
 
 @pytest.mark.anyio
 async def test_node_hash_must_not_be_null(
-    data_store: DataStore,
-    store_id: bytes32,
-    valid_node_values: dict[str, Any],
+    data_store: DataStore, store_id: bytes32, valid_node_values: dict[str, Any]
 ) -> None:
     valid_node_values["hash"] = None
 
@@ -71,10 +62,7 @@ async def test_node_hash_must_not_be_null(
 
 @pytest.mark.anyio
 async def test_node_type_must_be_valid(
-    data_store: DataStore,
-    node_type: NodeType,
-    bad_node_type: int,
-    valid_node_values: dict[str, Any],
+    data_store: DataStore, node_type: NodeType, bad_node_type: int, valid_node_values: dict[str, Any]
 ) -> None:
     valid_node_values["node_type"] = bad_node_type
 
@@ -118,10 +106,7 @@ async def test_node_internal_child_not_null(data_store: DataStore, store_id: byt
 @pytest.mark.parametrize(argnames="side", argvalues=Side)
 @pytest.mark.anyio
 async def test_node_internal_must_be_valid_reference(
-    data_store: DataStore,
-    store_id: bytes32,
-    bad_child_hash: bytes,
-    side: Side,
+    data_store: DataStore, store_id: bytes32, bad_child_hash: bytes, side: Side
 ) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
     node_a = await data_store.get_node_by_key(key=b"\x02", store_id=store_id)
@@ -269,12 +254,7 @@ async def test_root_node_hash_must_reference(data_store: DataStore) -> None:
 @pytest.mark.anyio
 async def test_root_status_must_be_valid(data_store: DataStore, store_id: bytes32, bad_status: int) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
-    values = {
-        "tree_id": bytes32.zeros,
-        "generation": 0,
-        "node_hash": example.terminal_nodes[0],
-        "status": bad_status,
-    }
+    values = {"tree_id": bytes32.zeros, "generation": 0, "node_hash": example.terminal_nodes[0], "status": bad_status}
 
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
@@ -321,11 +301,7 @@ async def test_root_store_id_generation_must_be_unique(data_store: DataStore, st
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
-async def test_ancestors_ancestor_must_be_32(
-    data_store: DataStore,
-    store_id: bytes32,
-    length: int,
-) -> None:
+async def test_ancestors_ancestor_must_be_32(data_store: DataStore, store_id: bytes32, length: int) -> None:
     async with data_store.db_wrapper.writer() as writer:
         node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
@@ -340,11 +316,7 @@ async def test_ancestors_ancestor_must_be_32(
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
-async def test_ancestors_store_id_must_be_32(
-    data_store: DataStore,
-    store_id: bytes32,
-    length: int,
-) -> None:
+async def test_ancestors_store_id_must_be_32(data_store: DataStore, store_id: bytes32, length: int) -> None:
     async with data_store.db_wrapper.writer() as writer:
         node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
@@ -359,11 +331,7 @@ async def test_ancestors_store_id_must_be_32(
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
-async def test_subscriptions_store_id_must_be_32(
-    data_store: DataStore,
-    store_id: bytes32,
-    length: int,
-) -> None:
+async def test_subscriptions_store_id_must_be_32(data_store: DataStore, store_id: bytes32, length: int) -> None:
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
             await writer.execute(

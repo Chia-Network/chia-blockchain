@@ -82,8 +82,7 @@ def curry_and_treehash(hash_of_quoted_mod_hash: bytes32, *hashed_arguments: byte
 
     curried_values = curried_values_tree_hash(list(hashed_arguments))
     return shatree_pair(
-        A_KW_TREEHASH,
-        shatree_pair(hash_of_quoted_mod_hash, shatree_pair(curried_values, NIL_TREEHASH)),
+        A_KW_TREEHASH, shatree_pair(hash_of_quoted_mod_hash, shatree_pair(curried_values, NIL_TREEHASH))
     )
 
 

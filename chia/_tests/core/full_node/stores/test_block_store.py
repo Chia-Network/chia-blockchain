@@ -63,10 +63,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
     wt: WalletTool = bt.get_pool_wallet_tool()
     tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0])
     blocks = bt.get_consecutive_blocks(
-        10,
-        block_list_input=blocks,
-        guarantee_transaction_block=True,
-        transaction_data=tx,
+        10, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
     )
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
@@ -304,8 +301,7 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
         async with db_wrapper.reader_no_transaction() as conn:
             for block in blocks:
                 async with conn.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height",
-                    (block.header_hash,),
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height", (block.header_hash,)
                 ) as cursor:
                     rows = list(await cursor.fetchall())
                     print(count, rows)
@@ -314,8 +310,7 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
                 count += 1
             for block in alt_blocks:
                 async with conn.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height",
-                    (block.header_hash,),
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height", (block.header_hash,)
                 ) as cursor:
                     rows = list(await cursor.fetchall())
                     assert len(rows) == 1

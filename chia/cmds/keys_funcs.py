@@ -729,15 +729,7 @@ def derive_child_key(
     if key_type is not None:
         path_indices: list[int] = [12381, 8444]
         path_indices.append(
-            {
-                "farmer": 0,
-                "pool": 1,
-                "wallet": 2,
-                "local": 3,
-                "backup": 4,
-                "singleton": 5,
-                "pool_auth": 6,
-            }[key_type]
+            {"farmer": 0, "pool": 1, "wallet": 2, "local": 3, "backup": 4, "singleton": 5, "pool_auth": 6}[key_type]
         )
 
         if non_observer_derivation:

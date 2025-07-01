@@ -70,13 +70,9 @@ async def test_harvester_receive_source_signing_data(
     the farmer reward address, as specified by the harvester, are respected.
     See: CHIP-22: https://github.com/Chia-Network/chips/pull/88
     """
-    (
-        farmer_service,
-        harvester_service,
-        full_node_service_1,
-        full_node_service_2,
-        _,
-    ) = farmer_harvester_2_simulators_zero_bits_plot_filter
+    (farmer_service, harvester_service, full_node_service_1, full_node_service_2, _) = (
+        farmer_harvester_2_simulators_zero_bits_plot_filter
+    )
     farmer: Farmer = farmer_service._node
     harvester: Harvester = harvester_service._node
     full_node_1: FullNode = full_node_service_1._node
@@ -292,13 +288,7 @@ async def test_harvester_fee_convention(
     """
     Tests fee convention specified in CHIP-22: https://github.com/Chia-Network/chips/pull/88
     """
-    (
-        farmer_service,
-        _,
-        _,
-        _,
-        _,
-    ) = farmer_harvester_2_simulators_zero_bits_plot_filter
+    (farmer_service, _, _, _, _) = farmer_harvester_2_simulators_zero_bits_plot_filter
 
     caplog.set_level(logging.DEBUG)
     farmer: Farmer = farmer_service._node
@@ -323,13 +313,7 @@ async def test_harvester_fee_invalid_convention(
     Tests that logs are properly emitted when an invalid free threshold is specified
     given the fee convention from CHIP-22: https://github.com/Chia-Network/chips/pull/88
     """
-    (
-        farmer_service,
-        _,
-        _,
-        _,
-        _,
-    ) = farmer_harvester_2_simulators_zero_bits_plot_filter
+    (farmer_service, _, _, _, _) = farmer_harvester_2_simulators_zero_bits_plot_filter
 
     farmer: Farmer = farmer_service._node
     caplog.set_level(logging.DEBUG)

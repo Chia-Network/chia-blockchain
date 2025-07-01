@@ -52,11 +52,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
             await sim_client.get_coin_records_by_puzzle_hash(state_layer_ph, include_spent_coins=False)
         )[0].coin
 
-        generic_spend = make_spend(
-            state_layer_coin,
-            state_layer_puzzle,
-            Program.to([[[51, ACS_PH, 1]]]),
-        )
+        generic_spend = make_spend(state_layer_coin, state_layer_puzzle, Program.to([[[51, ACS_PH, 1]]]))
         generic_bundle = cost_logger.add_cost(
             "State layer only coin - one child created", WalletSpendBundle([generic_spend], G2Element())
         )
@@ -114,16 +110,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                 await sim_client.get_coin_records_by_parent_ids([state_layer_coin.name()], include_spent_coins=False)
             )[0].coin
             update_spend = make_spend(
-                state_layer_coin,
-                state_layer_puzzle,
-                Program.to(
-                    [
-                        [
-                            [51, ACS_PH, 1],
-                            [-24, METADATA_UPDATER, solution],
-                        ]
-                    ]
-                ),
+                state_layer_coin, state_layer_puzzle, Program.to([[[51, ACS_PH, 1], [-24, METADATA_UPDATER, solution]]])
             )
             update_bundle = cost_logger.add_cost(
                 "State layer only coin (metadata update) - one child created",
@@ -144,22 +131,14 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         # (mod (_ _ solution) (if solution (list (f solution) (f (r solution)) ()) (x)))
         transfer_program = Program.to([2, [3, 11, [1, 4, 19, [4, 43, [1, []]]], [1, 8]], 1])
 
-        ownership_puzzle: Program = construct_ownership_layer(
-            None,
-            transfer_program,
-            ACS,
-        )
+        ownership_puzzle: Program = construct_ownership_layer(None, transfer_program, ACS)
         ownership_ph: bytes32 = ownership_puzzle.get_tree_hash()
         await sim.farm_block(ownership_ph)
         ownership_coin = (await sim_client.get_coin_records_by_puzzle_hash(ownership_ph, include_spent_coins=False))[
             0
         ].coin
 
-        generic_spend = make_spend(
-            ownership_coin,
-            ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, [], []]]]),
-        )
+        generic_spend = make_spend(ownership_coin, ownership_puzzle, Program.to([[[51, ACS_PH, 1], [-10, [], []]]]))
         generic_bundle = cost_logger.add_cost(
             "Ownership only coin - one child created", WalletSpendBundle([generic_spend], G2Element())
         )
@@ -170,11 +149,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             0
         ].coin
 
-        skip_tp_spend = make_spend(
-            ownership_coin,
-            ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1]]]),
-        )
+        skip_tp_spend = make_spend(ownership_coin, ownership_puzzle, Program.to([[[51, ACS_PH, 1]]]))
         skip_tp_bundle = WalletSpendBundle([skip_tp_spend], G2Element())
 
         result = await sim_client.push_tx(skip_tp_bundle)
@@ -185,15 +160,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         make_bad_announcement_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
-            Program.to(
-                [
-                    [
-                        [51, ACS_PH, 1],
-                        [-10, TARGET_OWNER, TARGET_TP],
-                        [62, b"\xad\x4c" + bytes32.zeros],
-                    ]
-                ]
-            ),
+            Program.to([[[51, ACS_PH, 1], [-10, TARGET_OWNER, TARGET_TP], [62, b"\xad\x4c" + bytes32.zeros]]]),
         )
         make_bad_announcement_bundle = WalletSpendBundle([make_bad_announcement_spend], G2Element())
 
@@ -209,8 +176,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             asserted_msg=b"\xad\x4c" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
         )
         harmless_announcement = AssertPuzzleAnnouncement(
-            asserted_ph=ownership_puzzle.get_tree_hash(),
-            asserted_msg=b"oy",
+            asserted_ph=ownership_puzzle.get_tree_hash(), asserted_msg=b"oy"
         )
         update_everything_spend = make_spend(
             ownership_coin,
@@ -237,11 +203,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         await sim.farm_block()
         assert (await sim_client.get_coin_records_by_parent_ids([ownership_coin.name()], include_spent_coins=False))[
             0
-        ].coin.puzzle_hash == construct_ownership_layer(
-            TARGET_OWNER,
-            TARGET_TP,
-            ACS,
-        ).get_tree_hash()
+        ].coin.puzzle_hash == construct_ownership_layer(TARGET_OWNER, TARGET_TP, ACS).get_tree_hash()
 
 
 @pytest.mark.anyio
@@ -259,15 +221,9 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         ROYALTY_ADDRESS = bytes32([1] * 32)
         TRADE_PRICE_PERCENTAGE = 5000  # 50%
         transfer_program: Program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-            FAKE_SINGLETON_STRUCT,
-            ROYALTY_ADDRESS,
-            TRADE_PRICE_PERCENTAGE,
+            FAKE_SINGLETON_STRUCT, ROYALTY_ADDRESS, TRADE_PRICE_PERCENTAGE
         )
-        ownership_puzzle: Program = construct_ownership_layer(
-            None,
-            transfer_program,
-            ACS,
-        )
+        ownership_puzzle: Program = construct_ownership_layer(None, transfer_program, ACS)
         ownership_ph: bytes32 = ownership_puzzle.get_tree_hash()
         await sim.farm_block(ownership_ph)
         ownership_coin = (await sim_client.get_coin_records_by_puzzle_hash(ownership_ph, include_spent_coins=False))[
@@ -277,11 +233,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         BLOCK_HEIGHT = sim.block_height
 
         # Try a spend, no royalties, no owner update
-        generic_spend = make_spend(
-            ownership_coin,
-            ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1]]]),
-        )
+        generic_spend = make_spend(ownership_coin, ownership_puzzle, Program.to([[[51, ACS_PH, 1]]]))
         generic_bundle = cost_logger.add_cost(
             "Ownership only coin (default NFT1 TP) - one child created", WalletSpendBundle([generic_spend], G2Element())
         )
@@ -311,20 +263,12 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             ),
         )
 
-        did_announcement_spend = make_spend(
-            singleton_coin,
-            FAKE_SINGLETON,
-            Program.to([[[62, FAKE_LAUNCHER_ID]]]),
-        )
+        did_announcement_spend = make_spend(singleton_coin, FAKE_SINGLETON, Program.to([[[62, FAKE_LAUNCHER_ID]]]))
 
         expected_announcement_data = Program.to(
             (FAKE_LAUNCHER_ID, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]])
         ).get_tree_hash()
-        xch_announcement_spend = make_spend(
-            xch_coin,
-            ACS,
-            Program.to([[62, expected_announcement_data]]),
-        )
+        xch_announcement_spend = make_spend(xch_coin, ACS, Program.to([[62, expected_announcement_data]]))
 
         cat_announcement_spend = make_spend(cat_coin, FAKE_CAT, Program.to([[[62, expected_announcement_data]]]))
 
@@ -349,11 +293,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # Finally, make sure we can just clear the DID label off
-        new_ownership_puzzle: Program = construct_ownership_layer(
-            FAKE_LAUNCHER_ID,
-            transfer_program,
-            ACS,
-        )
+        new_ownership_puzzle: Program = construct_ownership_layer(FAKE_LAUNCHER_ID, transfer_program, ACS)
         new_ownership_ph: bytes32 = new_ownership_puzzle.get_tree_hash()
         await sim.farm_block(new_ownership_ph)
         new_ownership_coin = (
@@ -361,9 +301,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         )[0].coin
 
         empty_spend = make_spend(
-            new_ownership_coin,
-            new_ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),
+            new_ownership_coin, new_ownership_puzzle, Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]])
         )
         empty_bundle = cost_logger.add_cost(
             "Ownership only coin (default NFT1 TP) - one child created + clear DID",

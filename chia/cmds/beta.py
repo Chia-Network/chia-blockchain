@@ -70,13 +70,7 @@ def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) 
 
 
 @beta_cmd.command("enable", help="Enable beta test mode")
-@click.option(
-    "-f",
-    "--force",
-    help="Force accept the beta program warning",
-    is_flag=True,
-    default=False,
-)
+@click.option("-f", "--force", help="Force accept the beta program warning", is_flag=True, default=False)
 @click.option("-p", "--path", help="The beta mode root path", type=str, required=False)
 @click.pass_context
 def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:

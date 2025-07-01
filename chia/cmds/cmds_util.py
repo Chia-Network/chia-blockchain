@@ -67,10 +67,7 @@ def transaction_status_msg(fingerprint: int, tx_id: bytes32) -> str:
 
 
 async def validate_client_connection(
-    rpc_client: RpcClient,
-    node_type: str,
-    rpc_port: int,
-    consume_errors: bool = True,
+    rpc_client: RpcClient, node_type: str, rpc_port: int, consume_errors: bool = True
 ) -> None:
     try:
         await rpc_client.healthz()

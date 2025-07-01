@@ -54,12 +54,7 @@ def create_default_last_message_time_dict() -> dict[ProtocolMessageTypes, float]
 
 
 class ConnectionClosedCallbackProtocol(Protocol):
-    async def __call__(
-        self,
-        connection: WSChiaConnection,
-        ban_time: int,
-        closed_connection: bool = ...,
-    ) -> None: ...
+    async def __call__(self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = ...) -> None: ...
 
 
 @final
@@ -121,8 +116,7 @@ class WSChiaConnection:
     protocol_version: Version = field(default_factory=lambda: Version("0"))
 
     log_rate_limit_last_time: dict[ProtocolMessageTypes, float] = field(
-        default_factory=create_default_last_message_time_dict,
-        repr=False,
+        default_factory=create_default_last_message_time_dict, repr=False
     )
 
     @classmethod
@@ -190,12 +184,7 @@ class WSChiaConnection:
             # AttributeError: 'NoneType' object has no attribute '_get_extra_info'
             return None
 
-    async def perform_handshake(
-        self,
-        network_id: str,
-        server_port: int,
-        local_type: NodeType,
-    ) -> None:
+    async def perform_handshake(self, network_id: str, server_port: int, local_type: NodeType) -> None:
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
@@ -302,10 +291,7 @@ class WSChiaConnection:
         self.incoming_message_task = create_referenced_task(self.incoming_message_handler())
 
     async def close(
-        self,
-        ban_time: int = 0,
-        ws_close_code: WSCloseCode = WSCloseCode.OK,
-        error: Optional[Err] = None,
+        self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None
     ) -> None:
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
@@ -534,10 +520,7 @@ class WSChiaConnection:
         return True
 
     async def call_api(
-        self,
-        request_method: Callable[..., Awaitable[Optional[Message]]],
-        message: Streamable,
-        timeout: int = 60,
+        self, request_method: Callable[..., Awaitable[Optional[Message]]], message: Streamable, timeout: int = 60
     ) -> Any:
         if self.connection_type is None:
             raise ValueError("handshake not done yet")

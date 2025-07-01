@@ -76,11 +76,7 @@ async def main(db_path: Path) -> None:
         assert peak is not None
         timing = 0.0
         for i in range(REPETITIONS):
-            block = BlockInfo(
-                peak.header_hash,
-                SerializedProgram.from_bytes(bytes.fromhex("80")),
-                random_refs(),
-            )
+            block = BlockInfo(peak.header_hash, SerializedProgram.from_bytes(bytes.fromhex("80")), random_refs())
 
             start_time = monotonic()
             gen = await get_block_generator(blockchain.lookup_block_generators, block)

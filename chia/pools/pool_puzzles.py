@@ -90,10 +90,7 @@ def create_full_puzzle(inner_puzzle: Program, launcher_id: bytes32) -> Program:
 
 
 def create_p2_singleton_puzzle(
-    singleton_mod_hash: bytes,
-    launcher_id: bytes32,
-    seconds_delay: uint64,
-    delayed_puzzle_hash: bytes32,
+    singleton_mod_hash: bytes, launcher_id: bytes32, seconds_delay: uint64, delayed_puzzle_hash: bytes32
 ) -> Program:
     # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH
     return P2_SINGLETON_MOD.curry(
@@ -102,10 +99,7 @@ def create_p2_singleton_puzzle(
 
 
 def create_p2_singleton_puzzle_hash(
-    singleton_mod_hash: bytes,
-    launcher_id: bytes32,
-    seconds_delay: uint64,
-    delayed_puzzle_hash: bytes32,
+    singleton_mod_hash: bytes, launcher_id: bytes32, seconds_delay: uint64, delayed_puzzle_hash: bytes32
 ) -> bytes32:
     # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH
     return curry_and_treehash(
@@ -194,11 +188,7 @@ def create_travel_spend(
     delay_ph: bytes32,
 ) -> tuple[CoinSpend, Program]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(
-        current,
-        launcher_coin.name(),
-        genesis_challenge,
-        delay_time,
-        delay_ph,
+        current, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
     )
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is key_value_list ()
@@ -240,14 +230,7 @@ def create_travel_spend(
     full_solution: Program = Program.to([parent_info_list, current_singleton.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
-    return (
-        make_spend(
-            current_singleton,
-            full_puzzle,
-            full_solution,
-        ),
-        inner_puzzle,
-    )
+    return (make_spend(current_singleton, full_puzzle, full_solution), inner_puzzle)
 
 
 def create_absorb_spend(
@@ -320,14 +303,9 @@ def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optio
 def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     args = uncurry_pool_member_inner_puzzle(inner_puzzle)
     if args is not None:
-        (
-            _inner_f,
-            _target_puzzle_hash,
-            _p2_singleton_hash,
-            pubkey_program,
-            _pool_reward_prefix,
-            _escape_puzzlehash,
-        ) = args
+        (_inner_f, _target_puzzle_hash, _p2_singleton_hash, pubkey_program, _pool_reward_prefix, _escape_puzzlehash) = (
+            args
+        )
     else:
         raise ValueError("Unable to extract pubkey")
     pubkey = G1Element.from_bytes(pubkey_program.as_atom())

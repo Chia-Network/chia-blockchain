@@ -23,10 +23,7 @@ class LimitedSemaphore:
 
     @classmethod
     def create(cls, active_limit: int, waiting_limit: int) -> LimitedSemaphore:
-        return cls(
-            _semaphore=asyncio.Semaphore(active_limit),
-            _available_count=active_limit + waiting_limit,
-        )
+        return cls(_semaphore=asyncio.Semaphore(active_limit), _available_count=active_limit + waiting_limit)
 
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:

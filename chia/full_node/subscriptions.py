@@ -93,10 +93,7 @@ class PeerSubscriptions:
         added: set[bytes32] = set()
 
         def limit_reached() -> set[bytes32]:
-            log.info(
-                "Peer %s attempted to exceed the subscription limit while adding puzzle subscriptions.",
-                peer_id,
-            )
+            log.info("Peer %s attempted to exceed the subscription limit while adding puzzle subscriptions.", peer_id)
             return added
 
         # If the subscription limit is reached, bail.
@@ -127,10 +124,7 @@ class PeerSubscriptions:
         added: set[bytes32] = set()
 
         def limit_reached() -> set[bytes32]:
-            log.info(
-                "Peer %s attempted to exceed the subscription limit while adding coin subscriptions.",
-                peer_id,
-            )
+            log.info("Peer %s attempted to exceed the subscription limit while adding coin subscriptions.", peer_id)
             return added
 
         # If the subscription limit is reached, bail.

@@ -8,12 +8,8 @@ from chia_puzzles_py.programs import (
     NFT_STATE_LAYER,
     NFT_STATE_LAYER_HASH,
 )
-from chia_puzzles_py.programs import (
-    NFT_OWNERSHIP_LAYER as NFT_OWNERSHIP_LAYER_BYTES,
-)
-from chia_puzzles_py.programs import (
-    NFT_OWNERSHIP_LAYER_HASH as NFT_OWNERSHIP_LAYER_HASH_BYTES,
-)
+from chia_puzzles_py.programs import NFT_OWNERSHIP_LAYER as NFT_OWNERSHIP_LAYER_BYTES
+from chia_puzzles_py.programs import NFT_OWNERSHIP_LAYER_HASH as NFT_OWNERSHIP_LAYER_HASH_BYTES
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program

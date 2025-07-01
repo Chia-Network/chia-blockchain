@@ -169,10 +169,7 @@ class Key:
 
     @classmethod
     def parse(cls, data: str, metadata: Optional[dict[str, Any]]) -> Key:
-        return cls(
-            bytes.fromhex(data),
-            metadata,
-        )
+        return cls(bytes.fromhex(data), metadata)
 
     def to_data(self) -> Union[str, dict[str, Any]]:
         return self.secret.hex()
@@ -249,10 +246,7 @@ class FileKeyring(FileSystemEventHandler):
             file_content = FileKeyringContent()
             file_content.write_to_path(keyring_path)
 
-        obj = cls(
-            keyring_path=keyring_path,
-            cached_file_content=file_content,
-        )
+        obj = cls(keyring_path=keyring_path, cached_file_content=file_content)
         obj.setup_keyring_file_watcher()
 
         return obj
@@ -272,11 +266,7 @@ class FileKeyring(FileSystemEventHandler):
     def setup_keyring_file_watcher(self) -> None:
         # recursive=True necessary for macOS support
         if not self.keyring_observer.is_alive():
-            self.keyring_observer.schedule(
-                self,
-                str(self.keyring_path.parent),
-                recursive=True,
-            )
+            self.keyring_observer.schedule(self, str(self.keyring_path.parent), recursive=True)
             self.keyring_observer.start()
 
     def cleanup_keyring_file_watcher(self) -> None:

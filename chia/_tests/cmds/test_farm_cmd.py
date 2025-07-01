@@ -18,11 +18,7 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 async def test_farm_summary_command(
     capsys: CaptureFixture[str],
     farmer_one_harvester_simulator_wallet: tuple[
-        HarvesterService,
-        FarmerService,
-        SimulatorFullNodeService,
-        WalletService,
-        BlockTools,
+        HarvesterService, FarmerService, SimulatorFullNodeService, WalletService, BlockTools
     ],
 ) -> None:
     harvester_service, farmer_service, full_node_service, wallet_service, bt = farmer_one_harvester_simulator_wallet

@@ -97,17 +97,10 @@ async def async_main(root_path: pathlib.Path) -> int:
     config = load_config(root_path, "config.yaml", fill_missing_services=True)
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
     config[SERVICE_NAME] = service_config
-    initialize_logging(
-        service_name=SERVICE_NAME,
-        logging_config=service_config["logging"],
-        root_path=root_path,
-    )
+    initialize_logging(service_name=SERVICE_NAME, logging_config=service_config["logging"], root_path=root_path)
 
     create_all_ssl(
-        root_path=root_path,
-        private_node_names=["data_layer"],
-        public_node_names=["data_layer"],
-        overwrite=False,
+        root_path=root_path, private_node_names=["data_layer"], public_node_names=["data_layer"], overwrite=False
     )
 
     plugins_config = config["data_layer"].get("plugins", {})

@@ -12,10 +12,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_missing_decorator(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
@@ -32,10 +29,7 @@ async def test_missing_decorator(
     assert len(wallet_node.wallet_state_manager.decorator_manager.decorator_list) == 0
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_unknown_decorator(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
@@ -52,10 +46,7 @@ async def test_unknown_decorator(
     assert len(wallet_node.wallet_state_manager.decorator_manager.decorator_list) == 0
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_decorator(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],

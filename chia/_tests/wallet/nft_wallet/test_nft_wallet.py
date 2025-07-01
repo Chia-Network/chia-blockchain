@@ -56,10 +56,7 @@ async def get_wallet_number(manager: WalletStateManager) -> int:
 
 # TODO: This is not a very paradigmatic function and should be updated
 async def wait_rpc_state_condition(
-    timeout: float,
-    async_function: Any,
-    params: list[Any],
-    condition_func: Callable[[dict[str, Any]], bool],
+    timeout: float, async_function: Any, params: list[Any], condition_func: Callable[[dict[str, Any]], bool]
 ) -> dict[str, Any]:
     __tracebackhide__ = True
 
@@ -77,7 +74,7 @@ async def wait_rpc_state_condition(
         elapsed = now - start
         if elapsed >= timeout:
             raise asyncio.TimeoutError(
-                f"timed out while waiting for {async_function.__name__}(): {elapsed} >= {timeout}",
+                f"timed out while waiting for {async_function.__name__}(): {elapsed} >= {timeout}"
             )
 
         await asyncio.sleep(0.3)
@@ -94,14 +91,8 @@ async def test_nft_wallet_creation_automatically(wallet_environments: WalletTest
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "nft": 2}
+    env_1.wallet_aliases = {"xch": 1, "nft": 2}
 
     nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
@@ -152,10 +143,7 @@ async def test_nft_wallet_creation_automatically(wallet_environments: WalletTest
                         "<=#pending_change": -1,  # any amount decrease
                         "unspent_coin_count": 0,
                     },
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
                 },
             ),
             WalletStateTransition(),
@@ -172,40 +160,21 @@ async def test_nft_wallet_creation_automatically(wallet_environments: WalletTest
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_0.generate_signed_transaction(
-            [uint64(coins[0].coin.amount)],
-            [wallet_1_ph],
-            action_scope,
-            coins={coins[0].coin},
+            [uint64(coins[0].coin.amount)], [wallet_1_ph], action_scope, coins={coins[0].coin}
         )
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
-                },
+                pre_block_balance_updates={"xch": {}, "nft": {"pending_coin_removal_count": 1}},
                 post_block_balance_updates={
                     "xch": {},
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": -1,
-                    },
+                    "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": -1},
                 },
             ),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "nft": {
-                        "init": True,
-                        "unspent_coin_count": 1,
-                    },
-                },
+                pre_block_balance_updates={"xch": {}},
+                post_block_balance_updates={"xch": {}, "nft": {"init": True, "unspent_coin_count": 1}},
             ),
         ]
     )
@@ -238,14 +207,8 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "nft": 2}
+    env_1.wallet_aliases = {"xch": 1, "nft": 2}
 
     nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
@@ -299,10 +262,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
                         "<=#pending_change": -1,  # any amount decrease
                         "unspent_coin_count": 0,
                     },
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
                 },
             ),
             WalletStateTransition(),
@@ -323,7 +283,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await env_0.change_balances(
         {
             "xch": {
-                "set_remainder": True,  # Not testing XCH reorg functionality in this test
+                "set_remainder": True  # Not testing XCH reorg functionality in this test
             },
             "nft": {
                 # State back to before confirmation
@@ -361,9 +321,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
                     },
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -375,10 +333,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
                         "<=#pending_change": -1,  # any amount decrease
                         "unspent_coin_count": 0,
                     },
-                    "nft": {
-                        "pending_coin_removal_count": -2,
-                        "unspent_coin_count": 2,
-                    },
+                    "nft": {"pending_coin_removal_count": -2, "unspent_coin_count": 2},
                 },
             ),
             WalletStateTransition(),
@@ -398,10 +353,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_0.generate_signed_transaction(
-            [uint64(coins[1].coin.amount)],
-            [wallet_1_ph],
-            action_scope,
-            coins={coins[1].coin},
+            [uint64(coins[1].coin.amount)], [wallet_1_ph], action_scope, coins={coins[1].coin}
         )
     assert action_scope.side_effects.transactions[0].spend_bundle is not None
 
@@ -410,17 +362,8 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    }
-                },
-                post_block_balance_updates={
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": -1,
-                    }
-                },
+                pre_block_balance_updates={"nft": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"nft": {"pending_coin_removal_count": -1, "unspent_coin_count": -1}},
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
@@ -435,11 +378,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
                         "unspent_coin_count": 0,
                     }
                 },
-                post_block_balance_updates={
-                    "nft": {
-                        "unspent_coin_count": 1,
-                    }
-                },
+                post_block_balance_updates={"nft": {"unspent_coin_count": 1}},
             ),
         ]
     )
@@ -457,10 +396,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_1.generate_signed_transaction(
-            [uint64(coins[0].coin.amount)],
-            [wallet_0_ph],
-            action_scope,
-            coins={coins[0].coin},
+            [uint64(coins[0].coin.amount)], [wallet_0_ph], action_scope, coins={coins[0].coin}
         )
     assert action_scope.side_effects.transactions[0].spend_bundle is not None
 
@@ -469,25 +405,11 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={
-                    "nft": {
-                        "unspent_coin_count": 1,
-                    }
-                },
+                pre_block_balance_updates={}, post_block_balance_updates={"nft": {"unspent_coin_count": 1}}
             ),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    }
-                },
-                post_block_balance_updates={
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": -1,
-                    }
-                },
+                pre_block_balance_updates={"nft": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"nft": {"pending_coin_removal_count": -1, "unspent_coin_count": -1}},
             ),
         ]
     )
@@ -506,21 +428,8 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, peak_height=uint32(height + 2))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, peak_height=uint32(height + 2))
 
-    await env_0.change_balances(
-        {
-            "nft": {
-                "unspent_coin_count": -1,
-            }
-        }
-    )
-    await env_1.change_balances(
-        {
-            "nft": {
-                "pending_coin_removal_count": 1,
-                "unspent_coin_count": 1,
-            }
-        }
-    )
+    await env_0.change_balances({"nft": {"unspent_coin_count": -1}})
+    await env_1.change_balances({"nft": {"pending_coin_removal_count": 1, "unspent_coin_count": 1}})
     await env_0.check_balances()
     await env_1.check_balances()
 
@@ -549,10 +458,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     wallet_node = env.node
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "nft": 2}
 
     nft_wallet_0 = await env.rpc_client.fetch("create_new_wallet", dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(nft_wallet_0, dict)
@@ -582,10 +488,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
                 },
                 post_block_balance_updates={
                     "xch": {"set_remainder": True},  # tested above
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
                 },
             )
         ]
@@ -619,10 +522,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
                 },
                 post_block_balance_updates={
                     "xch": {"set_remainder": True},  # tested above
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
                 },
             )
         ]
@@ -671,10 +571,7 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
     wallet_node = env.node
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "nft": 2}
 
     nft_wallet = await NFTWallet.create_new_nft_wallet(wallet_node.wallet_state_manager, wallet, name="NFT WALLET 1")
 
@@ -743,15 +640,9 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "nft": {"pending_coin_removal_count": 1},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "nft": {"pending_coin_removal_count": -1},
-                },
-            ),
+                pre_block_balance_updates={"xch": {}, "nft": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"xch": {}, "nft": {"pending_coin_removal_count": -1}},
+            )
         ]
     )
 
@@ -783,15 +674,9 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "nft": {"pending_coin_removal_count": 1},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "nft": {"pending_coin_removal_count": -1},
-                },
-            ),
+                pre_block_balance_updates={"xch": {}, "nft": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"xch": {}, "nft": {"pending_coin_removal_count": -1}},
+            )
         ]
     )
 
@@ -813,12 +698,7 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     wallet_node = env.node
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft_w_did": 3,
-        "nft_no_did": 4,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2, "nft_w_did": 3, "nft_no_did": 4}
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(env.wallet_state_manager, wallet, uint64(1), action_scope)
@@ -831,10 +711,7 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
                     "xch": {"set_remainder": True},
                     "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             )
         ]
     )
@@ -854,12 +731,7 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     assert res["wallet_id"] == nft_wallet.id()
 
     await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={"nft_w_did": {"init": True}},
-                post_block_balance_updates={},
-            )
-        ]
+        [WalletStateTransition(pre_block_balance_updates={"nft_w_did": {"init": True}}, post_block_balance_updates={})]
     )
 
     # now create NFT wallet with P2 standard puzzle for inner puzzle
@@ -873,12 +745,7 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     assert nft_wallet.id() == wallet_by_did_response.wallet_id
 
     await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={"nft_no_did": {"init": True}},
-                post_block_balance_updates={},
-            )
-        ]
+        [WalletStateTransition(pre_block_balance_updates={"nft_no_did": {"init": True}}, post_block_balance_updates={})]
     )
 
     assert (await env.rpc_client.get_nft_wallets_with_dids()).nft_wallets == [
@@ -1017,12 +884,7 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft_w_did": 3,
-        "nft_no_did": 4,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2, "nft_w_did": 3, "nft_no_did": 4}
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(env.wallet_state_manager, wallet, uint64(1), action_scope)
@@ -1035,10 +897,7 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
                     "xch": {"set_remainder": True},
                     "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             )
         ]
     )
@@ -1053,12 +912,7 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
     assert env.wallet_aliases["nft_w_did"] == res["wallet_id"]
 
     await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={"nft_w_did": {"init": True}},
-                post_block_balance_updates={},
-            )
-        ]
+        [WalletStateTransition(pre_block_balance_updates={"nft_w_did": {"init": True}}, post_block_balance_updates={})]
     )
 
     # Create a NFT with DID
@@ -1151,17 +1005,8 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-        "nft_w_did": 4,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
+    env_1.wallet_aliases = {"xch": 1, "did": 2, "nft": 3, "nft_w_did": 4}
     # Create DID
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
@@ -1176,10 +1021,7 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
                     "xch": {"set_remainder": True},
                     "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -1198,12 +1040,7 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
 
     await wallet_environments.process_pending_states(
         [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "nft": {"init": True},
-                },
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={"nft": {"init": True}}, post_block_balance_updates={}),
             WalletStateTransition(),
         ]
     )
@@ -1363,9 +1200,7 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
             ),
             WalletStateTransition(
                 pre_block_balance_updates={},
-                post_block_balance_updates={
-                    "nft": {"init": True, "unspent_coin_count": 1},
-                },
+                post_block_balance_updates={"nft": {"init": True, "unspent_coin_count": 1}},
             ),
         ]
     )
@@ -1459,11 +1294,7 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
     env = wallet_environments.environments[0]
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(env.wallet_state_manager, wallet, uint64(1), action_scope)
@@ -1476,11 +1307,8 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
                     "xch": {"set_remainder": True},
                     "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did": {"set_remainder": True},
-                },
-            ),
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
+            )
         ]
     )
 
@@ -1496,14 +1324,7 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
     assert env.wallet_aliases["nft"] == res["wallet_id"]
 
     await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "nft": {"init": True},
-                },
-                post_block_balance_updates={},
-            ),
-        ]
+        [WalletStateTransition(pre_block_balance_updates={"nft": {"init": True}}, post_block_balance_updates={})]
     )
 
     # Create a NFT with DID
@@ -1559,7 +1380,7 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
                     },
                     "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
                 },
-            ),
+            )
         ]
     )
 
@@ -1622,7 +1443,7 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
                     },
                     "nft": {"pending_coin_removal_count": -1},
                 },
-            ),
+            )
         ]
     )
 
@@ -1652,12 +1473,7 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
     env = wallet_environments.environments[0]
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft_w_did": 3,
-        "nft_no_did": 4,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2, "nft_w_did": 3, "nft_no_did": 4}
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(env.wallet_state_manager, wallet, uint64(1), action_scope)
@@ -1670,11 +1486,8 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
                     "xch": {"set_remainder": True},
                     "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did": {"set_remainder": True},
-                },
-            ),
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
+            )
         ]
     )
 
@@ -1694,12 +1507,9 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "nft_w_did": {"init": True},
-                    "nft_no_did": {"init": True},
-                },
+                pre_block_balance_updates={"nft_w_did": {"init": True}, "nft_no_did": {"init": True}},
                 post_block_balance_updates={},
-            ),
+            )
         ]
     )
 
@@ -1891,8 +1701,7 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
             wallet_environments.tx_config,
         )
     set_did_bulk_resp = await env.rpc_client.set_nft_did_bulk(
-        NFTSetDIDBulk(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=fee, push=True),
-        wallet_environments.tx_config,
+        NFTSetDIDBulk(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=fee, push=True), wallet_environments.tx_config
     )
     assert len(set_did_bulk_resp.spend_bundle.coin_spends) == 5
     assert set_did_bulk_resp.tx_num == 5  # 1 for each NFT being spent (3), 1 for fee tx, 1 for did tx
@@ -1980,16 +1789,8 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft_w_did": 3,
-        "nft_no_did": 4,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2, "nft_w_did": 3, "nft_no_did": 4}
+    env_1.wallet_aliases = {"xch": 1, "nft": 2}
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
             env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
@@ -2003,10 +1804,7 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
                     "xch": {"set_remainder": True},
                     "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -2029,10 +1827,7 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "nft_w_did": {"init": True},
-                    "nft_no_did": {"init": True},
-                },
+                pre_block_balance_updates={"nft_w_did": {"init": True}, "nft_no_did": {"init": True}},
                 post_block_balance_updates={},
             ),
             WalletStateTransition(),
@@ -2265,13 +2060,8 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
                 },
             ),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "nft": {"init": True, "unspent_coin_count": 3},
-                },
+                pre_block_balance_updates={"xch": {}},
+                post_block_balance_updates={"xch": {}, "nft": {"init": True, "unspent_coin_count": 3}},
             ),
         ]
     )
@@ -2302,14 +2092,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did1": 2,
-        "nft_w_did1": 3,
-        "nft_no_did": 4,
-        "did2": 5,
-        "nft_w_did2": 6,
-    }
+    env.wallet_aliases = {"xch": 1, "did1": 2, "nft_w_did1": 3, "nft_no_did": 4, "did2": 5, "nft_w_did2": 6}
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(env.wallet_state_manager, wallet, uint64(1), action_scope)
@@ -2322,10 +2105,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
                     "xch": {"set_remainder": True},
                     "did1": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did1": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did1": {"set_remainder": True}},
             )
         ]
     )
@@ -2410,10 +2190,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
                     "xch": {"set_remainder": True},
                     "did2": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "did2": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did2": {"set_remainder": True}},
             )
         ]
     )
@@ -2546,10 +2323,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "nft_w_did2": {"pending_coin_removal_count": 1},
-                },
+                pre_block_balance_updates={"xch": {}, "nft_w_did2": {"pending_coin_removal_count": 1}},
                 post_block_balance_updates={
                     "xch": {},
                     "nft_w_did2": {"pending_coin_removal_count": -1, "unspent_coin_count": -1},
@@ -2578,10 +2352,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
 async def test_set_nft_status(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "nft": 2}
 
     res = await env.rpc_client.fetch("create_new_wallet", dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(res, dict)
@@ -2590,14 +2361,8 @@ async def test_set_nft_status(wallet_environments: WalletTestFramework) -> None:
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "nft": {"init": True},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "nft": {},
-                },
+                pre_block_balance_updates={"xch": {}, "nft": {"init": True}},
+                post_block_balance_updates={"xch": {}, "nft": {}},
             )
         ]
     )
@@ -2679,10 +2444,7 @@ async def test_set_nft_status(wallet_environments: WalletTestFramework) -> None:
 async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "nft": 2}
 
     res = await env.rpc_client.fetch("create_new_wallet", dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(res, dict)
@@ -2691,14 +2453,8 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {},
-                    "nft": {"init": True},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "nft": {},
-                },
+                pre_block_balance_updates={"xch": {}, "nft": {"init": True}},
+                post_block_balance_updates={"xch": {}, "nft": {}},
             )
         ]
     )
@@ -2762,9 +2518,7 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
-        puzzle.get_tree_hash(),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        G1Element.from_bytes(bytes.fromhex(pubkey)), puzzle.get_tree_hash(), G2Element.from_bytes(bytes.fromhex(sig))
     )
     # Test hex string
     message = "0123456789ABCDEF"
@@ -2773,35 +2527,23 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
-        puzzle.get_tree_hash(),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        G1Element.from_bytes(bytes.fromhex(pubkey)), puzzle.get_tree_hash(), G2Element.from_bytes(bytes.fromhex(sig))
     )
     # Test BLS sign string
     message = "Hello World"
     pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
-        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
-        message=message,
-        is_hex=False,
-        safe_mode=False,
+        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message, is_hex=False, safe_mode=False
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
-        bytes(message, "utf-8"),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        G1Element.from_bytes(bytes.fromhex(pubkey)), bytes(message, "utf-8"), G2Element.from_bytes(bytes.fromhex(sig))
     )
     # Test BLS sign hex
     message = "0123456789ABCDEF"
     pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
-        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
-        message=message,
-        is_hex=True,
-        safe_mode=False,
+        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message, is_hex=True, safe_mode=False
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
-        bytes.fromhex(message),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        G1Element.from_bytes(bytes.fromhex(pubkey)), bytes.fromhex(message), G2Element.from_bytes(bytes.fromhex(sig))
     )

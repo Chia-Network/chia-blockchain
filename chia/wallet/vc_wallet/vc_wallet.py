@@ -62,10 +62,7 @@ class VCWallet:
 
     @classmethod
     async def create_new_vc_wallet(
-        cls: type[_T_VCWallet],
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        name: Optional[str] = None,
+        cls: type[_T_VCWallet], wallet_state_manager: WalletStateManager, wallet: Wallet, name: Optional[str] = None
     ) -> _T_VCWallet:
         name = "VCWallet" if name is None else name
         new_wallet: _T_VCWallet = await cls.create(
@@ -188,12 +185,7 @@ class VCWallet:
         if inner_puzzle_hash is None:  # pragma: no cover
             inner_puzzle_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         dpuzs, coin_spends, vc = VerifiedCredential.launch(
-            coins,
-            provider_did,
-            inner_puzzle_hash,
-            [inner_puzzle_hash],
-            fee=fee,
-            extra_conditions=extra_conditions,
+            coins, provider_did, inner_puzzle_hash, [inner_puzzle_hash], fee=fee, extra_conditions=extra_conditions
         )
         for dpuz, coin in zip(dpuzs, coins):
             solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
@@ -318,10 +310,7 @@ class VCWallet:
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
         extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
-        innersol: Program = self.standard_wallet.make_solution(
-            primaries=primaries,
-            conditions=extra_conditions,
-        )
+        innersol: Program = self.standard_wallet.make_solution(primaries=primaries, conditions=extra_conditions)
         did_announcement, coin_spend, _vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
         spend_bundle = WalletSpendBundle([coin_spend], G2Element())
         if did_announcement is not None:
@@ -423,8 +412,7 @@ class VCWallet:
         # Assemble final bundle
         expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
         await did_wallet.create_message_spend(
-            action_scope,
-            extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
+            action_scope, extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement)
         )
         async with action_scope.use() as interface:
             interface.side_effects.extra_spends.append(WalletSpendBundle([vc_spend], G2Element()))
@@ -549,7 +537,7 @@ class VCWallet:
                                 frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
                                 frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
                             )
-                            .to_serialized(),
+                            .to_serialized()
                         )
                     )
             else:
@@ -564,10 +552,7 @@ class VCWallet:
                     [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
                     vc_id=launcher_id,
-                    extra_conditions=(
-                        *announcements_to_assert[launcher_id],
-                        *announcements_to_make[launcher_id],
-                    ),
+                    extra_conditions=(*announcements_to_assert[launcher_id], *announcements_to_make[launcher_id]),
                 )
 
         async with action_scope.use() as interface:
@@ -620,11 +605,7 @@ class VCWallet:
         else:
             return vc_proofs.prove_keys(keys)
 
-    async def select_coins(
-        self,
-        amount: uint64,
-        action_scope: WalletActionScope,
-    ) -> set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
         raise RuntimeError("VCWallet does not support select_coins()")  # pragma: no cover
 
     async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:

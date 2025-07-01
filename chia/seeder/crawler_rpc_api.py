@@ -19,10 +19,7 @@ class CrawlerRpcApi:
         self.service_name = "chia_crawler"
 
     def get_routes(self) -> dict[str, Endpoint]:
-        return {
-            "/get_peer_counts": self.get_peer_counts,
-            "/get_ips_after_timestamp": self.get_ips_after_timestamp,
-        }
+        return {"/get_peer_counts": self.get_peer_counts, "/get_ips_after_timestamp": self.get_ips_after_timestamp}
 
     async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
         payloads = []
@@ -74,7 +71,4 @@ class CrawlerRpcApi:
 
         matched_ips.sort()
 
-        return {
-            "ips": matched_ips[offset : (offset + limit)],
-            "total": len(matched_ips),
-        }
+        return {"ips": matched_ips[offset : (offset + limit)], "total": len(matched_ips)}

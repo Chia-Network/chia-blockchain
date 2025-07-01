@@ -77,10 +77,7 @@ class Cache(typing_extensions.TypedDict):
 
 
 def create_empty_cache() -> Cache:
-    return {
-        "entries": {},
-        "version": current_cache_version,
-    }
+    return {"entries": {}, "version": current_cache_version}
 
 
 def load_cache(file: typing.IO[str]) -> Cache:
@@ -123,12 +120,7 @@ class ClvmPaths:
             missing_files.append(str(hex_path))
         if stem_filename not in hash_dict:
             missing_files.append(f"{stem_filename} entry in {hashes_path}")
-        return cls(
-            clvm=clvm,
-            hex=hex_path,
-            hash=stem_filename,
-            missing_files=missing_files,
-        )
+        return cls(clvm=clvm, hex=hex_path, hash=stem_filename, missing_files=missing_files)
 
 
 @typing_extensions.final
@@ -151,20 +143,14 @@ class ClvmBytes:
 
     @classmethod
     def from_hex_bytes(cls, hex_bytes: bytes) -> ClvmBytes:
-        return cls(
-            hex=hex_bytes,
-            hash=generate_hash_bytes(hex_bytes=hex_bytes),
-        )
+        return cls(hex=hex_bytes, hash=generate_hash_bytes(hex_bytes=hex_bytes))
 
 
 # These files have the wrong extension for now so we'll just manually exclude them
 excludes: set[str] = set()
 
 
-def find_stems(
-    top_levels: set[str],
-    suffixes: typing.Mapping[str, str] = all_suffixes,
-) -> dict[str, set[pathlib.Path]]:
+def find_stems(top_levels: set[str], suffixes: typing.Mapping[str, str] = all_suffixes) -> dict[str, set[pathlib.Path]]:
     found_stems = {
         name: {
             path.with_name(path.name[: -len(suffix)])
@@ -188,11 +174,7 @@ def create_cache_entry(reference_paths: ClvmPaths, reference_bytes: ClvmBytes) -
     hash_hasher = hashlib.sha256()
     hash_hasher.update(reference_bytes.hash)
 
-    return {
-        "clsp": clvm_hasher.hexdigest(),
-        "hex": hex_hasher.hexdigest(),
-        "hash": hash_hasher.hexdigest(),
-    }
+    return {"clsp": clvm_hasher.hexdigest(), "hex": hex_hasher.hexdigest(), "hash": hash_hasher.hexdigest()}
 
 
 @click.group()
@@ -288,8 +270,7 @@ def check(use_cache: bool) -> int:
             if not cache_hit:
                 with tempfile.TemporaryDirectory() as temporary_directory:
                     generated_paths = ClvmPaths.from_clvm(
-                        clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name),
-                        hash_dict=HASHES,
+                        clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name), hash_dict=HASHES
                     )
 
                     compile_clvm(
@@ -377,8 +358,7 @@ def build() -> int:
 
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generated_paths = ClvmPaths.from_clvm(
-                    clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name),
-                    hash_dict=HASHES,
+                    clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name), hash_dict=HASHES
                 )
 
                 compile_clvm(

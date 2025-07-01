@@ -36,15 +36,8 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
     wallet_maker = env_maker.xch_wallet
     wallet_taker = env_taker.xch_wallet
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
+    env_taker.wallet_aliases = {"xch": 1, "nft": 2}
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -62,22 +55,10 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -93,49 +74,28 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
         env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash,
-            royalty_puzhash,
-            royalty_basis_pts,
-            did_id,
+            metadata, action_scope, target_puzhash, royalty_puzhash, royalty_basis_pts, did_id
         )
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"init": True, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
                 },
             ),
             WalletStateTransition(),
@@ -199,9 +159,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                         "pending_coin_removal_count": 1,
                     },
                     "did": {},
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -213,10 +171,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                         "pending_coin_removal_count": -1,
                     },
                     "did": {},
-                    "nft": {
-                        "unspent_coin_count": -1,
-                        "pending_coin_removal_count": -1,
-                    },
+                    "nft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
                 },
             ),
             WalletStateTransition(
@@ -228,9 +183,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
                     },
-                    "nft": {
-                        "init": True,
-                    },
+                    "nft": {"init": True},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -240,9 +193,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                         "<=#pending_change": -1,
                         "pending_coin_removal_count": -1,
                     },
-                    "nft": {
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"unspent_coin_count": 1},
                 },
             ),
         ]
@@ -262,15 +213,8 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
     wallet_maker = env_maker.xch_wallet
     wallet_taker = env_taker.xch_wallet
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "nft": 2}
+    env_taker.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
 
     async with wallet_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -289,22 +233,10 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
         ]
     )
@@ -319,22 +251,14 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
         env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
     )
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
 
     async with nft_wallet_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash,
-            royalty_puzhash,
-            royalty_basis_pts,
-            did_id,
+            metadata, action_scope, target_puzhash, royalty_puzhash, royalty_basis_pts, did_id
         )
 
     await wallet_environments.process_pending_states(
@@ -342,27 +266,14 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"init": True, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
                 },
             ),
         ]
@@ -429,9 +340,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                         "<=#max_send_amount": -(maker_fee + xch_offered + expected_royalty),
                         "pending_coin_removal_count": 1,
                     },
-                    "nft": {
-                        "init": True,
-                    },
+                    "nft": {"init": True},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -441,9 +350,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                         ">=#max_send_amount": 1,
                         "pending_coin_removal_count": -1,
                     },
-                    "nft": {
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"unspent_coin_count": 1},
                 },
             ),
             WalletStateTransition(
@@ -457,9 +364,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                         "pending_coin_removal_count": 1,
                     },
                     "did": {},
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -472,10 +377,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                         "pending_coin_removal_count": -1,
                     },
                     "did": {},
-                    "nft": {
-                        "unspent_coin_count": -1,
-                        "pending_coin_removal_count": -1,
-                    },
+                    "nft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
                 },
             ),
         ]
@@ -492,17 +394,8 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
     wallet_maker = env_maker.xch_wallet
     wallet_taker = env_taker.xch_wallet
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft1": 3,
-        "nft0": 4,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
+    env_taker.wallet_aliases = {"xch": 1, "did": 2, "nft1": 3, "nft0": 4}
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -520,22 +413,10 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -551,49 +432,28 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
         env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash,
-            royalty_puzhash,
-            royalty_basis_pts,
-            did_id,
+            metadata, action_scope, target_puzhash, royalty_puzhash, royalty_basis_pts, did_id
         )
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"init": True, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
                 },
             ),
             WalletStateTransition(),
@@ -613,22 +473,10 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
         ]
     )
@@ -645,27 +493,14 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"init": True, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
                 },
             ),
         ]
@@ -720,9 +555,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                         "pending_coin_removal_count": 1,
                     },
                     "did": {},
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -734,10 +567,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                         "pending_coin_removal_count": -1,
                     },
                     "did": {},
-                    "nft": {
-                        "unspent_coin_count": -1,
-                        "pending_coin_removal_count": -1,
-                    },
+                    "nft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
                 },
             ),
             WalletStateTransition(
@@ -748,7 +578,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                         "<=#max_send_amount": -(taker_fee + xch_requested + expected_royalty),
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -758,10 +588,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                         "<=#pending_change": -1,
                         "pending_coin_removal_count": -1,
                     },
-                    "nft0": {
-                        "init": True,
-                        "unspent_coin_count": 1,
-                    },
+                    "nft0": {"init": True, "unspent_coin_count": 1},
                 },
             ),
         ]
@@ -784,17 +611,8 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
     wallet_maker = env_maker.xch_wallet
     wallet_taker = env_taker.xch_wallet
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-        "cat": 4,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-        "cat": 3,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "did": 2, "nft": 3, "cat": 4}
+    env_taker.wallet_aliases = {"xch": 1, "nft": 2, "cat": 3}
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -812,22 +630,10 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -843,49 +649,28 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
         env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash,
-            royalty_puzhash,
-            royalty_basis_pts,
-            did_id,
+            metadata, action_scope, target_puzhash, royalty_puzhash, royalty_basis_pts, did_id
         )
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"init": True, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
                 },
             ),
             WalletStateTransition(),
@@ -927,22 +712,10 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -975,24 +748,11 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "cat": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "cat": {
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"cat": {"set_remainder": True}},
+                post_block_balance_updates={"cat": {"set_remainder": True}},
             ),
             WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={
-                    "cat": {
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={}, post_block_balance_updates={"cat": {"set_remainder": True}}
             ),
         ]
     )
@@ -1047,9 +807,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                     },
                     "cat": {},
                     "did": {},
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1067,10 +825,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                         "unspent_coin_count": 2 if expected_royalty > 0 else 1,
                     },
                     "did": {},
-                    "nft": {
-                        "unspent_coin_count": -1,
-                        "pending_coin_removal_count": -1,
-                    },
+                    "nft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
                 },
             ),
             WalletStateTransition(
@@ -1089,9 +844,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
                     },
-                    "nft": {
-                        "init": True,
-                    },
+                    "nft": {"init": True},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1108,9 +861,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                         "<=#pending_change": -1,
                         "pending_coin_removal_count": -1,
                     },
-                    "nft": {
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"unspent_coin_count": 1},
                 },
             ),
         ]
@@ -1127,17 +878,8 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
     wallet_maker = env_maker.xch_wallet
     wallet_taker = env_taker.xch_wallet
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "nft": 2,
-        "cat": 3,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-        "cat": 4,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "nft": 2, "cat": 3}
+    env_taker.wallet_aliases = {"xch": 1, "did": 2, "nft": 3, "cat": 4}
 
     async with wallet_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -1156,22 +898,10 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             ),
         ]
     )
@@ -1186,22 +916,14 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
         env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
     )
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
 
     async with nft_wallet_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash,
-            royalty_puzhash,
-            royalty_basis_pts,
-            did_id,
+            metadata, action_scope, target_puzhash, royalty_puzhash, royalty_basis_pts, did_id
         )
 
     await wallet_environments.process_pending_states(
@@ -1209,27 +931,14 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"init": True, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
                 },
             ),
         ]
@@ -1272,22 +981,10 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -1346,7 +1043,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         "<=#max_send_amount": maker_diff,
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -1356,7 +1053,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         "<=#pending_change": 1,
                         "pending_coin_removal_count": -1,
                         "unspent_coin_count": 1 if test_change else 0,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -1368,7 +1065,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         "spendable_balance": taker_diff,
                         "max_send_amount": taker_diff,
                         "unspent_coin_count": 1 if test_change else 2,
-                    },
+                    }
                 },
             ),
         ]
@@ -1424,9 +1121,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         "<=#max_send_amount": -(cats_requested + expected_royalty),
                         "pending_coin_removal_count": 1,
                     },
-                    "nft": {
-                        "init": True,
-                    },
+                    "nft": {"init": True},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1443,9 +1138,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         ">=#max_send_amount": 1,
                         "pending_coin_removal_count": -1,
                     },
-                    "nft": {
-                        "unspent_coin_count": 1,
-                    },
+                    "nft": {"unspent_coin_count": 1},
                 },
             ),
             WalletStateTransition(
@@ -1462,9 +1155,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         "unconfirmed_wallet_balance": cats_requested  # + expected_royalty,
                     },
                     "did": {},
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1482,10 +1173,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                         "unspent_coin_count": 2,
                     },
                     "did": {},
-                    "nft": {
-                        "unspent_coin_count": -1,
-                        "pending_coin_removal_count": -1,
-                    },
+                    "nft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
                 },
             ),
         ]
@@ -1502,11 +1190,7 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
     env_maker = wallet_environments.environments[0]
     wallet_maker = env_maker.xch_wallet
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "nft": 3,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -1524,22 +1208,10 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
             )
         ]
     )
@@ -1554,10 +1226,7 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
         env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
     )
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
 
     await env_maker.change_balances({"nft": {"init": True}})
@@ -1566,38 +1235,21 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash,
-            royalty_puzhash,
-            royalty_basis_pts,
-            did_id,
+            metadata, action_scope, target_puzhash, royalty_puzhash, royalty_basis_pts, did_id
         )
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
                 },
             )
         ]
@@ -1651,9 +1303,7 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
                         "<=#max_send_amount": -FEE,
                         "pending_coin_removal_count": 3,
                     },
-                    "nft": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1663,9 +1313,7 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
                         "unspent_coin_count": -2,
                         "pending_coin_removal_count": -3,
                     },
-                    "nft": {
-                        "pending_coin_removal_count": -1,
-                    },
+                    "nft": {"pending_coin_removal_count": -1},
                 },
             )
         ]
@@ -1702,22 +1350,8 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
     wallet_maker = wsm_maker.main_wallet
     wallet_taker = wsm_taker.main_wallet
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "cat_maker": 2,
-        "nft0": 3,
-        "did": 4,
-        "nft1": 5,
-        "cat_taker": 6,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "cat_taker": 2,
-        "nft0": 3,
-        "did": 4,
-        "nft1": 5,
-        "cat_maker": 6,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "cat_maker": 2, "nft0": 3, "did": 4, "nft1": 5, "cat_taker": 6}
+    env_taker.wallet_aliases = {"xch": 1, "cat_taker": 2, "nft0": 3, "did": 4, "nft1": 5, "cat_maker": 6}
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -1769,54 +1403,30 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat_maker": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "cat_maker": {"set_remainder": True},
                     "nft0": {},
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "did": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat_maker": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "cat_maker": {"set_remainder": True},
                     "nft0": {},
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "did": {"set_remainder": True},
                 },
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat_taker": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "cat_taker": {"set_remainder": True},
                     "nft0": {},
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "did": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat_taker": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "cat_taker": {"set_remainder": True},
                     "nft0": {},
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "did": {"set_remainder": True},
                 },
             ),
         ]
@@ -1844,10 +1454,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
     await env_taker.change_balances({"nft1": {"init": True}})
 
     metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
     if royalty_basis_pts_maker > 65535:
         with pytest.raises(ValueError):
@@ -1880,62 +1487,33 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash_taker,
-            royalty_puzhash_taker,
-            royalty_basis_pts_taker_1,
-            did_id_taker,
+            metadata, action_scope, target_puzhash_taker, royalty_puzhash_taker, royalty_basis_pts_taker_1, did_id_taker
         )
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
                 },
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
                 },
             ),
         ]
@@ -1949,12 +1527,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         wallet_environments.tx_config, push=True
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
-            metadata,
-            action_scope,
-            target_puzhash_taker,
-            royalty_puzhash_taker,
-            royalty_basis_pts_taker_2,
-            did_id_taker,
+            metadata, action_scope, target_puzhash_taker, royalty_puzhash_taker, royalty_basis_pts_taker_2, did_id_taker
         )
 
     await wallet_environments.process_pending_states(
@@ -1962,26 +1535,14 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "nft1": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
                 },
             ),
         ]
@@ -2022,10 +1583,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         nft_to_offer_asset_id_taker_1: nft_taker_1_info,
         nft_to_offer_asset_id_taker_2: nft_taker_2_info,
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
-            {
-                "type": "CAT",
-                "tail": "0x" + cat_wallet_taker.get_asset_id(),
-            }
+            {"type": "CAT", "tail": "0x" + cat_wallet_taker.get_asset_id()}
         ),
     }
 
@@ -2046,10 +1604,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                 wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
             ) as action_scope:
                 trade_take = await trade_manager_taker.respond_to_offer(
-                    Offer.from_bytes(trade_make.offer),
-                    env_taker.node.get_full_node_peer(),
-                    action_scope,
-                    fee=FEE,
+                    Offer.from_bytes(trade_make.offer), env_taker.node.get_full_node_peer(), action_scope, fee=FEE
                 )
         # all done for this test
         return
@@ -2058,30 +1613,20 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
             wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
         ) as action_scope:
             trade_take = await trade_manager_taker.respond_to_offer(
-                maker_offer,
-                env_taker.node.get_full_node_peer(),
-                action_scope,
-                fee=FEE,
+                maker_offer, env_taker.node.get_full_node_peer(), action_scope, fee=FEE
             )
     assert trade_take is not None
 
     maker_royalty_summary = NFTWallet.royalty_calculation(
-        {
-            nft_to_offer_asset_id_maker: (royalty_puzhash_maker, uint16(royalty_basis_pts_maker)),
-        },
-        {
-            None: uint64(XCH_REQUESTED),
-            bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): uint64(CAT_REQUESTED),
-        },
+        {nft_to_offer_asset_id_maker: (royalty_puzhash_maker, uint16(royalty_basis_pts_maker))},
+        {None: uint64(XCH_REQUESTED), bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): uint64(CAT_REQUESTED)},
     )
     taker_royalty_summary = NFTWallet.royalty_calculation(
         {
             nft_to_offer_asset_id_taker_1: (royalty_puzhash_taker, royalty_basis_pts_taker_1),
             nft_to_offer_asset_id_taker_2: (royalty_puzhash_taker, royalty_basis_pts_taker_2),
         },
-        {
-            bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): uint64(CAT_REQUESTED),
-        },
+        {bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): uint64(CAT_REQUESTED)},
     )
     maker_xch_royalties_expected = maker_royalty_summary[nft_to_offer_asset_id_maker][0]["amount"]
     maker_cat_royalties_expected = maker_royalty_summary[nft_to_offer_asset_id_maker][1]["amount"]
@@ -2106,9 +1651,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         "<=#max_send_amount": -CAT_REQUESTED - taker_cat_royalties_expected,
                         "pending_coin_removal_count": 1,
                     },
-                    "nft1": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft1": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -2136,13 +1679,8 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         # Parametrizations make unspent_coin_count too complicated
                         "set_remainder": True,
                     },
-                    "nft1": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": -1,
-                    },
-                    "nft0": {
-                        "unspent_coin_count": 2,
-                    },
+                    "nft1": {"pending_coin_removal_count": -1, "unspent_coin_count": -1},
+                    "nft0": {"unspent_coin_count": 2},
                 },
             ),
             WalletStateTransition(
@@ -2162,13 +1700,8 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         "pending_coin_removal_count": 1,
                     },
                     # Royalties don't factor into unconfirmed balance calculations
-                    "cat_maker": {
-                        "init": True,
-                        "unconfirmed_wallet_balance": CAT_REQUESTED,
-                    },
-                    "nft1": {
-                        "pending_coin_removal_count": 2,
-                    },
+                    "cat_maker": {"init": True, "unconfirmed_wallet_balance": CAT_REQUESTED},
+                    "nft1": {"pending_coin_removal_count": 2},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -2195,13 +1728,8 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         # Parametrizations make unspent_coin_count too complicated
                         "set_remainder": True,
                     },
-                    "nft1": {
-                        "unspent_coin_count": -2,
-                        "pending_coin_removal_count": -2,
-                    },
-                    "nft0": {
-                        "unspent_coin_count": 1,
-                    },
+                    "nft1": {"unspent_coin_count": -2, "pending_coin_removal_count": -2},
+                    "nft0": {"unspent_coin_count": 1},
                 },
             ),
         ]
@@ -2230,10 +1758,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
     driver_dict = {
         nft_to_offer_asset_id_maker: maker_nft_info,
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
-            {
-                "type": "CAT",
-                "tail": "0x" + cat_wallet_taker.get_asset_id(),
-            }
+            {"type": "CAT", "tail": "0x" + cat_wallet_taker.get_asset_id()}
         ),
     }
 
@@ -2252,10 +1777,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer),
-            env_taker.node.get_full_node_peer(),
-            action_scope,
-            fee=uint64(0),
+            Offer.from_bytes(trade_make.offer), env_taker.node.get_full_node_peer(), action_scope, fee=uint64(0)
         )
     assert trade_take is not None
 
@@ -2296,9 +1818,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         # parametrization makes unspent_coin_count difficult
                         "set_remainder": True,
                     },
-                    "nft0": {
-                        "unspent_coin_count": 1,
-                    },
+                    "nft0": {"unspent_coin_count": 1},
                 },
             ),
             WalletStateTransition(
@@ -2310,9 +1830,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
                     },
-                    "cat_maker": {
-                        "unconfirmed_wallet_balance": CAT_REQUESTED,
-                    },
+                    "cat_maker": {"unconfirmed_wallet_balance": CAT_REQUESTED},
                     "cat_taker": {
                         "unconfirmed_wallet_balance": -CAT_REQUESTED,
                         "<=#spendable_balance": -CAT_REQUESTED,
@@ -2320,9 +1838,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
                     },
-                    "nft0": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "nft0": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -2346,10 +1862,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                         "<=#pending_change": -1,
                         "pending_coin_removal_count": -1,
                     },
-                    "nft0": {
-                        "unspent_coin_count": -1,
-                        "pending_coin_removal_count": -1,
-                    },
+                    "nft0": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
                 },
             ),
         ]

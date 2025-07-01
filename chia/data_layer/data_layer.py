@@ -99,9 +99,7 @@ async def get_plugin_info(plugin_remote: PluginRemote) -> tuple[PluginRemote, di
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                plugin_remote.url + "/plugin_info",
-                json={},
-                headers=plugin_remote.headers,
+                plugin_remote.url + "/plugin_info", json={}, headers=plugin_remote.headers
             ) as response:
                 ret = {"status": response.status}
                 if response.status == 200:
@@ -270,11 +268,7 @@ class DataLayer:
         return create_res.transactions, create_res.launcher_id
 
     async def batch_update(
-        self,
-        store_id: bytes32,
-        changelist: list[dict[str, Any]],
-        fee: uint64,
-        submit_on_chain: bool = True,
+        self, store_id: bytes32, changelist: list[dict[str, Any]], fee: uint64, submit_on_chain: bool = True
     ) -> Optional[TransactionRecord]:
         status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
         await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
@@ -295,10 +289,7 @@ class DataLayer:
         return self.none_bytes if pending_root.node_hash is None else pending_root.node_hash
 
     async def multistore_batch_update(
-        self,
-        store_updates: list[dict[str, Any]],
-        fee: uint64,
-        submit_on_chain: bool = True,
+        self, store_updates: list[dict[str, Any]], fee: uint64, submit_on_chain: bool = True
     ) -> list[TransactionRecord]:
         store_ids: set[bytes32] = set()
         for update in store_updates:
@@ -327,11 +318,7 @@ class DataLayer:
         else:
             return []
 
-    async def submit_pending_root(
-        self,
-        store_id: bytes32,
-        fee: uint64,
-    ) -> TransactionRecord:
+    async def submit_pending_root(self, store_id: bytes32, fee: uint64) -> TransactionRecord:
         await self._update_confirmation_status(store_id=store_id)
 
         pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
@@ -390,31 +377,18 @@ class DataLayer:
 
             return node_hash
 
-    async def publish_update(
-        self,
-        store_id: bytes32,
-        fee: uint64,
-    ) -> TransactionRecord:
+    async def publish_update(self, store_id: bytes32, fee: uint64) -> TransactionRecord:
         await self._update_confirmation_status(store_id=store_id)
         root_hash = await self._get_publishable_root_hash(store_id=store_id)
         transaction_record = (
             await self.wallet_rpc.dl_update_root(
-                DLUpdateRoot(
-                    launcher_id=store_id,
-                    new_root=root_hash,
-                    fee=fee,
-                    push=True,
-                ),
-                DEFAULT_TX_CONFIG,
+                DLUpdateRoot(launcher_id=store_id, new_root=root_hash, fee=fee, push=True), DEFAULT_TX_CONFIG
             )
         ).tx_record
         return transaction_record
 
     async def get_key_value_hash(
-        self,
-        store_id: bytes32,
-        key: bytes,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        self, store_id: bytes32, key: bytes, root_hash: Union[bytes32, Unspecified] = unspecified
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -432,11 +406,7 @@ class DataLayer:
             res = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
             return res.value
 
-    async def get_keys_values(
-        self,
-        store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
-    ) -> list[TerminalNode]:
+    async def get_keys_values(self, store_id: bytes32, root_hash: Union[bytes32, Unspecified]) -> list[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys_values(store_id, root_hash)
@@ -445,11 +415,7 @@ class DataLayer:
         return res
 
     async def get_keys_values_paginated(
-        self,
-        store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
-        page: int,
-        max_page_size: Optional[int] = None,
+        self, store_id: bytes32, root_hash: Union[bytes32, Unspecified], page: int, max_page_size: Optional[int] = None
     ) -> KeysValuesPaginationData:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -465,11 +431,7 @@ class DataLayer:
         return res
 
     async def get_keys_paginated(
-        self,
-        store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
-        page: int,
-        max_page_size: Optional[int] = None,
+        self, store_id: bytes32, root_hash: Union[bytes32, Unspecified], page: int, max_page_size: Optional[int] = None
     ) -> KeysPaginationData:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -667,11 +629,7 @@ class DataLayer:
             if not os.path.exists(filename_full_tree):
                 with open(filename_full_tree, "wb") as writer:
                     await self.data_store.write_tree_to_file(
-                        root=root,
-                        node_hash=root.node_hash,
-                        store_id=store_id,
-                        deltas_only=False,
-                        writer=writer,
+                        root=root, node_hash=root.node_hash, store_id=store_id, deltas_only=False, writer=writer
                     )
                     self.log.info(f"Successfully written full tree filename {filename_full_tree}.")
 
@@ -681,9 +639,7 @@ class DataLayer:
             async with aiohttp.ClientSession() as session:
                 try:
                     async with session.post(
-                        d.url + "/handle_download",
-                        json=request_json,
-                        headers=d.headers,
+                        d.url + "/handle_download", json=request_json, headers=d.headers
                     ) as response:
                         res_json = await response.json()
                         if res_json["handle_download"]:
@@ -751,9 +707,7 @@ class DataLayer:
                         self.log.info(f"Using uploader {uploader} for store {store_id.hex()}")
                         async with aiohttp.ClientSession() as session:
                             async with session.post(
-                                uploader.url + "/upload",
-                                json=request_json,
-                                headers=uploader.headers,
+                                uploader.url + "/upload", json=request_json, headers=uploader.headers
                             ) as response:
                                 res_json = await response.json()
                                 if res_json["uploaded"]:
@@ -810,9 +764,7 @@ class DataLayer:
             for uploader in uploaders:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
-                        uploader.url + "/add_missing_files",
-                        json=request_json,
-                        headers=uploader.headers,
+                        uploader.url + "/add_missing_files", json=request_json, headers=uploader.headers
                     ) as response:
                         res_json = await response.json()
                         if not res_json["uploaded"]:
@@ -857,20 +809,12 @@ class DataLayer:
                 for group_by_store in (True, False):
                     paths.append(
                         get_full_tree_filename_path(
-                            self.server_files_location,
-                            store_id,
-                            root_hash,
-                            root.generation,
-                            group_by_store,
+                            self.server_files_location, store_id, root_hash, root.generation, group_by_store
                         )
                     )
                     paths.append(
                         get_delta_filename_path(
-                            self.server_files_location,
-                            store_id,
-                            root_hash,
-                            root.generation,
-                            group_by_store,
+                            self.server_files_location, store_id, root_hash, root.generation, group_by_store
                         )
                     )
 
@@ -1020,11 +964,7 @@ class DataLayer:
                 self.unsubscribe_data_queue.clear()
             await asyncio.sleep(manage_data_interval)
 
-    async def update_subscription(
-        self,
-        worker_id: int,
-        job: Job[Subscription],
-    ) -> None:
+    async def update_subscription(self, worker_id: int, job: Job[Subscription]) -> None:
         subscription = job.input
 
         try:
@@ -1035,11 +975,7 @@ class DataLayer:
         except Exception as e:
             self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
 
-    async def build_offer_changelist(
-        self,
-        store_id: bytes32,
-        inclusions: tuple[KeyValue, ...],
-    ) -> list[dict[str, Any]]:
+    async def build_offer_changelist(self, store_id: bytes32, inclusions: tuple[KeyValue, ...]) -> list[dict[str, Any]]:
         async with self.data_store.transaction():
             changelist: list[dict[str, Any]] = []
             for entry in inclusions:
@@ -1054,20 +990,9 @@ class DataLayer:
 
                 if existing_value is not None:
                     # upsert, delete the existing key and value
-                    changelist.append(
-                        {
-                            "action": "delete",
-                            "key": entry.key,
-                        }
-                    )
+                    changelist.append({"action": "delete", "key": entry.key})
 
-                changelist.append(
-                    {
-                        "action": "insert",
-                        "key": entry.key,
-                        "value": entry.value,
-                    }
-                )
+                changelist.append({"action": "insert", "key": entry.key, "value": entry.value})
 
             return changelist
 
@@ -1079,15 +1004,12 @@ class DataLayer:
             our_store_proofs: dict[bytes32, StoreProofs] = {}
             for offer_store in offer_stores:
                 changelist = await self.build_offer_changelist(
-                    store_id=offer_store.store_id,
-                    inclusions=offer_store.inclusions,
+                    store_id=offer_store.store_id, inclusions=offer_store.inclusions
                 )
 
                 if len(changelist) > 0:
                     new_root_hash = await self.batch_insert(
-                        store_id=offer_store.store_id,
-                        changelist=changelist,
-                        enable_batch_autoinsert=False,
+                        store_id=offer_store.store_id, changelist=changelist, enable_batch_autoinsert=False
                     )
                 else:
                     existing_root = await self.get_root(store_id=offer_store.store_id)
@@ -1101,14 +1023,10 @@ class DataLayer:
                 proofs: list[Proof] = []
                 for entry in offer_store.inclusions:
                     node_hash = await self.get_key_value_hash(
-                        store_id=offer_store.store_id,
-                        key=entry.key,
-                        root_hash=new_root_hash,
+                        store_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
                     )
                     proof_of_inclusion = await self.data_store.get_proof_of_inclusion_by_hash(
-                        node_hash=node_hash,
-                        store_id=offer_store.store_id,
-                        root_hash=new_root_hash,
+                        node_hash=node_hash, store_id=offer_store.store_id, root_hash=new_root_hash
                     )
                     proof = Proof(
                         key=entry.key,
@@ -1128,12 +1046,7 @@ class DataLayer:
                 our_store_proofs[offer_store.store_id] = store_proof
             return our_store_proofs
 
-    async def make_offer(
-        self,
-        maker: tuple[OfferStore, ...],
-        taker: tuple[OfferStore, ...],
-        fee: uint64,
-    ) -> Offer:
+    async def make_offer(self, maker: tuple[OfferStore, ...], taker: tuple[OfferStore, ...], fee: uint64) -> Offer:
         async with self.data_store.transaction():
             our_store_proofs = await self.process_offered_stores(offer_stores=maker)
 
@@ -1187,11 +1100,7 @@ class DataLayer:
         return offer
 
     async def take_offer(
-        self,
-        offer_bytes: bytes,
-        taker: tuple[OfferStore, ...],
-        maker: tuple[StoreProofs, ...],
-        fee: uint64,
+        self, offer_bytes: bytes, taker: tuple[OfferStore, ...], maker: tuple[StoreProofs, ...], fee: uint64
     ) -> TradeRecord:
         async with self.data_store.transaction():
             our_store_proofs = await self.process_offered_stores(offer_stores=taker)
@@ -1306,9 +1215,7 @@ class DataLayer:
             async with aiohttp.ClientSession() as session:
                 try:
                     async with session.post(
-                        uploader.url + "/handle_upload",
-                        json={"store_id": store_id.hex()},
-                        headers=uploader.headers,
+                        uploader.url + "/handle_upload", json={"store_id": store_id.hex()}, headers=uploader.headers
                     ) as response:
                         res_json = await response.json()
                         if res_json["handle_upload"]:
@@ -1321,11 +1228,7 @@ class DataLayer:
         coros = [get_plugin_info(plugin_remote=plugin) for plugin in {*self.uploaders, *self.downloaders}]
         results = dict(await asyncio.gather(*coros))
 
-        unknown = {
-            "name": "unknown",
-            "version": "unknown",
-            "instance": "unknown",
-        }
+        unknown = {"name": "unknown", "version": "unknown", "instance": "unknown"}
 
         uploader_status = {uploader.url: results.get(uploader, unknown) for uploader in self.uploaders}
         downloader_status = {downloader.url: results.get(downloader, unknown) for downloader in self.downloaders}

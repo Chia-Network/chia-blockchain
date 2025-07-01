@@ -16,18 +16,8 @@ class Counters:
 
 @click.command()
 @click.argument("pid", type=int, required=True)
-@click.option(
-    "--output",
-    type=str,
-    default="cpu-usage.log",
-    help="the file to print CPU usage stats to",
-)
-@click.option(
-    "--threads",
-    is_flag=True,
-    default=False,
-    help="Also capture threads counters",
-)
+@click.option("--output", type=str, default="cpu-usage.log", help="the file to print CPU usage stats to")
+@click.option("--threads", is_flag=True, default=False, help="Also capture threads counters")
 def main(pid: int, output: str, threads: bool) -> None:
     process = psutil.Process(pid)
 

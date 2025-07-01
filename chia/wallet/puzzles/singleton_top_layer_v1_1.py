@@ -9,12 +9,8 @@ from chia_puzzles_py.programs import (
     SINGLETON_TOP_LAYER_V1_1,
     SINGLETON_TOP_LAYER_V1_1_HASH,
 )
-from chia_puzzles_py.programs import (
-    SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES,
-)
-from chia_puzzles_py.programs import (
-    SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES,
-)
+from chia_puzzles_py.programs import SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES
+from chia_puzzles_py.programs import SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -188,48 +184,25 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
 
 # Take standard coin and amount -> launch conditions & launcher coin solution
 def launch_conditions_and_coinsol(
-    coin: Coin,
-    inner_puzzle: Program,
-    comment: list[tuple[str, str]],
-    amount: uint64,
+    coin: Coin, inner_puzzle: Program, comment: list[tuple[str, str]], amount: uint64
 ) -> tuple[list[Program], CoinSpend]:
     if (amount % 2) == 0:
         raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
     launcher_coin: Coin = generate_launcher_coin(coin, amount)
     curried_singleton: Program = SINGLETON_MOD.curry(
-        (SINGLETON_MOD_HASH, (launcher_coin.name(), SINGLETON_LAUNCHER_HASH)),
-        inner_puzzle,
+        (SINGLETON_MOD_HASH, (launcher_coin.name(), SINGLETON_LAUNCHER_HASH)), inner_puzzle
     )
 
-    launcher_solution = Program.to(
-        [
-            curried_singleton.get_tree_hash(),
-            amount,
-            comment,
-        ]
-    )
-    create_launcher = Program.to(
-        [
-            ConditionOpcode.CREATE_COIN,
-            SINGLETON_LAUNCHER_HASH,
-            amount,
-        ],
-    )
+    launcher_solution = Program.to([curried_singleton.get_tree_hash(), amount, comment])
+    create_launcher = Program.to([ConditionOpcode.CREATE_COIN, SINGLETON_LAUNCHER_HASH, amount])
     assert_launcher_announcement = Program.to(
-        [
-            ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-            std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),
-        ],
+        [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())]
     )
 
     conditions = [create_launcher, assert_launcher_announcement]
 
-    launcher_coin_spend = make_spend(
-        launcher_coin,
-        SINGLETON_LAUNCHER,
-        launcher_solution,
-    )
+    launcher_coin_spend = make_spend(launcher_coin, SINGLETON_LAUNCHER, launcher_solution)
 
     return conditions, launcher_coin_spend
 
@@ -249,40 +222,22 @@ def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
 
     amount: uint64 = uint64(coin_spend.coin.amount)
 
-    return LineageProof(
-        parent_name,
-        inner_puzzle_hash,
-        amount,
-    )
+    return LineageProof(parent_name, inner_puzzle_hash, amount)
 
 
 # Return the puzzle reveal of a singleton with specific ID and innerpuz
 def puzzle_for_singleton(
     launcher_id: bytes32, inner_puz: Program, launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH
 ) -> Program:
-    return SINGLETON_MOD.curry(
-        (SINGLETON_MOD_HASH, (launcher_id, launcher_hash)),
-        inner_puz,
-    )
+    return SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_hash)), inner_puz)
 
 
 # Return a solution to spend a singleton
-def solution_for_singleton(
-    lineage_proof: LineageProof,
-    amount: uint64,
-    inner_solution: Program,
-) -> Program:
+def solution_for_singleton(lineage_proof: LineageProof, amount: uint64, inner_solution: Program) -> Program:
     if lineage_proof.inner_puzzle_hash is None:
-        parent_info = [
-            lineage_proof.parent_name,
-            lineage_proof.amount,
-        ]
+        parent_info = [lineage_proof.parent_name, lineage_proof.amount]
     else:
-        parent_info = [
-            lineage_proof.parent_name,
-            lineage_proof.inner_puzzle_hash,
-            lineage_proof.amount,
-        ]
+        parent_info = [lineage_proof.parent_name, lineage_proof.inner_puzzle_hash, lineage_proof.amount]
 
     solution: Program = Program.to([parent_info, amount, inner_solution])
     return solution
@@ -296,11 +251,7 @@ def pay_to_singleton_puzzle(launcher_id: bytes32) -> Program:
 # Create a coin that a singleton can claim or that can be sent to another puzzle after a specified time
 def pay_to_singleton_or_delay_puzzle(launcher_id: bytes32, delay_time: uint64, delay_ph: bytes32) -> Program:
     return P2_SINGLETON_OR_DELAYED_MOD.curry(
-        SINGLETON_MOD_HASH,
-        launcher_id,
-        SINGLETON_LAUNCHER_HASH,
-        delay_time,
-        delay_ph,
+        SINGLETON_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH, delay_time, delay_ph
     )
 
 
@@ -329,26 +280,16 @@ def claim_p2_singleton(
     if delay_time is None or delay_ph is None:
         puzzle: Program = pay_to_singleton_puzzle(launcher_id)
     else:
-        puzzle = pay_to_singleton_or_delay_puzzle(
-            launcher_id,
-            delay_time,
-            delay_ph,
-        )
+        puzzle = pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph)
     claim_coinsol = make_spend(
-        p2_singleton_coin,
-        puzzle,
-        solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),
+        p2_singleton_coin, puzzle, solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash)
     )
     return assertion, announcement, claim_coinsol
 
 
 # Get the CoinSpend for spending to a delayed puzzle
 def spend_to_delayed_puzzle(
-    p2_singleton_coin: Coin,
-    output_amount: uint64,
-    launcher_id: bytes32,
-    delay_time: uint64,
-    delay_ph: bytes32,
+    p2_singleton_coin: Coin, output_amount: uint64, launcher_id: bytes32, delay_time: uint64, delay_ph: bytes32
 ) -> CoinSpend:
     claim_coinsol = make_spend(
         p2_singleton_coin,

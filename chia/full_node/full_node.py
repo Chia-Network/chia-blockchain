@@ -179,11 +179,7 @@ class FullNode:
 
     @classmethod
     async def create(
-        cls,
-        config: dict[str, Any],
-        root_path: Path,
-        consensus_constants: ConsensusConstants,
-        name: str = __name__,
+        cls, config: dict[str, Any], root_path: Path, consensus_constants: ConsensusConstants, name: str = __name__
     ) -> FullNode:
         # NOTE: async to force the queue creation to occur when an event loop is available
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
@@ -524,9 +520,7 @@ class FullNode:
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
-            constants=self.constants,
-            blockchain=self.blockchain,
-            multiprocessing_context=self.multiprocessing_context,
+            constants=self.constants, blockchain=self.blockchain, multiprocessing_context=self.multiprocessing_context
         )
         peak = self.blockchain.get_peak()
         if peak is not None:
@@ -651,9 +645,7 @@ class FullNode:
                             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
                             assert peak_fb is not None
                             ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                                peak_fb,
-                                state_change_summary,
-                                peer,
+                                peak_fb, state_change_summary, peer
                             )
                         except Exception:
                             # Still do post processing after cancel (or exception)
@@ -842,11 +834,7 @@ class FullNode:
             peak = self.blockchain.block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-                self.constants,
-                self.blockchain,
-                peak.required_iters,
-                peak_block,
-                True,
+                self.constants, self.blockchain, peak.required_iters, peak_block, True
             )
             recent_rc = self.blockchain.get_recent_reward_challenges()
 
@@ -949,12 +937,7 @@ class FullNode:
 
             elif connection.connection_type is NodeType.WALLET:
                 # If connected to a wallet, send the Peak
-                request_wallet = wallet_protocol.NewPeakWallet(
-                    peak.header_hash,
-                    peak.height,
-                    peak.weight,
-                    peak.height,
-                )
+                request_wallet = wallet_protocol.NewPeakWallet(peak.header_hash, peak.height, peak.weight, peak.height)
                 await connection.send_message(make_msg(ProtocolMessageTypes.new_peak_wallet, request_wallet))
             elif connection.connection_type is NodeType.TIMELORD:
                 await self.send_peak_to_timelords()
@@ -1025,9 +1008,7 @@ class FullNode:
             for peer in peers:
                 coroutines.append(
                     peer.call_api(
-                        FullNodeAPI.request_block,
-                        full_node_protocol.RequestBlock(target_peak.height, True),
-                        timeout=10,
+                        FullNodeAPI.request_block, full_node_protocol.RequestBlock(target_peak.height, True), timeout=10
                     )
                 )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
@@ -1233,10 +1214,7 @@ class FullNode:
                         else:
                             bump = seconds_per_request
 
-                        new_peers_with_peak[idx] = (
-                            new_peers_with_peak[idx][0],
-                            new_peers_with_peak[idx][1] + bump,
-                        )
+                        new_peers_with_peak[idx] = (new_peers_with_peak[idx][0], new_peers_with_peak[idx][1] + bump)
                         # the fewer peers we have, the more willing we should be
                         # to wait for them.
                         timeout = int(30 + 30 / len(new_peers_with_peak))
@@ -1255,10 +1233,7 @@ class FullNode:
                                 # this will have its next allowed timestamp in
                                 # the passed, and be preferred multiple times
                                 # over this peer.
-                                new_peers_with_peak[idx] = (
-                                    new_peers_with_peak[idx][0],
-                                    end,
-                                )
+                                new_peers_with_peak[idx] = (new_peers_with_peak[idx][0], end)
                             start = time.monotonic()
                             await output_queue.put((peer, response.blocks))
                             end = time.monotonic()
@@ -1322,14 +1297,7 @@ class FullNode:
 
                     futures: list[Awaitable[PreValidationResult]] = []
                     for block in blocks_to_validate:
-                        futures.extend(
-                            await self.prevalidate_blocks(
-                                blockchain,
-                                [block],
-                                vs,
-                                summaries,
-                            )
-                        )
+                        futures.extend(await self.prevalidate_blocks(blockchain, [block], vs, summaries))
                     start = time.monotonic()
                     await output_queue.put((peer, next_validation_state, list(futures), blocks_to_validate))
                     end = time.monotonic()
@@ -1368,12 +1336,7 @@ class FullNode:
                 # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
                 # call will update it
                 state_change_summary, err = await self.add_prevalidated_blocks(
-                    blockchain,
-                    blocks,
-                    pre_validation_results,
-                    fork_info,
-                    peer.peer_info,
-                    vs,
+                    blockchain, blocks, pre_validation_results, fork_info, peer.peer_info, vs
                 )
                 if err is not None:
                     await peer.close(600)
@@ -1467,10 +1430,7 @@ class FullNode:
             connection = self.server.all_connections.get(peer)
             if connection is not None:
                 state = CoinStateUpdate(
-                    wallet_update.peak.height,
-                    wallet_update.fork_height,
-                    wallet_update.peak.header_hash,
-                    list(changes),
+                    wallet_update.peak.height, wallet_update.fork_height, wallet_update.peak.header_hash, list(changes)
                 )
                 await connection.send_message(make_msg(ProtocolMessageTypes.coin_state_update, state))
 
@@ -1504,21 +1464,11 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, None
 
-        futures = await self.prevalidate_blocks(
-            blockchain,
-            blocks_to_validate,
-            copy.copy(vs),
-            wp_summaries,
-        )
+        futures = await self.prevalidate_blocks(blockchain, blocks_to_validate, copy.copy(vs), wp_summaries)
         pre_validation_results = list(await asyncio.gather(*futures))
 
         agg_state_change_summary, err = await self.add_prevalidated_blocks(
-            blockchain,
-            blocks_to_validate,
-            pre_validation_results,
-            fork_info,
-            peer_info,
-            vs,
+            blockchain, blocks_to_validate, pre_validation_results, fork_info, peer_info, vs
         )
 
         if agg_state_change_summary is not None:
@@ -1598,13 +1548,7 @@ class FullNode:
         for block in blocks_to_validate:
             ret.append(
                 await pre_validate_block(
-                    self.constants,
-                    blockchain,
-                    block,
-                    self.blockchain.pool,
-                    None,
-                    vs,
-                    wp_summaries=wp_summaries,
+                    self.constants, blockchain, block, self.blockchain.pool, None, vs, wp_summaries=wp_summaries
                 )
             )
         return ret
@@ -1838,10 +1782,7 @@ class FullNode:
         self._state_changed("signage_point", {"broadcast_farmer": broadcast_farmer})
 
     async def peak_post_processing(
-        self,
-        block: FullBlock,
-        state_change_summary: StateChangeSummary,
-        peer: Optional[WSChiaConnection],
+        self, block: FullBlock, state_change_summary: StateChangeSummary, peer: Optional[WSChiaConnection]
     ) -> PeakPostProcessingResult:
         """
         Must be called under self.blockchain.priority_mutex. This updates the internal state of the full node with the
@@ -1868,9 +1809,7 @@ class FullNode:
         )
 
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
-            state_change_summary,
-            self.subscriptions.has_coin_subscription,
-            self.subscriptions.has_puzzle_subscription,
+            state_change_summary, self.subscriptions.has_coin_subscription, self.subscriptions.has_puzzle_subscription
         )
         await self.hint_store.add_hints(hints_to_add)
 
@@ -1888,14 +1827,7 @@ class FullNode:
             fork_block = await self.blockchain.get_block_record_from_db(fork_hash)
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
-            record,
-            block,
-            sub_slots[0],
-            sub_slots[1],
-            fork_block,
-            self.blockchain,
-            sub_slot_iters,
-            difficulty,
+            record, block, sub_slots[0], sub_slots[1], fork_block, self.blockchain, sub_slot_iters, difficulty
         )
 
         signage_points: list[tuple[RespondSignagePoint, WSChiaConnection, Optional[EndOfSubSlotBundle]]] = []
@@ -1909,11 +1841,7 @@ class FullNode:
                 )
                 # Collect the data for networking outside the mutex
                 signage_points.append(
-                    (
-                        RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof),
-                        peer,
-                        sub_slots[1],
-                    )
+                    (RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1])
                 )
 
         if sub_slots[1] is None:
@@ -2300,10 +2228,7 @@ class FullNode:
         return None
 
     async def add_unfinished_block(
-        self,
-        block: UnfinishedBlock,
-        peer: Optional[WSChiaConnection],
-        farmed_block: bool = False,
+        self, block: UnfinishedBlock, peer: Optional[WSChiaConnection], farmed_block: bool = False
     ) -> None:
         """
         We have received an unfinished block, either created by us, or from another peer.
@@ -2442,11 +2367,7 @@ class FullNode:
             height = uint32(self.blockchain.block_record(block.prev_header_hash).height + 1)
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-            self.constants,
-            self.blockchain,
-            validate_result.required_iters,
-            block,
-            True,
+            self.constants, self.blockchain, validate_result.required_iters, block, True
         )
 
         self.full_node_store.add_unfinished_block(height, block, validate_result)
@@ -2483,10 +2404,7 @@ class FullNode:
             )
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            self.constants,
-            len(block.finished_sub_slots) > 0,
-            prev_b,
-            self.blockchain,
+            self.constants, len(block.finished_sub_slots) > 0, prev_b, self.blockchain
         )
 
         if block.reward_chain_block.signage_point_index == 0:
@@ -2504,12 +2422,7 @@ class FullNode:
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
-            block.reward_chain_block,
-            difficulty,
-            sub_slot_iters,
-            block.foliage,
-            ses,
-            rc_prev,
+            block.reward_chain_block, difficulty, sub_slot_iters, block.foliage, ses, rc_prev
         )
 
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
@@ -2595,18 +2508,13 @@ class FullNode:
                 return None
 
         finished_sub_slots: Optional[list[EndOfSubSlotBundle]] = self.full_node_store.get_finished_sub_slots(
-            self.blockchain,
-            prev_b,
-            last_slot_cc_hash,
+            self.blockchain, prev_b, last_slot_cc_hash
         )
         if finished_sub_slots is None:
             return None
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            self.constants,
-            len(finished_sub_slots) > 0,
-            prev_b,
-            self.blockchain,
+            self.constants, len(finished_sub_slots) > 0, prev_b, self.blockchain
         )
 
         if unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash == self.constants.GENESIS_CHALLENGE:
@@ -2620,9 +2528,7 @@ class FullNode:
         sp_total_iters = uint128(
             sub_slot_start_iters
             + calculate_sp_iters(
-                self.constants,
-                sub_slot_iters,
-                unfinished_block.reward_chain_block.signage_point_index,
+                self.constants, sub_slot_iters, unfinished_block.reward_chain_block.signage_point_index
             )
         )
 
@@ -2832,11 +2738,7 @@ class FullNode:
         assert mempool_item.fee >= 0
         assert mempool_item.cost is not None
 
-        new_tx = full_node_protocol.NewTransaction(
-            mempool_item.name,
-            mempool_item.cost,
-            mempool_item.fee,
-        )
+        new_tx = full_node_protocol.NewTransaction(mempool_item.name, mempool_item.cost, mempool_item.fee)
         msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
         if current_peer is None:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -2935,10 +2837,7 @@ class FullNode:
             if peer is None:
                 continue
 
-            msg = make_msg(
-                ProtocolMessageTypes.mempool_items_removed,
-                wallet_protocol.MempoolItemsRemoved(removals),
-            )
+            msg = make_msg(ProtocolMessageTypes.mempool_items_removed, wallet_protocol.MempoolItemsRemoved(removals))
             await peer.send_message(msg)
 
         total_time = time.monotonic() - start_time
@@ -3034,11 +2933,7 @@ class FullNode:
 
     # returns True if we ended up replacing the proof, and False otherwise
     async def _replace_proof(
-        self,
-        vdf_info: VDFInfo,
-        vdf_proof: VDFProof,
-        header_hash: bytes32,
-        field_vdf: CompressibleVDFField,
+        self, vdf_info: VDFInfo, vdf_proof: VDFProof, header_hash: bytes32, field_vdf: CompressibleVDFField
     ) -> bool:
         block = await self.block_store.get_full_block(header_hash)
         if block is None:
@@ -3168,11 +3063,7 @@ class FullNode:
             self.log.error(f"{peer} requested compact vdf we don't have, height: {request.height}.")
             return None
         compact_vdf = full_node_protocol.RespondCompactVDF(
-            request.height,
-            request.header_hash,
-            request.field_vdf,
-            request.vdf_info,
-            vdf_proof,
+            request.height, request.header_hash, request.field_vdf, request.vdf_info, vdf_proof
         )
         msg = make_msg(ProtocolMessageTypes.respond_compact_vdf, compact_vdf)
         await peer.send_message(msg)

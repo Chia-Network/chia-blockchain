@@ -28,11 +28,7 @@ def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int, g
 
 
 def get_full_tree_filename_path(
-    foldername: Path,
-    store_id: bytes32,
-    node_hash: bytes32,
-    generation: int,
-    group_by_store: bool = False,
+    foldername: Path, store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False
 ) -> Path:
     if group_by_store:
         path = foldername.joinpath(f"{store_id}")
@@ -41,11 +37,7 @@ def get_full_tree_filename_path(
 
 
 def get_delta_filename_path(
-    foldername: Path,
-    store_id: bytes32,
-    node_hash: bytes32,
-    generation: int,
-    group_by_store: bool = False,
+    foldername: Path, store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False
 ) -> Path:
     if group_by_store:
         path = foldername.joinpath(f"{store_id}")
@@ -88,10 +80,7 @@ def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
 
 
 async def insert_into_data_store_from_file(
-    data_store: DataStore,
-    store_id: bytes32,
-    root_hash: Optional[bytes32],
-    filename: Path,
+    data_store: DataStore, store_id: bytes32, root_hash: Optional[bytes32], filename: Path
 ) -> int:
     num_inserted = 0
     with open(filename, "rb") as reader:
@@ -223,9 +212,7 @@ async def download_file(
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            downloader.url + "/download",
-            json=request_json,
-            headers=downloader.headers,
+            downloader.url + "/download", json=request_json, headers=downloader.headers
         ) as response:
             res_json = await response.json()
             assert isinstance(res_json["downloaded"], bool)
@@ -282,17 +269,10 @@ async def insert_from_delta_file(
         log.info(f"Successfully downloaded delta file {target_filename_path.name}.")
         try:
             filename_full_tree = get_full_tree_filename_path(
-                client_foldername,
-                store_id,
-                root_hash,
-                existing_generation,
-                group_files_by_store,
+                client_foldername, store_id, root_hash, existing_generation, group_files_by_store
             )
             num_inserted = await insert_into_data_store_from_file(
-                data_store,
-                store_id,
-                None if root_hash == bytes32.zeros else root_hash,
-                target_filename_path,
+                data_store, store_id, None if root_hash == bytes32.zeros else root_hash, target_filename_path
             )
             log.info(
                 f"Successfully inserted hash {root_hash} from delta file. "
@@ -369,10 +349,7 @@ async def http_download(
     async with aiohttp.ClientSession() as session:
         headers = {"accept-encoding": "gzip"}
         async with session.get(
-            server_info.url + "/" + filename,
-            headers=headers,
-            timeout=timeout,
-            proxy=proxy_url,
+            server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
         ) as resp:
             resp.raise_for_status()
             size = int(resp.headers.get("content-length", 0))

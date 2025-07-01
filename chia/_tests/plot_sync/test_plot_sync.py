@@ -279,8 +279,7 @@ class Environment:
 
 @pytest.fixture(scope="function")
 async def environment(
-    tmp_path: Path,
-    farmer_two_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
+    tmp_path: Path, farmer_two_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools]
 ) -> AsyncIterator[Environment]:
     def new_test_dir(name: str, plot_list: list[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)

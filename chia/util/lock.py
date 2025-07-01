@@ -32,10 +32,7 @@ class Lockfile:
         return self
 
     def __exit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        self, exc_type: Optional[type[BaseException]], exc: Optional[BaseException], traceback: Optional[TracebackType]
     ) -> None:
         self.release()
 

@@ -230,11 +230,7 @@ async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
 
 
 @pytest.mark.parametrize(
-    argnames="transactioned",
-    argvalues=[
-        pytest.param(True, id="transaction"),
-        pytest.param(False, id="no transaction"),
-    ],
+    argnames="transactioned", argvalues=[pytest.param(True, id="transaction"), pytest.param(False, id="no transaction")]
 )
 @pytest.mark.anyio
 async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> None:
@@ -405,8 +401,7 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
 )
 @pytest.mark.anyio
 async def test_in_transaction_as_expected(
-    manager_method: Callable[[DBWrapper2], ConnectionContextManager],
-    expected: bool,
+    manager_method: Callable[[DBWrapper2], ConnectionContextManager], expected: bool
 ) -> None:
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
@@ -463,15 +458,11 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
                 pass
 
             async with writer.execute(
-                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
-                {"id": 1, "friend": None},
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)", {"id": 1, "friend": None}
             ):
                 pass
 
-            async with writer.execute(
-                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
-                {"id": 2, "friend": 1},
-            ):
+            async with writer.execute("INSERT INTO people(id, friend) VALUES (:id, :friend)", {"id": 2, "friend": 1}):
                 pass
 
         # make sure the writer raises a foreign key error on exit
@@ -522,15 +513,11 @@ async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> 
                 pass
 
             async with writer.execute(
-                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
-                {"id": 1, "friend": None},
+                "INSERT INTO people(id, friend) VALUES (:id, :friend)", {"id": 1, "friend": None}
             ):
                 pass
 
-            async with writer.execute(
-                "INSERT INTO people(id, friend) VALUES (:id, :friend)",
-                {"id": 2, "friend": 1},
-            ):
+            async with writer.execute("INSERT INTO people(id, friend) VALUES (:id, :friend)", {"id": 2, "friend": 1}):
                 pass
 
         # make sure the writer raises a foreign key error on exit
@@ -547,8 +534,7 @@ async def test_set_foreign_keys_fails_within_acquired_writer() -> None:
     async with DBConnection(2, foreign_keys=True) as db_wrapper:
         async with db_wrapper.writer():
             with pytest.raises(
-                InternalError,
-                match="Unable to set foreign key enforcement state while a writer is held",
+                InternalError, match="Unable to set foreign key enforcement state while a writer is held"
             ):
                 async with db_wrapper._set_foreign_key_enforcement(enabled=False):
                     pass  # pragma: no cover

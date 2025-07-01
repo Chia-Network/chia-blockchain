@@ -383,8 +383,7 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
     # Fetch the coin records using the wallet protocol,
     # with more coin ids than the limit of 100,000, but only after height 10000.
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, False),
-        peer,
+        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, False), peer
     )
     assert resp is not None
 
@@ -595,11 +594,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
     # The expected behavior when the limit is exceeded, is to skip the rest
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            [ph],
-            uint32(0),
-            h0,
-            wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
-            False,
+            [ph], uint32(0), h0, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
         ),
         peer,
     )
@@ -790,10 +785,7 @@ async def assert_mempool_added(queue: Queue[Message], transaction_ids: set[bytes
     assert set(update.transaction_ids) == transaction_ids
 
 
-async def assert_mempool_removed(
-    queue: Queue[Message],
-    removed_items: set[wallet_protocol.RemovedMempoolItem],
-) -> None:
+async def assert_mempool_removed(queue: Queue[Message], removed_items: set[wallet_protocol.RemovedMempoolItem]) -> None:
     message = await queue.get()
     assert message.type == ProtocolMessageTypes.mempool_items_removed.value
 

@@ -92,11 +92,7 @@ class Receiver:
     _update_callback: ReceiverUpdateCallback
     _harvesting_mode: Optional[HarvestingMode]
 
-    def __init__(
-        self,
-        connection: WSChiaConnection,
-        update_callback: ReceiverUpdateCallback,
-    ) -> None:
+    def __init__(self, connection: WSChiaConnection, update_callback: ReceiverUpdateCallback) -> None:
         self._connection = connection
         self._current_sync = Sync()
         self._last_sync = Sync()
@@ -197,10 +193,7 @@ class Receiver:
             expected: PlotSyncIdentifier = PlotSyncIdentifier(
                 identifier.timestamp, self._current_sync.sync_id, self._current_sync.next_message_id
             )
-            raise InvalidIdentifierError(
-                identifier,
-                expected,
-            )
+            raise InvalidIdentifierError(identifier, expected)
 
     async def _sync_started(self, data: PlotSyncStart) -> None:
         if data.initial:

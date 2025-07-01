@@ -56,24 +56,13 @@ async def mint_cr_cat(
 ) -> None:
     async with wallet_0.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
         our_puzzle = await action_scope.get_puzzle(wallet_0.wallet_state_manager)
-    cat_puzzle: Program = construct_cat_puzzle(
-        CAT_MOD,
-        tail.get_tree_hash(),
-        Program.to(1),
-    )
+    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), Program.to(1))
     CAT_AMOUNT_0 = uint64(100)
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
     tx = (
         await client_0.create_signed_transactions(
-            [
-                {
-                    "puzzle_hash": cat_puzzle.get_tree_hash(),
-                    "amount": CAT_AMOUNT_0,
-                }
-            ],
-            tx_config,
-            wallet_id=1,
+            [{"puzzle_hash": cat_puzzle.get_tree_hash(), "amount": CAT_AMOUNT_0}], tx_config, wallet_id=1
         )
     ).signed_tx
     spend_bundle = tx.spend_bundle
@@ -93,9 +82,7 @@ async def mint_cr_cat(
                                 [
                                     51,
                                     construct_cr_layer(
-                                        authorized_providers,
-                                        proofs_checker.as_program(),
-                                        our_puzzle,
+                                        authorized_providers, proofs_checker.as_program(), our_puzzle
                                     ).get_tree_hash(),
                                     CAT_AMOUNT_0,
                                     [our_puzzle.get_tree_hash()],
@@ -125,13 +112,7 @@ async def mint_cr_cat(
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "config_overrides": {"automatically_add_unknown_cats": True},
-            "blocks_needed": [2, 1],
-        }
-    ],
+    [{"num_environments": 2, "config_overrides": {"automatically_add_unknown_cats": True}, "blocks_needed": [2, 1]}],
     indirect=True,
 )
 @pytest.mark.anyio
@@ -148,17 +129,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     client_1 = wallet_environments.environments[1].rpc_client
 
     # Define wallet aliases
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "vc": 3,
-        "crcat": 4,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "crcat": 2,
-        "vc": 3,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2, "vc": 3, "crcat": 4}
+    env_1.wallet_aliases = {"xch": 1, "crcat": 2, "vc": 3}
 
     # Generate DID as an "authorized provider"
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -220,12 +192,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -3,  # 3 for VC mint, 1 for DID mint
                         "set_remainder": True,
                     },
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "vc": {
-                        "unspent_coin_count": 1,
-                    },
+                    "did": {"set_remainder": True},
+                    "vc": {"unspent_coin_count": 1},
                 },
             ),
             WalletStateTransition(),
@@ -238,12 +206,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     proofs: VCProofs = VCProofs({"foo": "1", "bar": "1", "baz": "1", "qux": "1", "grault": "1"})
     proof_root: bytes32 = proofs.root()
     await client_0.vc_spend(
-        VCSpend(
-            vc_id=vc_record.vc.launcher_id,
-            new_proof_hash=proof_root,
-            fee=uint64(100),
-            push=True,
-        ),
+        VCSpend(vc_id=vc_record.vc.launcher_id, new_proof_hash=proof_root, fee=uint64(100), push=True),
         wallet_environments.tx_config,
     )
     await wallet_environments.process_pending_states(
@@ -263,25 +226,17 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": 1,
                         "max_send_amount": -1,
                     },
-                    "vc": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "vc": {"pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -100,
-                        "pending_coin_removal_count": -1,
-                        "set_remainder": True,
-                    },
+                    "xch": {"confirmed_wallet_balance": -100, "pending_coin_removal_count": -1, "set_remainder": True},
                     "did": {
                         "spendable_balance": 1,
                         "pending_change": -1,
                         "pending_coin_removal_count": -1,
                         "max_send_amount": 1,
                     },
-                    "vc": {
-                        "pending_coin_removal_count": -1,
-                    },
+                    "vc": {"pending_coin_removal_count": -1},
                 },
             ),
             WalletStateTransition(),
@@ -296,16 +251,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "vc": {
-                        "pending_coin_removal_count": 1,
-                    },
-                },
-                post_block_balance_updates={
-                    "vc": {
-                        "pending_coin_removal_count": -1,
-                    },
-                },
+                pre_block_balance_updates={"vc": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"vc": {"pending_coin_removal_count": -1}},
             ),
             WalletStateTransition(),
         ]
@@ -333,13 +280,10 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "<=#spendable_balance": -100,
                         "<=#max_send_amount": -100,
                         "set_remainder": True,
-                    },
+                    }
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -100,
-                        "set_remainder": True,
-                    },
+                    "xch": {"confirmed_wallet_balance": -100, "set_remainder": True},
                     "crcat": {
                         "init": True,
                         "confirmed_wallet_balance": 100,
@@ -396,9 +340,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": -2000000000,
                         "set_remainder": True,
                     },
-                    "vc": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "vc": {"pending_coin_removal_count": 1},
                     "crcat": {
                         "unconfirmed_wallet_balance": -90,
                         "spendable_balance": -100,
@@ -413,9 +355,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -1,
                         "set_remainder": True,
                     },
-                    "vc": {
-                        "pending_coin_removal_count": -1,
-                    },
+                    "vc": {"pending_coin_removal_count": -1},
                     "crcat": {
                         "confirmed_wallet_balance": -90,
                         "spendable_balance": 10,
@@ -438,11 +378,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": 0,
                     }
                 },
-                post_block_additional_balance_info={
-                    "crcat": {
-                        "pending_approval_balance": 90,
-                    },
-                },
+                post_block_additional_balance_info={"crcat": {"pending_approval_balance": 90}},
             ),
         ]
     )
@@ -462,39 +398,22 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     await client_0.vc_spend(
-        VCSpend(vc_id=vc_record.vc.launcher_id, new_puzhash=ph, push=True),
-        wallet_environments.tx_config,
+        VCSpend(vc_id=vc_record.vc.launcher_id, new_puzhash=ph, push=True), wallet_environments.tx_config
     )
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "vc": {
-                        "pending_coin_removal_count": 1,
-                    }
-                },
-                post_block_balance_updates={
-                    "vc": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": -1,
-                    }
-                },
+                pre_block_balance_updates={"vc": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"vc": {"pending_coin_removal_count": -1, "unspent_coin_count": -1}},
             ),
-            WalletStateTransition(
-                post_block_balance_updates={
-                    "vc": {"init": True, "set_remainder": True},
-                }
-            ),
+            WalletStateTransition(post_block_balance_updates={"vc": {"init": True, "set_remainder": True}}),
         ]
     )
     await client_1.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
 
     # Claim the pending approval to our wallet
     await client_1.crcat_approve_pending(
-        env_1.dealias_wallet_id("crcat"),
-        uint64(90),
-        wallet_environments.tx_config,
-        fee=uint64(90),
+        env_1.dealias_wallet_id("crcat"), uint64(90), wallet_environments.tx_config, fee=uint64(90)
     )
     await wallet_environments.process_pending_states(
         [
@@ -508,24 +427,12 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": -90,
                         "set_remainder": True,
                     },
-                    "vc": {
-                        "pending_coin_removal_count": 1,
-                    },
-                    "crcat": {
-                        "unconfirmed_wallet_balance": 90,
-                        "pending_change": 90,
-                        "pending_coin_removal_count": 1,
-                    },
+                    "vc": {"pending_coin_removal_count": 1},
+                    "crcat": {"unconfirmed_wallet_balance": 90, "pending_change": 90, "pending_coin_removal_count": 1},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -90,
-                        "pending_coin_removal_count": -1,
-                        "set_remainder": True,
-                    },
-                    "vc": {
-                        "pending_coin_removal_count": -1,
-                    },
+                    "xch": {"confirmed_wallet_balance": -90, "pending_coin_removal_count": -1, "set_remainder": True},
+                    "vc": {"pending_coin_removal_count": -1},
                     "crcat": {
                         "confirmed_wallet_balance": 90,
                         "spendable_balance": 90,
@@ -535,23 +442,14 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -1,
                     },
                 },
-                post_block_additional_balance_info={
-                    "crcat": {
-                        "pending_approval_balance": 0,
-                    },
-                },
+                post_block_additional_balance_info={"crcat": {"pending_approval_balance": 0}},
             ),
         ]
     )
 
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
     with pytest.raises(ValueError):
-        await client_0.cat_spend(
-            cr_cat_wallet_0.id(),
-            wallet_environments.tx_config,
-            uint64(10),
-            wallet_1_addr,
-        )
+        await client_0.cat_spend(cr_cat_wallet_0.id(), wallet_environments.tx_config, uint64(10), wallet_1_addr)
 
     # Test melting a CRCAT
     # This is intended to trigger an edge case where the output and change are the same forcing a new puzhash
@@ -579,9 +477,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": 20,
                         "set_remainder": True,
                     },
-                    "vc": {
-                        "pending_coin_removal_count": 1,
-                    },
+                    "vc": {"pending_coin_removal_count": 1},
                     "crcat": {
                         "unconfirmed_wallet_balance": -50,
                         "spendable_balance": -90,
@@ -591,14 +487,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": 20,
-                        "pending_coin_removal_count": -1,
-                        "set_remainder": True,
-                    },
-                    "vc": {
-                        "pending_coin_removal_count": -1,
-                    },
+                    "xch": {"confirmed_wallet_balance": 20, "pending_coin_removal_count": -1, "set_remainder": True},
+                    "vc": {"pending_coin_removal_count": -1},
                     "crcat": {
                         "confirmed_wallet_balance": -50,  # should go straight to confirmed because we sent to ourselves
                         "spendable_balance": 40,
@@ -638,11 +528,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -1,
-                        "pending_coin_removal_count": -1,
-                        "set_remainder": True,
-                    },
+                    "xch": {"confirmed_wallet_balance": -1, "pending_coin_removal_count": -1, "set_remainder": True},
                     "did": {
                         "spendable_balance": 1,
                         "pending_change": -1,
@@ -651,13 +537,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-            WalletStateTransition(
-                post_block_balance_updates={
-                    "vc": {
-                        "unspent_coin_count": -1,
-                    },
-                },
-            ),
+            WalletStateTransition(post_block_balance_updates={"vc": {"unspent_coin_count": -1}}),
         ]
     )
     assert (
@@ -665,16 +545,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
 async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Setup
@@ -684,11 +555,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     client_0 = env_0.rpc_client
 
     # Aliases
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-        "vc": 3,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2, "vc": 3}
 
     # Generate DID as an "authorized provider"
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -753,10 +620,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did": {"set_remainder": True},
-                },
-                post_block_balance_updates={},
+                pre_block_balance_updates={"did": {"set_remainder": True}}, post_block_balance_updates={}
             )
         ]
     )
@@ -769,17 +633,8 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
         [
             WalletStateTransition(
                 # Balance checking for this spend covered in test_vc_lifecycle
-                pre_block_balance_updates={
-                    "vc": {
-                        "pending_coin_removal_count": 1,
-                    },
-                },
-                post_block_balance_updates={
-                    "vc": {
-                        "pending_coin_removal_count": -1,
-                        "unspent_coin_count": -1,
-                    },
-                },
+                pre_block_balance_updates={"vc": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"vc": {"pending_coin_removal_count": -1, "unspent_coin_count": -1}},
             )
         ]
     )
@@ -790,15 +645,10 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_cat_wallet_conversion(
-    self_hostname: str,
-    one_wallet_and_one_simulator_services: Any,
-    trusted: Any,
+    self_hostname: str, one_wallet_and_one_simulator_services: Any, trusted: Any
 ) -> None:
     num_blocks = 1
     full_nodes, wallets, bt = one_wallet_and_one_simulator_services

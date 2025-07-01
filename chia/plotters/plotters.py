@@ -172,30 +172,12 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
     parser = subparsers.add_parser(name, help=plotter_desc)
     for option in option_list:
         if option is Options.K:
-            parser.add_argument(
-                "-k",
-                "--size",
-                type=int,
-                help="K value.",
-                default=32,
-            )
+            parser.add_argument("-k", "--size", type=int, help="K value.", default=32)
         if option is Options.NUM_BUCKETS:
             u_default = 0 if name == "chiapos" else 256
-            parser.add_argument(
-                "-u",
-                "--buckets",
-                type=int,
-                help="Number of buckets.",
-                default=u_default,
-            )
+            parser.add_argument("-u", "--buckets", type=int, help="Number of buckets.", default=u_default)
         if option is Options.STRIPE_SIZE:
-            parser.add_argument(
-                "-s",
-                "--stripes",
-                type=int,
-                help="Stripe size.",
-                default=0,
-            )
+            parser.add_argument("-s", "--stripes", type=int, help="Stripe size.", default=0)
         if option is Options.CUDA_TMP_DIR:
             parser.add_argument(
                 "-t",
@@ -207,93 +189,32 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.TMP_DIR:
             parser.add_argument(
-                "-t",
-                "--tmp_dir",
-                type=str,
-                dest="tmpdir",
-                help="Temporary directory 1.",
-                required=True,
+                "-t", "--tmp_dir", type=str, dest="tmpdir", help="Temporary directory 1.", required=True
             )
         if option is Options.TMP_DIR2:
-            parser.add_argument(
-                "-2",
-                "--tmp_dir2",
-                type=str,
-                dest="tmpdir2",
-                help="Temporary directory 2.",
-                default="",
-            )
+            parser.add_argument("-2", "--tmp_dir2", type=str, dest="tmpdir2", help="Temporary directory 2.", default="")
         if option is Options.FINAL_DIR:
-            parser.add_argument(
-                "-d",
-                "--final_dir",
-                type=str,
-                dest="finaldir",
-                help="Final directory.",
-                required=True,
-            )
+            parser.add_argument("-d", "--final_dir", type=str, dest="finaldir", help="Final directory.", required=True)
         if option is Options.BUFF:
-            parser.add_argument(
-                "-b",
-                "--buffer",
-                type=int,
-                help="Size of the buffer, in MB.",
-                default=0,
-            )
+            parser.add_argument("-b", "--buffer", type=int, help="Size of the buffer, in MB.", default=0)
         if option is Options.NUM_THREADS:
             r_default = 4 if name == "madmax" else 0
-            parser.add_argument(
-                "-r",
-                "--threads",
-                type=int,
-                help="Num threads.",
-                default=r_default,
-            )
+            parser.add_argument("-r", "--threads", type=int, help="Num threads.", default=r_default)
         if option is Options.NOBITFIELD:
-            parser.add_argument(
-                "-e",
-                "--nobitfield",
-                action="store_true",
-                help="Disable bitfield.",
-                default=False,
-            )
+            parser.add_argument("-e", "--nobitfield", action="store_true", help="Disable bitfield.", default=False)
         if option is Options.MEMO:
-            parser.add_argument(
-                "-m",
-                "--memo",
-                type=binascii.unhexlify,
-                help="Memo variable.",
-            )
+            parser.add_argument("-m", "--memo", type=binascii.unhexlify, help="Memo variable.")
         if option is Options.ID:
-            parser.add_argument(
-                "-i",
-                "--id",
-                type=binascii.unhexlify,
-                help="Plot id",
-            )
+            parser.add_argument("-i", "--id", type=binascii.unhexlify, help="Plot id")
         if option is Options.PLOT_COUNT:
-            parser.add_argument(
-                "-n",
-                "--count",
-                type=int,
-                help="Number of plots to create (default = 1)",
-                default=1,
-            )
+            parser.add_argument("-n", "--count", type=int, help="Number of plots to create (default = 1)", default=1)
         if option is Options.MADMAX_NUM_BUCKETS_PHRASE3:
             parser.add_argument(
-                "-v",
-                "--buckets3",
-                type=int,
-                help="Number of buckets for phase 3+4 (default = 256)",
-                default=256,
+                "-v", "--buckets3", type=int, help="Number of buckets for phase 3+4 (default = 256)", default=256
             )
         if option is Options.MADMAX_WAITFORCOPY:
             parser.add_argument(
-                "-w",
-                "--waitforcopy",
-                action="store_true",
-                help="Wait for copy to start next plot",
-                default=False,
+                "-w", "--waitforcopy", action="store_true", help="Wait for copy to start next plot", default=False
             )
         if option is Options.MADMAX_TMPTOGGLE:
             parser.add_argument(
@@ -304,67 +225,26 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 default=False,
             )
         if option is Options.POOLCONTRACT:
-            parser.add_argument(
-                "-c",
-                "--contract",
-                type=str,
-                help="Pool Contract Address (64 chars)",
-                default="",
-            )
+            parser.add_argument("-c", "--contract", type=str, help="Pool Contract Address (64 chars)", default="")
         if option is Options.MADMAX_RMULTI2:
-            parser.add_argument(
-                "-K",
-                "--rmulti2",
-                type=int,
-                help="Thread multiplier for P2 (default = 1)",
-                default=1,
-            )
+            parser.add_argument("-K", "--rmulti2", type=int, help="Thread multiplier for P2 (default = 1)", default=1)
         if option is Options.POOLKEY:
             parser.add_argument(
-                "-p",
-                "--pool-key",
-                type=binascii.unhexlify,
-                help="Pool Public Key (48 bytes)",
-                default="",
+                "-p", "--pool-key", type=binascii.unhexlify, help="Pool Public Key (48 bytes)", default=""
             )
         if option is Options.FARMERKEY:
             parser.add_argument(
-                "-f",
-                "--farmerkey",
-                type=binascii.unhexlify,
-                help="Farmer Public Key (48 bytes)",
-                default="",
+                "-f", "--farmerkey", type=binascii.unhexlify, help="Farmer Public Key (48 bytes)", default=""
             )
         if option is Options.BLADEBIT_WARMSTART:
-            parser.add_argument(
-                "-w",
-                "--warmstart",
-                action="store_true",
-                help="Warm start",
-                default=False,
-            )
+            parser.add_argument("-w", "--warmstart", action="store_true", help="Warm start", default=False)
         if option is Options.BLADEBIT_NONUMA:
-            parser.add_argument(
-                "--nonuma",
-                action="store_true",
-                help="Disable numa",
-                default=False,
-            )
+            parser.add_argument("--nonuma", action="store_true", help="Disable numa", default=False)
         if option is Options.VERBOSE:
-            parser.add_argument(
-                "-v",
-                "--verbose",
-                action="store_true",
-                help="Set verbose",
-                default=False,
-            )
+            parser.add_argument("-v", "--verbose", action="store_true", help="Set verbose", default=False)
         if option is Options.OVERRIDE_K:
             parser.add_argument(
-                "--override-k",
-                dest="override",
-                action="store_true",
-                help="Force size smaller than 32",
-                default=False,
+                "--override-k", dest="override", action="store_true", help="Force size smaller than 32", default=False
             )
         if option is Options.ALT_FINGERPRINT:
             parser.add_argument(
@@ -383,13 +263,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 default=False,
             )
         if option is Options.CONNECT_TO_DAEMON:
-            parser.add_argument(
-                "-D",
-                "--connect-to-daemon",
-                action="store_true",
-                help=argparse.SUPPRESS,
-                default=False,
-            )
+            parser.add_argument("-D", "--connect-to-daemon", action="store_true", help=argparse.SUPPRESS, default=False)
         if option is Options.BLADEBIT_NO_CPU_AFFINITY:
             parser.add_argument(
                 "--no-cpu-affinity",
@@ -398,41 +272,17 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 default=False,
             )
         if option is Options.BLADEBIT_CACHE:
-            parser.add_argument(
-                "--cache",
-                type=str,
-                help="Size of cache to reserve for I/O",
-            )
+            parser.add_argument("--cache", type=str, help="Size of cache to reserve for I/O")
         if option is Options.BLADEBIT_F1_THREAD:
-            parser.add_argument(
-                "--f1-threads",
-                type=int,
-                help="Override the thread count for F1 generation",
-            )
+            parser.add_argument("--f1-threads", type=int, help="Override the thread count for F1 generation")
         if option is Options.BLADEBIT_FP_THREAD:
-            parser.add_argument(
-                "--fp-threads",
-                type=int,
-                help="Override the thread count for forward propagation",
-            )
+            parser.add_argument("--fp-threads", type=int, help="Override the thread count for forward propagation")
         if option is Options.BLADEBIT_C_THREAD:
-            parser.add_argument(
-                "--c-threads",
-                type=int,
-                help="Override the thread count for C table processing",
-            )
+            parser.add_argument("--c-threads", type=int, help="Override the thread count for C table processing")
         if option is Options.BLADEBIT_P2_THREAD:
-            parser.add_argument(
-                "--p2-threads",
-                type=int,
-                help="Override the thread count for Phase 2",
-            )
+            parser.add_argument("--p2-threads", type=int, help="Override the thread count for Phase 2")
         if option is Options.BLADEBIT_P3_THREAD:
-            parser.add_argument(
-                "--p3-threads",
-                type=int,
-                help="Override the thread count for Phase 3",
-            )
+            parser.add_argument("--p3-threads", type=int, help="Override the thread count for Phase 3")
         if option is Options.BLADEBIT_ALTERNATE:
             parser.add_argument(
                 "--alternate",
@@ -442,45 +292,23 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.BLADEBIT_NO_T1_DIRECT:
             parser.add_argument(
-                "--no-t1-direct",
-                action="store_true",
-                help="Disable direct I/O on the temp 1 directory",
-                default=False,
+                "--no-t1-direct", action="store_true", help="Disable direct I/O on the temp 1 directory", default=False
             )
         if option is Options.BLADEBIT_NO_T2_DIRECT:
             parser.add_argument(
-                "--no-t2-direct",
-                action="store_true",
-                help="Disable direct I/O on the temp 2 directory",
-                default=False,
+                "--no-t2-direct", action="store_true", help="Disable direct I/O on the temp 2 directory", default=False
             )
         if option is Options.COMPRESSION:
-            parser.add_argument(
-                "--compress",
-                type=int,
-                help="Compression level",
-                default=1,
-            )
+            parser.add_argument("--compress", type=int, help="Compression level", default=1)
         if option is Options.BLADEBIT_DEVICE_INDEX:
-            parser.add_argument(
-                "--device",
-                type=int,
-                help="The CUDA device index",
-                default=0,
-            )
+            parser.add_argument("--device", type=int, help="The CUDA device index", default=0)
         if option is Options.BLADEBIT_HYBRID_128_MODE:
             parser.add_argument(
-                "--disk-128",
-                action="store_true",
-                help="Enable hybrid disk plotting for 128G system RAM",
-                default=False,
+                "--disk-128", action="store_true", help="Enable hybrid disk plotting for 128G system RAM", default=False
             )
         if option is Options.BLADEBIT_HYBRID_16_MODE:
             parser.add_argument(
-                "--disk-16",
-                action="store_true",
-                help="Enable hybrid disk plotting for 16G system RAM",
-                default=False,
+                "--disk-16", action="store_true", help="Enable hybrid disk plotting for 16G system RAM", default=False
             )
 
 

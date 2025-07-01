@@ -42,12 +42,7 @@ def data_cmd() -> None:
 
 def create_changelist_option() -> Callable[[FC], FC]:
     return click.option(
-        "-d",
-        "--changelist",
-        "changelist_string",
-        help="str representing the changelist",
-        type=str,
-        required=True,
+        "-d", "--changelist", "changelist_string", help="str representing the changelist", type=str, required=True
     )
 
 
@@ -75,24 +70,11 @@ def create_key_option(multiple: bool = False) -> Callable[[FC], FC]:
 
 
 def create_data_store_id_option() -> Callable[[FC], FC]:
-    return click.option(
-        "-store",
-        "--id",
-        help="The hexadecimal store id.",
-        type=Bytes32ParamType(),
-        required=True,
-    )
+    return click.option("-store", "--id", help="The hexadecimal store id.", type=Bytes32ParamType(), required=True)
 
 
 def create_data_store_name_option() -> Callable[[FC], FC]:
-    return click.option(
-        "-n",
-        "--table_name",
-        "table_name",
-        help="The name of the table.",
-        type=str,
-        required=True,
-    )
+    return click.option("-n", "--table_name", "table_name", help="The name of the table.", type=str, required=True)
 
 
 def create_rpc_port_option() -> Callable[[FC], FC]:
@@ -107,22 +89,12 @@ def create_rpc_port_option() -> Callable[[FC], FC]:
 
 
 def create_root_hash_option() -> Callable[[FC], FC]:
-    return click.option(
-        "-r",
-        "--root_hash",
-        help="The hexadecimal root hash",
-        type=Bytes32ParamType(),
-        required=False,
-    )
+    return click.option("-r", "--root_hash", help="The hexadecimal root hash", type=Bytes32ParamType(), required=False)
 
 
 def create_page_option() -> Callable[[FC], FC]:
     return click.option(
-        "-p",
-        "--page",
-        help="Enables pagination of the output and requests a specific page.",
-        type=int,
-        required=False,
+        "-p", "--page", help="Enables pagination of the output and requests a specific page.", type=int, required=False
     )
 
 
@@ -143,12 +115,7 @@ def create_max_page_size_option() -> Callable[[FC], FC]:
 @options.create_fee()
 @click.option("--verbose", is_flag=True, help="Enable verbose output.")
 @options.create_fingerprint()
-def create_data_store(
-    data_rpc_port: int,
-    fee: Optional[uint64],
-    verbose: bool,
-    fingerprint: Optional[int],
-) -> None:
+def create_data_store(data_rpc_port: int, fee: Optional[uint64], verbose: bool, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
     run(create_data_store_cmd(data_rpc_port, fee, verbose, fingerprint=fingerprint))
@@ -161,11 +128,7 @@ def create_data_store(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def get_value(
-    id: bytes32,
-    key_string: str,
-    root_hash: Optional[bytes32],
-    data_rpc_port: int,
-    fingerprint: Optional[int],
+    id: bytes32, key_string: str, root_hash: Optional[bytes32], data_rpc_port: int, fingerprint: Optional[int]
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
 
@@ -209,11 +172,7 @@ def update_data_store(
 @options.create_fingerprint()
 @click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
 def update_multiple_stores(
-    store_updates_string: str,
-    data_rpc_port: int,
-    fee: uint64,
-    fingerprint: Optional[int],
-    submit: bool,
+    store_updates_string: str, data_rpc_port: int, fee: uint64, fingerprint: Optional[int], submit: bool
 ) -> None:
     from chia.cmds.data_funcs import update_multiple_stores_cmd
 
@@ -233,42 +192,20 @@ def update_multiple_stores(
 @create_rpc_port_option()
 @options.create_fee()
 @options.create_fingerprint()
-def submit_pending_root(
-    id: bytes32,
-    data_rpc_port: int,
-    fee: uint64,
-    fingerprint: Optional[int],
-) -> None:
+def submit_pending_root(id: bytes32, data_rpc_port: int, fee: uint64, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import submit_pending_root_cmd
 
-    run(
-        submit_pending_root_cmd(
-            rpc_port=data_rpc_port,
-            store_id=id,
-            fee=fee,
-            fingerprint=fingerprint,
-        )
-    )
+    run(submit_pending_root_cmd(rpc_port=data_rpc_port, store_id=id, fee=fee, fingerprint=fingerprint))
 
 
 @data_cmd.command("submit_all_pending_roots", help="Submit on chain all locally stored batches")
 @create_rpc_port_option()
 @options.create_fee()
 @options.create_fingerprint()
-def submit_all_pending_roots(
-    data_rpc_port: int,
-    fee: uint64,
-    fingerprint: Optional[int],
-) -> None:
+def submit_all_pending_roots(data_rpc_port: int, fee: uint64, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import submit_all_pending_roots_cmd
 
-    run(
-        submit_all_pending_roots_cmd(
-            rpc_port=data_rpc_port,
-            fee=fee,
-            fingerprint=fingerprint,
-        )
-    )
+    run(submit_all_pending_roots_cmd(rpc_port=data_rpc_port, fee=fee, fingerprint=fingerprint))
 
 
 @data_cmd.command("get_keys", help="Get all keys for a given store")
@@ -319,11 +256,7 @@ def get_keys_values(
 @create_data_store_id_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
-def get_root(
-    id: bytes32,
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def get_root(id: bytes32, data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import get_root_cmd
 
     run(get_root_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint))
@@ -341,12 +274,7 @@ def get_root(
 )
 @create_rpc_port_option()
 @options.create_fingerprint()
-def subscribe(
-    id: bytes32,
-    urls: list[str],
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def subscribe(id: bytes32, urls: list[str], data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import subscribe_cmd
 
     run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls, fingerprint=fingerprint))
@@ -357,12 +285,7 @@ def subscribe(
 @click.option("-u", "--url", "urls", help="Server urls to remove", type=str, multiple=True)
 @create_rpc_port_option()
 @options.create_fingerprint()
-def remove_subscription(
-    id: bytes32,
-    urls: list[str],
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def remove_subscription(id: bytes32, urls: list[str], data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import remove_subscriptions_cmd
 
     run(remove_subscriptions_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls, fingerprint=fingerprint))
@@ -373,12 +296,7 @@ def remove_subscription(
 @create_rpc_port_option()
 @options.create_fingerprint()
 @click.option("--retain", is_flag=True, help="Retain .dat files")
-def unsubscribe(
-    id: bytes32,
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-    retain: bool,
-) -> None:
+def unsubscribe(id: bytes32, data_rpc_port: int, fingerprint: Optional[int], retain: bool) -> None:
     from chia.cmds.data_funcs import unsubscribe_cmd
 
     run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint, retain=retain))
@@ -422,11 +340,7 @@ def get_kv_diff(
 @create_data_store_id_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
-def get_root_history(
-    id: bytes32,
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def get_root_history(id: bytes32, data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import get_root_history_cmd
 
     run(get_root_history_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint))
@@ -452,11 +366,7 @@ def get_root_history(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_missing_files(
-    ids: Sequence[bytes32],
-    overwrite: bool,
-    directory: Optional[str],
-    data_rpc_port: int,
-    fingerprint: Optional[int],
+    ids: Sequence[bytes32], overwrite: bool, directory: Optional[str], data_rpc_port: int, fingerprint: Optional[int]
 ) -> None:
     from chia.cmds.data_funcs import add_missing_files_cmd
 
@@ -489,25 +399,11 @@ def add_missing_files(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_mirror(
-    id: bytes32,
-    amount: int,
-    urls: list[str],
-    fee: Optional[uint64],
-    data_rpc_port: int,
-    fingerprint: Optional[int],
+    id: bytes32, amount: int, urls: list[str], fee: Optional[uint64], data_rpc_port: int, fingerprint: Optional[int]
 ) -> None:
     from chia.cmds.data_funcs import add_mirror_cmd
 
-    run(
-        add_mirror_cmd(
-            rpc_port=data_rpc_port,
-            store_id=id,
-            urls=urls,
-            amount=amount,
-            fee=fee,
-            fingerprint=fingerprint,
-        )
-    )
+    run(add_mirror_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls, amount=amount, fee=fee, fingerprint=fingerprint))
 
 
 # NOTE: tx_endpoint
@@ -516,87 +412,45 @@ def add_mirror(
 @options.create_fee()
 @create_rpc_port_option()
 @options.create_fingerprint()
-def delete_mirror(
-    coin_id: bytes32,
-    fee: Optional[uint64],
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def delete_mirror(coin_id: bytes32, fee: Optional[uint64], data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import delete_mirror_cmd
 
-    run(
-        delete_mirror_cmd(
-            rpc_port=data_rpc_port,
-            coin_id=coin_id,
-            fee=fee,
-            fingerprint=fingerprint,
-        )
-    )
+    run(delete_mirror_cmd(rpc_port=data_rpc_port, coin_id=coin_id, fee=fee, fingerprint=fingerprint))
 
 
 @data_cmd.command("get_mirrors", help="Get a list of all mirrors for a given store")
 @create_data_store_id_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
-def get_mirrors(
-    id: bytes32,
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def get_mirrors(id: bytes32, data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import get_mirrors_cmd
 
-    run(
-        get_mirrors_cmd(
-            rpc_port=data_rpc_port,
-            store_id=id,
-            fingerprint=fingerprint,
-        )
-    )
+    run(get_mirrors_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint))
 
 
 @data_cmd.command("get_subscriptions", help="Get subscribed stores, including the owned stores")
 @create_rpc_port_option()
 @options.create_fingerprint()
-def get_subscriptions(
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def get_subscriptions(data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import get_subscriptions_cmd
 
-    run(
-        get_subscriptions_cmd(
-            rpc_port=data_rpc_port,
-            fingerprint=fingerprint,
-        )
-    )
+    run(get_subscriptions_cmd(rpc_port=data_rpc_port, fingerprint=fingerprint))
 
 
 @data_cmd.command("get_owned_stores", help="Get owned stores")
 @create_rpc_port_option()
 @options.create_fingerprint()
-def get_owned_stores(
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def get_owned_stores(data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import get_owned_stores_cmd
 
-    run(
-        get_owned_stores_cmd(
-            rpc_port=data_rpc_port,
-            fingerprint=fingerprint,
-        )
-    )
+    run(get_owned_stores_cmd(rpc_port=data_rpc_port, fingerprint=fingerprint))
 
 
 @data_cmd.command("get_sync_status", help="Get locally stored root compared to the root of the singleton")
 @create_data_store_id_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
-def get_sync_status(
-    id: bytes32,
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def get_sync_status(id: bytes32, data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import get_sync_status_cmd
 
     run(get_sync_status_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint))
@@ -609,97 +463,52 @@ def plugins_cmd() -> None:
 
 @plugins_cmd.command("check", help="Calls the plugin_info endpoint on all configured plugins")
 @create_rpc_port_option()
-def check_plugins(
-    data_rpc_port: int,
-) -> None:
+def check_plugins(data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import check_plugins_cmd
 
     run(check_plugins_cmd(rpc_port=data_rpc_port))
 
 
 @data_cmd.command(
-    "clear_pending_roots",
-    help="Clear pending roots that will not be published, associated data may not be recoverable",
+    "clear_pending_roots", help="Clear pending roots that will not be published, associated data may not be recoverable"
 )
 @create_data_store_id_option()
 @click.confirmation_option(
-    prompt="Associated data may not be recoverable.\nAre you sure you want to remove the pending roots?",
+    prompt="Associated data may not be recoverable.\nAre you sure you want to remove the pending roots?"
 )
 @create_rpc_port_option()
 @options.create_fingerprint()
-def clear_pending_roots(
-    id: bytes32,
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def clear_pending_roots(id: bytes32, data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import clear_pending_roots
 
-    run(
-        clear_pending_roots(
-            rpc_port=data_rpc_port,
-            store_id=id,
-            fingerprint=fingerprint,
-        )
-    )
+    run(clear_pending_roots(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint))
 
 
-@data_cmd.command(
-    "wallet_log_in",
-    help="Request that the wallet service be logged in to the specified fingerprint",
-)
+@data_cmd.command("wallet_log_in", help="Request that the wallet service be logged in to the specified fingerprint")
 @create_rpc_port_option()
 @options.create_fingerprint(required=True)
-def wallet_log_in(
-    data_rpc_port: int,
-    fingerprint: int,
-) -> None:
+def wallet_log_in(data_rpc_port: int, fingerprint: int) -> None:
     from chia.cmds.data_funcs import wallet_log_in_cmd
 
-    run(
-        wallet_log_in_cmd(
-            rpc_port=data_rpc_port,
-            fingerprint=fingerprint,
-        )
-    )
+    run(wallet_log_in_cmd(rpc_port=data_rpc_port, fingerprint=fingerprint))
 
 
-@data_cmd.command(
-    "get_proof",
-    help="Obtains a merkle proof of inclusion for a given key",
-)
+@data_cmd.command("get_proof", help="Obtains a merkle proof of inclusion for a given key")
 @create_data_store_id_option()
 @create_rpc_port_option()
 @create_key_option(multiple=True)
 @options.create_fingerprint()
-def get_proof(
-    id: bytes32,
-    key_strings: list[str],
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def get_proof(id: bytes32, key_strings: list[str], data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import get_proof_cmd
 
     run(get_proof_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint, key_strings=key_strings))
 
 
-@data_cmd.command(
-    "verify_proof",
-    help="Verifies a merkle proof of inclusion",
-)
-@click.option(
-    "-p",
-    "--proof",
-    "proof_string",
-    help="Proof to validate in JSON format.",
-    type=str,
-)
+@data_cmd.command("verify_proof", help="Verifies a merkle proof of inclusion")
+@click.option("-p", "--proof", "proof_string", help="Proof to validate in JSON format.", type=str)
 @create_rpc_port_option()
 @options.create_fingerprint()
-def verify_proof(
-    proof_string: str,
-    data_rpc_port: int,
-    fingerprint: Optional[int],
-) -> None:
+def verify_proof(proof_string: str, data_rpc_port: int, fingerprint: Optional[int]) -> None:
     from chia.cmds.data_funcs import verify_proof_cmd
 
     proof_dict = json.loads(proof_string)

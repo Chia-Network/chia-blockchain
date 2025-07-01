@@ -108,10 +108,7 @@ class Introducer:
                         peer.last_attempt = uint64(time.time())
 
                         self.log.info(f"Vetting peer {peer.host} {peer.port}")
-                        _r, w = await asyncio.wait_for(
-                            asyncio.open_connection(peer.host, int(peer.port)),
-                            timeout=3,
-                        )
+                        _r, w = await asyncio.wait_for(asyncio.open_connection(peer.host, int(peer.port)), timeout=3)
                         w.close()
                     except Exception as e:
                         self.log.warning(f"Could not vet {peer}, removing. {type(e)}{e!s}")
@@ -137,13 +134,7 @@ class Introducer:
         for rdtype in ("A", "AAAA"):
             result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
             for ip in result:
-                peers.append(
-                    TimestampedPeerInfo(
-                        ip.to_text(),
-                        self.default_port,
-                        uint64(0),
-                    )
-                )
+                peers.append(TimestampedPeerInfo(ip.to_text(), self.default_port, uint64(0)))
             if len(peers) > num_peers:
                 break
 

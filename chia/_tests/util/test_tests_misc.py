@@ -21,8 +21,7 @@ sample_cases = [
 
 def sample_result(name: str) -> pytest.MarkDecorator:
     return pytest.mark.parametrize(
-        argnames=name,
-        argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in sample_cases],
+        argnames=name, argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in sample_cases]
     )
 
 

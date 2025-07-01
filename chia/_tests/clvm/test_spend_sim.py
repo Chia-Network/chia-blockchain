@@ -55,15 +55,11 @@ async def test_all_endpoints():
         hint = Program.to("hint").get_tree_hash()
         non_existent_hint = Program.to("non_existent_hint").get_tree_hash()
         acs_hint_spent = make_spend(
-            coin,
-            acs,
-            Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 2, [hint]]]),
+            coin, acs, Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 2, [hint]]])
         )
         hinted_coin = compute_additions(acs_hint_spent)[0]
         acs_hint_unspent = make_spend(
-            hinted_coin,
-            acs,
-            Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 1, [hint]]]),
+            hinted_coin, acs, Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 1, [hint]]])
         )
         await sim_client.push_tx(SpendBundle([acs_hint_spent, acs_hint_unspent], G2Element()))
         await sim.farm_block(acs_ph)
@@ -77,9 +73,7 @@ async def test_all_endpoints():
         next_coin = coin_records[-1].coin
         height = sim.get_height()
         acs_hint_next_coin = make_spend(
-            next_coin,
-            acs,
-            Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 2, [hint]]]),
+            next_coin, acs, Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 2, [hint]]])
         )
         await sim_client.push_tx(SpendBundle([acs_hint_next_coin], G2Element()))
         await sim.farm_block(acs_ph)
@@ -141,14 +135,7 @@ async def test_all_endpoints():
         spendable_coin = await sim_client.get_coin_records_by_puzzle_hash(puzzle_hash, include_spent_coins=False)
         spendable_coin = spendable_coin[0].coin
         bundle = SpendBundle(
-            [
-                make_spend(
-                    spendable_coin,
-                    Program.to(1),
-                    Program.to([[51, puzzle_hash, 1]]),
-                )
-            ],
-            G2Element(),
+            [make_spend(spendable_coin, Program.to(1), Program.to([[51, puzzle_hash, 1]]))], G2Element()
         )
         _result, error = await sim_client.push_tx(bundle)
         assert not error

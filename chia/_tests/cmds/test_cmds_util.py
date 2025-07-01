@@ -12,8 +12,7 @@ from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 
 @pytest.mark.anyio
 async def test_get_any_service_client_works_without_ssl(
-    root_path_populated_with_config: Path,
-    recording_web_server: RecordingWebServer,
+    root_path_populated_with_config: Path, recording_web_server: RecordingWebServer
 ) -> None:
     expected_result = {"success": True, "keepy": "uppy"}
 
@@ -30,9 +29,7 @@ async def test_get_any_service_client_works_without_ssl(
 
 @pytest.mark.anyio
 async def test_failure_output_no_traceback(
-    root_path_populated_with_config: Path,
-    recording_web_server: RecordingWebServer,
-    capsys: pytest.CaptureFixture[str],
+    root_path_populated_with_config: Path, recording_web_server: RecordingWebServer, capsys: pytest.CaptureFixture[str]
 ) -> None:
     expected_response = {"success": False, "magic": "statue"}
 
@@ -53,9 +50,7 @@ async def test_failure_output_no_traceback(
 
 @pytest.mark.anyio
 async def test_failure_output_with_traceback(
-    root_path_populated_with_config: Path,
-    recording_web_server: RecordingWebServer,
-    capsys: pytest.CaptureFixture[str],
+    root_path_populated_with_config: Path, recording_web_server: RecordingWebServer, capsys: pytest.CaptureFixture[str]
 ) -> None:
     sample_traceback = "this\nthat"
     sample_traceback_json = json.dumps(sample_traceback)
@@ -76,9 +71,7 @@ async def test_failure_output_with_traceback(
 
 @pytest.mark.anyio
 async def test_failure_output_no_consumption(
-    root_path_populated_with_config: Path,
-    recording_web_server: RecordingWebServer,
-    capsys: pytest.CaptureFixture[str],
+    root_path_populated_with_config: Path, recording_web_server: RecordingWebServer, capsys: pytest.CaptureFixture[str]
 ) -> None:
     expected_response = {"success": False, "magic": "xylophone"}
 

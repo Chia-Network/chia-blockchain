@@ -53,15 +53,10 @@ class PriorityMutex(Generic[_T_Priority]):
 
     @classmethod
     def create(cls, priority_type: type[_T_Priority]) -> PriorityMutex[_T_Priority]:
-        return cls(
-            _deques={priority: collections.deque() for priority in sorted(priority_type)},
-        )
+        return cls(_deques={priority: collections.deque() for priority in sorted(priority_type)})
 
     @contextlib.asynccontextmanager
-    async def acquire(
-        self,
-        priority: _T_Priority,
-    ) -> AsyncIterator[None]:
+    async def acquire(self, priority: _T_Priority) -> AsyncIterator[None]:
         task = asyncio.current_task()
         if task is None:
             raise Exception(f"unable to check current task, got: {task!r}")

@@ -48,6 +48,5 @@ class BlockchainInterface(BlocksProtocol, Protocol):
     ) -> None: ...
 
     async def get_sub_epoch_challenge_segments(
-        self,
-        sub_epoch_summary_hash: bytes32,
+        self, sub_epoch_summary_hash: bytes32
     ) -> Optional[list[SubEpochChallengeSegment]]: ...

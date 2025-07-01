@@ -26,20 +26,14 @@ async def test_notification_store_backwards_compat() -> None:
     with tempfile.TemporaryDirectory() as temporary_directory:
         db_name = Path(temporary_directory).joinpath("test.sqlite")
         db_name.parent.mkdir(parents=True, exist_ok=True)
-        async with DBWrapper2.managed(
-            database=db_name,
-        ) as db_wrapper:
+        async with DBWrapper2.managed(database=db_name) as db_wrapper:
             async with db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
                     "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
                 )
                 cursor = await conn.execute(
                     "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
-                    (
-                        bytes32.zeros,
-                        bytes([0] * 10),
-                        bytes([0]),
-                    ),
+                    (bytes32.zeros, bytes([0] * 10), bytes([0])),
                 )
                 await cursor.close()
 
@@ -47,10 +41,7 @@ async def test_notification_store_backwards_compat() -> None:
             await NotificationStore.create(db_wrapper)
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_notifications(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
@@ -148,9 +139,7 @@ async def test_notifications(
             await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, action_scope, fee=FEE)
         [tx] = action_scope.side_effects.transactions
         await time_out_assert_not_none(
-            5,
-            full_node_api.full_node.mempool_manager.get_spendbundle,
-            tx.spend_bundle.name(),
+            5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
         )
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 

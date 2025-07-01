@@ -28,10 +28,7 @@ async def test_protocol_messages(
     a_wallet = bt.get_pool_wallet_tool()
     reward_ph = a_wallet.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
-        35,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
+        35, guarantee_transaction_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
     )
 
     full_node_sim: Union[FullNodeAPI, FullNodeSimulator] = full_nodes[0]

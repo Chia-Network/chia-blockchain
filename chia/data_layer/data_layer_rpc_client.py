@@ -32,12 +32,7 @@ class DataLayerRpcClient(RpcClient):
     ) -> dict[str, Any]:
         response = await self.fetch(
             "batch_update",
-            {
-                "id": store_id.hex(),
-                "changelist": changelist,
-                "fee": fee,
-                "submit_on_chain": submit_on_chain,
-            },
+            {"id": store_id.hex(), "changelist": changelist, "fee": fee, "submit_on_chain": submit_on_chain},
         )
         return response
 
@@ -45,12 +40,7 @@ class DataLayerRpcClient(RpcClient):
         self, store_updates: list[dict[str, Any]], fee: Optional[uint64], submit_on_chain: bool = True
     ) -> dict[str, Any]:
         response = await self.fetch(
-            "multistore_batch_update",
-            {
-                "store_updates": store_updates,
-                "fee": fee,
-                "submit_on_chain": submit_on_chain,
-            },
+            "multistore_batch_update", {"store_updates": store_updates, "fee": fee, "submit_on_chain": submit_on_chain}
         )
         return response
 

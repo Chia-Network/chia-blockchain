@@ -131,7 +131,7 @@ class ServeInThread:
                 port=self.requested_port,
                 thread_end_event=self.thread_end_event,
                 port_holder=self.port_holder,
-            ),
+            )
         )
         try:
             await self.server_task
@@ -165,7 +165,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     logger.info(" ==== launching serve.py")
     # TODO: is there some reason not to use an async process here?
     with subprocess.Popen(  # noqa: ASYNC220
-        [sys.executable, "-m", "chia._tests.core.server.serve", os.fspath(serve_file)],
+        [sys.executable, "-m", "chia._tests.core.server.serve", os.fspath(serve_file)]
     ):
         logger.info(" ====           serve.py running")
 
@@ -174,7 +174,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         logger.info(" ==== launching flood.py")
         # TODO: is there some reason not to use an async process here?
         with subprocess.Popen(  # noqa: ASYNC220
-            [sys.executable, "-m", "chia._tests.core.server.flood", os.fspath(flood_file)],
+            [sys.executable, "-m", "chia._tests.core.server.flood", os.fspath(flood_file)]
         ):
             logger.info(" ====           flood.py running")
 

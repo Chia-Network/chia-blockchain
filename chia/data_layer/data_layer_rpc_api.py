@@ -214,7 +214,7 @@ class DataLayerRpcApi:
                     "total_pages": keys_paginated.total_pages,
                     "total_bytes": keys_paginated.total_bytes,
                     "root_hash": keys_paginated.root_hash,
-                },
+                }
             )
 
         return response
@@ -254,7 +254,7 @@ class DataLayerRpcApi:
                     "total_pages": keys_values_paginated.total_pages,
                     "total_bytes": keys_values_paginated.total_bytes,
                     "root_hash": keys_values_paginated.root_hash,
-                },
+                }
             )
 
         return response
@@ -497,10 +497,7 @@ class DataLayerRpcApi:
         response: EndpointResult = {"diff": res}
         if page is not None:
             response.update(
-                {
-                    "total_pages": kv_diff_paginated.total_pages,
-                    "total_bytes": kv_diff_paginated.total_bytes,
-                },
+                {"total_pages": kv_diff_paginated.total_pages, "total_bytes": kv_diff_paginated.total_bytes}
             )
 
         return response
@@ -537,10 +534,7 @@ class DataLayerRpcApi:
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         fee = get_fee(self.service.config, {"fee": request.fee})
         trade_record = await self.service.take_offer(
-            offer_bytes=request.offer.offer,
-            maker=request.offer.maker,
-            taker=request.offer.taker,
-            fee=fee,
+            offer_bytes=request.offer.offer, maker=request.offer.maker, taker=request.offer.taker, fee=fee
         )
         return TakeOfferResponse(success=True, trade_id=trade_record.trade_id)
 
@@ -562,11 +556,7 @@ class DataLayerRpcApi:
     async def cancel_offer(self, request: CancelOfferRequest) -> CancelOfferResponse:
         fee = get_fee(self.service.config, {"fee": request.fee})
 
-        await self.service.cancel_offer(
-            trade_id=request.trade_id,
-            secure=request.secure,
-            fee=fee,
-        )
+        await self.service.cancel_offer(trade_id=request.trade_id, secure=request.secure, fee=fee)
 
         return CancelOfferResponse(success=True)
 
@@ -629,11 +619,7 @@ class DataLayerRpcApi:
 
         store_proof = StoreProofsHashes(store_id=request.store_id, proofs=all_proofs)
         return GetProofResponse(
-            proof=DLProof(
-                store_proofs=store_proof,
-                coin_id=root.coin_id,
-                inner_puzzle_hash=root.inner_puzzle_hash,
-            ),
+            proof=DLProof(store_proofs=store_proof, coin_id=root.coin_id, inner_puzzle_hash=root.inner_puzzle_hash),
             success=True,
         )
 

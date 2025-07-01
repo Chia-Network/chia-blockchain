@@ -119,11 +119,7 @@ def create_checkpoint(file: Path, out_file: Path, height: int) -> None:
     asyncio.run(run_sync_checkpoint(Path(file), Path(out_file), height))
 
 
-async def run_sync_checkpoint(
-    file: Path,
-    root_path: Path,
-    max_height: int,
-) -> None:
+async def run_sync_checkpoint(file: Path, root_path: Path, max_height: int) -> None:
     root_path.mkdir(parents=True, exist_ok=True)
 
     chia_init(root_path, should_check_keys=False, v1_db=False)
@@ -132,11 +128,7 @@ async def run_sync_checkpoint(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
     config["full_node"]["db_sync"] = "off"
-    full_node = await FullNode.create(
-        config["full_node"],
-        root_path=root_path,
-        consensus_constants=constants,
-    )
+    full_node = await FullNode.create(config["full_node"], root_path=root_path, consensus_constants=constants)
 
     full_node.set_server(FakeServer())  # type: ignore[arg-type]
     async with full_node.manage():

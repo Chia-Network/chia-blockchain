@@ -10,8 +10,7 @@ from chia.ssl.ssl_check import check_ssl
 
 
 def test_check_ssl_stream_with_bad_permissions(
-    capsys: pytest.CaptureFixture[str],
-    root_path_populated_with_config: Path,
+    capsys: pytest.CaptureFixture[str], root_path_populated_with_config: Path
 ) -> None:
     with capsys.disabled():
         create_all_ssl(root_path=root_path_populated_with_config)

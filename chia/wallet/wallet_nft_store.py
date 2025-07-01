@@ -244,11 +244,7 @@ class WalletNftStore:
             if wallet_id:
                 sql += " and wallet_id=?"
                 params.append(wallet_id)
-            row = await execute_fetchone(
-                conn,
-                sql,
-                params,
-            )
+            row = await execute_fetchone(conn, sql, params)
 
         if row is None:
             return None
@@ -265,10 +261,7 @@ class WalletNftStore:
             await conn.execute("DELETE FROM users_nfts WHERE latest_height>?", (height,))
 
             # Retrieve removed NFTs
-            result = await conn.execute(
-                "UPDATE users_nfts SET removed_height = null WHERE removed_height>?",
-                (height,),
-            )
+            result = await conn.execute("UPDATE users_nfts SET removed_height = null WHERE removed_height>?", (height,))
             if result.rowcount > 0:
                 return True
             return False

@@ -14,69 +14,23 @@ from chia.util.config import lock_and_load_config, save_config
 
 
 def configure(root_path: Path, *args: str) -> Result:
-    return CliRunner().invoke(
-        cli,
-        [
-            "--root-path",
-            str(root_path),
-            "beta",
-            "configure",
-            *args,
-        ],
-    )
+    return CliRunner().invoke(cli, ["--root-path", str(root_path), "beta", "configure", *args])
 
 
 def configure_interactive(root_path: Path, user_input: Optional[str] = None) -> Result:
-    return CliRunner().invoke(
-        cli,
-        [
-            "--root-path",
-            str(root_path),
-            "beta",
-            "configure",
-        ],
-        input=user_input,
-    )
+    return CliRunner().invoke(cli, ["--root-path", str(root_path), "beta", "configure"], input=user_input)
 
 
 def enable(root_path: Path, *args: str) -> Result:
-    return CliRunner().invoke(
-        cli,
-        [
-            "--root-path",
-            str(root_path),
-            "beta",
-            "enable",
-            "--force",
-            *args,
-        ],
-    )
+    return CliRunner().invoke(cli, ["--root-path", str(root_path), "beta", "enable", "--force", *args])
 
 
 def enable_interactive(root_path: Path, user_input: Optional[str] = None) -> Result:
-    return CliRunner().invoke(
-        cli,
-        [
-            "--root-path",
-            str(root_path),
-            "beta",
-            "enable",
-        ],
-        input=user_input,
-    )
+    return CliRunner().invoke(cli, ["--root-path", str(root_path), "beta", "enable"], input=user_input)
 
 
 def prepare_submission(root_path: Path, user_input: Optional[str] = None) -> Result:
-    return CliRunner().invoke(
-        cli,
-        [
-            "--root-path",
-            str(root_path),
-            "beta",
-            "prepare_submission",
-        ],
-        input=user_input,
-    )
+    return CliRunner().invoke(cli, ["--root-path", str(root_path), "beta", "prepare_submission"], input=user_input)
 
 
 def generate_example_submission_data(beta_root_path: Path, versions: int, logs: int) -> None:
@@ -100,11 +54,7 @@ def generate_beta_config(
     root_path: Path, enabled: bool, beta_path: Path, interval: int = metrics_log_interval_default
 ) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
-        config["beta"] = {
-            "enabled": enabled,
-            "path": str(beta_path),
-            "metrics_log_interval": interval,
-        }
+        config["beta"] = {"enabled": enabled, "path": str(beta_path), "metrics_log_interval": interval}
         save_config(root_path, "config.yaml", config)
 
 
@@ -291,15 +241,7 @@ def test_beta_disable(root_path_populated_with_config: Path, enabled: bool) -> N
     beta_path = root_path / "beta"
     generate_beta_config(root_path, enabled, beta_path)
 
-    result = CliRunner().invoke(
-        cli,
-        [
-            "--root-path",
-            str(root_path),
-            "beta",
-            "disable",
-        ],
-    )
+    result = CliRunner().invoke(cli, ["--root-path", str(root_path), "beta", "disable"])
     if enabled:
         assert result.exit_code == 0
         assert "beta test mode disabled" in result.output
@@ -357,24 +299,13 @@ def test_prepare_submission(
 
 @pytest.mark.parametrize(
     "enabled, path, interval",
-    [
-        (True, Path("path_1"), metrics_log_interval_min),
-        (False, Path("path_2"), metrics_log_interval_max),
-    ],
+    [(True, Path("path_1"), metrics_log_interval_min), (False, Path("path_2"), metrics_log_interval_max)],
 )
 def test_beta_status(root_path_populated_with_config: Path, enabled: bool, path: Path, interval: int) -> None:
     root_path = root_path_populated_with_config
     generate_beta_config(root_path, enabled, path)
 
-    result = CliRunner().invoke(
-        cli,
-        [
-            "--root-path",
-            str(root_path),
-            "beta",
-            "status",
-        ],
-    )
+    result = CliRunner().invoke(cli, ["--root-path", str(root_path), "beta", "status"])
 
     assert result.exit_code == 0
     assert f"enabled: {enabled}" in result.output

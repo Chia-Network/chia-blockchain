@@ -11,10 +11,7 @@ async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> Non
     if ":" not in add_connection:
         print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
     else:
-        ip, port = (
-            ":".join(add_connection.split(":")[:-1]),
-            add_connection.split(":")[-1],
-        )
+        ip, port = (":".join(add_connection.split(":")[:-1]), add_connection.split(":")[-1])
         print(f"Connecting to {ip}, {port}")
         try:
             result = await rpc_client.open_connection(ip, int(port))

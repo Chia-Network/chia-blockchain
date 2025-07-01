@@ -80,11 +80,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
             fake_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(fake_puzzle.get_tree_hash()))[0].coin
 
             # Create the spend
-            fake_spend = make_spend(
-                fake_coin,
-                fake_puzzle,
-                Program.to([[[62, "$"]]]),
-            )
+            fake_spend = make_spend(fake_coin, fake_puzzle, Program.to([[[62, "$"]]]))
 
             proofs_of_inclusion = []
             for row_hash in desired_row_hashes:
@@ -133,9 +129,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                     await sim_client.get_coin_records_by_puzzle_hash(fake_puzzle_bad_announcement.get_tree_hash())
                 )[0].coin
                 new_fake_spend = make_spend(
-                    fake_coin_bad_announcement,
-                    fake_puzzle_bad_announcement,
-                    Program.to([[[62, "$"]]]),
+                    fake_coin_bad_announcement, fake_puzzle_bad_announcement, Program.to([[[62, "$"]]])
                 )
                 new_final_bundle = WalletSpendBundle([new_fake_spend, graftroot_spend], G2Element())
                 result = await sim_client.push_tx(new_final_bundle)

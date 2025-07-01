@@ -76,10 +76,7 @@ async def execute_fetchone(
 
 
 async def _create_connection(
-    database: Union[str, Path],
-    uri: bool = False,
-    log_file: Optional[TextIO] = None,
-    name: Optional[str] = None,
+    database: Union[str, Path], uri: bool = False, log_file: Optional[TextIO] = None, name: Optional[str] = None
 ) -> aiosqlite.Connection:
     # To avoid https://github.com/python/cpython/issues/118172
     connection = await aiosqlite.connect(database=database, uri=uri, cached_statements=0)
@@ -92,10 +89,7 @@ async def _create_connection(
 
 @contextlib.asynccontextmanager
 async def manage_connection(
-    database: Union[str, Path],
-    uri: bool = False,
-    log_file: Optional[TextIO] = None,
-    name: Optional[str] = None,
+    database: Union[str, Path], uri: bool = False, log_file: Optional[TextIO] = None, name: Optional[str] = None
 ) -> AsyncIterator[aiosqlite.Connection]:
     connection: aiosqlite.Connection
     connection = await _create_connection(database=database, uri=uri, log_file=log_file, name=name)
@@ -183,7 +177,7 @@ class DBWrapper2:
                 log_file = async_exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
 
             write_connection = await async_exit_stack.enter_async_context(
-                manage_connection(database=database, uri=uri, log_file=log_file, name="writer"),
+                manage_connection(database=database, uri=uri, log_file=log_file, name="writer")
             )
             await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
             if synchronous is not None:
@@ -197,12 +191,7 @@ class DBWrapper2:
 
             for index in range(reader_count):
                 read_connection = await async_exit_stack.enter_async_context(
-                    manage_connection(
-                        database=database,
-                        uri=uri,
-                        log_file=log_file,
-                        name=f"reader-{index}",
-                    ),
+                    manage_connection(database=database, uri=uri, log_file=log_file, name=f"reader-{index}")
                 )
                 read_connection.row_factory = row_factory
                 await self.add_connection(c=read_connection)
@@ -248,10 +237,7 @@ class DBWrapper2:
 
         for index in range(reader_count):
             read_connection = await _create_connection(
-                database=database,
-                uri=uri,
-                log_file=log_file,
-                name=f"reader-{index}",
+                database=database, uri=uri, log_file=log_file, name=f"reader-{index}"
             )
             read_connection.row_factory = row_factory
             await self.add_connection(c=read_connection)
@@ -290,8 +276,7 @@ class DBWrapper2:
 
     @contextlib.asynccontextmanager
     async def writer(
-        self,
-        foreign_key_enforcement_enabled: Optional[bool] = None,
+        self, foreign_key_enforcement_enabled: Optional[bool] = None
     ) -> AsyncIterator[aiosqlite.Connection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
@@ -323,7 +308,7 @@ class DBWrapper2:
             async with contextlib.AsyncExitStack() as exit_stack:
                 if foreign_key_enforcement_enabled is not None:
                     await exit_stack.enter_async_context(
-                        self._set_foreign_key_enforcement(enabled=foreign_key_enforcement_enabled),
+                        self._set_foreign_key_enforcement(enabled=foreign_key_enforcement_enabled)
                     )
 
                 async with self._savepoint_ctx():

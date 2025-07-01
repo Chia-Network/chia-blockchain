@@ -78,11 +78,7 @@ def test_by_spent_coin_ids() -> None:
     mempool.add_to_pool(item_1)
 
     # Another coin with the same puzzle hash shouldn't match.
-    other = make_item(
-        [
-            CoinSpend(IDENTITY_COIN_3, IDENTITY_PUZZLE, Program.to([])),
-        ]
-    )
+    other = make_item([CoinSpend(IDENTITY_COIN_3, IDENTITY_PUZZLE, Program.to([]))])
     mempool.add_to_pool(other)
 
     # And this coin is completely unrelated.
@@ -109,11 +105,7 @@ def test_by_spend_puzzle_hashes() -> None:
     mempool.add_to_pool(item_1)
 
     # Another coin with the same puzzle hash should match.
-    item_2 = make_item(
-        [
-            CoinSpend(IDENTITY_COIN_3, IDENTITY_PUZZLE, Program.to([])),
-        ]
-    )
+    item_2 = make_item([CoinSpend(IDENTITY_COIN_3, IDENTITY_PUZZLE, Program.to([]))])
     mempool.add_to_pool(item_2)
 
     # But this coin has a different puzzle hash.
@@ -127,9 +119,7 @@ def test_by_spend_puzzle_hashes() -> None:
     ]
 
     # Test the other puzzle hash as well.
-    assert mempool.items_with_puzzle_hashes({OTHER_PUZZLE_HASH}, False) == [
-        other.spend_bundle_name,
-    ]
+    assert mempool.items_with_puzzle_hashes({OTHER_PUZZLE_HASH}, False) == [other.spend_bundle_name]
 
     # And an unrelated puzzle hash.
     assert mempool.items_with_puzzle_hashes({bytes32(b"0" * 32)}, False) == []
@@ -140,11 +130,7 @@ def test_by_created_coin_id() -> None:
     mempool = Mempool(MEMPOOL_INFO, fee_estimator)
 
     # Add a transaction that creates the queried coin id.
-    item = make_item(
-        [
-            CoinSpend(IDENTITY_COIN_1, IDENTITY_PUZZLE, Program.to([[51, IDENTITY_PUZZLE_HASH, 1000]])),
-        ]
-    )
+    item = make_item([CoinSpend(IDENTITY_COIN_1, IDENTITY_PUZZLE, Program.to([[51, IDENTITY_PUZZLE_HASH, 1000]]))])
     mempool.add_to_pool(item)
 
     # Test that the transaction is found.
@@ -164,7 +150,7 @@ def test_by_created_puzzle_hash() -> None:
                 IDENTITY_COIN_1,
                 IDENTITY_PUZZLE,
                 Program.to([[51, OTHER_PUZZLE_HASH, 400], [51, OTHER_PUZZLE_HASH, 600]]),
-            ),
+            )
         ]
     )
     mempool.add_to_pool(item_1)
@@ -173,10 +159,8 @@ def test_by_created_puzzle_hash() -> None:
     item_2 = make_item(
         [
             CoinSpend(
-                IDENTITY_COIN_2,
-                IDENTITY_PUZZLE,
-                Program.to([[51, IDENTITY_PUZZLE_HASH, 1000, [OTHER_PUZZLE_HASH]]]),
-            ),
+                IDENTITY_COIN_2, IDENTITY_PUZZLE, Program.to([[51, IDENTITY_PUZZLE_HASH, 1000, [OTHER_PUZZLE_HASH]]])
+            )
         ]
     )
     mempool.add_to_pool(item_2)

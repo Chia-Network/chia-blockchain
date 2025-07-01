@@ -45,18 +45,9 @@ class WalletUserStore:
         if len(all_wallets) == 0:
             await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")
 
-    async def create_wallet(
-        self,
-        name: str,
-        wallet_type: int,
-        data: str,
-        id: Optional[int] = None,
-    ) -> WalletInfo:
+    async def create_wallet(self, name: str, wallet_type: int, data: str, id: Optional[int] = None) -> WalletInfo:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
-                "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-                (id, name, wallet_type, data),
-            )
+            cursor = await conn.execute("INSERT INTO users_wallets VALUES(?, ?, ?, ?)", (id, name, wallet_type, data))
             await cursor.close()
             wallet = await self.get_last_wallet()
             if wallet is None:
@@ -72,12 +63,7 @@ class WalletUserStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
-                (
-                    wallet_info.id,
-                    wallet_info.name,
-                    wallet_info.type,
-                    wallet_info.data,
-                ),
+                (wallet_info.id, wallet_info.name, wallet_info.type, wallet_info.data),
             )
             await cursor.close()
 

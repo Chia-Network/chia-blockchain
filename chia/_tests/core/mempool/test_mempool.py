@@ -424,10 +424,7 @@ class TestMempoolManager:
         await full_node_1.respond_transaction(tx, peer, test=True)
 
         await time_out_assert(
-            10,
-            full_node_1.full_node.mempool_manager.get_spendbundle,
-            spend_bundle,
-            spend_bundle.name(),
+            10, full_node_1.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
         )
 
     @pytest.mark.anyio
@@ -589,9 +586,7 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
         spend_bundle2 = generate_test_spend_bundle(
-            wallet_a,
-            blocks[-1].get_included_reward_coins()[0],
-            new_puzzle_hash=BURN_PUZZLE_HASH_2,
+            wallet_a, blocks[-1].get_included_reward_coins()[0], new_puzzle_hash=BURN_PUZZLE_HASH_2
         )
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
@@ -811,10 +806,7 @@ class TestMempoolManager:
         full_node_1, _server_1, _bt = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
-        cvp = ConditionWithArgs(
-            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
-            [int_to_bytes(start_height + 5)],
-        )
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(start_height + 5)])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, _peer, status, err = await self.condition_tester(one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1380,10 +1372,7 @@ class TestMempoolManager:
 
             dic = {cvp.opcode: [cvp]}
             # mismatching message
-            cvp2 = ConditionWithArgs(
-                ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
-                [b"wrong test"],
-            )
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"wrong test"])
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic)
             spend_bundle2 = generate_test_spend_bundle(wallet_a, coin_2, dic2)
@@ -1509,10 +1498,7 @@ class TestMempoolManager:
             # missing arg here
             cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])
             dic = {cvp.opcode: [cvp]}
-            cvp2 = ConditionWithArgs(
-                ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
-                [b"test"],
-            )
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [b"test"])
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic)
             spend_bundle2 = generate_test_spend_bundle(wallet_a, coin_2, dic2)
@@ -1538,10 +1524,7 @@ class TestMempoolManager:
             cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.msg_calc])
             dic = {cvp.opcode: [cvp]}
             # missing arg here
-            cvp2 = ConditionWithArgs(
-                ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
-                [],
-            )
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic)
             spend_bundle2 = generate_test_spend_bundle(wallet_a, coin_2, dic2)
@@ -1567,10 +1550,7 @@ class TestMempoolManager:
 
             dic = {cvp.opcode: [cvp]}
 
-            cvp2 = ConditionWithArgs(
-                ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
-                [b"wrong test"],
-            )
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [b"wrong test"])
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic)
             spend_bundle2 = generate_test_spend_bundle(wallet_a, coin_2, dic2)
@@ -1597,10 +1577,7 @@ class TestMempoolManager:
 
             dic = {cvp.opcode: [cvp]}
             # Wrong type of Create_announcement
-            cvp2 = ConditionWithArgs(
-                ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
-                [b"test"],
-            )
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic)
             spend_bundle2 = generate_test_spend_bundle(wallet_a, coin_2, dic2)
@@ -1811,11 +1788,7 @@ class TestMempoolManager:
 
         assert spend_bundle1 is not None
 
-        spend_bundle2 = generate_test_spend_bundle(
-            wallet_a,
-            coin,
-            new_puzzle_hash=BURN_PUZZLE_HASH_2,
-        )
+        spend_bundle2 = generate_test_spend_bundle(wallet_a, coin, new_puzzle_hash=BURN_PUZZLE_HASH_2)
 
         assert spend_bundle2 is not None
 
@@ -1833,9 +1806,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_agg_sig_condition(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         reward_ph = wallet_a.get_new_puzzlehash()
         full_node_1, _server_1, bt = one_node_one_block
@@ -1881,9 +1852,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_correct_my_parent(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -1904,9 +1873,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_my_parent_garbage(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -1929,9 +1896,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_my_parent_missing_arg(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, _bt = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [])
@@ -1946,9 +1911,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_invalid_my_parent(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -1970,9 +1933,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_correct_my_puzhash(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -1993,9 +1954,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_my_puzhash_garbage(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -2017,9 +1976,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_my_puzhash_missing_arg(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, _bt = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [])
@@ -2034,9 +1991,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_invalid_my_puzhash(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -2057,9 +2012,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_correct_my_amount(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -2080,9 +2033,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_my_amount_garbage(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, bt = one_node_one_block
 
@@ -2105,9 +2056,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_my_amount_missing_arg(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, _bt = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [])
@@ -2122,9 +2071,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_invalid_my_amount(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, _bt = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(1000)])
@@ -2139,9 +2086,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_negative_my_amount(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _server_1, _bt = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(-1)])
@@ -2156,9 +2101,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_my_amount_too_large(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _, _ = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2**64)])
@@ -2209,15 +2152,7 @@ class TestGeneratorConditions:
         assert len(npc_result.conds.spends) == 1
         assert npc_result.conds.spends[0].seconds_relative == 50
 
-    @pytest.mark.parametrize(
-        "mempool,operand",
-        [
-            (True, -1),
-            (False, -1),
-            (True, 1),
-            (False, 1),
-        ],
-    )
+    @pytest.mark.parametrize("mempool,operand", [(True, -1), (False, -1), (True, 1), (False, 1)])
     def test_div(self, mempool: bool, operand: int, softfork_height: uint32) -> None:
         # op_div is disallowed on negative numbers in the mempool, and after the
         # softfork
@@ -2268,11 +2203,7 @@ class TestGeneratorConditions:
             assert npc_result.conds.spends[0].seconds_relative == 100
 
     @pytest.mark.parametrize(
-        "opcode",
-        [
-            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
-            ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
-        ],
+        "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     )
     def test_just_announcement(self, opcode: ConditionOpcode, softfork_height: uint32) -> None:
         message = "a" * 1024
@@ -2286,11 +2217,7 @@ class TestGeneratorConditions:
         # validated
 
     @pytest.mark.parametrize(
-        "opcode",
-        [
-            ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-            ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
-        ],
+        "opcode", [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT]
     )
     def test_assert_announcement_fail(self, opcode: ConditionOpcode, softfork_height: uint32) -> None:
         message = "a" * 1024
@@ -2499,14 +2426,7 @@ class TestGeneratorConditions:
     @pytest.mark.parametrize("mempool", [True, False])
     @pytest.mark.parametrize(
         "condition",
-        [
-            '(2 100 "foo" "bar")',
-            "(100)",
-            "(4 1) (2 2) (3 3)",
-            '("foobar")',
-            '(0x100 "foobar")',
-            '(0x1ff "foobar")',
-        ],
+        ['(2 100 "foo" "bar")', "(100)", "(4 1) (2 2) (3 3)", '("foobar")', '(0x100 "foobar")', '(0x1ff "foobar")'],
     )
     def test_unknown_condition(self, mempool: bool, condition: str, softfork_height: uint32) -> None:
         npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
@@ -2541,10 +2461,7 @@ class TestGeneratorConditions:
     @pytest.mark.parametrize("mempool", [True, False])
     @pytest.mark.parametrize(
         "condition, expect_error",
-        [
-            ('(66 0 "foo") (67 0 "bar")', Err.MESSAGE_NOT_SENT_OR_RECEIVED.value),
-            ('(66 0 "foo") (67 0 "foo")', None),
-        ],
+        [('(66 0 "foo") (67 0 "bar")', Err.MESSAGE_NOT_SENT_OR_RECEIVED.value), ('(66 0 "foo") (67 0 "foo")', None)],
     )
     def test_message_condition(
         self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
@@ -2841,17 +2758,12 @@ class TestMaliciousGenerators:
 
     @pytest.mark.anyio
     async def test_invalid_coin_spend_coin(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         full_node_1, _, bt = one_node_one_block
         reward_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            5,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
+            5, guarantee_transaction_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
         )
 
         await add_blocks_in_batches(blocks, full_node_1.full_node)
@@ -2911,9 +2823,7 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
+        CLVMCost(uint64(11000000000 * 3)), FeeRate(uint64(1000000)), CLVMCost(uint64(11000000000))
     )
     mempool = Mempool(mempool_info, fee_estimator)
     for i in items:
@@ -2935,9 +2845,7 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 def test_timeout(old: bool) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
+        CLVMCost(uint64(11000000000 * 3)), FeeRate(uint64(1000000)), CLVMCost(uint64(11000000000))
     )
     mempool = Mempool(mempool_info, fee_estimator)
 
@@ -2985,11 +2893,7 @@ def item_cost(cost: int, fee_rate: float) -> MempoolItem:
 def test_full_mempool(items: list[int], add: int, expected: list[int]) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(100)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(100)),
-    )
+    mempool_info = MempoolInfo(CLVMCost(uint64(100)), FeeRate(uint64(1000000)), CLVMCost(uint64(100)))
     mempool = Mempool(mempool_info, fee_estimator)
     invariant_check_mempool(mempool)
     fee_rate: float = 3.0
@@ -3032,11 +2936,7 @@ def test_full_mempool(items: list[int], add: int, expected: list[int]) -> None:
 def test_limit_expiring_transactions(height: bool, items: list[int], expected: list[int], increase_fee: bool) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(100)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(50)),
-    )
+    mempool_info = MempoolInfo(CLVMCost(uint64(100)), FeeRate(uint64(1000000)), CLVMCost(uint64(50)))
     mempool = Mempool(mempool_info, fee_estimator)
     mempool.new_tx_block(uint32(10), uint64(100000))
     invariant_check_mempool(mempool)
@@ -3089,11 +2989,7 @@ def test_limit_expiring_transactions(height: bool, items: list[int], expected: l
     "items,coin_ids,expected",
     [
         # None of these spend those coins
-        (
-            [mk_item(coins[0:1]), mk_item(coins[1:2]), mk_item(coins[2:3])],
-            [coins[3].name(), coins[4].name()],
-            [],
-        ),
+        ([mk_item(coins[0:1]), mk_item(coins[1:2]), mk_item(coins[2:3])], [coins[3].name(), coins[4].name()], []),
         # One of these spends one of the coins
         (
             [mk_item(coins[0:1]), mk_item(coins[1:2]), mk_item(coins[2:3])],
@@ -3111,9 +3007,7 @@ def test_limit_expiring_transactions(height: bool, items: list[int], expected: l
 def test_get_items_by_coin_ids(items: list[MempoolItem], coin_ids: list[bytes32], expected: list[MempoolItem]) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
+        CLVMCost(uint64(11000000000 * 3)), FeeRate(uint64(1000000)), CLVMCost(uint64(11000000000))
     )
     mempool = Mempool(mempool_info, fee_estimator)
     for i in items:
@@ -3147,9 +3041,7 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
 
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
+        CLVMCost(uint64(11000000000 * 3)), FeeRate(uint64(1000000)), CLVMCost(uint64(11000000000))
     )
     mempool = Mempool(mempool_info, fee_estimator)
     coins = [
@@ -3204,9 +3096,7 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
 @pytest.mark.parametrize("old", [True, False])
 def test_create_block_generator(old: bool) -> None:
     mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
+        CLVMCost(uint64(11000000000 * 3)), FeeRate(uint64(1000000)), CLVMCost(uint64(11000000000))
     )
 
     fee_estimator = create_bitcoin_fee_estimator(test_constants.MAX_BLOCK_COST_CLVM)

@@ -159,11 +159,7 @@ async def async_combine(
         fee=fee,
         push=False,
     )
-    resp = await client_info.client.combine_coins(
-        combine_request,
-        tx_config,
-        timelock_info=condition_valid_times,
-    )
+    resp = await client_info.client.combine_coins(combine_request, tx_config, timelock_info=condition_valid_times)
 
     if not override and wallet_id == 1 and fee >= sum(coin.amount for tx in resp.transactions for coin in tx.removals):
         print("Fee is >= the amount of coins selected. To continue, please use --override flag.")
@@ -173,9 +169,7 @@ async def async_combine(
     if push:
         cli_confirm("Would you like to Continue? (y/n): ")
         resp = await client_info.client.combine_coins(
-            dataclasses.replace(combine_request, push=True),
-            tx_config,
-            timelock_info=condition_valid_times,
+            dataclasses.replace(combine_request, push=True), tx_config, timelock_info=condition_valid_times
         )
         for tx in resp.transactions:
             print(f"Transaction sent: {tx.name}")

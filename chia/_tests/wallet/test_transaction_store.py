@@ -336,10 +336,7 @@ async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None
             ]:
                 test_trs.append(
                     dataclasses.replace(
-                        tr1,
-                        name=bytes32.random(seeded_random),
-                        wallet_id=uint32(wallet_id),
-                        type=uint32(type.value),
+                        tr1, name=bytes32.random(seeded_random), wallet_id=uint32(wallet_id), type=uint32(type.value)
                     )
                 )
 
@@ -565,14 +562,7 @@ async def test_get_transactions_between_confirmed(seeded_random: random.Random) 
         )
         assert await store.get_transactions_between(
             1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.exclude([])
-        ) == [
-            tr6,
-            tr5,
-            tr4,
-            tr3,
-            tr2,
-            tr1,
-        ]
+        ) == [tr6, tr5, tr4, tr3, tr2, tr1]
         assert await store.get_transactions_between(
             1,
             0,
@@ -812,11 +802,7 @@ async def test_transaction_record_is_valid() -> None:
     assert not dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()
     mempool_success = ("success", uint8(MempoolInclusionStatus.SUCCESS), None)
     low_fee = ("low_fee", uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_LOW_FEE.name)
-    close_to_zero = (
-        "close_to_zero",
-        uint8(MempoolInclusionStatus.FAILED),
-        Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name,
-    )
+    close_to_zero = ("close_to_zero", uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name)
     # But it should become valid with one of the above attempts
     assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, mempool_success]).is_valid()
     assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, low_fee]).is_valid()

@@ -13,9 +13,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_TRANSFER_PROGRAM_DEFAULT,
 )
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
-from chia.wallet.singleton import (
-    SINGLETON_TOP_LAYER_MOD,
-)
+from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD
 
 # Need the legacy CAT mod for zlib backwards compatibility
 LEGACY_CAT_MOD = Program.fromhex(

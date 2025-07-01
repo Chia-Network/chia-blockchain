@@ -22,9 +22,7 @@ async def forever_worker(worker_id: int) -> None:
 @pytest.mark.anyio
 async def test_creates_expected_worker_count_immediately(count: int) -> None:
     async with AsyncPool.managed(
-        name="test pool",
-        worker_async_callable=forever_worker,
-        target_worker_count=count,
+        name="test pool", worker_async_callable=forever_worker, target_worker_count=count
     ) as pool:
         assert len(pool._workers) == count
 
@@ -33,9 +31,7 @@ async def test_creates_expected_worker_count_immediately(count: int) -> None:
 @pytest.mark.anyio
 async def test_workers_list_empty_after_management(count: int) -> None:
     async with AsyncPool.managed(
-        name="test pool",
-        worker_async_callable=forever_worker,
-        target_worker_count=count,
+        name="test pool", worker_async_callable=forever_worker, target_worker_count=count
     ) as pool:
         assert len(pool._workers) == count
 
@@ -46,11 +42,7 @@ async def test_workers_list_empty_after_management(count: int) -> None:
 @pytest.mark.anyio
 async def test_managed_raises_usefully_for_invalid_target_count(count: int) -> None:
     with pytest.raises(InvalidTargetWorkerCountError, match=f"{count}"):
-        async with AsyncPool.managed(
-            name="test pool",
-            worker_async_callable=forever_worker,
-            target_worker_count=count,
-        ):
+        async with AsyncPool.managed(name="test pool", worker_async_callable=forever_worker, target_worker_count=count):
             # testing that the context manager raises on entry so we should never
             # cover below
             pass  # pragma: no cover
@@ -80,9 +72,7 @@ async def test_does_not_exceed_expected_concurrency(count: int) -> None:
     instrumented_workers = InstrumentedWorkers()
 
     async with AsyncPool.managed(
-        name="test pool",
-        worker_async_callable=instrumented_workers.work,
-        target_worker_count=count,
+        name="test pool", worker_async_callable=instrumented_workers.work, target_worker_count=count
     ):
         await asyncio.sleep(long_time)
 
@@ -96,20 +86,14 @@ async def test_worker_id_counts() -> None:
     result_queue: asyncio.Queue[int] = asyncio.Queue()
 
     async def worker(
-        worker_id: int,
-        result_queue: asyncio.Queue[int] = result_queue,
-        hang_on_worker_id: int = expected_results[-1],
+        worker_id: int, result_queue: asyncio.Queue[int] = result_queue, hang_on_worker_id: int = expected_results[-1]
     ) -> None:
         await result_queue.put(worker_id)
         if worker_id == hang_on_worker_id:
             forever = asyncio.Event()
             await forever.wait()
 
-    async with AsyncPool.managed(
-        name="test pool",
-        worker_async_callable=worker,
-        target_worker_count=1,
-    ):
+    async with AsyncPool.managed(name="test pool", worker_async_callable=worker, target_worker_count=1):
         results: list[int] = []
 
         with anyio.fail_after(adjusted_timeout(10)):
@@ -143,11 +127,7 @@ async def test_worker_exception_logged(caplog: pytest.LogCaptureFixture) -> None
         else:
             raise work
 
-    async with AsyncPool.managed(
-        name=expected_name,
-        worker_async_callable=worker,
-        target_worker_count=1,
-    ):
+    async with AsyncPool.managed(name=expected_name, worker_async_callable=worker, target_worker_count=1):
         await work_queue.put(CustomException())
         await work_queue.put(None)
 
@@ -179,18 +159,12 @@ async def test_simple_queue_example() -> None:
     result_queue: asyncio.Queue[int] = asyncio.Queue()
 
     async def worker(
-        worker_id: int,
-        work_queue: asyncio.Queue[int] = work_queue,
-        result_queue: asyncio.Queue[int] = result_queue,
+        worker_id: int, work_queue: asyncio.Queue[int] = work_queue, result_queue: asyncio.Queue[int] = result_queue
     ) -> None:
         x = await work_queue.get()
         await result_queue.put(x**2)
 
-    async with AsyncPool.managed(
-        name="test pool",
-        worker_async_callable=worker,
-        target_worker_count=2,
-    ):
+    async with AsyncPool.managed(name="test pool", worker_async_callable=worker, target_worker_count=2):
         for input in inputs:
             await work_queue.put(input)
 
@@ -211,10 +185,7 @@ async def test_simple_queue_example_using_queued() -> None:
     work_queue: asyncio.Queue[Job[int]] = asyncio.Queue()
     result_queue: asyncio.Queue[int] = asyncio.Queue()
 
-    async def worker(
-        worker_id: int,
-        job: Job[int],
-    ) -> int:
+    async def worker(worker_id: int, job: Job[int]) -> int:
         return job.input**2
 
     async with QueuedAsyncPool.managed(
@@ -246,10 +217,7 @@ async def test_queued_pre_cancel() -> None:
     work_queue: asyncio.Queue[Job[int]] = asyncio.Queue()
     result_queue: asyncio.Queue[int] = asyncio.Queue()
 
-    async def worker(
-        worker_id: int,
-        job: Job[int],
-    ) -> int:
+    async def worker(worker_id: int, job: Job[int]) -> int:
         return job.input**2
 
     async with QueuedAsyncPool.managed(
@@ -284,10 +252,7 @@ async def test_queued_active_cancel() -> None:
     work_queue: asyncio.Queue[Job[int]] = asyncio.Queue()
     result_queue: asyncio.Queue[int] = asyncio.Queue()
 
-    async def worker(
-        worker_id: int,
-        job: Job[int],
-    ) -> int:
+    async def worker(worker_id: int, job: Job[int]) -> int:
         if job.input in cancel:
             forever = asyncio.Event()
             await forever.wait()
@@ -326,10 +291,7 @@ async def test_queued_raises() -> None:
     work_queue: asyncio.Queue[Job[int]] = asyncio.Queue()
     result_queue: asyncio.Queue[int] = asyncio.Queue()
 
-    async def worker(
-        worker_id: int,
-        job: Job[int],
-    ) -> int:
+    async def worker(worker_id: int, job: Job[int]) -> int:
         if job.input in raises:
             raise Exception(job.input)
 

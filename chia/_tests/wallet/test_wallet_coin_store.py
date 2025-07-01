@@ -34,51 +34,11 @@ coin_9 = Coin(coin_5.name(), bytes32.random(module_seeded_random), uint64(4))
 record_replaced = WalletCoinRecord(coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
-record_3 = WalletCoinRecord(
-    coin_3,
-    uint32(5),
-    uint32(10),
-    True,
-    False,
-    WalletType.STANDARD_WALLET,
-    0,
-)
-record_4 = WalletCoinRecord(
-    coin_4,
-    uint32(5),
-    uint32(15),
-    True,
-    False,
-    WalletType.STANDARD_WALLET,
-    0,
-)
-record_5 = WalletCoinRecord(
-    coin_5,
-    uint32(5),
-    uint32(0),
-    False,
-    False,
-    WalletType.STANDARD_WALLET,
-    1,
-)
-record_6 = WalletCoinRecord(
-    coin_6,
-    uint32(5),
-    uint32(15),
-    True,
-    False,
-    WalletType.STANDARD_WALLET,
-    2,
-)
-record_7 = WalletCoinRecord(
-    coin_7,
-    uint32(5),
-    uint32(0),
-    False,
-    False,
-    WalletType.POOLING_WALLET,
-    2,
-)
+record_3 = WalletCoinRecord(coin_3, uint32(5), uint32(10), True, False, WalletType.STANDARD_WALLET, 0)
+record_4 = WalletCoinRecord(coin_4, uint32(5), uint32(15), True, False, WalletType.STANDARD_WALLET, 0)
+record_5 = WalletCoinRecord(coin_5, uint32(5), uint32(0), False, False, WalletType.STANDARD_WALLET, 1)
+record_6 = WalletCoinRecord(coin_6, uint32(5), uint32(15), True, False, WalletType.STANDARD_WALLET, 2)
+record_7 = WalletCoinRecord(coin_7, uint32(5), uint32(0), False, False, WalletType.POOLING_WALLET, 2)
 record_8 = WalletCoinRecord(
     coin_8,
     uint32(1),
@@ -138,12 +98,7 @@ def test_wallet_coin_record_parsed_metadata_failures(invalid_record: WalletCoinR
         invalid_record.parsed_metadata()
 
 
-@pytest.mark.parametrize(
-    "coin_record, expected_metadata",
-    [
-        (record_8, clawback_metadata),
-    ],
-)
+@pytest.mark.parametrize("coin_record, expected_metadata", [(record_8, clawback_metadata)])
 def test_wallet_coin_record_parsed_metadata(coin_record: WalletCoinRecord, expected_metadata: Streamable) -> None:
     assert coin_record.parsed_metadata() == expected_metadata
 
@@ -380,10 +335,7 @@ get_coin_records_offset_limit_tests: list[tuple[GetCoinRecords, list[WalletCoinR
 ]
 
 get_coin_records_wallet_id_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
-    (
-        GetCoinRecords(),
-        [record_8, record_9, record_1, record_2, record_3, record_4, record_5, record_6, record_7],
-    ),
+    (GetCoinRecords(), [record_8, record_9, record_1, record_2, record_3, record_4, record_5, record_6, record_7]),
     (GetCoinRecords(wallet_id=uint32(0)), [record_1, record_2, record_3, record_4]),
     (GetCoinRecords(wallet_id=uint32(1)), [record_8, record_5]),
     (GetCoinRecords(wallet_id=uint32(2)), [record_9, record_6, record_7]),
@@ -432,8 +384,7 @@ get_coin_records_puzzle_hash_filter_tests: list[tuple[GetCoinRecords, list[Walle
     ),
     (
         GetCoinRecords(
-            wallet_type=uint8(WalletType.STANDARD_WALLET),
-            puzzle_hash_filter=HashFilter.exclude([coin_7.puzzle_hash]),
+            wallet_type=uint8(WalletType.STANDARD_WALLET), puzzle_hash_filter=HashFilter.exclude([coin_7.puzzle_hash])
         ),
         [record_8, record_9, record_1, record_2, record_3, record_4, record_5, record_6],
     ),
@@ -886,22 +837,10 @@ async def test_rollback_to_block() -> None:
         assert (
             await store.get_coin_records(
                 coin_id_filter=HashFilter.include(
-                    [
-                        coin_1.name(),
-                        coin_2.name(),
-                        coin_3.name(),
-                        coin_4.name(),
-                        coin_5.name(),
-                    ]
+                    [coin_1.name(), coin_2.name(), coin_3.name(), coin_4.name(), coin_5.name()]
                 )
             )
-        ).records == [
-            r1,
-            r2,
-            r3,
-            r4,
-            r5,
-        ]
+        ).records == [r1, r2, r3, r4, r5]
 
         assert await store.get_coin_record(coin_5.name()) == r5
 

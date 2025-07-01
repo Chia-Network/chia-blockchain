@@ -52,12 +52,7 @@ def create_payload_dict(command: str, data: Optional[dict[str, Any]], origin: st
         data = {}
 
     return WsRpcMessage(
-        command=command,
-        ack=False,
-        data=data,
-        request_id=bytes32.secret().hex(),
-        destination=destination,
-        origin=origin,
+        command=command, ack=False, data=data, request_id=bytes32.secret().hex(), destination=destination, origin=origin
     )
 
 

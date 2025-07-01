@@ -10,9 +10,7 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 
 
 async def find_fork_point_in_chain(
-    blocks: BlockRecordsProtocol,
-    block_1: Union[BlockRecord, HeaderBlock],
-    block_2: Union[BlockRecord, HeaderBlock],
+    blocks: BlockRecordsProtocol, block_1: Union[BlockRecord, HeaderBlock], block_2: Union[BlockRecord, HeaderBlock]
 ) -> int:
     """Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
     are all included in chain)

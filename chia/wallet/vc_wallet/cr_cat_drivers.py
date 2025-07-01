@@ -6,16 +6,9 @@ from dataclasses import dataclass, replace
 from enum import IntEnum
 from typing import Optional
 
-from chia_puzzles_py.programs import (
-    CONDITIONS_W_FEE_ANNOUNCE,
-    FLAG_PROOFS_CHECKER,
-)
-from chia_puzzles_py.programs import (
-    CREDENTIAL_RESTRICTION as CREDENTIAL_RESTRICTION_BYTES,
-)
-from chia_puzzles_py.programs import (
-    CREDENTIAL_RESTRICTION_HASH as CREDENTIAL_RESTRICTION_HASH_BYTES,
-)
+from chia_puzzles_py.programs import CONDITIONS_W_FEE_ANNOUNCE, FLAG_PROOFS_CHECKER
+from chia_puzzles_py.programs import CREDENTIAL_RESTRICTION as CREDENTIAL_RESTRICTION_BYTES
+from chia_puzzles_py.programs import CREDENTIAL_RESTRICTION_HASH as CREDENTIAL_RESTRICTION_HASH_BYTES
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
@@ -51,16 +44,7 @@ PROOF_FLAGS_CHECKER: Program = Program.from_bytes(FLAG_PROOFS_CHECKER)
 PENDING_VC_ANNOUNCEMENT: Program = Program.from_bytes(CONDITIONS_W_FEE_ANNOUNCE)
 CREDENTIAL_STRUCT: Program = Program.to(
     (
-        (
-            (
-                SINGLETON_MOD_HASH,
-                SINGLETON_LAUNCHER_HASH,
-            ),
-            (
-                EXTIGENT_METADATA_LAYER_HASH,
-                EML_TP_COVENANT_ADAPTER_HASH,
-            ),
-        ),
+        ((SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_HASH), (EXTIGENT_METADATA_LAYER_HASH, EML_TP_COVENANT_ADAPTER_HASH)),
         (
             curry_and_treehash(
                 Program.to((1, EXTIGENT_METADATA_LAYER_HASH)).get_tree_hash_precalc(EXTIGENT_METADATA_LAYER_HASH),
@@ -86,29 +70,19 @@ CREDENTIAL_STRUCT: Program = Program.to(
                 ).get_tree_hash(),
             ),
         ),
-    ),
+    )
 )
 CREDENTIAL_STRUCT_HASH: bytes32 = CREDENTIAL_STRUCT.get_tree_hash()
 
 
 # Basic drivers
-def construct_cr_layer(
-    authorized_providers: list[bytes32],
-    proofs_checker: Program,
-    inner_puzzle: Program,
-) -> Program:
-    first_curry: Program = CREDENTIAL_RESTRICTION.curry(
-        CREDENTIAL_STRUCT,
-        authorized_providers,
-        proofs_checker,
-    )
+def construct_cr_layer(authorized_providers: list[bytes32], proofs_checker: Program, inner_puzzle: Program) -> Program:
+    first_curry: Program = CREDENTIAL_RESTRICTION.curry(CREDENTIAL_STRUCT, authorized_providers, proofs_checker)
     return first_curry.curry(first_curry.get_tree_hash(), inner_puzzle)
 
 
 def construct_cr_layer_hash(
-    authorized_providers_hash: bytes32,
-    proofs_checker_hash: bytes32,
-    inner_puzzle_hash: bytes32,
+    authorized_providers_hash: bytes32, proofs_checker_hash: bytes32, inner_puzzle_hash: bytes32
 ) -> bytes32:
     first_curry_hash: bytes32 = curry_and_treehash(
         Program.to((1, CREDENTIAL_RESTRICTION_HASH)).get_tree_hash_precalc(CREDENTIAL_RESTRICTION_HASH),
@@ -125,9 +99,7 @@ def construct_cr_layer_hash(
     return final_hash
 
 
-def match_cr_layer(
-    uncurried_puzzle: UncurriedPuzzle,
-) -> Optional[tuple[list[bytes32], Program, Program]]:
+def match_cr_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[list[bytes32], Program, Program]]:
     extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
     if extra_uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         return (
@@ -218,28 +190,14 @@ class CRCAT:
                 ],
             )
         )
-        eve_cat_puzzle: Program = construct_cat_puzzle(
-            CAT_MOD,
-            tail_hash,
-            eve_innerpuz,
-        )
+        eve_cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail_hash, eve_innerpuz)
         eve_cat_puzzle_hash: bytes32 = eve_cat_puzzle.get_tree_hash()
 
         eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle_hash, payment.amount)
-        dpuz: Program = Program.to(
-            (
-                1,
-                [
-                    [51, eve_cat_puzzle_hash, payment.amount],
-                    [61, std_hash(eve_coin.name())],
-                ],
-            )
-        )
+        dpuz: Program = Program.to((1, [[51, eve_cat_puzzle_hash, payment.amount], [61, std_hash(eve_coin.name())]]))
 
         eve_proof: LineageProof = LineageProof(
-            eve_coin.parent_coin_info,
-            eve_innerpuz.get_tree_hash(),
-            uint64(eve_coin.amount),
+            eve_coin.parent_coin_info, eve_innerpuz.get_tree_hash(), uint64(eve_coin.amount)
         )
 
         return (
@@ -270,18 +228,10 @@ class CRCAT:
         )
 
     def construct_puzzle(self, inner_puzzle: Program) -> Program:
-        return construct_cat_puzzle(
-            CAT_MOD,
-            self.tail_hash,
-            self.construct_cr_layer(inner_puzzle),
-        )
+        return construct_cat_puzzle(CAT_MOD, self.tail_hash, self.construct_cr_layer(inner_puzzle))
 
     def construct_cr_layer(self, inner_puzzle: Program) -> Program:
-        return construct_cr_layer(
-            self.authorized_providers,
-            self.proofs_checker,
-            inner_puzzle,
-        )
+        return construct_cr_layer(self.authorized_providers, self.proofs_checker, inner_puzzle)
 
     @staticmethod
     def is_cr_cat(puzzle_reveal: UncurriedPuzzle) -> tuple[bool, str]:
@@ -379,9 +329,7 @@ class CRCAT:
 
         # Convert all of the old stuff into python
         new_lineage_proof: LineageProof = LineageProof(
-            parent_spend.coin.parent_coin_info,
-            lineage_inner_puzhash,
-            uint64(parent_spend.coin.amount),
+            parent_spend.coin.parent_coin_info, lineage_inner_puzhash, uint64(parent_spend.coin.amount)
         )
 
         all_conditions: list[Program] = list(conditions.as_iter())
@@ -538,8 +486,7 @@ class CRCAT:
             return index - 1
 
         sorted_inner_spends: list[tuple[Self, int, Program, Program]] = sorted(
-            inner_spends,
-            key=lambda spend: spend[0].coin.name(),
+            inner_spends, key=lambda spend: spend[0].coin.name()
         )
 
         all_expected_announcements: list[AssertCoinAnnouncement] = []
@@ -565,7 +512,7 @@ class CRCAT:
                 LineageProof(
                     next_crcat.coin.parent_coin_info,
                     next_crcat.construct_cr_layer(
-                        next_crcat.inner_puzzle_hash,  # type: ignore
+                        next_crcat.inner_puzzle_hash  # type: ignore
                     ).get_tree_hash_precalc(next_crcat.inner_puzzle_hash),
                     uint64(next_crcat.coin.amount),
                 ),
@@ -631,13 +578,7 @@ class ProofsChecker(Streamable):
             return 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.to(None) else -1
 
         return PROOF_FLAGS_CHECKER.curry(
-            [
-                Program.to((flag, "1"))
-                for flag in sorted(
-                    self.flags,
-                    key=functools.cmp_to_key(byte_sort_flags),
-                )
-            ]
+            [Program.to((flag, "1")) for flag in sorted(self.flags, key=functools.cmp_to_key(byte_sort_flags))]
         )
 
     @classmethod

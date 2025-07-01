@@ -28,16 +28,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
     GetUnresolvedPeerInfosCase(
         description="multiple farmer peers",
         service_config={
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}]
         },
         requested_node_type=NodeType.FARMER,
         expected_peer_infos={
@@ -47,34 +38,15 @@ class GetUnresolvedPeerInfosCase(DataCase):
     ),
     GetUnresolvedPeerInfosCase(
         description="single farmer peer",
-        service_config={
-            "farmer_peer": {
-                "host": "my.farmer.tld",
-                "port": 18447,
-            },
-        },
+        service_config={"farmer_peer": {"host": "my.farmer.tld", "port": 18447}},
         requested_node_type=NodeType.FARMER,
-        expected_peer_infos={
-            UnresolvedPeerInfo(host="my.farmer.tld", port=uint16(18447)),
-        },
+        expected_peer_infos={UnresolvedPeerInfo(host="my.farmer.tld", port=uint16(18447))},
     ),
     GetUnresolvedPeerInfosCase(
         description="single farmer peer and multiple farmer peers",
         service_config={
-            "farmer_peer": {
-                "host": "my.farmer.tld",
-                "port": 18447,
-            },
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.other.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peer": {"host": "my.farmer.tld", "port": 18447},
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.other.farmer.tld", "port": 18447}],
         },
         requested_node_type=NodeType.FARMER,
         expected_peer_infos={
@@ -86,16 +58,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
     GetUnresolvedPeerInfosCase(
         description="multiple full node peers",
         service_config={
-            "full_node_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8444,
-                },
-                {
-                    "host": "my.full-node.tld",
-                    "port": 18444,
-                },
-            ],
+            "full_node_peers": [{"host": "127.0.0.1", "port": 8444}, {"host": "my.full-node.tld", "port": 18444}]
         },
         requested_node_type=NodeType.FULL_NODE,
         expected_peer_infos={
@@ -105,34 +68,15 @@ class GetUnresolvedPeerInfosCase(DataCase):
     ),
     GetUnresolvedPeerInfosCase(
         description="single full node peer",
-        service_config={
-            "full_node_peer": {
-                "host": "my.full-node.tld",
-                "port": 18444,
-            },
-        },
+        service_config={"full_node_peer": {"host": "my.full-node.tld", "port": 18444}},
         requested_node_type=NodeType.FULL_NODE,
-        expected_peer_infos={
-            UnresolvedPeerInfo(host="my.full-node.tld", port=uint16(18444)),
-        },
+        expected_peer_infos={UnresolvedPeerInfo(host="my.full-node.tld", port=uint16(18444))},
     ),
     GetUnresolvedPeerInfosCase(
         description="single full node peer and multiple full node peers",
         service_config={
-            "full_node_peer": {
-                "host": "my.full-node.tld",
-                "port": 18444,
-            },
-            "full_node_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8444,
-                },
-                {
-                    "host": "my.other.full-node.tld",
-                    "port": 18444,
-                },
-            ],
+            "full_node_peer": {"host": "my.full-node.tld", "port": 18444},
+            "full_node_peers": [{"host": "127.0.0.1", "port": 8444}, {"host": "my.other.full-node.tld", "port": 18444}],
         },
         requested_node_type=NodeType.FULL_NODE,
         expected_peer_infos={
@@ -171,253 +115,97 @@ class SetPeerInfoCase(DataCase):
     SetPeerInfoCase(
         description="multiple peers, modify first entry, set host and port",
         service_config={
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}]
         },
         requested_node_type=NodeType.FARMER,
         peer_host="localhost",
         peer_port=1337,
         expected_service_config={
-            "farmer_peers": [
-                {
-                    "host": "localhost",
-                    "port": 1337,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peers": [{"host": "localhost", "port": 1337}, {"host": "my.farmer.tld", "port": 18447}]
         },
     ),
     SetPeerInfoCase(
         description="multiple peers, modify first entry, set host",
         service_config={
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}]
         },
         requested_node_type=NodeType.FARMER,
         peer_host="localhost",
         expected_service_config={
-            "farmer_peers": [
-                {
-                    "host": "localhost",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peers": [{"host": "localhost", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}]
         },
     ),
     SetPeerInfoCase(
         description="multiple peers, modify first entry, set port",
         service_config={
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}]
         },
         requested_node_type=NodeType.FARMER,
         peer_port=1337,
         expected_service_config={
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 1337,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peers": [{"host": "127.0.0.1", "port": 1337}, {"host": "my.farmer.tld", "port": 18447}]
         },
     ),
     SetPeerInfoCase(
         description="single peer, set host and port",
-        service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 8447,
-            },
-        },
+        service_config={"farmer_peer": {"host": "127.0.0.1", "port": 8447}},
         requested_node_type=NodeType.FARMER,
         peer_host="localhost",
         peer_port=1337,
-        expected_service_config={
-            "farmer_peer": {
-                "host": "localhost",
-                "port": 1337,
-            },
-        },
+        expected_service_config={"farmer_peer": {"host": "localhost", "port": 1337}},
     ),
     SetPeerInfoCase(
         description="single peer, set host",
-        service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 8447,
-            },
-        },
+        service_config={"farmer_peer": {"host": "127.0.0.1", "port": 8447}},
         requested_node_type=NodeType.FARMER,
         peer_host="localhost",
-        expected_service_config={
-            "farmer_peer": {
-                "host": "localhost",
-                "port": 8447,
-            },
-        },
+        expected_service_config={"farmer_peer": {"host": "localhost", "port": 8447}},
     ),
     SetPeerInfoCase(
         description="single peer, set port",
-        service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 8447,
-            },
-        },
+        service_config={"farmer_peer": {"host": "127.0.0.1", "port": 8447}},
         requested_node_type=NodeType.FARMER,
         peer_port=1337,
-        expected_service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 1337,
-            },
-        },
+        expected_service_config={"farmer_peer": {"host": "127.0.0.1", "port": 1337}},
     ),
     SetPeerInfoCase(
         description="single and multiple peers, modify single peer, set host and port",
         service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 28447,
-            },
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peer": {"host": "127.0.0.1", "port": 28447},
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}],
         },
         requested_node_type=NodeType.FARMER,
         peer_host="localhost",
         peer_port=1337,
         expected_service_config={
-            "farmer_peer": {
-                "host": "localhost",
-                "port": 1337,
-            },
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peer": {"host": "localhost", "port": 1337},
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}],
         },
     ),
     SetPeerInfoCase(
         description="single and multiple peers, modify single peer, set host",
         service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 28447,
-            },
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peer": {"host": "127.0.0.1", "port": 28447},
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}],
         },
         requested_node_type=NodeType.FARMER,
         peer_host="localhost",
         expected_service_config={
-            "farmer_peer": {
-                "host": "localhost",
-                "port": 28447,
-            },
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peer": {"host": "localhost", "port": 28447},
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}],
         },
     ),
     SetPeerInfoCase(
         description="single and multiple peers, modify single peer, set port",
         service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 28447,
-            },
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peer": {"host": "127.0.0.1", "port": 28447},
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}],
         },
         requested_node_type=NodeType.FARMER,
         peer_port=1337,
         expected_service_config={
-            "farmer_peer": {
-                "host": "127.0.0.1",
-                "port": 1337,
-            },
-            "farmer_peers": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 8447,
-                },
-                {
-                    "host": "my.farmer.tld",
-                    "port": 18447,
-                },
-            ],
+            "farmer_peer": {"host": "127.0.0.1", "port": 1337},
+            "farmer_peers": [{"host": "127.0.0.1", "port": 8447}, {"host": "my.farmer.tld", "port": 18447}],
         },
     ),
 )

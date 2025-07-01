@@ -290,11 +290,7 @@ class Sender:
     def sync_done(self, removed: list[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")
         removed_list = [str(x) for x in removed]
-        self._add_list_batched(
-            ProtocolMessageTypes.plot_sync_removed,
-            PlotSyncPathList,
-            removed_list,
-        )
+        self._add_list_batched(ProtocolMessageTypes.plot_sync_removed, PlotSyncPathList, removed_list)
         failed_to_open_list = [str(x) for x in list(self._plot_manager.failed_to_open_filenames)]
         self._add_list_batched(ProtocolMessageTypes.plot_sync_invalid, PlotSyncPathList, failed_to_open_list)
         no_key_list = [str(x) for x in self._plot_manager.no_key_filenames]

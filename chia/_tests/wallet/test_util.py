@@ -29,11 +29,7 @@ def test_compute_spend_hints_and_additions() -> None:
     parent_coin = coin_generator.get()
     hinted_coins = [coin_generator.get(parent_coin.coin.name(), include_hint=i % 2 == 0) for i in range(10)]
     create_coin_args = [coin_creation_args(create_coin) for create_coin in hinted_coins]
-    coin_spend = make_spend(
-        parent_coin.coin,
-        Program.to(1),
-        Program.to(create_coin_args),
-    )
+    coin_spend = make_spend(parent_coin.coin, Program.to(1), Program.to(create_coin_args))
     expected_dict = {hinted_coin.coin.name(): hinted_coin for hinted_coin in hinted_coins}
     assert compute_spend_hints_and_additions(coin_spend)[0] == expected_dict
 
@@ -65,19 +61,14 @@ def test_cs_config() -> None:
     coin_to_exclude = CoinGenerator().get().coin
     coin_id_to_exclude = bytes32.zeros
     assert CoinSelectionConfigLoader.from_json_dict(
-        {
-            "excluded_coins": [coin_to_exclude.to_json_dict()],
-            "excluded_coin_ids": [coin_id_to_exclude.hex()],
-        }
+        {"excluded_coins": [coin_to_exclude.to_json_dict()], "excluded_coin_ids": [coin_id_to_exclude.hex()]}
     ).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
         **default_cs_config,
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex(), "0x" + coin_id_to_exclude.hex()],
     }
-    assert CoinSelectionConfigLoader.from_json_dict(
-        {
-            "excluded_coins": [coin_to_exclude.to_json_dict()],
-        }
-    ).override(max_coin_amount=100).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
+    assert CoinSelectionConfigLoader.from_json_dict({"excluded_coins": [coin_to_exclude.to_json_dict()]}).override(
+        max_coin_amount=100
+    ).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
         **default_cs_config,
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex()],
         "max_coin_amount": 100,
@@ -152,11 +143,7 @@ def test_lineage_proof_varargs(serializations: tuple[tuple[Any, ...], Program, l
             [LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         ),
         ({"amount": uint64(0)}, Program.to([uint64(0)]), [LineageProofField.AMOUNT]),
-        (
-            {"inner_puzzle_hash": bytes32.zeros},
-            Program.to([bytes32.zeros]),
-            [LineageProofField.INNER_PUZZLE_HASH],
-        ),
+        ({"inner_puzzle_hash": bytes32.zeros}, Program.to([bytes32.zeros]), [LineageProofField.INNER_PUZZLE_HASH]),
     ],
 )
 def test_lineage_proof_kwargs(serializations: tuple[dict[str, Any], Program, list[LineageProofField]]) -> None:

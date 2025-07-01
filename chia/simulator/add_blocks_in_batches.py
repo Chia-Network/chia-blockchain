@@ -14,10 +14,7 @@ from chia.types.validation_state import ValidationState
 from chia.util.batches import to_batches
 
 
-async def add_blocks_in_batches(
-    blocks: list[FullBlock],
-    full_node: FullNode,
-) -> None:
+async def add_blocks_in_batches(blocks: list[FullBlock], full_node: FullNode) -> None:
     peak_hash = blocks[0].prev_header_hash
     if blocks[0].height == 0:
         assert peak_hash == full_node.constants.GENESIS_CHALLENGE

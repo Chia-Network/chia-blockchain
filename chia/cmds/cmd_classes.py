@@ -7,18 +7,7 @@ import inspect
 import pathlib
 import sys
 from dataclasses import MISSING, dataclass, field, fields
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Optional,
-    Protocol,
-    Union,
-    final,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+from typing import Any, Callable, ClassVar, Optional, Protocol, Union, final, get_args, get_origin, get_type_hints
 
 import click
 from chia_rs.sized_bytes import bytes32
@@ -52,12 +41,7 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
         default_default = None  # pragma: no cover
 
     return field(
-        metadata=dict(
-            option_args=dict(
-                param_decls=tuple(param_decls),
-                **kwargs,
-            ),
-        ),
+        metadata=dict(option_args=dict(param_decls=tuple(param_decls), **kwargs)),
         default=kwargs.get("default", default_default),
     )
 
@@ -110,10 +94,7 @@ class HexString32(click.ParamType):
             self.fail(f"not a valid 32-byte hex string: {value!r} ({e})", param, ctx)
 
 
-_CLASS_TYPES_TO_CLICK_TYPES = {
-    bytes: HexString(),
-    bytes32: HexString32(),
-}
+_CLASS_TYPES_TO_CLICK_TYPES = {bytes: HexString(), bytes32: HexString32()}
 
 
 @dataclass
@@ -261,32 +242,19 @@ def _convert_class_to_function(cls: type[ChiaCommand]) -> SyncCmd:
 
 @dataclass_transform(frozen_default=True)
 def chia_command(
-    *,
-    group: Optional[click.Group] = None,
-    name: str,
-    short_help: str,
-    help: str,
+    *, group: Optional[click.Group] = None, name: str, short_help: str, help: str
 ) -> Callable[[type[ChiaCommand]], type[ChiaCommand]]:
     def _chia_command(cls: type[ChiaCommand]) -> type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
         # passed through the dataclass wrapper.  Not sure what to do about this right now.
         if sys.version_info >= (3, 10):
-            wrapped_cls: type[ChiaCommand] = dataclass(
-                frozen=True,
-                kw_only=True,
-            )(cls)
+            wrapped_cls: type[ChiaCommand] = dataclass(frozen=True, kw_only=True)(cls)
         else:  # pragma: no cover
             # stuff below 3.10 doesn't know about kw_only
-            wrapped_cls: type[ChiaCommand] = dataclass(
-                frozen=True,
-            )(cls)
+            wrapped_cls: type[ChiaCommand] = dataclass(frozen=True)(cls)
 
         metadata = Metadata(
-            command=click.command(
-                name=name,
-                short_help=short_help,
-                help=help,
-            )(_convert_class_to_function(wrapped_cls))
+            command=click.command(name=name, short_help=short_help, help=help)(_convert_class_to_function(wrapped_cls))
         )
 
         setattr(wrapped_cls, _chia_command_metadata_attribute, metadata)

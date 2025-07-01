@@ -23,10 +23,7 @@ from chia._tests.core.mempool.test_mempool_manager import (
 from chia._tests.util.key_tool import KeyTool
 from chia._tests.util.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.eligible_coin_spends import (
-    SingletonFastForward,
-    perform_the_fast_forward,
-)
+from chia.full_node.eligible_coin_spends import SingletonFastForward, perform_the_fast_forward
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -358,9 +355,7 @@ async def test_singleton_fast_forward_solo() -> None:
         )
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
         inner_puzzle_hash = inner_puzzle.get_tree_hash()
-        inner_conditions: list[list[Any]] = [
-            [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_AMOUNT],
-        ]
+        inner_conditions: list[list[Any]] = [[ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_AMOUNT]]
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
         # spending the eve coin is not eligible for fast forward, so we need to make this spend first, to test FF
         await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=G2Element())

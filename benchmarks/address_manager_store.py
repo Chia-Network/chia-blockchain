@@ -12,11 +12,7 @@ from pathlib import Path
 import aiofiles
 from chia_rs.sized_ints import uint16, uint64
 
-from chia.server.address_manager import (
-    NEW_BUCKETS_PER_ADDRESS,
-    AddressManager,
-    ExtendedPeerInfo,
-)
+from chia.server.address_manager import NEW_BUCKETS_PER_ADDRESS, AddressManager, ExtendedPeerInfo
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.util.files import write_file_async
 

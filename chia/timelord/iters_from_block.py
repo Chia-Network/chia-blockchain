@@ -41,10 +41,5 @@ def iters_from_block(
 
     return (
         calculate_sp_iters(constants, sub_slot_iters, reward_chain_block.signage_point_index),
-        calculate_ip_iters(
-            constants,
-            sub_slot_iters,
-            reward_chain_block.signage_point_index,
-            required_iters,
-        ),
+        calculate_ip_iters(constants, sub_slot_iters, reward_chain_block.signage_point_index, required_iters),
     )

@@ -56,12 +56,7 @@ class Program(SExp):
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
         # parse serialized programs into a python compatible structure
-        _cost, ret = run_chia_program(
-            b"\x01",
-            blob,
-            50,
-            0,
-        )
+        _cost, ret = run_chia_program(b"\x01", blob, 50, 0)
         return cls.to(ret)
 
     @classmethod

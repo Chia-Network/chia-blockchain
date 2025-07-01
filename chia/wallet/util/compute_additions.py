@@ -12,9 +12,7 @@ from chia.util.errors import Err, ValidationError
 
 
 def compute_additions_with_cost(
-    cs: CoinSpend,
-    *,
-    max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+    cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
 ) -> tuple[list[Coin], int]:
     """
     Run the puzzle in the specified CoinSpend and return the cost and list of

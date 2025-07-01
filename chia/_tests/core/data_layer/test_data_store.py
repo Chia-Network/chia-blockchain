@@ -144,12 +144,7 @@ async def test_table_is_not_empty(data_store: DataStore, store_id: bytes32) -> N
     value = b"abc"
 
     await data_store.insert(
-        key=key,
-        value=value,
-        store_id=store_id,
-        reference_node_hash=None,
-        side=None,
-        status=Status.COMMITTED,
+        key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
     )
 
     is_empty = await data_store.table_is_empty(store_id=store_id)
@@ -204,8 +199,7 @@ async def test_insert_increments_generation(data_store: DataStore, store_id: byt
 
 @pytest.mark.anyio
 async def test_get_tree_generation_returns_none_when_none_available(
-    raw_data_store: DataStore,
-    store_id: bytes32,
+    raw_data_store: DataStore, store_id: bytes32
 ) -> None:
     with pytest.raises(Exception, match=re.escape(f"No generations found for store ID: {store_id.hex()}")):
         await raw_data_store.get_tree_generation(store_id=store_id)
@@ -253,9 +247,7 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
 
 @pytest.mark.anyio
 async def test_build_a_tree(
-    data_store: DataStore,
-    store_id: bytes32,
-    create_example: Callable[[DataStore, bytes32], Awaitable[Example]],
+    data_store: DataStore, store_id: bytes32, create_example: Callable[[DataStore, bytes32], Awaitable[Example]]
 ) -> None:
     example = await create_example(data_store, store_id)
 
@@ -369,20 +361,10 @@ async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32)
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "use_optimized",
-    [True, False],
-)
-@pytest.mark.parametrize(
-    "num_batches",
-    [1, 5, 10, 25],
-)
+@pytest.mark.parametrize("use_optimized", [True, False])
+@pytest.mark.parametrize("num_batches", [1, 5, 10, 25])
 async def test_batch_update(
-    data_store: DataStore,
-    store_id: bytes32,
-    use_optimized: bool,
-    tmp_path: Path,
-    num_batches: int,
+    data_store: DataStore, store_id: bytes32, use_optimized: bool, tmp_path: Path, num_batches: int
 ) -> None:
     total_operations = 1000 if use_optimized else 100
     num_ops_per_batch = total_operations // num_batches
@@ -398,9 +380,7 @@ async def test_batch_update(
         keys_values: dict[bytes, bytes] = {}
         for operation in range(num_batches * num_ops_per_batch):
             [op_type] = random.choices(
-                ["insert", "upsert-insert", "upsert-update", "delete"],
-                [0.4, 0.2, 0.2, 0.2],
-                k=1,
+                ["insert", "upsert-insert", "upsert-update", "delete"], [0.4, 0.2, 0.2, 0.2], k=1
             )
             if op_type in {"insert", "upsert-insert"} or len(keys_values) == 0:
                 if len(keys_values) == 0:
@@ -409,11 +389,7 @@ async def test_batch_update(
                 value = (2 * operation).to_bytes(4, byteorder="big")
                 if op_type == "insert":
                     await single_op_data_store.autoinsert(
-                        key=key,
-                        value=value,
-                        store_id=store_id,
-                        use_optimized=use_optimized,
-                        status=Status.COMMITTED,
+                        key=key, value=value, store_id=store_id, use_optimized=use_optimized, status=Status.COMMITTED
                     )
                 else:
                     await single_op_data_store.upsert(
@@ -430,10 +406,7 @@ async def test_batch_update(
                 key = random.choice(list(keys_values.keys()))
                 del keys_values[key]
                 await single_op_data_store.delete(
-                    key=key,
-                    store_id=store_id,
-                    use_optimized=use_optimized,
-                    status=Status.COMMITTED,
+                    key=key, store_id=store_id, use_optimized=use_optimized, status=Status.COMMITTED
                 )
                 batch.append({"action": "delete", "key": key})
             else:
@@ -492,56 +465,33 @@ async def test_batch_update(
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "use_optimized",
-    [True, False],
-)
-async def test_upsert_ignores_existing_arguments(
-    data_store: DataStore,
-    store_id: bytes32,
-    use_optimized: bool,
-) -> None:
+@pytest.mark.parametrize("use_optimized", [True, False])
+async def test_upsert_ignores_existing_arguments(data_store: DataStore, store_id: bytes32, use_optimized: bool) -> None:
     key = b"key"
     value = b"value1"
 
     await data_store.autoinsert(
-        key=key,
-        value=value,
-        store_id=store_id,
-        use_optimized=use_optimized,
-        status=Status.COMMITTED,
+        key=key, value=value, store_id=store_id, use_optimized=use_optimized, status=Status.COMMITTED
     )
     node = await data_store.get_node_by_key(key, store_id)
     assert node.value == value
 
     new_value = b"value2"
     await data_store.upsert(
-        key=key,
-        new_value=new_value,
-        store_id=store_id,
-        use_optimized=use_optimized,
-        status=Status.COMMITTED,
+        key=key, new_value=new_value, store_id=store_id, use_optimized=use_optimized, status=Status.COMMITTED
     )
     node = await data_store.get_node_by_key(key, store_id)
     assert node.value == new_value
 
     await data_store.upsert(
-        key=key,
-        new_value=new_value,
-        store_id=store_id,
-        use_optimized=use_optimized,
-        status=Status.COMMITTED,
+        key=key, new_value=new_value, store_id=store_id, use_optimized=use_optimized, status=Status.COMMITTED
     )
     node = await data_store.get_node_by_key(key, store_id)
     assert node.value == new_value
 
     key2 = b"key2"
     await data_store.upsert(
-        key=key2,
-        new_value=value,
-        store_id=store_id,
-        use_optimized=use_optimized,
-        status=Status.COMMITTED,
+        key=key2, new_value=value, store_id=store_id, use_optimized=use_optimized, status=Status.COMMITTED
     )
     node = await data_store.get_node_by_key(key2, store_id)
     assert node.value == value
@@ -549,16 +499,9 @@ async def test_upsert_ignores_existing_arguments(
 
 @pytest.mark.parametrize(argnames="side", argvalues=list(Side))
 @pytest.mark.anyio
-async def test_insert_batch_reference_and_side(
-    data_store: DataStore,
-    store_id: bytes32,
-    side: Side,
-) -> None:
+async def test_insert_batch_reference_and_side(data_store: DataStore, store_id: bytes32, side: Side) -> None:
     insert_result = await data_store.autoinsert(
-        key=b"key1",
-        value=b"value1",
-        store_id=store_id,
-        status=Status.COMMITTED,
+        key=b"key1", value=b"value1", store_id=store_id, status=Status.COMMITTED
     )
 
     new_root_hash = await data_store.insert_batch(
@@ -570,7 +513,7 @@ async def test_insert_batch_reference_and_side(
                 "value": b"value2",
                 "reference_node_hash": insert_result.node_hash,
                 "side": side,
-            },
+            }
         ],
     )
     assert new_root_hash is not None, "batch insert failed or failed to update root"
@@ -601,9 +544,7 @@ async def test_ancestor_table_unique_inserts(data_store: DataStore, store_id: by
 
 @pytest.mark.anyio
 async def test_get_pairs(
-    data_store: DataStore,
-    store_id: bytes32,
-    create_example: Callable[[DataStore, bytes32], Awaitable[Example]],
+    data_store: DataStore, store_id: bytes32, create_example: Callable[[DataStore, bytes32], Awaitable[Example]]
 ) -> None:
     example = await create_example(data_store, store_id)
 
@@ -626,46 +567,29 @@ async def test_get_pairs_when_empty(data_store: DataStore, store_id: bytes32) ->
 )
 @pytest.mark.anyio()
 async def test_inserting_duplicate_key_fails(
-    data_store: DataStore,
-    store_id: bytes32,
-    first_value: bytes,
-    second_value: bytes,
+    data_store: DataStore, store_id: bytes32, first_value: bytes, second_value: bytes
 ) -> None:
     key = b"\x05"
 
     insert_result = await data_store.insert(
-        key=key,
-        value=first_value,
-        store_id=store_id,
-        reference_node_hash=None,
-        side=None,
+        key=key, value=first_value, store_id=store_id, reference_node_hash=None, side=None
     )
 
     # TODO: more specific exception
     with pytest.raises(Exception):
         await data_store.insert(
-            key=key,
-            value=second_value,
-            store_id=store_id,
-            reference_node_hash=insert_result.node_hash,
-            side=Side.RIGHT,
+            key=key, value=second_value, store_id=store_id, reference_node_hash=insert_result.node_hash, side=Side.RIGHT
         )
 
     # TODO: more specific exception
     with pytest.raises(Exception):
         await data_store.insert(
-            key=key,
-            value=second_value,
-            store_id=store_id,
-            reference_node_hash=insert_result.node_hash,
-            side=Side.RIGHT,
+            key=key, value=second_value, store_id=store_id, reference_node_hash=insert_result.node_hash, side=Side.RIGHT
         )
 
 
 @pytest.mark.anyio()
-async def test_inserting_invalid_length_hash_raises_original_exception(
-    data_store: DataStore,
-) -> None:
+async def test_inserting_invalid_length_hash_raises_original_exception(data_store: DataStore) -> None:
     with pytest.raises(aiosqlite.IntegrityError):
         # casting since we are testing an invalid case
         await data_store._insert_node(
@@ -680,16 +604,12 @@ async def test_inserting_invalid_length_hash_raises_original_exception(
 
 @pytest.mark.anyio()
 async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
-    data_store: DataStore,
-    store_id: bytes32,
+    data_store: DataStore, store_id: bytes32
 ) -> None:
     with pytest.raises(aiosqlite.IntegrityError):
         # casting since we are testing an invalid case
         await data_store._insert_ancestor_table(
-            left_hash=bytes32(b"\x01" * 32),
-            right_hash=bytes32(b"\x02" * 32),
-            store_id=store_id,
-            generation=0,
+            left_hash=bytes32(b"\x01" * 32), right_hash=bytes32(b"\x02" * 32), store_id=store_id, generation=0
         )
 
 
@@ -995,17 +915,11 @@ async def test_check_roots_are_incrementing_missing_zero(raw_data_store: DataSto
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
                 """,
-                {
-                    "tree_id": store_id,
-                    "generation": generation,
-                    "node_hash": None,
-                    "status": Status.COMMITTED.value,
-                },
+                {"tree_id": store_id, "generation": generation, "node_hash": None, "status": Status.COMMITTED.value},
             )
 
     with pytest.raises(
-        TreeGenerationIncrementingError,
-        match=r"\n +c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd$",
+        TreeGenerationIncrementingError, match=r"\n +c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd$"
     ):
         await raw_data_store._check_roots_are_incrementing()
 
@@ -1021,17 +935,11 @@ async def test_check_roots_are_incrementing_gap(raw_data_store: DataStore) -> No
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
                 """,
-                {
-                    "tree_id": store_id,
-                    "generation": generation,
-                    "node_hash": None,
-                    "status": Status.COMMITTED.value,
-                },
+                {"tree_id": store_id, "generation": generation, "node_hash": None, "status": Status.COMMITTED.value},
             )
 
     with pytest.raises(
-        TreeGenerationIncrementingError,
-        match=r"\n +c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd$",
+        TreeGenerationIncrementingError, match=r"\n +c954ab71ffaf5b0f129b04b35fdc7c84541f4375167e730e2646bfcfdb7cf2cd$"
     ):
         await raw_data_store._check_roots_are_incrementing()
 
@@ -1041,18 +949,10 @@ async def test_check_hashes_internal(raw_data_store: DataStore) -> None:
     async with raw_data_store.db_wrapper.writer() as writer:
         await writer.execute(
             "INSERT INTO node(hash, node_type, left, right) VALUES(:hash, :node_type, :left, :right)",
-            {
-                "hash": a_bytes_32,
-                "node_type": NodeType.INTERNAL,
-                "left": a_bytes_32,
-                "right": a_bytes_32,
-            },
+            {"hash": a_bytes_32, "node_type": NodeType.INTERNAL, "left": a_bytes_32, "right": a_bytes_32},
         )
 
-    with pytest.raises(
-        NodeHashError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
+    with pytest.raises(NodeHashError, match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$"):
         await raw_data_store._check_hashes()
 
 
@@ -1069,10 +969,7 @@ async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
             },
         )
 
-    with pytest.raises(
-        NodeHashError,
-        match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$",
-    ):
+    with pytest.raises(NodeHashError, match=r"\n +000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f$"):
         await raw_data_store._check_hashes()
 
 
@@ -1091,13 +988,7 @@ async def test_root_state(data_store: DataStore, store_id: bytes32) -> None:
 async def test_change_root_state(data_store: DataStore, store_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
-    await data_store.insert(
-        key=key,
-        value=value,
-        store_id=store_id,
-        reference_node_hash=None,
-        side=None,
-    )
+    await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
     root = await data_store.get_pending_root(store_id)
     assert root is not None
     assert root.status == Status.PENDING
@@ -1170,11 +1061,7 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
 @pytest.mark.anyio
 async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
     insert_result = await data_store.insert(
-        key=b"000",
-        value=b"000",
-        store_id=store_id,
-        reference_node_hash=None,
-        side=None,
+        key=b"000", value=b"000", store_id=store_id, reference_node_hash=None, side=None
     )
     empty_hash = bytes32.zeros
     invalid_hash = bytes32([0] * 31 + [1])
@@ -1190,27 +1077,12 @@ async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
 
 @pytest.mark.anyio
 async def test_kv_diff_3(data_store: DataStore, store_id: bytes32) -> None:
-    insert_result = await data_store.autoinsert(
-        key=b"000",
-        value=b"000",
-        store_id=store_id,
-        status=Status.COMMITTED,
-    )
+    insert_result = await data_store.autoinsert(key=b"000", value=b"000", store_id=store_id, status=Status.COMMITTED)
     await data_store.delete(store_id=store_id, key=b"000", status=Status.COMMITTED)
-    insert_result_2 = await data_store.autoinsert(
-        key=b"000",
-        value=b"001",
-        store_id=store_id,
-        status=Status.COMMITTED,
-    )
+    insert_result_2 = await data_store.autoinsert(key=b"000", value=b"001", store_id=store_id, status=Status.COMMITTED)
     diff_1 = await data_store.get_kv_diff(store_id, insert_result.node_hash, insert_result_2.node_hash)
     assert diff_1 == {DiffData(OperationType.DELETE, b"000", b"000"), DiffData(OperationType.INSERT, b"000", b"001")}
-    insert_result_3 = await data_store.upsert(
-        key=b"000",
-        new_value=b"002",
-        store_id=store_id,
-        status=Status.COMMITTED,
-    )
+    insert_result_3 = await data_store.upsert(key=b"000", new_value=b"002", store_id=store_id, status=Status.COMMITTED)
     diff_2 = await data_store.get_kv_diff(store_id, insert_result_2.node_hash, insert_result_3.node_hash)
     assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"001"), DiffData(OperationType.INSERT, b"000", b"002")}
 
@@ -1247,7 +1119,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
     )
     subscriptions = await data_store.get_subscriptions()
     assert subscriptions == [
-        Subscription(store_id, [ServerInfo("http://127:0:0:1/8000", 1, 1), ServerInfo("http://127:0:0:1/8001", 2, 2)]),
+        Subscription(store_id, [ServerInfo("http://127:0:0:1/8000", 1, 1), ServerInfo("http://127:0:0:1/8001", 2, 2)])
     ]
 
     await data_store.unsubscribe(store_id)
@@ -1336,10 +1208,7 @@ async def test_server_selection(data_store: DataStore, store_id: bytes32) -> Non
         current_timestamp += 1
 
 
-@pytest.mark.parametrize(
-    "error",
-    [True, False],
-)
+@pytest.mark.parametrize("error", [True, False])
 @pytest.mark.anyio
 async def test_server_http_ban(
     data_store: DataStore,
@@ -1410,18 +1279,11 @@ async def test_server_http_ban(
     assert sinfo.ignore_till == start_timestamp  # we don't increase on second failure
 
 
-@pytest.mark.parametrize(
-    "test_delta",
-    [True, False],
-)
+@pytest.mark.parametrize("test_delta", [True, False])
 @boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
 @pytest.mark.anyio
 async def test_data_server_files(
-    data_store: DataStore,
-    store_id: bytes32,
-    test_delta: bool,
-    group_files_by_store: bool,
-    tmp_path: Path,
+    data_store: DataStore, store_id: bytes32, test_delta: bool, group_files_by_store: bool, tmp_path: Path
 ) -> None:
     roots: list[Root] = []
     num_batches = 10
@@ -1479,23 +1341,13 @@ async def test_pending_roots(data_store: DataStore, store_id: bytes32, pending_s
     value = b"abc"
 
     await data_store.insert(
-        key=key,
-        value=value,
-        store_id=store_id,
-        reference_node_hash=None,
-        side=None,
-        status=Status.COMMITTED,
+        key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
     )
 
     key = b"\x01\x03"
     value = b"abc"
 
-    await data_store.autoinsert(
-        key=key,
-        value=value,
-        store_id=store_id,
-        status=pending_status,
-    )
+    await data_store.autoinsert(key=key, value=value, store_id=store_id, status=pending_status)
     pending_root = await data_store.get_pending_root(store_id=store_id)
     assert pending_root is not None
     assert pending_root.generation == 2 and pending_root.status == pending_status
@@ -1514,12 +1366,7 @@ async def test_clear_pending_roots_returns_root(
     value = b"abc"
 
     await data_store.insert(
-        key=key,
-        value=value,
-        store_id=store_id,
-        reference_node_hash=None,
-        side=None,
-        status=pending_status,
+        key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=pending_status
     )
 
     pending_root = await data_store.get_pending_root(store_id=store_id)
@@ -1552,38 +1399,15 @@ class BatchesInsertBenchmarkCase:
 
 
 @datacases(
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=100,
-        limit=2.2,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=100,
-        limit=4,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=1_000,
-        limit=30,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=1_000,
-        limit=36,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=10_000,
-        count=25_000,
-        limit=52,
-    ),
+    BatchInsertBenchmarkCase(pre=0, count=100, limit=2.2),
+    BatchInsertBenchmarkCase(pre=1_000, count=100, limit=4),
+    BatchInsertBenchmarkCase(pre=0, count=1_000, limit=30),
+    BatchInsertBenchmarkCase(pre=1_000, count=1_000, limit=36),
+    BatchInsertBenchmarkCase(pre=10_000, count=25_000, limit=52),
 )
 @pytest.mark.anyio
 async def test_benchmark_batch_insert_speed(
-    data_store: DataStore,
-    store_id: bytes32,
-    benchmark_runner: BenchmarkRunner,
-    case: BatchInsertBenchmarkCase,
+    data_store: DataStore, store_id: bytes32, benchmark_runner: BenchmarkRunner, case: BatchInsertBenchmarkCase
 ) -> None:
     r = random.Random()
     r.seed("shadowlands", version=2)
@@ -1601,32 +1425,16 @@ async def test_benchmark_batch_insert_speed(
     batch = changelist[case.pre : case.pre + case.count]
 
     if case.pre > 0:
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=pre,
-            status=Status.COMMITTED,
-        )
+        await data_store.insert_batch(store_id=store_id, changelist=pre, status=Status.COMMITTED)
 
     with benchmark_runner.assert_runtime(seconds=case.limit):
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=batch,
-        )
+        await data_store.insert_batch(store_id=store_id, changelist=batch)
 
 
-@datacases(
-    BatchesInsertBenchmarkCase(
-        count=50,
-        batch_count=200,
-        limit=195,
-    ),
-)
+@datacases(BatchesInsertBenchmarkCase(count=50, batch_count=200, limit=195))
 @pytest.mark.anyio
 async def test_benchmark_batch_insert_speed_multiple_batches(
-    data_store: DataStore,
-    store_id: bytes32,
-    benchmark_runner: BenchmarkRunner,
-    case: BatchesInsertBenchmarkCase,
+    data_store: DataStore, store_id: bytes32, benchmark_runner: BenchmarkRunner, case: BatchesInsertBenchmarkCase
 ) -> None:
     r = random.Random()
     r.seed("shadowlands", version=2)
@@ -1641,11 +1449,7 @@ async def test_benchmark_batch_insert_speed_multiple_batches(
                 }
                 for x in range(batch * case.count, (batch + 1) * case.count)
             ]
-            await data_store.insert_batch(
-                store_id=store_id,
-                changelist=changelist,
-                status=Status.COMMITTED,
-            )
+            await data_store.insert_batch(store_id=store_id, changelist=changelist, status=Status.COMMITTED)
 
 
 @pytest.mark.anyio
@@ -1848,12 +1652,7 @@ async def test_insert_from_delta_file(
     for generation in range(num_files):
         key = generation.to_bytes(4, byteorder="big")
         value = generation.to_bytes(4, byteorder="big")
-        await data_store.autoinsert(
-            key=key,
-            value=value,
-            store_id=store_id,
-            status=Status.COMMITTED,
-        )
+        await data_store.autoinsert(key=key, value=value, store_id=store_id, status=Status.COMMITTED)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
@@ -2007,12 +1806,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     for generation in range(num_files):
         key = generation.to_bytes(4, byteorder="big")
         value = generation.to_bytes(4, byteorder="big")
-        await data_store.autoinsert(
-            key=key,
-            value=value,
-            store_id=store_id,
-            status=Status.COMMITTED,
-        )
+        await data_store.autoinsert(key=key, value=value, store_id=store_id, status=Status.COMMITTED)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
@@ -2073,12 +1867,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
 
     key = b"a"
     value = b"a"
-    await data_store.autoinsert(
-        key=key,
-        value=value,
-        store_id=store_id,
-        status=Status.COMMITTED,
-    )
+    await data_store.autoinsert(key=key, value=value, store_id=store_id, status=Status.COMMITTED)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 2
@@ -2137,9 +1926,7 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
 @pytest.mark.anyio
 @boolean_datacases(name="use_batch_autoinsert", false="not optimized batch insert", true="optimized batch insert")
 async def test_batch_insert_key_already_present(
-    data_store: DataStore,
-    store_id: bytes32,
-    use_batch_autoinsert: bool,
+    data_store: DataStore, store_id: bytes32, use_batch_autoinsert: bool
 ) -> None:
     key = b"foo"
     value = b"bar"
@@ -2171,11 +1958,7 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
                 bytes_key = key.to_bytes(4, byteorder="big")
                 changelist.append({"action": "insert", "key": bytes_key, "value": bytes_value})
 
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=changelist,
-            status=Status.COMMITTED,
-        )
+        await data_store.insert_batch(store_id=store_id, changelist=changelist, status=Status.COMMITTED)
         for key in range(num_keys):
             bytes_key = key.to_bytes(4, byteorder="big")
             node = await data_store.get_node_by_key(bytes_key, store_id)
@@ -2190,12 +1973,7 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
 @pytest.mark.anyio
 async def test_migration_unknown_version(data_store: DataStore) -> None:
     async with data_store.db_wrapper.writer() as writer:
-        await writer.execute(
-            "INSERT INTO schema(version_id) VALUES(:version_id)",
-            {
-                "version_id": "unknown version",
-            },
-        )
+        await writer.execute("INSERT INTO schema(version_id) VALUES(:version_id)", {"version_id": "unknown version"})
     with pytest.raises(Exception, match="Unknown version"):
         await data_store.migrate_db()
 
@@ -2236,11 +2014,7 @@ async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) ->
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
         changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
-    await data_store.insert_batch(
-        store_id=store_id,
-        changelist=changelist,
-        status=Status.PENDING,
-    )
+    await data_store.insert_batch(store_id=store_id, changelist=changelist, status=Status.PENDING)
 
     pending_root = await data_store.get_pending_root(store_id=store_id)
     assert pending_root is not None
@@ -2257,12 +2031,7 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
     num_values = 100
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
-        await data_store.autoinsert(
-            key=value_bytes,
-            value=value_bytes,
-            store_id=store_id,
-            status=Status.COMMITTED,
-        )
+        await data_store.autoinsert(key=value_bytes, value=value_bytes, store_id=store_id, status=Status.COMMITTED)
         root = await data_store.get_tree_root(store_id=store_id)
         assert root.node_hash is not None
         ancestors = await _check_ancestors(data_store, store_id, root.node_hash)
@@ -2323,11 +2092,7 @@ async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
         changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
-    await data_store.insert_batch(
-        store_id=store_id,
-        changelist=changelist,
-        status=Status.COMMITTED,
-    )
+    await data_store.insert_batch(store_id=store_id, changelist=changelist, status=Status.COMMITTED)
 
     expected_nodes = await get_all_nodes(data_store, store_id)
     nodes = await data_store.get_nodes([node.hash for node in expected_nodes])
@@ -2342,12 +2107,7 @@ async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
 @pytest.mark.anyio
 @pytest.mark.parametrize("pre", [0, 2048])
 @pytest.mark.parametrize("batch_size", [25, 100, 500])
-async def test_get_leaf_at_minimum_height(
-    data_store: DataStore,
-    store_id: bytes32,
-    pre: int,
-    batch_size: int,
-) -> None:
+async def test_get_leaf_at_minimum_height(data_store: DataStore, store_id: bytes32, pre: int, batch_size: int) -> None:
     num_values = 1000
     value_offset = 1000000
     all_min_leafs: set[TerminalNode] = set()
@@ -2359,21 +2119,12 @@ async def test_get_leaf_at_minimum_height(
         for value in range(pre):
             value_bytes = (value * value).to_bytes(8, byteorder="big")
             changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=changelist,
-            status=Status.COMMITTED,
-        )
+        await data_store.insert_batch(store_id=store_id, changelist=changelist, status=Status.COMMITTED)
 
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
         # Use autoinsert instead of `insert_batch` to get a more randomly shaped tree
-        await data_store.autoinsert(
-            key=value_bytes,
-            value=value_bytes,
-            store_id=store_id,
-            status=Status.COMMITTED,
-        )
+        await data_store.autoinsert(key=value_bytes, value=value_bytes, store_id=store_id, status=Status.COMMITTED)
 
         if (value + 1) % batch_size == 0:
             hash_to_parent: dict[bytes32, InternalNode] = {}

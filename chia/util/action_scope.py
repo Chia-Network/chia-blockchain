@@ -46,10 +46,7 @@ class SQLiteResourceManager:
             self = cls(db)
             async with self._db.writer() as conn:
                 await conn.execute("CREATE TABLE side_effects(total blob)")
-                await conn.execute(
-                    "INSERT INTO side_effects VALUES(?)",
-                    (bytes(initial_resource),),
-                )
+                await conn.execute("INSERT INTO side_effects VALUES(?)", (bytes(initial_resource),))
             yield self
 
     @contextlib.asynccontextmanager
@@ -71,10 +68,7 @@ class SQLiteResourceManager:
 
     async def save_resource(self, resource: SideEffects) -> None:
         # This sets all rows (there's only one) to the new serialization
-        await self.get_active_writer().execute(
-            "UPDATE side_effects SET total=?",
-            (bytes(resource),),
-        )
+        await self.get_active_writer().execute("UPDATE side_effects SET total=?", (bytes(resource),))
 
 
 class SideEffects(Protocol):

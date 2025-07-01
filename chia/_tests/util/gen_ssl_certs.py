@@ -13,11 +13,7 @@ from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, ma
 
 @click.command()
 @click.option(
-    "--suffix",
-    type=str,
-    default="",
-    help="Suffix to append to the generated cert/key symbols.",
-    required=True,
+    "--suffix", type=str, default="", help="Suffix to append to the generated cert/key symbols.", required=True
 )
 def gen_ssl(suffix: str = "") -> None:
     captured_crt: Optional[bytes] = None
@@ -69,9 +65,7 @@ def gen_ssl(suffix: str = "") -> None:
         },
         "crawler": {"private": {"crt": "SSL_TEST_CRAWLER_PRIVATE_CRT", "key": "SSL_TEST_CRAWLER_PRIVATE_KEY"}},
         "daemon": {"private": {"crt": "SSL_TEST_DAEMON_PRIVATE_CRT", "key": "SSL_TEST_DAEMON_PRIVATE_KEY"}},
-        "introducer": {
-            "public": {"crt": "SSL_TEST_INTRODUCER_PUBLIC_CRT", "key": "SSL_TEST_INTRODUCER_PUBLIC_KEY"},
-        },
+        "introducer": {"public": {"crt": "SSL_TEST_INTRODUCER_PUBLIC_CRT", "key": "SSL_TEST_INTRODUCER_PUBLIC_KEY"}},
     }
 
     chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()

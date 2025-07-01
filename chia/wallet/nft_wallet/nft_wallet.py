@@ -217,10 +217,7 @@ class NFTWallet:
         else:
             inner_puzzle = p2_puzzle
         child_puzzle: Program = nft_puzzle_utils.create_full_puzzle(
-            singleton_id,
-            Program.to(metadata),
-            bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
-            inner_puzzle,
+            singleton_id, Program.to(metadata), bytes32(uncurried_nft.metadata_updater_hash.as_atom()), inner_puzzle
         )
         self.log.debug(
             "Created NFT full puzzle with inner: %s",
@@ -229,10 +226,7 @@ class NFTWallet:
         child_puzzle_hash = child_puzzle.get_tree_hash()
         for new_coin in compute_additions(data.parent_coin_spend):
             self.log.debug(
-                "Comparing addition: %s with %s, amount: %s ",
-                new_coin.puzzle_hash,
-                child_puzzle_hash,
-                new_coin.amount,
+                "Comparing addition: %s with %s, amount: %s ", new_coin.puzzle_hash, child_puzzle_hash, new_coin.amount
             )
             if new_coin.puzzle_hash == child_puzzle_hash:
                 child_coin = new_coin
@@ -297,10 +291,7 @@ class NFTWallet:
             self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 
     async def get_did_approval_info(
-        self,
-        nft_ids: list[bytes32],
-        action_scope: WalletActionScope,
-        did_id: Optional[bytes32] = None,
+        self, nft_ids: list[bytes32], action_scope: WalletActionScope, did_id: Optional[bytes32] = None
     ) -> bytes32:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
 
@@ -521,12 +512,7 @@ class NFTWallet:
         else:
             raise ValueError("Invalid NFT puzzle.")
 
-    async def get_coins_to_offer(
-        self,
-        nft_id: bytes32,
-        *args: Any,
-        **kwargs: Any,
-    ) -> set[Coin]:
+    async def get_coins_to_offer(self, nft_id: bytes32, *args: Any, **kwargs: Any) -> set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
@@ -543,11 +529,7 @@ class NFTWallet:
 
     @classmethod
     async def create_from_puzzle_info(
-        cls: Any,
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        puzzle_driver: PuzzleInfo,
-        name: Optional[str] = None,
+        cls: Any, wallet_state_manager: Any, wallet: Wallet, puzzle_driver: PuzzleInfo, name: Optional[str] = None
     ) -> Any:
         # Off the bat we don't support multiple profile but when we do this will have to change
         for wallet in wallet_state_manager.wallets.values():
@@ -555,12 +537,7 @@ class NFTWallet:
                 return wallet
 
         # TODO: These are not the arguments to this function yet but they will be
-        return await cls.create_new_nft_wallet(
-            wallet_state_manager,
-            wallet,
-            None,
-            name,
-        )
+        return await cls.create_new_nft_wallet(wallet_state_manager, wallet, None, name)
 
     async def generate_signed_transaction(
         self,
@@ -681,23 +658,13 @@ class NFTWallet:
                 *extra_conditions,
                 UnknownCondition(
                     opcode=Program.to(-10),
-                    args=[
-                        Program.to(new_owner),
-                        Program.to(trade_prices_list),
-                        Program.to(new_did_inner_hash),
-                    ],
+                    args=[Program.to(new_owner), Program.to(trade_prices_list), Program.to(new_did_inner_hash)],
                 ),
             )
         if metadata_update is not None:
             extra_conditions = (
                 *extra_conditions,
-                UnknownCondition(
-                    opcode=Program.to(-24),
-                    args=[
-                        NFT_METADATA_UPDATER,
-                        Program.to(metadata_update),
-                    ],
-                ),
+                UnknownCondition(opcode=Program.to(-24), args=[NFT_METADATA_UPDATER, Program.to(metadata_update)]),
             )
 
         innersol: Program = self.standard_wallet.make_solution(
@@ -719,8 +686,7 @@ class NFTWallet:
 
     @staticmethod
     def royalty_calculation(
-        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
-        fungible_asset_dict: dict[Any, uint64],
+        royalty_assets_dict: dict[Any, tuple[Any, uint16]], fungible_asset_dict: dict[Any, uint64]
     ) -> dict[Any, list[dict[str, Any]]]:
         summary_dict: dict[Any, list[dict[str, Any]]] = {}
         for id, royalty_info in royalty_assets_dict.items():
@@ -750,11 +716,7 @@ class NFTWallet:
         royalty_nft_asset_dict: dict[bytes32, int] = {}
         for asset, amount in offer_dict.items():
             if asset is not None and driver_dict[asset].check_type(  # check if asset is an Royalty Enabled NFT
-                [
-                    AssetType.SINGLETON.value,
-                    AssetType.METADATA.value,
-                    AssetType.OWNERSHIP.value,
-                ]
+                [AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value]
             ):
                 driver_dict[asset].info["also"]["also"]["owner"] = "()"
                 royalty_nft_asset_dict[asset] = amount
@@ -796,11 +758,7 @@ class NFTWallet:
                 royalty_percentage = int(royalty_percentage_raw)
             if amount > 0:
                 required_royalty_info.append(
-                    (
-                        asset,
-                        bytes32(transfer_info["transfer_program"]["royalty_address"]),
-                        uint16(royalty_percentage),
-                    )
+                    (asset, bytes32(transfer_info["transfer_program"]["royalty_address"]), uint16(royalty_percentage))
                 )
             else:
                 offered_royalty_percentages[asset] = uint16(royalty_percentage)
@@ -957,8 +915,7 @@ class NFTWallet:
                                     None,
                                     [
                                         CreateCoin(
-                                            OFFER_MOD_HASH,
-                                            uint64(sum(p.amount for _, p in duplicate_payments)),
+                                            OFFER_MOD_HASH, uint64(sum(p.amount for _, p in duplicate_payments))
                                         ).as_condition_args()
                                     ],
                                 )
@@ -1368,10 +1325,7 @@ class NFTWallet:
             ),
         )
         did_inner_sol: Program = Program.to([1, did_p2_solution])
-        did_full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            did_wallet.did_info.origin_coin.name(),
-        )
+        did_full_puzzle: Program = create_singleton_puzzle(innerpuz, did_wallet.did_info.origin_coin.name())
         # The DID lineage parent won't not exist if we're bulk minting from a future DID coin
         if did_lineage_parent:
             did_parent_info: Optional[LineageProof] = LineageProof(
@@ -1385,11 +1339,7 @@ class NFTWallet:
 
         did_full_sol = Program.to(
             [
-                [
-                    did_parent_info.parent_name,
-                    did_parent_info.inner_puzzle_hash,
-                    did_parent_info.amount,
-                ],
+                [did_parent_info.parent_name, did_parent_info.inner_puzzle_hash, did_parent_info.amount],
                 did_coin.amount,
                 did_inner_sol,
             ]
@@ -1609,11 +1559,7 @@ class NFTWallet:
                 WalletSpendBundle(intermediate_coin_spends + launcher_spends, G2Element())
             )
 
-    async def select_coins(
-        self,
-        amount: uint64,
-        action_scope: WalletActionScope,
-    ) -> set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
         raise RuntimeError("NFTWallet does not support select_coins()")
 
     def require_derivation_paths(self) -> bool:

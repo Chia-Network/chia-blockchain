@@ -61,9 +61,7 @@ async def get_nearest_transaction_block(blockchain: Blockchain, block: BlockReco
 
 
 async def get_average_block_time(
-    blockchain: Blockchain,
-    base_block: BlockRecord,
-    height_distance: int,
+    blockchain: Blockchain, base_block: BlockRecord, height_distance: int
 ) -> Optional[uint32]:
     newer_block = await get_nearest_transaction_block(blockchain, base_block)
     if newer_block.height < 1:
@@ -143,22 +141,8 @@ class FullNodeRpcApi:
         if change in {"new_peak", "sync_mode"}:
             data = await self.get_blockchain_state({})
             assert data is not None
-            payloads.append(
-                create_payload_dict(
-                    "get_blockchain_state",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                )
-            )
-            payloads.append(
-                create_payload_dict(
-                    "get_blockchain_state",
-                    data,
-                    self.service_name,
-                    "metrics",
-                )
-            )
+            payloads.append(create_payload_dict("get_blockchain_state", data, self.service_name, "wallet_ui"))
+            payloads.append(create_payload_dict("get_blockchain_state", data, self.service_name, "metrics"))
 
         if change in {"block", "signage_point"}:
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
@@ -178,25 +162,18 @@ class FullNodeRpcApi:
                 "blockchain_state": {
                     "peak": None,
                     "genesis_challenge_initialized": self.service.initialized,
-                    "sync": {
-                        "sync_mode": False,
-                        "synced": False,
-                        "sync_tip_height": 0,
-                        "sync_progress_height": 0,
-                    },
+                    "sync": {"sync_mode": False, "synced": False, "sync_tip_height": 0, "sync_progress_height": 0},
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
                     "average_block_time": None,
                     "mempool_size": 0,
                     "mempool_cost": 0,
-                    "mempool_min_fees": {
-                        "cost_5000000": 0,
-                    },
+                    "mempool_min_fees": {"cost_5000000": 0},
                     "mempool_max_total_cost": 0,
                     "block_max_cost": 0,
                     "node_id": node_id,
-                },
+                }
             }
             return res
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
@@ -281,12 +258,12 @@ class FullNodeRpcApi:
                 "mempool_min_fees": {
                     # We may give estimates for varying costs in the future
                     # This Dict sets us up for that in the future
-                    "cost_5000000": mempool_min_fee_5m,
+                    "cost_5000000": mempool_min_fee_5m
                 },
                 "mempool_max_total_cost": mempool_max_total_cost,
                 "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
                 "node_id": node_id,
-            },
+            }
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
         return response
@@ -723,10 +700,7 @@ class FullNodeRpcApi:
 
         names: list[bytes32] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
 
-        kwargs: dict[str, Any] = {
-            "include_spent_coins": False,
-            "names": names,
-        }
+        kwargs: dict[str, Any] = {"include_spent_coins": False, "names": names}
 
         if "start_height" in request:
             kwargs["start_height"] = uint32(request["start_height"])
@@ -761,9 +735,7 @@ class FullNodeRpcApi:
         if status == MempoolInclusionStatus.FAILED:
             assert error is not None
             raise ValueError(f"Failed to include transaction {spend_name}, error {error.name}")
-        return {
-            "status": status.name,
-        }
+        return {"status": status.name}
 
     async def get_puzzle_and_solution(self, request: dict[str, Any]) -> EndpointResult:
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])

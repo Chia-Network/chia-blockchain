@@ -69,12 +69,7 @@ EmptyMempoolInfo = MempoolInfo(
 )
 
 
-EmptyFeeMempoolInfo = FeeMempoolInfo(
-    EmptyMempoolInfo,
-    CLVMCost(uint64(0)),
-    0,
-    datetime.min,
-)
+EmptyFeeMempoolInfo = FeeMempoolInfo(EmptyMempoolInfo, CLVMCost(uint64(0)), 0, datetime.min)
 
 
 @dataclass(frozen=True)

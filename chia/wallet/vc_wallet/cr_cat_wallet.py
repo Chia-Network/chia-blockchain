@@ -148,11 +148,7 @@ class CRCATWallet(CATWallet):
         )
 
     @staticmethod
-    async def create(
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        wallet_info: WalletInfo,
-    ) -> CRCATWallet:
+    async def create(wallet_state_manager: WalletStateManager, wallet: Wallet, wallet_info: WalletInfo) -> CRCATWallet:
         self = CRCATWallet()
 
         self.log = logging.getLogger(__name__)
@@ -164,10 +160,7 @@ class CRCATWallet(CATWallet):
 
     @classmethod
     async def convert_to_cr(
-        cls,
-        cat_wallet: CATWallet,
-        authorized_providers: list[bytes32],
-        proofs_checker: ProofsChecker,
+        cls, cat_wallet: CATWallet, authorized_providers: list[bytes32], proofs_checker: ProofsChecker
     ) -> None:
         replace_self = cls()
         replace_self.standard_wallet = cat_wallet.standard_wallet
@@ -232,10 +225,7 @@ class CRCATWallet(CATWallet):
                 is_pending = False
             elif (
                 cr_cat.inner_puzzle_hash
-                == construct_pending_approval_state(
-                    hint_dict[coin.name()],
-                    uint64(coin.amount),
-                ).get_tree_hash()
+                == construct_pending_approval_state(hint_dict[coin.name()], uint64(coin.amount)).get_tree_hash()
             ):
                 self.log.info(f"Found pending approval CRCAT coin {coin.name().hex()}")
                 is_pending = True
@@ -411,12 +401,7 @@ class CRCATWallet(CATWallet):
         payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
         if coins is None:
-            cat_coins = list(
-                await self.select_coins(
-                    uint64(starting_amount),
-                    action_scope,
-                )
-            )
+            cat_coins = list(await self.select_coins(uint64(starting_amount), action_scope))
         else:
             cat_coins = list(coins)
 
@@ -493,13 +478,7 @@ class CRCATWallet(CATWallet):
 
             if cat_discrepancy is not None:
                 cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.to(None),
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+                    opcode=Program.to(51), args=[Program.to(None), Program.to(-113), tail_reveal, tail_solution]
                 )
                 if first:
                     extra_conditions = (*extra_conditions, cat_condition)
@@ -517,32 +496,26 @@ class CRCATWallet(CATWallet):
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
                         innersol = self.standard_wallet.make_solution(
-                            primaries=primaries,
-                            conditions=(*extra_conditions, announcement),
+                            primaries=primaries, conditions=(*extra_conditions, announcement)
                         )
                     elif regular_chia_to_claim > fee:
                         xch_announcement = await self.create_tandem_xch_tx(
-                            fee,
-                            uint64(regular_chia_to_claim),
-                            action_scope,
+                            fee, uint64(regular_chia_to_claim), action_scope
                         )
                         assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
-                            primaries=primaries,
-                            conditions=(*extra_conditions, xch_announcement, announcement),
+                            primaries=primaries, conditions=(*extra_conditions, xch_announcement, announcement)
                         )
                     else:
                         # TODO: what about when they are equal?
                         raise Exception("Equality not handled")
                 else:
                     innersol = self.standard_wallet.make_solution(
-                        primaries=primaries,
-                        conditions=(*extra_conditions, announcement),
+                        primaries=primaries, conditions=(*extra_conditions, announcement)
                     )
             else:
                 innersol = self.standard_wallet.make_solution(
-                    primaries=[],
-                    conditions=(announcement.corresponding_assertion(),),
+                    primaries=[], conditions=(announcement.corresponding_assertion(),)
                 )
             inner_derivation_record = (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -554,14 +527,7 @@ class CRCATWallet(CATWallet):
                     f"CR-CAT {crcat} has an inner puzzle hash {crcat.inner_puzzle_hash} that we don't have the keys for"
                 )
             inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_derivation_record.pubkey)
-            inner_spends.append(
-                (
-                    crcat,
-                    extra_delta if first else 0,
-                    inner_puzzle,
-                    innersol,
-                )
-            )
+            inner_spends.append((crcat, extra_delta if first else 0, inner_puzzle, innersol))
             first = False
 
         if vc is None:  # pragma: no cover
@@ -706,10 +672,7 @@ class CRCATWallet(CATWallet):
 
         # Select the relevant XCH coins
         if fee > 0:
-            chia_coins = await self.standard_wallet.select_coins(
-                fee,
-                action_scope,
-            )
+            chia_coins = await self.standard_wallet.select_coins(fee, action_scope)
         else:
             chia_coins = set()
 
@@ -758,10 +721,7 @@ class CRCATWallet(CATWallet):
         # Make the Fee TX
         if fee > 0:
             await self.create_tandem_xch_tx(
-                fee,
-                uint64(0),
-                action_scope,
-                extra_conditions=tuple(expected_announcements),
+                fee, uint64(0), action_scope, extra_conditions=tuple(expected_announcements)
             )
 
         # Make the VC TX
@@ -841,11 +801,7 @@ class CRCATWallet(CATWallet):
         """
         authorized_providers_hash: bytes32 = Program.to(self.info.authorized_providers).get_tree_hash()
         proofs_checker_hash: bytes32 = self.info.proofs_checker.as_program().get_tree_hash()
-        hint_inner_hash: bytes32 = construct_cr_layer_hash(
-            authorized_providers_hash,
-            proofs_checker_hash,
-            hint,
-        )
+        hint_inner_hash: bytes32 = construct_cr_layer_hash(authorized_providers_hash, proofs_checker_hash, hint)
         if (
             construct_cat_puzzle(
                 Program.to(CAT_MOD_HASH),

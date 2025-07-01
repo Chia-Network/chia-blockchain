@@ -65,10 +65,7 @@ class S3Plugin:
         instance_name: str,
     ):
         self.boto_resource = boto3.resource(
-            "s3",
-            region_name=region,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
+            "s3", region_name=region, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
         )
         self.stores = stores
         self.instance_name = instance_name
@@ -208,12 +205,7 @@ class S3Plugin:
                 with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-upload-") as pool:
                     if full_tree_path is not None:
                         await asyncio.get_running_loop().run_in_executor(
-                            pool,
-                            functools.partial(
-                                my_bucket.upload_file,
-                                full_tree_path,
-                                target_full_tree_path,
-                            ),
+                            pool, functools.partial(my_bucket.upload_file, full_tree_path, target_full_tree_path)
                         )
                     await asyncio.get_running_loop().run_in_executor(
                         pool, functools.partial(my_bucket.upload_file, diff_path, target_diff_path)
@@ -230,13 +222,7 @@ class S3Plugin:
         return web.json_response({"success": True})
 
     async def plugin_info(self, request: web.Request) -> web.Response:
-        return web.json_response(
-            {
-                "name": plugin_name,
-                "version": plugin_version,
-                "instance": self.instance_name,
-            }
-        )
+        return web.json_response({"name": plugin_name, "version": plugin_version, "instance": self.instance_name})
 
     async def handle_download(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
@@ -332,8 +318,7 @@ class S3Plugin:
 
                     with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-missing-") as pool:
                         await asyncio.get_running_loop().run_in_executor(
-                            pool,
-                            functools.partial(my_bucket.upload_file, file_path, target_file_name),
+                            pool, functools.partial(my_bucket.upload_file, file_path, target_file_name)
                         )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {e}")

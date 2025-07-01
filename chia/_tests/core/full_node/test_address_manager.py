@@ -9,12 +9,7 @@ from pathlib import Path
 import pytest
 from chia_rs.sized_ints import uint16, uint32, uint64
 
-from chia.server.address_manager import (
-    BUCKET_SIZE,
-    NEW_BUCKET_COUNT,
-    AddressManager,
-    ExtendedPeerInfo,
-)
+from chia.server.address_manager import BUCKET_SIZE, NEW_BUCKET_COUNT, AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import PeerDataSerialization
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.files import write_file_async
@@ -36,14 +31,7 @@ class AddressManagerTest(AddressManager):
         await self.attempt(peer.peer_info, False, time.time() - 61)
 
     async def add_peer_info(self, peers, peer_src=None):
-        timestamped_peers = [
-            TimestampedPeerInfo(
-                peer.host,
-                peer.port,
-                0,
-            )
-            for peer in peers
-        ]
+        timestamped_peers = [TimestampedPeerInfo(peer.host, peer.port, 0) for peer in peers]
         added = await self.add_to_new_table(timestamped_peers, peer_src)
         return added
 

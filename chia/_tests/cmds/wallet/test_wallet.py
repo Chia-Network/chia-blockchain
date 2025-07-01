@@ -149,10 +149,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
 
         async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
             self.add_to_log("get_coin_records", (request,))
-            return {
-                "coin_records": [{"metadata": {"time_lock": 12345678}}],
-                "total_count": 1,
-            }
+            return {"coin_records": [{"metadata": {"time_lock": 12345678}}], "total_count": 1}
 
     inst_rpc_client = GetTransactionsWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -489,18 +486,11 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     # get output with all options but verbose
     addr1 = encode_puzzle_hash(get_bytes32(3), "xch")
     addr2 = encode_puzzle_hash(get_bytes32(4), "xch")
-    command_args = [
-        "wallet",
-        "get_address",
-        WALLET_ID_ARG,
-        FINGERPRINT_ARG,
-    ]
+    command_args = ["wallet", "get_address", WALLET_ID_ARG, FINGERPRINT_ARG]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "-n"], [addr1])
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "-l"], [addr2])
     # these are various things that should be in the output
-    expected_calls: logType = {
-        "get_next_address": [(1, True), (1, False)],
-    }
+    expected_calls: logType = {"get_next_address": [(1, True), (1, False)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -551,7 +541,7 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", str(r_tx_ids_hex)])
     # these are various things that should be in the output
     expected_calls: logType = {
-        "spend_clawback_coins": [(tx_ids, 500000000000, False, True, test_condition_valid_times)],
+        "spend_clawback_coins": [(tx_ids, 500000000000, False, True, test_condition_valid_times)]
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -566,18 +556,11 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcC
 
     inst_rpc_client = UnconfirmedTxRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = [
-        "wallet",
-        "delete_unconfirmed_transactions",
-        WALLET_ID_ARG,
-        FINGERPRINT_ARG,
-    ]
+    command_args = ["wallet", "delete_unconfirmed_transactions", WALLET_ID_ARG, FINGERPRINT_ARG]
     assert_list = [f"Successfully deleted all unconfirmed transactions for wallet id {WALLET_ID} on key {FINGERPRINT}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     # these are various things that should be in the output
-    expected_calls: logType = {
-        "delete_unconfirmed_transactions": [(1,)],
-    }
+    expected_calls: logType = {"delete_unconfirmed_transactions": [(1,)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -592,16 +575,10 @@ def test_get_derivation_index(capsys: object, get_test_cli_clients: tuple[TestRp
 
     inst_rpc_client = GetDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = [
-        "wallet",
-        "get_derivation_index",
-        FINGERPRINT_ARG,
-    ]
+    command_args = ["wallet", "get_derivation_index", FINGERPRINT_ARG]
     run_cli_command_and_assert(capsys, root_dir, command_args, ["Last derivation index: 520"])
     # these are various things that should be in the output
-    expected_calls: logType = {
-        "get_current_derivation_index": [()],
-    }
+    expected_calls: logType = {"get_current_derivation_index": [()]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -623,7 +600,7 @@ def test_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     ]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-a{xch_addr}"], assert_list)
     expected_calls: logType = {
-        "sign_message_by_address": [(xch_addr, message.hex())],  # xch std
+        "sign_message_by_address": [(xch_addr, message.hex())]  # xch std
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -642,9 +619,7 @@ def test_update_derivation_index(capsys: object, get_test_cli_clients: tuple[Tes
     index = 600
     command_args = ["wallet", "update_derivation_index", FINGERPRINT_ARG, "--index", str(index)]
     run_cli_command_and_assert(capsys, root_dir, command_args, [f"Updated derivation index: {index}"])
-    expected_calls: logType = {
-        "extend_derivation_index": [(index,)],
-    }
+    expected_calls: logType = {"extend_derivation_index": [(index,)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -748,8 +723,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CreateOfferForIDsResponse:
             self.add_to_log(
-                "create_offer_for_ids",
-                (offer_dict, tx_config, driver_dict, solver, fee, validate_only, timelock_info),
+                "create_offer_for_ids", (offer_dict, tx_config, driver_dict, solver, fee, validate_only, timelock_info)
             )
 
             created_offer = Offer({}, WalletSpendBundle([], G2Element()), {})
@@ -823,18 +797,9 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                         )
                     ],
                     [
-                        FungibleAsset(
-                            "XCH",
-                            uint64(10000000000000),
-                        ),
-                        FungibleAsset(
-                            "test3",
-                            uint64(100000),
-                        ),
-                        FungibleAsset(
-                            "test4",
-                            uint64(100000),
-                        ),
+                        FungibleAsset("XCH", uint64(10000000000000)),
+                        FungibleAsset("test3", uint64(100000)),
+                        FungibleAsset("test4", uint64(100000)),
                     ],
                 ),
             )
@@ -929,10 +894,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                     trade_id=bytes32([1 + i] * 32),
                     status=uint32(TradeStatus.PENDING_ACCEPT.value),
                     valid_times=ConditionValidTimes(
-                        min_time=uint64(0),
-                        max_time=uint64(100),
-                        min_height=uint32(0),
-                        max_height=uint32(100),
+                        min_time=uint64(0), max_time=uint64(100), min_height=uint32(0), max_height=uint32(100)
                     ),
                 )
                 records.append(trade_offer)
@@ -967,12 +929,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {"get_all_offers": [(0, 10, "RELEVANCE", True, False, True, True, True)]}
-    command_args = [
-        "wallet",
-        "get_offers",
-        FINGERPRINT_ARG,
-        "--summaries",
-    ]
+    command_args = ["wallet", "get_offers", FINGERPRINT_ARG, "--summaries"]
     tzinfo = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
     # these are various things that should be in the output
     assert_list = [
@@ -1153,9 +1110,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     cat_requested_id = bytes32.from_hexstr("13a52e5efb1ee80a24c94b36bbda2b473094353614ced1c2938ba5ef6097431e")
     nft_requested_id_1 = bytes32.from_hexstr("7657b5f1cdee70459052c314f839bb1b76b8c3f444671da71ad7dfcb6c47f243")
     nft_requested_id_2 = bytes32.from_hexstr("5f03cdb94c96325f49f4abf1d4d10cabd5ea583632fbf20f251b7fad73645a14")
-    assert_list = [
-        "Cancelled offer with ID 71fd6de245d896c691b0115cdb9b47904cb60858ae87b86bfd648b23208b6cc1",
-    ]
+    assert_list = ["Cancelled offer with ID 71fd6de245d896c691b0115cdb9b47904cb60858ae87b86bfd648b23208b6cc1"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_offer": [(test_offer_id_bytes, True)],

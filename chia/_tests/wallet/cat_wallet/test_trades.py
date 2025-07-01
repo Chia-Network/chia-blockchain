@@ -98,9 +98,7 @@ async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) 
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_cat_trades(
-    wallet_environments: WalletTestFramework,
-    credential_restricted: bool,
-    active_softfork_height: uint32,
+    wallet_environments: WalletTestFramework, credential_restricted: bool, active_softfork_height: uint32
 ) -> None:
     # Setup
     env_maker = wallet_environments.environments[0]
@@ -123,39 +121,21 @@ async def test_cat_trades(
     # Create two new CATs, one in each wallet
     if credential_restricted:
         # Aliasing
-        env_maker.wallet_aliases = {
-            "xch": 1,
-            "did": 2,
-            "cat": 3,
-            "vc": 4,
-            "new cat": 5,
-        }
-        env_taker.wallet_aliases = {
-            "xch": 1,
-            "did": 2,
-            "new cat": 3,
-            "vc": 4,
-            "cat": 5,
-        }
+        env_maker.wallet_aliases = {"xch": 1, "did": 2, "cat": 3, "vc": 4, "new cat": 5}
+        env_taker.wallet_aliases = {"xch": 1, "did": 2, "new cat": 3, "vc": 4, "cat": 5}
 
         # Mint some DIDs
         async with wallet_maker.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:
             did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_maker.wallet_state_manager,
-                wallet_maker,
-                uint64(1),
-                action_scope,
+                wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
             )
         async with wallet_taker.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:
             did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_taker.wallet_state_manager,
-                wallet_taker,
-                uint64(1),
-                action_scope,
+                wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
             )
         did_id_maker = bytes32.from_hexstr(did_wallet_maker.get_my_DID())
         did_id_taker = bytes32.from_hexstr(did_wallet_taker.get_my_DID())
@@ -274,20 +254,14 @@ async def test_cat_trades(
                         "xch": {"set_remainder": True},
                         "vc": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={
                         "xch": {"set_remainder": True},
                         "vc": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
             ]
         )
@@ -295,61 +269,33 @@ async def test_cat_trades(
         proofs_maker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
         proof_root_maker: bytes32 = proofs_maker.root()
         await client_maker.vc_spend(
-            VCSpend(
-                vc_id=vc_record_maker.vc.launcher_id,
-                new_proof_hash=proof_root_maker,
-                push=True,
-            ),
+            VCSpend(vc_id=vc_record_maker.vc.launcher_id, new_proof_hash=proof_root_maker, push=True),
             wallet_environments.tx_config,
         )
 
         proofs_taker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
         proof_root_taker: bytes32 = proofs_taker.root()
         await client_taker.vc_spend(
-            VCSpend(
-                vc_id=vc_record_taker.vc.launcher_id,
-                new_proof_hash=proof_root_taker,
-                push=True,
-            ),
+            VCSpend(vc_id=vc_record_taker.vc.launcher_id, new_proof_hash=proof_root_taker, push=True),
             wallet_environments.tx_config,
         )
         await wallet_environments.process_pending_states(
             [
                 # Balance checking for this scenario is covered in tests/wallet/vc_wallet/test_vc_lifecycle
                 WalletStateTransition(
-                    pre_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
-                    post_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    pre_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
+                    post_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
                 WalletStateTransition(
-                    pre_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
-                    post_block_balance_updates={
-                        "did": {"set_remainder": True},
-                        "vc": {"set_remainder": True},
-                    },
+                    pre_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
+                    post_block_balance_updates={"did": {"set_remainder": True}, "vc": {"set_remainder": True}},
                 ),
             ]
         )
     else:
         # Aliasing
-        env_maker.wallet_aliases = {
-            "xch": 1,
-            "cat": 2,
-            "new cat": 3,
-        }
-        env_taker.wallet_aliases = {
-            "xch": 1,
-            "new cat": 2,
-            "cat": 3,
-        }
+        env_maker.wallet_aliases = {"xch": 1, "cat": 2, "new cat": 3}
+        env_taker.wallet_aliases = {"xch": 1, "new cat": 2, "cat": 3}
 
         # Mint some standard CATs
         async with wallet_maker.wallet_state_manager.new_action_scope(
@@ -382,20 +328,14 @@ async def test_cat_trades(
                         "xch": {"set_remainder": True},
                         "cat": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "cat": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={
                         "xch": {"set_remainder": True},
                         "new cat": {"init": True, "set_remainder": True},
                     },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "new cat": {"set_remainder": True},
-                    },
+                    post_block_balance_updates={"xch": {"set_remainder": True}, "new cat": {"set_remainder": True}},
                 ),
             ]
         )
@@ -456,10 +396,7 @@ async def test_cat_trades(
         wallet_maker.id(): 3,
         cat_wallet_maker.id(): -4,  # The taker has no knowledge of this CAT yet
     }
-    cat_for_cat: OfferSummary = {
-        bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): -5,
-        new_cat_wallet_maker.id(): 6,
-    }
+    cat_for_cat: OfferSummary = {bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): -5, new_cat_wallet_maker.id(): 6}
     chia_for_multiple_cat: OfferSummary = {
         wallet_maker.id(): -7,
         cat_wallet_maker.id(): 8,
@@ -479,10 +416,7 @@ async def test_cat_trades(
     driver_dict: dict[bytes32, PuzzleInfo] = {}
     for wallet in (cat_wallet_maker, new_cat_wallet_maker):
         asset_id: str = wallet.get_asset_id()
-        driver_item: dict[str, Any] = {
-            "type": AssetType.CAT.value,
-            "tail": "0x" + asset_id,
-        }
+        driver_item: dict[str, Any] = {"type": AssetType.CAT.value, "tail": "0x" + asset_id}
         if credential_restricted:
             driver_item["also"] = {
                 "type": AssetType.CR.value,
@@ -526,12 +460,7 @@ async def test_cat_trades(
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            maker_offer,
-            peer,
-            action_scope,
-            fee=uint64(1),
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(maker_offer, peer, action_scope, fee=uint64(1))
 
     if test_aggregation:
         first_offer = Offer.from_bytes(trade_take.offer)
@@ -546,7 +475,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -2,
                         # Unconfirmed balance doesn't change because offer may not complete
                         "unconfirmed_wallet_balance": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -577,13 +506,7 @@ async def test_cat_trades(
                     ),
                 },
                 post_block_additional_balance_info=(
-                    {
-                        "new cat": {
-                            "pending_approval_balance": 2,
-                        }
-                    }
-                    if credential_restricted
-                    else {}
+                    {"new cat": {"pending_approval_balance": 2}} if credential_restricted else {}
                 ),
             ),
             WalletStateTransition(
@@ -603,15 +526,7 @@ async def test_cat_trades(
                         "<=#spendable_balance": -2,
                         "<=#max_send_amount": -2,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -630,26 +545,14 @@ async def test_cat_trades(
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
     )
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(2),
-            wallet_environments.tx_config,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(2), wallet_environments.tx_config)
 
         await wallet_environments.process_pending_states(
             [
@@ -660,15 +563,9 @@ async def test_cat_trades(
                             "pending_coin_removal_count": 1,
                             "pending_change": 2,  # This is a little weird but fits the current definition
                         },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 2,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 2}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 2,
@@ -678,15 +575,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -745,10 +636,7 @@ async def test_cat_trades(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer),
-            peer,
-            action_scope,
-            fee=uint64(1),
+            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(1)
         )
 
     # Testing a precious display bug real quick
@@ -766,7 +654,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -4,
                         # Unconfirmed balance doesn't change because offer may not complete
                         "unconfirmed_wallet_balance": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -804,15 +692,7 @@ async def test_cat_trades(
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 0,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -828,15 +708,7 @@ async def test_cat_trades(
                         "max_send_amount": 4,
                         "confirmed_wallet_balance": 4,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -873,11 +745,7 @@ async def test_cat_trades(
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer),
-            peer,
-            action_scope,
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     if test_aggregation:
         second_offer = Offer.from_bytes(trade_take.offer)
@@ -892,7 +760,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -5,
                         # Unconfirmed balance doesn't change because offer may not complete
                         "unconfirmed_wallet_balance": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "new cat": (
@@ -922,20 +790,12 @@ async def test_cat_trades(
                     },
                 },
                 post_block_additional_balance_info=(
-                    {
-                        "new cat": {
-                            "pending_approval_balance": 6,
-                        }
-                    }
-                    if credential_restricted
-                    else {}
+                    {"new cat": {"pending_approval_balance": 6}} if credential_restricted else {}
                 ),
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "cat": {
-                        "unconfirmed_wallet_balance": 5,
-                    },
+                    "cat": {"unconfirmed_wallet_balance": 5},
                     "new cat": {
                         "unconfirmed_wallet_balance": -6,
                         "pending_change": 92,
@@ -943,15 +803,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -6,
                         "pending_coin_removal_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "cat": {
@@ -967,15 +819,7 @@ async def test_cat_trades(
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -985,11 +829,7 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(6),
-            wallet_environments.tx_config,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(6), wallet_environments.tx_config)
 
         await wallet_environments.process_pending_states(
             [
@@ -1000,15 +840,9 @@ async def test_cat_trades(
                             "pending_coin_removal_count": 1,
                             "pending_change": 6,  # This is a little weird but fits the current definition
                         },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 6,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 6}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 6,
@@ -1018,15 +852,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -1061,9 +889,7 @@ async def test_cat_trades(
         wallet_environments.tx_config, push=False
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            chia_for_multiple_cat,
-            action_scope,
-            driver_dict=driver_dict,
+            chia_for_multiple_cat, action_scope, driver_dict=driver_dict
         )
     assert error is None
     assert success is True
@@ -1075,11 +901,7 @@ async def test_cat_trades(
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer),
-            peer,
-            action_scope,
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     if test_aggregation:
         third_offer = Offer.from_bytes(trade_take.offer)
@@ -1094,7 +916,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -7,
                         # Unconfirmed balance doesn't change because offer may not complete
                         "unconfirmed_wallet_balance": 0,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1142,23 +964,14 @@ async def test_cat_trades(
                     ),
                 },
                 post_block_additional_balance_info=(
-                    {
-                        "cat": {
-                            "pending_approval_balance": 8,
-                        },
-                        "new cat": {
-                            "pending_approval_balance": 9,
-                        },
-                    }
+                    {"cat": {"pending_approval_balance": 8}, "new cat": {"pending_approval_balance": 9}}
                     if credential_restricted
                     else {}
                 ),
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": 7,
-                    },
+                    "xch": {"unconfirmed_wallet_balance": 7},
                     "cat": {
                         "unconfirmed_wallet_balance": -8,
                         "pending_change": 1,
@@ -1173,15 +986,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -9,
                         "pending_coin_removal_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1205,15 +1010,7 @@ async def test_cat_trades(
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -1223,11 +1020,7 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            cat_wallet_maker.id(),
-            uint64(8),
-            wallet_environments.tx_config,
-        )
+        await client_maker.crcat_approve_pending(cat_wallet_maker.id(), uint64(8), wallet_environments.tx_config)
 
         await wallet_environments.process_pending_states(
             [
@@ -1238,15 +1031,9 @@ async def test_cat_trades(
                             "pending_coin_removal_count": 1,
                             "pending_change": 8,  # This is a little weird but fits the current definition
                         },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "cat": {
-                            "pending_approval_balance": 8,
-                        },
-                    },
+                    pre_block_additional_balance_info={"cat": {"pending_approval_balance": 8}},
                     post_block_balance_updates={
                         "cat": {
                             "confirmed_wallet_balance": 8,
@@ -1256,25 +1043,15 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "cat": {
-                            "pending_approval_balance": 0,
-                        },
-                    },
+                    post_block_additional_balance_info={"cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
         )
 
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(9),
-            wallet_environments.tx_config,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(9), wallet_environments.tx_config)
 
         await wallet_environments.process_pending_states(
             [
@@ -1285,15 +1062,9 @@ async def test_cat_trades(
                             "pending_coin_removal_count": 1,
                             "pending_change": 9,  # This is a little weird but fits the current definition
                         },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 9,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 9}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 9,
@@ -1303,15 +1074,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -1321,10 +1086,7 @@ async def test_cat_trades(
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
     ) as action_scope:
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            multiple_cat_for_chia,
-            action_scope,
-        )
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(multiple_cat_for_chia, action_scope)
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -1334,11 +1096,7 @@ async def test_cat_trades(
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer),
-            peer,
-            action_scope,
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     if test_aggregation:
         fourth_offer = Offer.from_bytes(trade_take.offer)
@@ -1396,21 +1154,9 @@ async def test_cat_trades(
                         "pending_coin_removal_count": 1,
                         ">=#pending_change": 1,  # any amount increase
                     },
-                    "cat": {
-                        "unconfirmed_wallet_balance": 11,
-                    },
-                    "new cat": {
-                        "unconfirmed_wallet_balance": 12,
-                    },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    "cat": {"unconfirmed_wallet_balance": 11},
+                    "new cat": {"unconfirmed_wallet_balance": 12},
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1432,15 +1178,7 @@ async def test_cat_trades(
                         "max_send_amount": 12,
                         "unspent_coin_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -1453,10 +1191,7 @@ async def test_cat_trades(
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
     ) as action_scope:
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            chia_and_cat_for_cat,
-            action_scope,
-        )
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_and_cat_for_cat, action_scope)
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -1467,11 +1202,7 @@ async def test_cat_trades(
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer),
-            peer,
-            action_scope,
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     if test_aggregation:
         fifth_offer = Offer.from_bytes(trade_take.offer)
@@ -1532,12 +1263,8 @@ async def test_cat_trades(
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": 13,
-                    },
-                    "cat": {
-                        "unconfirmed_wallet_balance": 14,
-                    },
+                    "xch": {"unconfirmed_wallet_balance": 13},
+                    "cat": {"unconfirmed_wallet_balance": 14},
                     "new cat": {
                         "unconfirmed_wallet_balance": -15,
                         "pending_change": 68,
@@ -1545,15 +1272,7 @@ async def test_cat_trades(
                         "<=#max_send_amount": -15,
                         "pending_coin_removal_count": 1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": 1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": 1}} if credential_restricted else {}),
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -1575,15 +1294,7 @@ async def test_cat_trades(
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
                     },
-                    **(
-                        {
-                            "vc": {
-                                "pending_coin_removal_count": -1,
-                            }
-                        }
-                        if credential_restricted
-                        else {}
-                    ),
+                    **({"vc": {"pending_coin_removal_count": -1}} if credential_restricted else {}),
                 },
             ),
         ]
@@ -1593,11 +1304,7 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     if credential_restricted:
-        await client_maker.crcat_approve_pending(
-            new_cat_wallet_maker.id(),
-            uint64(15),
-            wallet_environments.tx_config,
-        )
+        await client_maker.crcat_approve_pending(new_cat_wallet_maker.id(), uint64(15), wallet_environments.tx_config)
 
         await wallet_environments.process_pending_states(
             [
@@ -1608,15 +1315,9 @@ async def test_cat_trades(
                             "pending_coin_removal_count": 1,
                             "pending_change": 15,  # This is a little weird but fits the current definition
                         },
-                        "vc": {
-                            "pending_coin_removal_count": 1,
-                        },
+                        "vc": {"pending_coin_removal_count": 1},
                     },
-                    pre_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 15,
-                        }
-                    },
+                    pre_block_additional_balance_info={"new cat": {"pending_approval_balance": 15}},
                     post_block_balance_updates={
                         "new cat": {
                             "confirmed_wallet_balance": 15,
@@ -1626,15 +1327,9 @@ async def test_cat_trades(
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
-                        "vc": {
-                            "pending_coin_removal_count": -1,
-                        },
+                        "vc": {"pending_coin_removal_count": -1},
                     },
-                    post_block_additional_balance_info={
-                        "new cat": {
-                            "pending_approval_balance": 0,
-                        }
-                    },
+                    post_block_additional_balance_info={"new cat": {"pending_approval_balance": 0}},
                 ),
                 WalletStateTransition(),
             ]
@@ -1651,30 +1346,15 @@ async def test_cat_trades(
         assert result.error is None
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "blocks_needed": [2, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [2, 1]}], indirect=True)
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "cat": 2}
+    env_taker.wallet_aliases = {"xch": 1, "cat": 2}
 
     xch_to_cat_amount = uint64(100)
 
@@ -1697,24 +1377,15 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
     )
 
-    cat_for_chia: OfferSummary = {
-        env_maker.wallet_aliases["xch"]: 1,
-        env_maker.wallet_aliases["cat"]: -2,
-    }
+    cat_for_chia: OfferSummary = {env_maker.wallet_aliases["xch"]: 1, env_maker.wallet_aliases["cat"]: -2}
 
-    chia_for_cat: OfferSummary = {
-        env_maker.wallet_aliases["xch"]: -3,
-        env_maker.wallet_aliases["cat"]: 4,
-    }
+    chia_for_cat: OfferSummary = {env_maker.wallet_aliases["xch"]: -3, env_maker.wallet_aliases["cat"]: 4}
 
     trade_manager_maker = env_maker.wallet_state_manager.trade_manager
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
@@ -1837,8 +1508,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
 
     # This take should fail since we have no CATs to fulfill it with
     with pytest.raises(
-        ValueError,
-        match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer",
+        ValueError, match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer"
     ):
         async with env_taker.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=False
@@ -1963,16 +1633,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 3,
-            "blocks_needed": [2, 1, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 3, "blocks_needed": [2, 1, 1]}], indirect=True)
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
@@ -1980,18 +1641,9 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     env_taker = wallet_environments.environments[1]
     env_trader = wallet_environments.environments[2]
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_trader.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "cat": 2}
+    env_taker.wallet_aliases = {"xch": 1, "cat": 2}
+    env_trader.wallet_aliases = {"xch": 1, "cat": 2}
 
     xch_to_cat_amount = uint64(100)
     fee = uint64(10)
@@ -2015,19 +1667,13 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
     )
 
-    cat_for_chia: OfferSummary = {
-        env_maker.wallet_aliases["xch"]: 1000,
-        env_maker.wallet_aliases["cat"]: -4,
-    }
+    cat_for_chia: OfferSummary = {env_maker.wallet_aliases["xch"]: 1000, env_maker.wallet_aliases["cat"]: -4}
 
     trade_manager_maker = env_maker.node.wallet_state_manager.trade_manager
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
@@ -2149,9 +1795,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
                         "<=#pending_change": -1,
                         "pending_coin_removal_count": -1,
                     },
-                    "cat": {
-                        "unconfirmed_wallet_balance": cat_for_chia[env_maker.wallet_aliases["cat"]],
-                    },
+                    "cat": {"unconfirmed_wallet_balance": cat_for_chia[env_maker.wallet_aliases["cat"]]},
                 },
             ),
         ],
@@ -2160,30 +1804,15 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_trader, tr2)
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "cat": 2}
+    env_taker.wallet_aliases = {"xch": 1, "cat": 2}
 
     xch_to_cat_amount = uint64(100)
 
@@ -2206,19 +1835,13 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
     )
 
-    cat_for_chia: OfferSummary = {
-        env_maker.wallet_aliases["xch"]: 1000,
-        env_maker.wallet_aliases["cat"]: -4,
-    }
+    cat_for_chia: OfferSummary = {env_maker.wallet_aliases["xch"]: 1000, env_maker.wallet_aliases["cat"]: -4}
 
     trade_manager_maker = env_maker.wallet_state_manager.trade_manager
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
@@ -2256,24 +1879,15 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
             # but the balances are weird in such a way that it suggests to me a test issue and not
             # an issue with production code - quex
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
-                post_block_balance_updates={
-                    "xch": {},
-                    "cat": {},
-                },
+                pre_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {}, "cat": {}},
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {},
-                    "cat": {},
-                },
+                post_block_balance_updates={"xch": {}, "cat": {}},
             ),
         ],
         invalid_transactions=[tx.name for tx in action_scope.side_effects.transactions],
@@ -2282,30 +1896,15 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
     await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "cat": 2}
+    env_taker.wallet_aliases = {"xch": 1, "cat": 2}
 
     xch_to_cat_amount = uint64(100)
 
@@ -2328,19 +1927,13 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
     )
 
-    cat_for_chia: OfferSummary = {
-        env_maker.wallet_aliases["xch"]: 1000,
-        env_maker.wallet_aliases["cat"]: -4,
-    }
+    cat_for_chia: OfferSummary = {env_maker.wallet_aliases["xch"]: 1000, env_maker.wallet_aliases["cat"]: -4}
 
     trade_manager_maker = env_maker.wallet_state_manager.trade_manager
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
@@ -2427,30 +2020,15 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 2,
-            "blocks_needed": [1, 1],
-        }
-    ],
-    indirect=True,
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
-    env_maker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
-    env_taker.wallet_aliases = {
-        "xch": 1,
-        "cat": 2,
-    }
+    env_maker.wallet_aliases = {"xch": 1, "cat": 2}
+    env_taker.wallet_aliases = {"xch": 1, "cat": 2}
 
     xch_to_cat_amount = uint64(100)
 
@@ -2473,23 +2051,14 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
                     "xch": {"set_remainder": True},
                     "cat": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}, "cat": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
     )
 
-    cat_for_chia: OfferSummary = {
-        env_maker.wallet_aliases["xch"]: 2,
-        env_maker.wallet_aliases["cat"]: -2,
-    }
-    chia_for_cat: OfferSummary = {
-        env_maker.wallet_aliases["xch"]: -1,
-        env_maker.wallet_aliases["cat"]: 1,
-    }
+    cat_for_chia: OfferSummary = {env_maker.wallet_aliases["xch"]: 2, env_maker.wallet_aliases["cat"]: -2}
+    chia_for_cat: OfferSummary = {env_maker.wallet_aliases["xch"]: -1, env_maker.wallet_aliases["cat"]: 1}
     combined_summary: OfferSummary = {
         env_maker.wallet_aliases["xch"]: cat_for_chia[env_maker.wallet_aliases["xch"]]
         + chia_for_cat[env_maker.wallet_aliases["xch"]],
@@ -2531,11 +2100,7 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
         push=True,
         additional_signing_responses=[*signing_response_1, *signing_response_2],
     ) as action_scope:
-        await trade_manager_taker.respond_to_offer(
-            agg_offer,
-            peer,
-            action_scope,
-        )
+        await trade_manager_taker.respond_to_offer(agg_offer, peer, action_scope)
 
     await wallet_environments.process_pending_states(
         [

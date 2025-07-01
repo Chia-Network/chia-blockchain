@@ -116,10 +116,7 @@ def load_serialized_clvm(
 
 
 def load_clvm(
-    clvm_filename,
-    package_or_requirement=here_name,
-    include_standard_libraries: bool = True,
-    recompile: bool = True,
+    clvm_filename, package_or_requirement=here_name, include_standard_libraries: bool = True, recompile: bool = True
 ) -> Program:
     return Program.from_bytes(
         bytes(

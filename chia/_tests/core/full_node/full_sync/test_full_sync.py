@@ -212,8 +212,7 @@ async def test_batch_sync(
         await full_node_2.full_node.add_block(block)
 
     await server_2.start_client(
-        PeerInfo(self_hostname, server_1.get_port()),
-        on_connect=full_node_2.full_node.on_connect,
+        PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_2.full_node.on_connect
     )
     await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
 
@@ -232,8 +231,7 @@ async def test_backtrack_sync_1(
         await full_node_1.full_node.add_block(block)
 
     await server_2.start_client(
-        PeerInfo(self_hostname, server_1.get_port()),
-        on_connect=full_node_2.full_node.on_connect,
+        PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_2.full_node.on_connect
     )
     await time_out_assert(60, node_height_exactly, True, full_node_2, 2)
 
@@ -251,8 +249,7 @@ async def test_backtrack_sync_2(
         await full_node_1.full_node.add_block(block)
 
     await server_2.start_client(
-        PeerInfo(self_hostname, server_1.get_port()),
-        on_connect=full_node_2.full_node.on_connect,
+        PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_2.full_node.on_connect
     )
     await time_out_assert(60, node_height_exactly, True, full_node_2, 8)
 
@@ -275,21 +272,18 @@ async def test_close_height_but_big_reorg(three_nodes: list[FullNodeAPI], bt: Bl
         await full_node_3.full_node.add_block(block)
 
     await server_2.start_client(
-        PeerInfo(self_hostname, server_1.get_port()),
-        on_connect=full_node_2.full_node.on_connect,
+        PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_2.full_node.on_connect
     )
     await time_out_assert(80, node_height_exactly, True, full_node_1, 50)
     await time_out_assert(80, node_height_exactly, True, full_node_2, 50)
     await time_out_assert(80, node_height_exactly, True, full_node_3, 89)
 
     await server_3.start_client(
-        PeerInfo(self_hostname, server_1.get_port()),
-        on_connect=full_node_3.full_node.on_connect,
+        PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_3.full_node.on_connect
     )
 
     await server_3.start_client(
-        PeerInfo(self_hostname, server_2.get_port()),
-        on_connect=full_node_3.full_node.on_connect,
+        PeerInfo(self_hostname, server_2.get_port()), on_connect=full_node_3.full_node.on_connect
     )
     await time_out_assert(80, node_height_exactly, True, full_node_1, 89)
     await time_out_assert(80, node_height_exactly, True, full_node_2, 89)

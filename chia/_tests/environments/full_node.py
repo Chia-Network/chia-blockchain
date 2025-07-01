@@ -16,8 +16,7 @@ from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 class FullNodeEnvironment:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ServiceEnvironment[FullNode, SimulatorFullNodeRpcApi, FullNodeSimulator]] = cast(
-            "FullNodeEnvironment",
-            None,
+            "FullNodeEnvironment", None
         )
 
     __match_args__: ClassVar[tuple[str, ...]] = ()

@@ -428,14 +428,7 @@ class TestKeyringWrapper:
         # 2 should still have the same label
         assert keyring_wrapper.keyring.get_label(2) == "two!!"
 
-    @pytest.mark.parametrize(
-        "label",
-        [
-            "🥳🤩🤪🤯😎😝😀",
-            "私は幸せな農夫です",
-            "لتفاصيل لتكتشف حقيقة وأساس ت",
-        ],
-    )
+    @pytest.mark.parametrize("label", ["🥳🤩🤪🤯😎😝😀", "私は幸せな農夫です", "لتفاصيل لتكتشف حقيقة وأساس ت"])
     def test_set_special_labels(self, label: str, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         keyring_wrapper.keyring.set_label(1, label)

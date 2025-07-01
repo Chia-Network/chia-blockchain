@@ -283,36 +283,16 @@ class TestRateLimits:
     @pytest.mark.parametrize(
         "node_with_params",
         [
-            pytest.param(
-                dict(
-                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
-                ),
-                id="V1",
-            ),
-            pytest.param(
-                dict(
-                    disable_capabilities=[],
-                ),
-                id="V2",
-            ),
+            pytest.param(dict(disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]), id="V1"),
+            pytest.param(dict(disable_capabilities=[]), id="V2"),
         ],
         indirect=True,
     )
     @pytest.mark.parametrize(
         "node_with_params_b",
         [
-            pytest.param(
-                dict(
-                    disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
-                ),
-                id="V1",
-            ),
-            pytest.param(
-                dict(
-                    disable_capabilities=[],
-                ),
-                id="V2",
-            ),
+            pytest.param(dict(disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]), id="V1"),
+            pytest.param(dict(disable_capabilities=[]), id="V2"),
         ],
         indirect=True,
     )
@@ -409,36 +389,16 @@ async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
 @pytest.mark.parametrize(
     "node_with_params",
     [
-        pytest.param(
-            dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
-            ),
-            id="V1",
-        ),
-        pytest.param(
-            dict(
-                disable_capabilities=[],
-            ),
-            id="V2",
-        ),
+        pytest.param(dict(disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]), id="V1"),
+        pytest.param(dict(disable_capabilities=[]), id="V2"),
     ],
     indirect=True,
 )
 @pytest.mark.parametrize(
     "node_with_params_b",
     [
-        pytest.param(
-            dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2],
-            ),
-            id="V1",
-        ),
-        pytest.param(
-            dict(
-                disable_capabilities=[],
-            ),
-            id="V2",
-        ),
+        pytest.param(dict(disable_capabilities=[Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]), id="V1"),
+        pytest.param(dict(disable_capabilities=[]), id="V2"),
     ],
     indirect=True,
 )

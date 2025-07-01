@@ -31,13 +31,7 @@ def block_to_block_record(
             constants, len(block.finished_sub_slots) > 0, prev_b, blocks
         )
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-    deficit = calculate_deficit(
-        constants,
-        block.height,
-        prev_b,
-        overflow,
-        len(block.finished_sub_slots),
-    )
+    deficit = calculate_deficit(constants, block.height, prev_b, overflow, len(block.finished_sub_slots))
 
     found_ses_hash: Optional[bytes32] = None
     ses: Optional[SubEpochSummary] = None
@@ -69,14 +63,7 @@ def block_to_block_record(
         prev_transaction_block_height = curr.height
 
     return header_block_to_sub_block_record(
-        constants,
-        required_iters,
-        block,
-        sub_slot_iters,
-        overflow,
-        deficit,
-        prev_transaction_block_height,
-        ses,
+        constants, required_iters, block, sub_slot_iters, overflow, deficit, prev_transaction_block_height, ses
     )
 
 

@@ -72,16 +72,10 @@ class NotificationStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO notifications (coin_id, msg, amount, height) VALUES(?, ?, ?, ?)",
-                (
-                    notification.id,
-                    notification.message,
-                    notification.amount.stream_to_bytes(),
-                    notification.height,
-                ),
+                (notification.id, notification.message, notification.amount.stream_to_bytes(), notification.height),
             )
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO all_notification_ids (coin_id) VALUES(?)",
-                (notification.id,),
+                "INSERT OR REPLACE INTO all_notification_ids (coin_id) VALUES(?)", (notification.id,)
             )
             await cursor.close()
 
@@ -101,15 +95,7 @@ class NotificationStore:
                 f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list} ORDER BY amount DESC", coin_ids
             )
 
-        return [
-            Notification(
-                bytes32(row[0]),
-                bytes(row[1]),
-                uint64.from_bytes(row[2]),
-                uint32(row[3]),
-            )
-            for row in rows
-        ]
+        return [Notification(bytes32(row[0]), bytes(row[1]), uint64.from_bytes(row[2]), uint32(row[3])) for row in rows]
 
     async def get_all_notifications(
         self, pagination: Optional[tuple[Optional[int], Optional[int]]] = None
@@ -139,15 +125,7 @@ class NotificationStore:
                 f"SELECT * from notifications ORDER BY amount DESC{pagination_str}", pagination_params
             )
 
-        return [
-            Notification(
-                bytes32(row[0]),
-                bytes(row[1]),
-                uint64.from_bytes(row[2]),
-                uint32(row[3]),
-            )
-            for row in rows
-        ]
+        return [Notification(bytes32(row[0]), bytes(row[1]), uint64.from_bytes(row[2]), uint32(row[3])) for row in rows]
 
     async def delete_notifications(self, coin_ids: list[bytes32]) -> None:
         coin_ids_str_list = "("

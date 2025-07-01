@@ -97,11 +97,7 @@ class TradeManager:
     most_recently_deserialized_trade: Optional[tuple[bytes32, Offer]]
 
     @staticmethod
-    async def create(
-        wallet_state_manager: Any,
-        db_wrapper: DBWrapper2,
-        name: Optional[str] = None,
-    ) -> TradeManager:
+    async def create(wallet_state_manager: Any, db_wrapper: DBWrapper2, name: Optional[str] = None) -> TradeManager:
         self = TradeManager()
         if name:
             self.log = logging.getLogger(name)
@@ -117,9 +113,7 @@ class TradeManager:
         records = await self.trade_store.get_trade_record_with_status(status)
         return records
 
-    async def get_coins_of_interest(
-        self,
-    ) -> set[bytes32]:
+    async def get_coins_of_interest(self) -> set[bytes32]:
         """
         Returns list of coins we want to check if they are included in filter,
         These will include coins that belong to us and coins that on other side of trade
@@ -178,9 +172,7 @@ class TradeManager:
 
             # And get all relevant coin states
             coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
-                our_addition_ids,
-                peer=peer,
-                fork_height=fork_height,
+                our_addition_ids, peer=peer, fork_height=fork_height
             )
             assert coin_states is not None
             coin_state_names: list[bytes32] = [cs.coin.name() for cs in coin_states]
@@ -317,8 +309,7 @@ class TradeManager:
                     assert isinstance(wallet, Wallet)
                     if fee_to_pay > coin.amount:
                         selected_coins: set[Coin] = await wallet.select_coins(
-                            uint64(fee_to_pay - coin.amount),
-                            action_scope,
+                            uint64(fee_to_pay - coin.amount), action_scope
                         )
                     else:
                         selected_coins = set()
@@ -331,10 +322,7 @@ class TradeManager:
                 # ATTENTION: new_wallets
                 assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet, NFTWallet))
                 async with self.wallet_state_manager.new_action_scope(
-                    action_scope.config.tx_config.override(
-                        excluded_coin_ids=[],
-                    ),
-                    push=False,
+                    action_scope.config.tx_config.override(excluded_coin_ids=[]), push=False
                 ) as inner_action_scope:
                     await wallet.generate_signed_transaction(
                         [amount_to_pay],
@@ -434,13 +422,7 @@ class TradeManager:
         if solver is None:
             solver = Solver({})
         result = await self._create_offer_for_ids(
-            offer,
-            action_scope,
-            driver_dict,
-            solver,
-            fee=fee,
-            extra_conditions=extra_conditions,
-            taking=taking,
+            offer, action_scope, driver_dict, solver, fee=fee, extra_conditions=extra_conditions, taking=taking
         )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -547,9 +529,7 @@ class TradeManager:
                         coins_to_offer[id] = await wallet.get_coins_to_offer(nft_id=asset_id)
                     else:
                         coins_to_offer[id] = await wallet.get_coins_to_offer(
-                            asset_id=asset_id,
-                            amount=uint64(amount_to_select),
-                            action_scope=action_scope,
+                            asset_id=asset_id, amount=uint64(amount_to_select), action_scope=action_scope
                         )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
@@ -579,12 +559,7 @@ class TradeManager:
             )
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints,
-                driver_dict,
-                action_scope,
-                solver,
-                fee,
-                extra_conditions,
+                offer_dict_no_ints, driver_dict, action_scope, solver, fee, extra_conditions
             )
 
             if potential_special_offer is not None:
@@ -714,10 +689,7 @@ class TradeManager:
 
         addition_dict: dict[uint32, list[Coin]] = {}
         for addition in additions:
-            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_coin(
-                addition,
-                hint_dict,
-            )
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_coin(addition, hint_dict)
             if wallet_identifier is not None:
                 if addition.parent_coin_info in settlement_coin_ids:
                     wallet = self.wallet_state_manager.wallets[wallet_identifier.id]
@@ -751,10 +723,7 @@ class TradeManager:
         # While we want additions to show up as separate records, removals of the same wallet should show as one
         removal_dict: dict[uint32, list[Coin]] = {}
         for removal in removals:
-            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_coin(
-                removal,
-                hint_dict,
-            )
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_coin(removal, hint_dict)
             if wallet_identifier is not None:
                 removal_dict.setdefault(wallet_identifier.id, [])
                 removal_dict[wallet_identifier.id].append(removal)
@@ -924,39 +893,18 @@ class TradeManager:
                     self.wallet_state_manager, offer_dict, driver_dict, action_scope, fee, extra_conditions
                 )
             elif (
-                puzzle_info.check_type(
-                    [
-                        AssetType.SINGLETON.value,
-                        AssetType.METADATA.value,
-                    ]
-                )
+                puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager,
-                    offer_dict,
-                    driver_dict,
-                    solver,
-                    action_scope,
-                    fee,
-                    extra_conditions,
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, action_scope, fee, extra_conditions
                 )
         return None
 
     def check_for_owner_change_in_drivers(self, puzzle_info: PuzzleInfo, driver_info: PuzzleInfo) -> bool:
         if puzzle_info.check_type(
-            [
-                AssetType.SINGLETON.value,
-                AssetType.METADATA.value,
-                AssetType.OWNERSHIP.value,
-            ]
-        ) and driver_info.check_type(
-            [
-                AssetType.SINGLETON.value,
-                AssetType.METADATA.value,
-                AssetType.OWNERSHIP.value,
-            ]
-        ):
+            [AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value]
+        ) and driver_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value]):
             old_owner = driver_info.also().also().info["owner"]  # type: ignore
             puzzle_info.also().also().info["owner"] = old_owner  # type: ignore
             if driver_info == puzzle_info:
@@ -966,12 +914,7 @@ class TradeManager:
     async def get_offer_summary(self, offer: Offer) -> dict[str, Any]:
         for puzzle_info in offer.driver_dict.values():
             if (
-                puzzle_info.check_type(
-                    [
-                        AssetType.SINGLETON.value,
-                        AssetType.METADATA.value,
-                    ]
-                )
+                puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.get_offer_summary(offer)
@@ -1002,21 +945,11 @@ class TradeManager:
     ) -> tuple[Offer, Solver]:
         for puzzle_info in offer.driver_dict.values():
             if (
-                puzzle_info.check_type(
-                    [
-                        AssetType.SINGLETON.value,
-                        AssetType.METADATA.value,
-                    ]
-                )
+                puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return (await DataLayerWallet.finish_graftroot_solutions(offer, solver), Solver({}))
-            elif puzzle_info.check_type(
-                [
-                    AssetType.CAT.value,
-                    AssetType.CR.value,
-                ]
-            ):
+            elif puzzle_info.check_type([AssetType.CAT.value, AssetType.CR.value]):
                 # get VC wallet
                 for _, wallet in self.wallet_state_manager.wallets.items():
                     if WalletType(wallet.type()) == WalletType.VC:
@@ -1035,12 +968,7 @@ class TradeManager:
         # This function exclusively deals with CR-CATs for now
         if not taking:
             for asset_id, puzzle_info in driver_dict.items():
-                if puzzle_info.check_type(
-                    [
-                        AssetType.CAT.value,
-                        AssetType.CR.value,
-                    ]
-                ):
+                if puzzle_info.check_type([AssetType.CAT.value, AssetType.CR.value]):
                     vc = await (
                         await self.wallet_state_manager.get_or_create_vc_wallet()
                     ).get_vc_with_provider_in_and_proofs(
@@ -1062,12 +990,7 @@ class TradeManager:
                         for payment in payments
                     ]
                     if asset_id is not None
-                    and driver_dict[asset_id].check_type(
-                        [
-                            AssetType.CAT.value,
-                            AssetType.CR.value,
-                        ]
-                    )
+                    and driver_dict[asset_id].check_type([AssetType.CAT.value, AssetType.CR.value])
                     else payments
                 )
                 for asset_id, payments in requested_payments.items()

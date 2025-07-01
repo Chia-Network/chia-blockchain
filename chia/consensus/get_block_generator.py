@@ -11,8 +11,7 @@ from chia.types.generator_types import BlockGenerator
 
 
 async def get_block_generator(
-    lookup_block_generators: Callable[[bytes32, set[uint32]], Awaitable[dict[uint32, bytes]]],
-    block: BlockInfo,
+    lookup_block_generators: Callable[[bytes32, set[uint32]], Awaitable[dict[uint32, bytes]]], block: BlockInfo
 ) -> Optional[BlockGenerator]:
     ref_list = block.transactions_generator_ref_list
     if block.transactions_generator is None:

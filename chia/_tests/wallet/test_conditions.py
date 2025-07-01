@@ -277,10 +277,7 @@ class TimelockInfo:
                 AssertBeforeSecondsAbsolute(uint64(10)),
             ],
             ConditionValidTimes(min_time=uint64(10), max_time=uint64(10)),
-            [
-                AssertSecondsAbsolute(uint64(10)),
-                AssertBeforeSecondsAbsolute(uint64(10)),
-            ],
+            [AssertSecondsAbsolute(uint64(10)), AssertBeforeSecondsAbsolute(uint64(10))],
         ),
     ],
 )

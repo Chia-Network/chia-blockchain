@@ -32,10 +32,7 @@ class FarmerRpcClient(RpcClient):
             "get_reward_targets",
             {"search_for_private_key": search_for_private_key, "max_ph_to_search": max_ph_to_search},
         )
-        return_dict = {
-            "farmer_target": response["farmer_target"],
-            "pool_target": response["pool_target"],
-        }
+        return_dict = {"farmer_target": response["farmer_target"], "pool_target": response["pool_target"]}
         if "have_pool_sk" in response:
             return_dict["have_pool_sk"] = response["have_pool_sk"]
         if "have_farmer_sk" in response:
@@ -43,9 +40,7 @@ class FarmerRpcClient(RpcClient):
         return return_dict
 
     async def set_reward_targets(
-        self,
-        farmer_target: Optional[str] = None,
-        pool_target: Optional[str] = None,
+        self, farmer_target: Optional[str] = None, pool_target: Optional[str] = None
     ) -> dict[str, Any]:
         request = {}
         if farmer_target is not None:

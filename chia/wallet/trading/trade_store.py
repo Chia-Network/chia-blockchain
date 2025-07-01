@@ -205,10 +205,7 @@ class TradeStore:
             await cursor.close()
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO trade_record_times (trade_id, valid_times) VALUES(?, ?)",
-                (
-                    record.trade_id,
-                    bytes(record.valid_times),
-                ),
+                (record.trade_id, bytes(record.valid_times)),
             )
             await cursor.close()
             # remove all current coin ids

@@ -24,14 +24,8 @@ from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import (
-    DID_INNERPUZ_MOD,
-)
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE_HASH,
-    SINGLETON_TOP_LAYER_MOD_HASH,
-    create_singleton_puzzle,
-)
+from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD_HASH, create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
@@ -90,14 +84,8 @@ async def make_did_wallet(
 
 #  TODO: See Issue CHIA-1544
 #  This test should be ported to WalletTestFramework once we can replace keys in the wallet node
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_creation_from_coin_spend(
     self_hostname: str,
@@ -177,20 +165,8 @@ async def test_creation_from_coin_spend(
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 3,
-            "blocks_needed": [1, 1, 1],
-        }
-    ],
-    indirect=True,
-)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 3, "blocks_needed": [1, 1, 1]}], indirect=True)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_creation_from_backup_file(
@@ -200,18 +176,9 @@ async def test_creation_from_backup_file(
     env_1 = wallet_environments.environments[1]
     env_2 = wallet_environments.environments[2]
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
-    env_2.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2}
+    env_1.wallet_aliases = {"xch": 1, "did": 2}
+    env_2.wallet_aliases = {"xch": 1, "did": 2}
 
     # Wallet1 sets up DIDWallet1 without any backup set
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
@@ -259,14 +226,8 @@ async def test_creation_from_backup_file(
                     },
                 },
             ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
         ]
     )
 
@@ -280,10 +241,7 @@ async def test_creation_from_backup_file(
 
     await wallet_environments.process_pending_states(
         [
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
@@ -318,22 +276,14 @@ async def test_creation_from_backup_file(
                     },
                 },
             ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
         ]
     )
 
     backup_data = did_wallet_1.create_backup()
 
     # Wallet2 recovers DIDWallet2 to a new set of keys
-    await env_2.rpc_client.create_new_did_wallet(
-        uint64(1),
-        DEFAULT_TX_CONFIG,
-        type="recovery",
-        backup_data=backup_data,
-    )
+    await env_2.rpc_client.create_new_did_wallet(uint64(1), DEFAULT_TX_CONFIG, type="recovery", backup_data=backup_data)
     did_wallet_2 = env_2.wallet_state_manager.get_wallet(id=uint32(2), required_type=DIDWallet)
     recovery_info = await env_2.rpc_client.did_get_recovery_info(
         DIDGetRecoveryInfo(uint32(env_2.wallet_aliases["did"]))
@@ -370,25 +320,12 @@ async def test_creation_from_backup_file(
                     }
                 },
             ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "did": {
-                        "init": True,
-                    }
-                },
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
+            WalletStateTransition(pre_block_balance_updates={"did": {"init": True}}, post_block_balance_updates={}),
         ]
     )
 
-    (
-        test_info_list,
-        test_message_spend_bundle,
-    ) = await did_wallet_2.load_attest_files_for_recovery_spend([attest_data])
+    (test_info_list, test_message_spend_bundle) = await did_wallet_2.load_attest_files_for_recovery_spend([attest_data])
     assert message_spend_bundle == test_message_spend_bundle
 
     async with env_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
@@ -404,10 +341,7 @@ async def test_creation_from_backup_file(
 
     await wallet_environments.process_pending_states(
         [
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             WalletStateTransition(
                 pre_block_balance_updates={},
                 post_block_balance_updates={
@@ -421,12 +355,7 @@ async def test_creation_from_backup_file(
                 },
             ),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did": {
-                        "unconfirmed_wallet_balance": 201,
-                        "pending_coin_removal_count": 2,
-                    }
-                },
+                pre_block_balance_updates={"did": {"unconfirmed_wallet_balance": 201, "pending_coin_removal_count": 2}},
                 post_block_balance_updates={
                     "did": {
                         "confirmed_wallet_balance": 201,
@@ -449,14 +378,8 @@ async def test_creation_from_backup_file(
 
     await wallet_environments.process_pending_states(
         [
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             WalletStateTransition(
                 pre_block_balance_updates={
                     "did": {
@@ -489,10 +412,7 @@ async def test_creation_from_backup_file(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_did_recovery_with_multiple_backup_dids(
     wallet_environments: WalletTestFramework, use_alternate_recovery: bool
@@ -504,14 +424,8 @@ async def test_did_recovery_with_multiple_backup_dids(
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2}
+    env_1.wallet_aliases = {"xch": 1, "did": 2}
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet: DIDWallet = await make_did_wallet(
@@ -533,9 +447,7 @@ async def test_did_recovery_with_multiple_backup_dids(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -544,9 +456,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -559,9 +469,7 @@ async def test_did_recovery_with_multiple_backup_dids(
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -570,9 +478,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -598,18 +504,11 @@ async def test_did_recovery_with_multiple_backup_dids(
 
     await wallet_environments.process_pending_states(
         [
-            WalletStateTransition(
-                pre_block_balance_updates={},
-                post_block_balance_updates={},
-            ),
+            WalletStateTransition(pre_block_balance_updates={}, post_block_balance_updates={}),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
                     "did_2": {
                         "init": True,
                         "unconfirmed_wallet_balance": 201,
@@ -618,12 +517,8 @@ async def test_did_recovery_with_multiple_backup_dids(
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
                     "did_2": {
                         "confirmed_wallet_balance": 201,
                         "spendable_balance": 201,
@@ -642,9 +537,7 @@ async def test_did_recovery_with_multiple_backup_dids(
 
     async with wallet_node_0.wallet_state_manager.lock:
         did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node_0.wallet_state_manager,
-            wallet_0,
-            backup_data,
+            wallet_node_0.wallet_state_manager, wallet_0, backup_data
         )
     assert did_wallet_4.get_name() == "Profile 2"
     env_0.wallet_aliases["did_2"] = 3
@@ -665,10 +558,9 @@ async def test_did_recovery_with_multiple_backup_dids(
 
     message_spend_bundle = message_spend_bundle.aggregate([message_spend_bundle, message_spend_bundle2])
 
-    (
-        test_info_list,
-        test_message_spend_bundle,
-    ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1, attest2])
+    (test_info_list, test_message_spend_bundle) = await did_wallet_4.load_attest_files_for_recovery_spend(
+        [attest1, attest2]
+    )
     assert message_spend_bundle == test_message_spend_bundle
 
     await wallet_environments.process_pending_states(
@@ -714,7 +606,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                         "max_send_amount": -101,
                         "pending_coin_removal_count": 1,
                         "set_remainder": True,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "did": {
@@ -722,7 +614,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                         "pending_change": -101,
                         "max_send_amount": 101,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
             ),
         ]
@@ -737,11 +629,7 @@ async def test_did_recovery_with_multiple_backup_dids(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "did_2": {
-                        "unconfirmed_wallet_balance": 201,
-                        "pending_change": 0,
-                        "pending_coin_removal_count": 3,
-                    },
+                    "did_2": {"unconfirmed_wallet_balance": 201, "pending_change": 0, "pending_coin_removal_count": 3}
                 },
                 post_block_balance_updates={
                     "did_2": {
@@ -751,7 +639,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                         "unspent_coin_count": 1,
                         "pending_change": 0,
                         "pending_coin_removal_count": -3,
-                    },
+                    }
                 },
             ),
             WalletStateTransition(
@@ -763,7 +651,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                         "max_send_amount": 0,
                         "pending_coin_removal_count": 0,
                         "set_remainder": True,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "did_2": {
@@ -772,7 +660,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                         "max_send_amount": -201,
                         "unspent_coin_count": -1,
                         "set_remainder": True,
-                    },
+                    }
                 },
             ),
         ]
@@ -784,20 +672,14 @@ async def test_did_recovery_with_multiple_backup_dids(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
     wallet_node_0 = env_0.node
     wallet_0 = env_0.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2}
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
@@ -815,9 +697,7 @@ async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramew
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -826,9 +706,7 @@ async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramew
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -838,7 +716,7 @@ async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramew
                         "pending_coin_removal_count": -1,
                     },
                 },
-            ),
+            )
         ]
     )
     coin = await did_wallet.get_coin()
@@ -849,21 +727,13 @@ async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramew
             wallet_environments.tx_config, push=False
         ) as action_scope:
             await did_wallet.recovery_spend(
-                coin,
-                ph,
-                info,
-                pubkey,
-                WalletSpendBundle([], AugSchemeMPL.aggregate([])),
-                action_scope,
+                coin, ph, info, pubkey, WalletSpendBundle([], AugSchemeMPL.aggregate([])), action_scope
             )
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
@@ -871,10 +741,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
     wallet_0 = env_0.xch_wallet
     api_0 = env_0.rpc_api
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2}
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet_0 = await make_did_wallet(
@@ -889,9 +756,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -900,9 +765,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -912,7 +775,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
                         "pending_coin_removal_count": -1,
                     },
                 },
-            ),
+            )
         ]
     )
 
@@ -967,7 +830,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
                         "max_send_amount": -101,
                         "pending_change": 101,
                         "pending_coin_removal_count": 1,
-                    },
+                    }
                 },
                 post_block_balance_updates={
                     "did_found": {
@@ -975,9 +838,9 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
                         "max_send_amount": 101,
                         "pending_change": -101,
                         "pending_coin_removal_count": -1,
-                    },
+                    }
                 },
-            ),
+            )
         ]
     )
 
@@ -1001,10 +864,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_did_attest_after_recovery(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
@@ -1014,14 +874,8 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2}
+    env_1.wallet_aliases = {"xch": 1, "did": 2}
 
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet: DIDWallet = await make_did_wallet(
@@ -1035,9 +889,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -1046,9 +898,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -1076,9 +926,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
             WalletStateTransition(),
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -1087,9 +935,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -1117,16 +963,8 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did": {
-                        "set_remainder": True,
-                    }
-                },
-                post_block_balance_updates={
-                    "did": {
-                        "set_remainder": True,
-                    }
-                },
+                pre_block_balance_updates={"did": {"set_remainder": True}},
+                post_block_balance_updates={"did": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -1137,9 +975,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
 
     async with wallet_node_0.wallet_state_manager.lock:
         did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node_0.wallet_state_manager,
-            wallet_0,
-            backup_data,
+            wallet_node_0.wallet_state_manager, wallet_0, backup_data
         )
     env_0.wallet_aliases["did_2"] = 3
     with wallet_environments.new_puzzle_hashes_allowed():
@@ -1162,62 +998,32 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "did_2": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
+                    "did": {"set_remainder": True},
+                    "did_2": {"init": True, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "did": {
-                        "set_remainder": True,
-                    },
-                    "did_2": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"did": {"set_remainder": True}, "did_2": {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
     )
 
-    (
-        info,
-        message_spend_bundle,
-    ) = await did_wallet_3.load_attest_files_for_recovery_spend([attest_data])
+    (info, message_spend_bundle) = await did_wallet_3.load_attest_files_for_recovery_spend([attest_data])
     async with did_wallet_3.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle, action_scope)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did_2": {
-                        "unconfirmed_wallet_balance": 101,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "did_2": {
-                        "confirmed_wallet_balance": 101,
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"did_2": {"unconfirmed_wallet_balance": 101, "set_remainder": True}},
+                post_block_balance_updates={"did_2": {"confirmed_wallet_balance": 101, "set_remainder": True}},
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
                     "did": {
                         "unconfirmed_wallet_balance": 0,  # TODO: fix pre-block balances for recovery
                         "set_remainder": True,
-                    },
+                    }
                 },
-                post_block_balance_updates={
-                    "did": {
-                        "confirmed_wallet_balance": -101,
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"did": {"confirmed_wallet_balance": -101, "set_remainder": True}},
             ),
         ]
     )
@@ -1227,9 +1033,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
 
     async with wallet_node_1.wallet_state_manager.lock:
         did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node_1.wallet_state_manager,
-            wallet_1,
-            backup_data,
+            wallet_node_1.wallet_state_manager, wallet_1, backup_data
         )
     env_1.wallet_aliases["did_2"] = 3
     coin = await did_wallet.get_coin()
@@ -1249,70 +1053,29 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did_2": {
-                        "unconfirmed_wallet_balance": 0,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "did_2": {
-                        "confirmed_wallet_balance": 0,
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"did_2": {"unconfirmed_wallet_balance": 0, "set_remainder": True}},
+                post_block_balance_updates={"did_2": {"confirmed_wallet_balance": 0, "set_remainder": True}},
             ),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did_2": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "did_2": {
-                        "confirmed_wallet_balance": 0,
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"did_2": {"init": True, "set_remainder": True}},
+                post_block_balance_updates={"did_2": {"confirmed_wallet_balance": 0, "set_remainder": True}},
             ),
         ]
     )
 
-    (
-        test_info_list,
-        test_message_spend_bundle,
-    ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1])
+    (test_info_list, test_message_spend_bundle) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1])
     async with did_wallet_4.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle, action_scope)
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "did": {
-                        "confirmed_wallet_balance": -101,
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"did": {"set_remainder": True}},
+                post_block_balance_updates={"did": {"confirmed_wallet_balance": -101, "set_remainder": True}},
             ),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did_2": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "did_2": {
-                        "confirmed_wallet_balance": 101,
-                        "set_remainder": True,
-                    },
-                },
+                pre_block_balance_updates={"did_2": {"set_remainder": True}},
+                post_block_balance_updates={"did_2": {"confirmed_wallet_balance": 101, "set_remainder": True}},
             ),
         ]
     )
@@ -1323,10 +1086,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
-@pytest.mark.parametrize(
-    "with_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("with_recovery", [True, False])
 @pytest.mark.anyio
 async def test_did_transfer(wallet_environments: WalletTestFramework, with_recovery: bool):
     env_0 = wallet_environments.environments[0]
@@ -1336,14 +1096,8 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
     wallet_0 = env_0.xch_wallet
     wallet_1 = env_1.xch_wallet
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2}
+    env_1.wallet_aliases = {"xch": 1, "did": 2}
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
     fee = uint64(1000)
@@ -1365,9 +1119,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -1376,9 +1128,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -1405,28 +1155,15 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "unconfirmed_wallet_balance": -101,
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
+                    "did": {"unconfirmed_wallet_balance": -101, "set_remainder": True},
                 },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                },
+                post_block_balance_updates={"xch": {"set_remainder": True}},
             ),
             WalletStateTransition(
                 pre_block_balance_updates={},
                 post_block_balance_updates={
-                    "did": {
-                        "init": True,
-                        "confirmed_wallet_balance": 101,
-                        "set_remainder": True,
-                    },
+                    "did": {"init": True, "confirmed_wallet_balance": 101, "set_remainder": True}
                 },
             ),
         ]
@@ -1451,16 +1188,10 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
     assert metadata["GitHub"] == "测试"
 
     # Test match_hinted_coin
-    assert await did_wallet_2.match_hinted_coin(
-        await did_wallet_2.get_coin(),
-        new_puzhash,
-    )
+    assert await did_wallet_2.match_hinted_coin(await did_wallet_2.get_coin(), new_puzhash)
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_did_auto_transfer_limit(
     self_hostname: str,
@@ -1549,9 +1280,7 @@ async def test_did_auto_transfer_limit(
     # Recover the coin
     async with wallet_node_2.wallet_state_manager.lock:
         did_wallet_10 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node_2.wallet_state_manager,
-            wallet2,
-            backup_data,
+            wallet_node_2.wallet_state_manager, wallet2, backup_data
         )
     assert did_wallet_10.did_info.origin_coin is not None
     resp = await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
@@ -1616,20 +1345,14 @@ async def test_did_auto_transfer_limit(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_update_recovery_list(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2}
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
@@ -1645,9 +1368,7 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework, us
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -1656,9 +1377,7 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework, us
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -1668,7 +1387,7 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework, us
                         "pending_coin_removal_count": -1,
                     },
                 },
-            ),
+            )
         ]
     )
     await did_wallet_1.update_recovery_list([ph], uint64(1))
@@ -1680,17 +1399,9 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework, us
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "did": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
+                pre_block_balance_updates={"did": {"set_remainder": True}},
+                post_block_balance_updates={"did": {"set_remainder": True}},
+            )
         ]
     )
     assert did_wallet_1.did_info.backup_ids[0] == bytes(ph)
@@ -1699,10 +1410,7 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework, us
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env_0 = wallet_environments.environments[0]
@@ -1712,14 +1420,8 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
     wallet_1 = env_1.xch_wallet
     api_0 = env_0.rpc_api
 
-    env_0.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
-    env_1.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env_0.wallet_aliases = {"xch": 1, "did": 2}
+    env_1.wallet_aliases = {"xch": 1, "did": 2}
 
     fee = uint64(1000)
     did_amount = uint64(101)
@@ -1742,9 +1444,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": did_amount,
@@ -1753,9 +1453,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": did_amount,
                         "spendable_balance": did_amount,
@@ -1810,37 +1508,17 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": -odd_amount - fee,
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"unconfirmed_wallet_balance": -odd_amount - fee, "set_remainder": True},
+                    "did": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -odd_amount - fee,
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"confirmed_wallet_balance": -odd_amount - fee, "set_remainder": True},
+                    "did": {"set_remainder": True},
                 },
             ),
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": 0,
-                        "set_remainder": True,
-                    }
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": odd_amount,
-                        "set_remainder": True,
-                    }
-                },
+                pre_block_balance_updates={"xch": {"unconfirmed_wallet_balance": 0, "set_remainder": True}},
+                post_block_balance_updates={"xch": {"confirmed_wallet_balance": odd_amount, "set_remainder": True}},
             ),
         ]
     )
@@ -1851,10 +1529,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_message_spend(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env = wallet_environments.environments[0]
@@ -1862,10 +1537,7 @@ async def test_message_spend(wallet_environments: WalletTestFramework, use_alter
     wallet = env.xch_wallet
     api_0 = env.rpc_api
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2}
 
     fee = uint64(1000)
 
@@ -1883,9 +1555,7 @@ async def test_message_spend(wallet_environments: WalletTestFramework, use_alter
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -1894,9 +1564,7 @@ async def test_message_spend(wallet_environments: WalletTestFramework, use_alter
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -1906,7 +1574,7 @@ async def test_message_spend(wallet_environments: WalletTestFramework, use_alter
                         "pending_coin_removal_count": -1,
                     },
                 },
-            ),
+            )
         ]
     )
     response = await api_0.did_message_spend(
@@ -1925,20 +1593,14 @@ async def test_message_spend(wallet_environments: WalletTestFramework, use_alter
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_update_metadata(wallet_environments: WalletTestFramework, use_alternate_recovery: bool):
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2}
 
     fee = uint64(1000)
     did_amount = uint64(101)
@@ -1958,9 +1620,7 @@ async def test_update_metadata(wallet_environments: WalletTestFramework, use_alt
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -1969,9 +1629,7 @@ async def test_update_metadata(wallet_environments: WalletTestFramework, use_alt
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -1981,7 +1639,7 @@ async def test_update_metadata(wallet_environments: WalletTestFramework, use_alt
                         "pending_coin_removal_count": -1,
                     },
                 },
-            ),
+            )
         ]
     )
 
@@ -2006,26 +1664,14 @@ async def test_update_metadata(wallet_environments: WalletTestFramework, use_alt
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": -fee,
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "unconfirmed_wallet_balance": 0,
-                        "set_remainder": True,
-                    },
+                    "xch": {"unconfirmed_wallet_balance": -fee, "set_remainder": True},
+                    "did": {"unconfirmed_wallet_balance": 0, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -fee,
-                        "set_remainder": True,
-                    },
-                    "did": {
-                        "confirmed_wallet_balance": 0,
-                        "set_remainder": True,
-                    },
+                    "xch": {"confirmed_wallet_balance": -fee, "set_remainder": True},
+                    "did": {"confirmed_wallet_balance": 0, "set_remainder": True},
                 },
-            ),
+            )
         ]
     )
 
@@ -2044,10 +1690,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
     wallet = env.xch_wallet
     api_0 = env.rpc_api
 
-    env.wallet_aliases = {
-        "xch": 1,
-        "did": 2,
-    }
+    env.wallet_aliases = {"xch": 1, "did": 2}
     fee = uint64(1000)
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
@@ -2068,9 +1711,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
         [
             WalletStateTransition(
                 pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "init": True,
                         "unconfirmed_wallet_balance": 101,
@@ -2079,9 +1720,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
                     },
                 },
                 post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
+                    "xch": {"set_remainder": True},
                     "did": {
                         "confirmed_wallet_balance": 101,
                         "spendable_balance": 101,
@@ -2091,7 +1730,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
                         "pending_coin_removal_count": -1,
                     },
                 },
-            ),
+            )
         ]
     )
     # Test general string
@@ -2099,10 +1738,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
     message = "Hello World"
     assert did_wallet_1.did_info.origin_coin is not None
     response = await api_0.sign_message_by_id(
-        {
-            "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
-            "message": message,
-        }
+        {"id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value), "message": message}
     )
     puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
@@ -2163,10 +1799,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
     )
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_create_did_with_recovery_list(
     self_hostname: str, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted: bool
@@ -2252,10 +1885,7 @@ async def test_create_did_with_recovery_list(
 
 #  TODO: See Issue CHIA-1544
 #  This test should be ported to WalletTestFramework once we can replace keys in the wallet node
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
 async def test_did_resync(
     self_hostname: str,
@@ -2343,20 +1973,8 @@ async def test_did_resync(
     assert did_info == did_wallet_2.did_info
 
 
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [1],
-        }
-    ],
-    indirect=True,
-)
-@pytest.mark.parametrize(
-    "use_alternate_recovery",
-    [True, False],
-)
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.parametrize("use_alternate_recovery", [True, False])
 @pytest.mark.anyio
 async def test_did_coin_records(wallet_environments: WalletTestFramework, use_alternate_recovery: bool) -> None:
     # Setup
@@ -2376,14 +1994,8 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, use_al
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    1: {"set_remainder": True},
-                    2: {"init": True, "set_remainder": True},
-                },
-                post_block_balance_updates={
-                    1: {"set_remainder": True},
-                    2: {"set_remainder": True},
-                },
+                pre_block_balance_updates={1: {"set_remainder": True}, 2: {"init": True, "set_remainder": True}},
+                post_block_balance_updates={1: {"set_remainder": True}, 2: {"set_remainder": True}},
             ),
             WalletStateTransition(),
         ]
@@ -2399,14 +2011,8 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, use_al
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
-                    pre_block_balance_updates={
-                        1: {"set_remainder": True},
-                        2: {"set_remainder": True},
-                    },
-                    post_block_balance_updates={
-                        1: {"set_remainder": True},
-                        2: {"set_remainder": True},
-                    },
+                    pre_block_balance_updates={1: {"set_remainder": True}, 2: {"set_remainder": True}},
+                    post_block_balance_updates={1: {"set_remainder": True}, 2: {"set_remainder": True}},
                 ),
                 WalletStateTransition(),
             ]

@@ -83,11 +83,7 @@ class WalletSingletonStore:
             )
 
     async def add_spend(
-        self,
-        wallet_id: uint32,
-        coin_state: CoinSpend,
-        block_height: uint32 = uint32(0),
-        pending: bool = True,
+        self, wallet_id: uint32, coin_state: CoinSpend, block_height: uint32 = uint32(0), pending: bool = True
     ) -> None:
         """Given a coin spend of a singleton, attempt to calculate the child coin and details
         for the new singleton record. Add the new record to the store and remove the old record
@@ -179,10 +175,7 @@ class WalletSingletonStore:
 
     async def update_pending_transaction(self, coin_id: bytes32, pending: bool) -> bool:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            c = await conn.execute(
-                "UPDATE singletons SET pending=? WHERE coin_id = ?",
-                (pending, coin_id.hex()),
-            )
+            c = await conn.execute("UPDATE singletons SET pending=? WHERE coin_id = ?", (pending, coin_id.hex()))
             return c.rowcount > 0
 
     async def get_records_by_wallet_id(self, wallet_id: int) -> list[SingletonRecord]:
@@ -192,8 +185,7 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM singletons WHERE wallet_id = ? ORDER BY removed_height",
-                (wallet_id,),
+                "SELECT * FROM singletons WHERE wallet_id = ? ORDER BY removed_height", (wallet_id,)
             )
         return [self._to_singleton_record(row) for row in rows]
 
@@ -203,10 +195,7 @@ class WalletSingletonStore:
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                "SELECT * FROM singletons WHERE coin_id = ?",
-                (coin_id.hex(),),
-            )
+            rows = await conn.execute_fetchall("SELECT * FROM singletons WHERE coin_id = ?", (coin_id.hex(),))
         return [self._to_singleton_record(row) for row in rows]
 
     async def get_records_by_singleton_id(self, singleton_id: bytes32) -> list[SingletonRecord]:
@@ -216,8 +205,7 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM singletons WHERE singleton_id = ? ORDER BY removed_height",
-                (singleton_id.hex(),),
+                "SELECT * FROM singletons WHERE singleton_id = ? ORDER BY removed_height", (singleton_id.hex(),)
             )
         return [self._to_singleton_record(row) for row in rows]
 

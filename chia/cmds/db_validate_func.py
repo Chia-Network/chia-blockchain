@@ -12,12 +12,7 @@ from chia.util.config import load_config
 from chia.util.path import path_from_root
 
 
-def db_validate_func(
-    root_path: Path,
-    in_db_path: Optional[Path] = None,
-    *,
-    validate_blocks: bool,
-) -> None:
+def db_validate_func(root_path: Path, in_db_path: Optional[Path] = None, *, validate_blocks: bool) -> None:
     config: dict[str, Any] = load_config(root_path, "config.yaml")
     if in_db_path is None:
         full_node_config = config["full_node"]

@@ -32,9 +32,7 @@ class ClawbackPuzzleDecorator:
         return inner_puzzle
 
     def decorate_target_puzzle_hash(
-        self,
-        inner_puzzle: Program,
-        target_puzzle_hash: bytes32,
+        self, inner_puzzle: Program, target_puzzle_hash: bytes32
     ) -> tuple[Program, bytes32]:
         return (
             self.decorate(inner_puzzle),

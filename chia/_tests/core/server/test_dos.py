@@ -252,8 +252,7 @@ class TestDos:
             return ws_con.closed
 
         new_message = make_msg(
-            ProtocolMessageTypes.request_mempool_transactions,
-            full_node_protocol.RequestMempoolTransactions(bytes([])),
+            ProtocolMessageTypes.request_mempool_transactions, full_node_protocol.RequestMempoolTransactions(bytes([]))
         )
         for i in range(2):
             await ws_con._send_message(new_message)

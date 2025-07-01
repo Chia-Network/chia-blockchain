@@ -21,9 +21,7 @@ def test_interface() -> None:
     estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm)
     target_times = [0, 120, 300]
     estimates = [estimator.estimate_fee_rate(time_offset_seconds=time) for time in target_times]
-    current_fee_rate = estimator.estimate_fee_rate(
-        time_offset_seconds=1,
-    )
+    current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
     zero = FeeRateV2(0)
     assert estimates == [zero, zero, zero]
     assert current_fee_rate.mojos_per_clvm_cost == 0

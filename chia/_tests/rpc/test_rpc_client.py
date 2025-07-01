@@ -39,8 +39,7 @@ class InvalidCreateCase:
 @pytest.fixture(name="rpc_client")
 async def rpc_client_fixture(recording_web_server: RecordingWebServer) -> AsyncIterator[RpcClient]:
     async with RpcClient.create_as_context(
-        self_hostname=recording_web_server.web_server.hostname,
-        port=recording_web_server.web_server.listen_port,
+        self_hostname=recording_web_server.web_server.hostname, port=recording_web_server.web_server.listen_port
     ) as rpc_client:
         yield rpc_client
 
@@ -50,16 +49,9 @@ async def rpc_client_fixture(recording_web_server: RecordingWebServer) -> AsyncI
     InvalidCreateCase(id="just net config", net_config={}),
 )
 @pytest.mark.anyio
-async def test_rpc_client_create_raises_for_invalid_root_path_net_config_combinations(
-    case: InvalidCreateCase,
-) -> None:
+async def test_rpc_client_create_raises_for_invalid_root_path_net_config_combinations(case: InvalidCreateCase) -> None:
     with pytest.raises(ValueError, match="Either both or neither of"):
-        await RpcClient.create(
-            self_hostname="",
-            port=uint16(0),
-            root_path=case.root_path,
-            net_config=case.net_config,
-        )
+        await RpcClient.create(self_hostname="", port=uint16(0), root_path=case.root_path, net_config=case.net_config)
 
 
 @pytest.mark.anyio
@@ -67,8 +59,7 @@ async def test_rpc_client_works_without_ssl(recording_web_server: RecordingWebSe
     expected_result = {"success": True, "daddy": "putdown"}
 
     async with RpcClient.create_as_context(
-        self_hostname=recording_web_server.web_server.hostname,
-        port=recording_web_server.web_server.listen_port,
+        self_hostname=recording_web_server.web_server.hostname, port=recording_web_server.web_server.listen_port
     ) as rpc_client:
         result = await rpc_client.fetch(path="", request_json={"response": expected_result})
 
@@ -76,9 +67,7 @@ async def test_rpc_client_works_without_ssl(recording_web_server: RecordingWebSe
 
 
 @pytest.mark.anyio
-async def test_rpc_client_send_request(
-    rpc_client: RpcClient,
-) -> None:
+async def test_rpc_client_send_request(rpc_client: RpcClient) -> None:
     expected_response = {"success": True, "magic": "asparagus"}
 
     response = await rpc_client.fetch(path="/table", request_json={"response": expected_response})
@@ -87,9 +76,7 @@ async def test_rpc_client_send_request(
 
 
 @pytest.mark.anyio
-async def test_failure_exception(
-    rpc_client: RpcClient,
-) -> None:
+async def test_failure_exception(rpc_client: RpcClient) -> None:
     expected_response = {"success": False, "magic": "xylophone"}
 
     with pytest.raises(ResponseFailureError) as exception_info:
@@ -109,9 +96,7 @@ def test_client_standard_endpoints_match_server() -> None:
 @pytest.mark.anyio
 @pytest.mark.parametrize("client_method", client_fetch_methods)
 async def test_client_fetch_methods(
-    client_method: Callable[..., Awaitable[object]],
-    rpc_client: RpcClient,
-    recording_web_server: RecordingWebServer,
+    client_method: Callable[..., Awaitable[object]], rpc_client: RpcClient, recording_web_server: RecordingWebServer
 ) -> None:
     # NOTE: this test assumes that the client method names should match the server
     #       route names

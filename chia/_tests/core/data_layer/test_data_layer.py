@@ -50,17 +50,12 @@ async def test_sql_logs(enable: bool, config: dict[str, Any], tmp_chia_root: Pat
 
 @pytest.mark.anyio
 async def test_plugin_requests_use_custom_headers(
-    recording_web_server: RecordingWebServer,
-    config: dict[str, Any],
-    tmp_chia_root: Path,
+    recording_web_server: RecordingWebServer, config: dict[str, Any], tmp_chia_root: Path
 ) -> None:
     header_key = "vbiuoqemnrlah"
     header_value = "98754718932345"
 
-    plugin_remote = PluginRemote(
-        url=recording_web_server.web_server.url(),
-        headers={header_key: header_value},
-    )
+    plugin_remote = PluginRemote(url=recording_web_server.web_server.url(), headers={header_key: header_value})
 
     async def wallet_rpc_init() -> WalletRpcClient:
         # this return is not presently used for this test

@@ -86,11 +86,7 @@ class WalletInterestedStore:
             await cursor.close()
 
     async def add_unacknowledged_token(
-        self,
-        asset_id: bytes32,
-        name: str,
-        first_seen_height: Optional[uint32],
-        sender_puzzle_hash: bytes32,
+        self, asset_id: bytes32, name: str, first_seen_height: Optional[uint32], sender_puzzle_hash: bytes32
     ) -> None:
         """
         Add an unacknowledged CAT to the database. It will only be inserted once at the first time.
@@ -128,10 +124,7 @@ class WalletInterestedStore:
         ]
 
     async def add_unacknowledged_coin_state(
-        self,
-        asset_id: bytes32,
-        coin_state: CoinState,
-        fork_height: Optional[uint32],
+        self, asset_id: bytes32, coin_state: CoinState, fork_height: Optional[uint32]
     ) -> None:
         """
         Add an unacknowledged coin state of a CAT to the database. It will be inserted into the retry store when the
@@ -169,10 +162,7 @@ class WalletInterestedStore:
         :return: None
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
-                "DELETE from unacknowledged_asset_token_states WHERE asset_id=?",
-                (asset_id,),
-            )
+            cursor = await conn.execute("DELETE from unacknowledged_asset_token_states WHERE asset_id=?", (asset_id,))
             await cursor.close()
 
     async def rollback_to_block(self, height: int) -> None:
@@ -182,8 +172,5 @@ class WalletInterestedStore:
         :return None:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
-                "DELETE from unacknowledged_asset_token_states WHERE fork_height>?",
-                (height,),
-            )
+            cursor = await conn.execute("DELETE from unacknowledged_asset_token_states WHERE fork_height>?", (height,))
             await cursor.close()

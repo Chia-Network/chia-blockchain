@@ -90,8 +90,7 @@ def test_replace_str_to_bytes() -> None:
 
 def test_replace_str_to_bytes_additional_data() -> None:
     test2 = replace_str_to_bytes(
-        test_constants,
-        AGG_SIG_ME_ADDITIONAL_DATA="0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        test_constants, AGG_SIG_ME_ADDITIONAL_DATA="0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
     )
 
     # if we update AGG_SIG_ME_ADDITIONAL_DATA, the other additional data is also

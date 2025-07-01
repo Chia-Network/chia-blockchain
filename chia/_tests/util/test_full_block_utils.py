@@ -202,12 +202,7 @@ def get_end_of_sub_slot() -> Generator[EndOfSubSlotBundle, None, None]:
         for infused_challenge_chain in [InfusedChallengeChainSubSlot(vdf()), None]:
             for reward_chain in get_reward_chain_sub_slot():
                 for proofs in get_sub_slot_proofs():
-                    yield EndOfSubSlotBundle(
-                        challenge_chain,
-                        infused_challenge_chain,
-                        reward_chain,
-                        proofs,
-                    )
+                    yield EndOfSubSlotBundle(challenge_chain, infused_challenge_chain, reward_chain, proofs)
 
 
 def get_finished_sub_slots() -> Generator[list[EndOfSubSlotBundle], None, None]:

@@ -119,18 +119,8 @@ def get_transaction_cmd(
     default=True,
     help="Sort transactions by {confirmed, height, time}",
 )
-@click.option(
-    "--reverse",
-    is_flag=True,
-    default=False,
-    help="Reverse the transaction ordering",
-)
-@click.option(
-    "--clawback",
-    is_flag=True,
-    default=False,
-    help="Only show clawback transactions",
-)
+@click.option("--reverse", is_flag=True, default=False, help="Reverse the transaction ordering")
+@click.option("--clawback", is_flag=True, default=False, help="Only show clawback transactions")
 @click.pass_context
 def get_transactions_cmd(
     ctx: click.Context,
@@ -207,12 +197,7 @@ def get_transactions_cmd(
     type=Bytes32ParamType(),
     help="Exclude this coin from being spent.",
 )
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @click.option(
     "--clawback_time",
     help="The seconds that the recipient needs to wait to claim the fund."
@@ -348,10 +333,7 @@ def get_address_cmd(
 )
 @options.create_fee("A fee to add to the offer when it gets taken, in XCH")
 @click.option(
-    "--force",
-    help="Force to push the spend bundle even it may be a double spend",
-    is_flag=True,
-    default=False,
+    "--force", help="Force to push the spend bundle even it may be a double spend", is_flag=True, default=False
 )
 @tx_out_cmd()
 @click.pass_context
@@ -487,11 +469,7 @@ def update_derivation_index_cmd(
     type=Bytes32ParamType(),
     required=True,
 )
-@click.option(
-    "-n",
-    "--token-name",
-    help="The name you wish to designate to the token",
-)
+@click.option("-n", "--token-name", help="The name you wish to designate to the token")
 @options.create_fingerprint()
 @click.pass_context
 def add_token_cmd(
@@ -534,12 +512,7 @@ def add_token_cmd(
     type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path),
 )
 @options.create_fee("A fee to add to the offer when it gets taken, in XCH")
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the offer.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the offer.", is_flag=True, default=False)
 @click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
 @timelock_args(enable=True)
 @click.pass_context
@@ -645,12 +618,7 @@ def get_offers_cmd(
 @click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
 @options.create_fee("The fee to use when pushing the completed offer, in XCH")
 # TODO: Reuse is not used
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the offer.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the offer.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def take_offer_cmd(
@@ -883,12 +851,7 @@ def did_get_details_cmd(
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
 @click.option("-d", "--metadata", help="The new whole metadata in json format", type=str, required=True)
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def did_update_metadata_cmd(
@@ -1057,12 +1020,7 @@ def did_message_spend_cmd(
     "-rr", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
 )
 @options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def did_transfer_did(
@@ -1186,12 +1144,7 @@ def nft_sign_message(
     default=0,
     show_default=True,
 )
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def nft_mint_cmd(
@@ -1270,12 +1223,7 @@ def nft_mint_cmd(
 @click.option("-mu", "--metadata-uri", help="Metadata URI to add to the NFT", type=str)
 @click.option("-lu", "--license-uri", help="License URI to add to the NFT", type=str)
 @options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def nft_add_uri_cmd(
@@ -1326,12 +1274,7 @@ def nft_add_uri_cmd(
 # TODO: Change RPC to use puzzlehash instead of address
 @click.option("-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True)
 @options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def nft_transfer_cmd(
@@ -1401,12 +1344,7 @@ def nft_list_cmd(
 @click.option("-di", "--did-id", help="DID Id to set on the NFT", type=str, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to set the DID on", type=str, required=True)
 @options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def nft_set_did_cmd(
@@ -1451,12 +1389,7 @@ def nft_set_did_cmd(
 # TODO: Change RPC to use bytes instead of hex string
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True)
 @click.pass_context
-def nft_get_info_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    nft_coin_id: str,
-) -> None:
+def nft_get_info_cmd(ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, nft_coin_id: str) -> None:
     from chia.cmds.wallet_funcs import get_nft_info
 
     asyncio.run(get_nft_info(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, nft_coin_id))
@@ -1566,11 +1499,7 @@ def get_notifications_cmd(
 @click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
 @click.pass_context
 def delete_notifications_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    id: Sequence[bytes32],
-    all: bool,
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: Sequence[bytes32], all: bool
 ) -> None:
     from chia.cmds.wallet_funcs import delete_notifications
 
@@ -1645,11 +1574,7 @@ def mint_vc_cmd(
 )
 @click.pass_context
 def get_vcs_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    start: int,
-    count: int,
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, start: int, count: int
 ) -> None:  # pragma: no cover
     from chia.cmds.wallet_funcs import get_vcs
 
@@ -1732,11 +1657,7 @@ def spend_vc_cmd(
 @click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
 @click.pass_context
 def add_proof_reveal_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    proof: Sequence[str],
-    root_only: bool,
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, proof: Sequence[str], root_only: bool
 ) -> None:  # pragma: no cover
     from chia.cmds.wallet_funcs import add_proof_reveal
 
@@ -1757,10 +1678,7 @@ def add_proof_reveal_cmd(
 @click.option("-r", "--proof-hash", help="The root to search for", type=str, required=True)
 @click.pass_context
 def get_proofs_for_root_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    proof_hash: str,
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, proof_hash: str
 ) -> None:  # pragma: no cover
     from chia.cmds.wallet_funcs import get_proofs_for_root
 
@@ -1861,12 +1779,7 @@ def revoke_vc_cmd(
     default=cli_amount_none,
     help="The maximum coin amount (in CAT units) to select",
 )
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
+@click.option("--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
 @tx_out_cmd()
 @click.pass_context
 def approve_r_cats_cmd(

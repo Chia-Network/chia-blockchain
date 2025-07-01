@@ -20,11 +20,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 )
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE_HASH,
-    SINGLETON_TOP_LAYER_MOD,
-    SINGLETON_TOP_LAYER_MOD_HASH,
-)
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD, SINGLETON_TOP_LAYER_MOD_HASH
 from chia.wallet.util.address_type import AddressType
 
 log = logging.getLogger(__name__)
@@ -177,9 +173,7 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
 
 
 def construct_ownership_layer(
-    current_owner: Optional[bytes32],
-    transfer_program: Program,
-    inner_puzzle: Program,
+    current_owner: Optional[bytes32], transfer_program: Program, inner_puzzle: Program
 ) -> Program:
     return NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER_HASH, current_owner, transfer_program, inner_puzzle)
 

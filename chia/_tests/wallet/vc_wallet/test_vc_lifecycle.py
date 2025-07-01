@@ -50,8 +50,7 @@ MOCK_SINGLETON_MOD_HASH: bytes32 = MOCK_SINGLETON_MOD.get_tree_hash()
 MOCK_LAUNCHER_ID: bytes32 = bytes32.zeros
 MOCK_LAUNCHER_HASH: bytes32 = bytes32([1] * 32)
 MOCK_SINGLETON: Program = MOCK_SINGLETON_MOD.curry(
-    (MOCK_SINGLETON_MOD_HASH, (MOCK_LAUNCHER_ID, MOCK_LAUNCHER_HASH)),
-    ACS,
+    (MOCK_SINGLETON_MOD_HASH, (MOCK_LAUNCHER_ID, MOCK_LAUNCHER_HASH)), ACS
 )
 
 
@@ -80,15 +79,9 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                 WalletSpendBundle(
                     [
                         make_spend(
-                            fake_acs_coin,
-                            FAKE_ACS,
-                            Program.to([[51, covenant_puzzle_hash, fake_acs_coin.amount]]),
+                            fake_acs_coin, FAKE_ACS, Program.to([[51, covenant_puzzle_hash, fake_acs_coin.amount]])
                         ),
-                        make_spend(
-                            acs_coin,
-                            ACS,
-                            Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
-                        ),
+                        make_spend(acs_coin, ACS, Program.to([[51, covenant_puzzle_hash, acs_coin.amount]])),
                     ],
                     G2Element(),
                 ),
@@ -120,7 +113,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                             Program.to(None),
                             Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
                         ),
-                    ),
+                    )
                 ],
                 G2Element(),
             )
@@ -142,7 +135,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                     Program.to(None),
                                     Program.to([[51, covenant_puzzle_hash, cov.amount]]),
                                 ),
-                            ),
+                            )
                         ],
                         G2Element(),
                     ),
@@ -176,7 +169,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                 Program.to(None),
                                 Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
                             ),
-                        ),
+                        )
                     ],
                     G2Element(),
                 ),
@@ -219,16 +212,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                     make_spend(
                         eml_coin,
                         eml_puzzle,
-                        Program.to(
-                            [
-                                solve_did_tp(
-                                    bad_data,
-                                    my_coin_id,
-                                    new_metadata,
-                                    new_tp_hash,
-                                )
-                            ]
-                        ),
+                        Program.to([solve_did_tp(bad_data, my_coin_id, new_metadata, new_tp_hash)]),
                     )
                 ],
                 G2Element(),
@@ -254,16 +238,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                     make_spend(
                         eml_coin,
                         eml_puzzle,
-                        Program.to(
-                            [
-                                solve_did_tp(
-                                    provider_innerpuzhash,
-                                    bad_data,
-                                    new_metadata,
-                                    new_tp_hash,
-                                )
-                            ]
-                        ),
+                        Program.to([solve_did_tp(provider_innerpuzhash, bad_data, new_metadata, new_tp_hash)]),
                     ),
                     did_authorization_spend,
                 ],
@@ -280,16 +255,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                     make_spend(
                         eml_coin,
                         eml_puzzle,
-                        Program.to(
-                            [
-                                solve_did_tp(
-                                    provider_innerpuzhash,
-                                    my_coin_id,
-                                    new_metadata,
-                                    new_tp_hash,
-                                )
-                            ]
-                        ),
+                        Program.to([solve_did_tp(provider_innerpuzhash, my_coin_id, new_metadata, new_tp_hash)]),
                     ),
                     did_authorization_spend,
                 ],
@@ -331,13 +297,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
             WalletSpendBundle(
                 [
                     make_spend(
-                        p2_either_coin,
-                        p2_either_puzzle,
-                        solve_revocation_layer(
-                            ACS,
-                            Program.to(None),
-                            hidden=True,
-                        ),
+                        p2_either_coin, p2_either_puzzle, solve_revocation_layer(ACS, Program.to(None), hidden=True)
                     )
                 ],
                 G2Element(),
@@ -352,11 +312,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
                     make_spend(
                         p2_either_coin,
                         p2_either_puzzle,
-                        solve_revocation_layer(
-                            hidden_puzzle,
-                            Program.to(bytes32.zeros),
-                            hidden=True,
-                        ),
+                        solve_revocation_layer(hidden_puzzle, Program.to(bytes32.zeros), hidden=True),
                     )
                 ],
                 G2Element(),
@@ -366,10 +322,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
 
         # Spend the inner puzzle
         brick_hash: bytes32 = bytes32.zeros
-        wrapped_brick_hash: bytes32 = create_revocation_layer(
-            hidden_puzzle_hash,
-            brick_hash,
-        ).get_tree_hash()
+        wrapped_brick_hash: bytes32 = create_revocation_layer(hidden_puzzle_hash, brick_hash).get_tree_hash()
         result = await client.push_tx(
             cost_logger.add_cost(
                 "Viral backdoor spend - one create coin",
@@ -378,10 +331,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
                         make_spend(
                             p2_either_coin,
                             p2_either_puzzle,
-                            solve_revocation_layer(
-                                ACS,
-                                Program.to([[51, brick_hash, 0]]),
-                            ),
+                            solve_revocation_layer(ACS, Program.to([[51, brick_hash, 0]])),
                         )
                     ],
                     G2Element(),
@@ -461,38 +411,23 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         other_lineage_proof: LineageProof
         other_did: Coin
         for fund_coin in (did_fund_coin, other_did_fund_coin):
-            conditions, launcher_spend = launch_conditions_and_coinsol(
-                fund_coin,
-                ACS,
-                [],
-                uint64(1),
-            )
+            conditions, launcher_spend = launch_conditions_and_coinsol(fund_coin, ACS, [], uint64(1))
             await client.push_tx(
                 WalletSpendBundle(
-                    [
-                        make_spend(
-                            fund_coin,
-                            RUN_PUZ_PUZ,
-                            Program.to((1, conditions)),
-                        ),
-                        launcher_spend,
-                    ],
-                    G2Element(),
+                    [make_spend(fund_coin, RUN_PUZ_PUZ, Program.to((1, conditions))), launcher_spend], G2Element()
                 )
             )
             await sim.farm_block()
             if fund_coin == did_fund_coin:
                 launcher_id = launcher_spend.coin.name()
                 lineage_proof = LineageProof(
-                    parent_name=launcher_spend.coin.parent_coin_info,
-                    amount=uint64(launcher_spend.coin.amount),
+                    parent_name=launcher_spend.coin.parent_coin_info, amount=uint64(launcher_spend.coin.amount)
                 )
                 did = (await client.get_coin_records_by_parent_ids([launcher_id], include_spent_coins=False))[0].coin
             else:
                 other_launcher_id = launcher_spend.coin.name()
                 other_lineage_proof = LineageProof(
-                    parent_name=launcher_spend.coin.parent_coin_info,
-                    amount=uint64(launcher_spend.coin.amount),
+                    parent_name=launcher_spend.coin.parent_coin_info, amount=uint64(launcher_spend.coin.amount)
                 )
                 other_did = (
                     await client.get_coin_records_by_parent_ids([other_launcher_id], include_spent_coins=False)
@@ -500,26 +435,11 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
         # Now let's launch the VC
         vc: VerifiedCredential
-        dpuzs, coin_spends, vc = VerifiedCredential.launch(
-            [vc_fund_coin],
-            launcher_id,
-            ACS_PH,
-            [bytes32.zeros],
-        )
+        dpuzs, coin_spends, vc = VerifiedCredential.launch([vc_fund_coin], launcher_id, ACS_PH, [bytes32.zeros])
         result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             cost_logger.add_cost(
                 "Launch VC",
-                WalletSpendBundle(
-                    [
-                        make_spend(
-                            vc_fund_coin,
-                            RUN_PUZ_PUZ,
-                            dpuzs[0],
-                        ),
-                        *coin_spends,
-                    ],
-                    G2Element(),
-                ),
+                WalletSpendBundle([make_spend(vc_fund_coin, RUN_PUZ_PUZ, dpuzs[0]), *coin_spends], G2Element()),
             )
         )
         await sim.farm_block()
@@ -550,10 +470,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                 [
                                     make_spend(
                                         did if correct_did else other_did,
-                                        puzzle_for_singleton(
-                                            launcher_id if correct_did else other_launcher_id,
-                                            ACS,
-                                        ),
+                                        puzzle_for_singleton(launcher_id if correct_did else other_launcher_id, ACS),
                                         solution_for_singleton(
                                             lineage_proof if correct_did else other_lineage_proof,
                                             uint64(did.amount) if correct_did else uint64(other_did.amount),
@@ -632,16 +549,8 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             result = await client.push_tx(
                 WalletSpendBundle(
                     [
-                        make_spend(
-                            cr_coin_1,
-                            RUN_PUZ_PUZ,
-                            dpuz_1,
-                        ),
-                        make_spend(
-                            cr_coin_2,
-                            RUN_PUZ_PUZ,
-                            dpuz_2,
-                        ),
+                        make_spend(cr_coin_1, RUN_PUZ_PUZ, dpuz_1),
+                        make_spend(cr_coin_2, RUN_PUZ_PUZ, dpuz_2),
                         launch_crcat_spend_1,
                         launch_crcat_spend_2,
                     ],
@@ -737,13 +646,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             result = await client.push_tx(
                 cost_logger.add_cost(
                     "CR-CATx2 w/ VC announcement, Standard Proof Checker (2 flags)",
-                    WalletSpendBundle(
-                        [
-                            *cr_cat_spends,
-                            *([auth_spend] if error != "forget_vc" else []),
-                        ],
-                        G2Element(),
-                    ),
+                    WalletSpendBundle([*cr_cat_spends, *([auth_spend] if error != "forget_vc" else [])], G2Element()),
                 )
             )
             if error is None:
@@ -776,10 +679,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         [
                             make_spend(
                                 new_did,
-                                puzzle_for_singleton(
-                                    launcher_id if correct_did else other_launcher_id,
-                                    ACS,
-                                ),
+                                puzzle_for_singleton(launcher_id if correct_did else other_launcher_id, ACS),
                                 solution_for_singleton(
                                     (
                                         LineageProof(
@@ -811,12 +711,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
         # Verify the end state
         new_singletons_puzzle_reveal: Program = puzzle_for_singleton(
-            vc.launcher_id,
-            construct_exigent_metadata_layer(
-                None,
-                ACS_TRANSFER_PROGRAM,
-                ACS,
-            ),
+            vc.launcher_id, construct_exigent_metadata_layer(None, ACS_TRANSFER_PROGRAM, ACS)
         )
 
         assert (
@@ -840,22 +735,10 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         await sim.rewind(save_point)
 
         _, clear_spend, _ = vc.do_spend(
-            ACS,
-            Program.to(
-                [
-                    [51, ACS_PH, vc.coin.amount],
-                    vc.magic_condition_for_self_revoke(),
-                ]
-            ),
+            ACS, Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_self_revoke()])
         )
         result = await client.push_tx(
-            cost_logger.add_cost(
-                "VC clear by user",
-                WalletSpendBundle(
-                    [clear_spend],
-                    G2Element(),
-                ),
-            )
+            cost_logger.add_cost("VC clear by user", WalletSpendBundle([clear_spend], G2Element()))
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -865,12 +748,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
         # Verify the end state
         cleared_singletons_puzzle_reveal: Program = puzzle_for_singleton(
-            vc.launcher_id,
-            construct_exigent_metadata_layer(
-                None,
-                ACS_TRANSFER_PROGRAM,
-                vc.wrap_inner_with_backdoor(),
-            ),
+            vc.launcher_id, construct_exigent_metadata_layer(None, ACS_TRANSFER_PROGRAM, vc.wrap_inner_with_backdoor())
         )
 
         assert (

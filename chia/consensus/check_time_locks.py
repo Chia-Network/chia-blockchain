@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from chia_rs import (
-    SpendBundleConditions,
-)
+from chia_rs import SpendBundleConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 

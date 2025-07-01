@@ -18,11 +18,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 class DaemonProxy:
     def __init__(
-        self,
-        uri: str,
-        ssl_context: Optional[ssl.SSLContext],
-        heartbeat: int,
-        max_message_size: int = 50 * 1000 * 1000,
+        self, uri: str, ssl_context: Optional[ssl.SSLContext], heartbeat: int, max_message_size: int = 50 * 1000 * 1000
     ):
         self._uri = uri
         self._request_dict: dict[str, asyncio.Event] = {}

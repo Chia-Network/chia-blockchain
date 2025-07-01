@@ -62,12 +62,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
     reward_ph = wallet_a.get_new_puzzlehash()
 
     # Generate some coins
-    blocks = bt.get_consecutive_blocks(
-        10,
-        [],
-        farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
-    )
+    blocks = bt.get_consecutive_blocks(10, [], farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph)
 
     coins_to_spend: list[Coin] = []
     for block in blocks:
@@ -503,11 +498,7 @@ def random_coin_records() -> RandomCoinRecords:
 
         puzzle_hash = std_hash(i.to_bytes(4, byteorder="big"))
 
-        coin = Coin(
-            std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
-            puzzle_hash,
-            uint64(i),
-        )
+        coin = Coin(std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")), puzzle_hash, uint64(i))
 
         if is_hinted:
             hint = std_hash(b"Hinted " + puzzle_hash)
@@ -626,11 +617,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
         for i in range(count):
             # Create coin records at either height 10 or 12.
             created_height = uint32((i % 2) * 2 + 10)
-            coin = Coin(
-                std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")),
-                ph,
-                uint64(i),
-            )
+            coin = Coin(std_hash(b"Parent Coin Id " + i.to_bytes(4, byteorder="big")), ph, uint64(i))
             coin_records.append(
                 CoinRecord(
                     coin=coin,

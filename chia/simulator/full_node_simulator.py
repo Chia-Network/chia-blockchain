@@ -210,10 +210,7 @@ class FullNodeSimulator(FullNodeAPI):
                 pre_validation_result: PreValidationResult = await future
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
-                    genesis,
-                    pre_validation_result,
-                    self.full_node.constants.SUB_SLOT_ITERS_STARTING,
-                    fork_info,
+                    genesis, pre_validation_result, self.full_node.constants.SUB_SLOT_ITERS_STARTING, fork_info
                 )
 
             peak = self.full_node.blockchain.get_peak()
@@ -368,11 +365,7 @@ class FullNodeSimulator(FullNodeAPI):
             return rewards
 
     async def farm_blocks_to_wallet(
-        self,
-        count: int,
-        wallet: Wallet,
-        timeout: Union[_Default, float, None] = default,
-        _wait_for_synced: bool = True,
+        self, count: int, wallet: Wallet, timeout: Union[_Default, float, None] = default, _wait_for_synced: bool = True
     ) -> int:
         """Farm the requested number of blocks to the passed wallet. This will
         process additional blocks as needed to process the reward transactions
@@ -441,10 +434,7 @@ class FullNodeSimulator(FullNodeAPI):
             return rewards
 
     async def farm_rewards_to_wallet(
-        self,
-        amount: int,
-        wallet: Wallet,
-        timeout: Union[_Default, float, None] = default,
+        self, amount: int, wallet: Wallet, timeout: Union[_Default, float, None] = default
     ) -> int:
         """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
@@ -483,9 +473,7 @@ class FullNodeSimulator(FullNodeAPI):
             return rewards
 
     async def wait_transaction_records_entered_mempool(
-        self,
-        records: Collection[Union[TransactionRecord, LightTransactionRecord]],
-        timeout: Union[float, None] = 5,
+        self, records: Collection[Union[TransactionRecord, LightTransactionRecord]], timeout: Union[float, None] = 5
     ) -> None:
         """Wait until the transaction records have entered the mempool.  Transaction
         records with no spend bundle are ignored.
@@ -515,9 +503,7 @@ class FullNodeSimulator(FullNodeAPI):
                 await asyncio.sleep(backoff)
 
     async def wait_bundle_ids_in_mempool(
-        self,
-        bundle_ids: Collection[bytes32],
-        timeout: Union[float, None] = 5,
+        self, bundle_ids: Collection[bytes32], timeout: Union[float, None] = 5
     ) -> None:
         """Wait until the ids of specific spend bundles have entered the mempool.
 
@@ -541,10 +527,7 @@ class FullNodeSimulator(FullNodeAPI):
                 await asyncio.sleep(backoff)
 
     async def wait_transaction_records_marked_as_in_mempool(
-        self,
-        record_ids: Collection[bytes32],
-        wallet_node: WalletNode,
-        timeout: Union[float, None] = 10,
+        self, record_ids: Collection[bytes32], wallet_node: WalletNode, timeout: Union[float, None] = 10
     ) -> None:
         """Wait until the transaction records have been marked that they have made it into the mempool.  Transaction
         records with no spend bundle are ignored.
@@ -569,9 +552,7 @@ class FullNodeSimulator(FullNodeAPI):
                 await asyncio.sleep(backoff)
 
     async def process_transaction_records(
-        self,
-        records: Collection[TransactionRecord],
-        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
+        self, records: Collection[TransactionRecord], timeout: Union[float, None] = (2 * timeout_per_block) + 5
     ) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
@@ -594,9 +575,7 @@ class FullNodeSimulator(FullNodeAPI):
             return await self.process_coin_spends(coins=coins_to_wait_for, timeout=None)
 
     async def process_spend_bundles(
-        self,
-        bundles: Collection[SpendBundle],
-        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
+        self, bundles: Collection[SpendBundle], timeout: Union[float, None] = (2 * timeout_per_block) + 5
     ) -> None:
         """Process the specified spend bundles and wait until they have been included
         in a block.
@@ -610,9 +589,7 @@ class FullNodeSimulator(FullNodeAPI):
             return await self.process_coin_spends(coins=coins_to_wait_for, timeout=None)
 
     async def process_coin_spends(
-        self,
-        coins: Collection[Coin],
-        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
+        self, coins: Collection[Coin], timeout: Union[float, None] = (2 * timeout_per_block) + 5
     ) -> None:
         """Process the specified coin names and wait until they have been created in a
         block.
@@ -774,10 +751,7 @@ class FullNodeSimulator(FullNodeAPI):
         return wallet_height == full_node_height and all_states_retried
 
     async def wait_for_wallet_synced(
-        self,
-        wallet_node: WalletNode,
-        timeout: Optional[float] = 5,
-        peak_height: Optional[uint32] = None,
+        self, wallet_node: WalletNode, timeout: Optional[float] = 5, peak_height: Optional[uint32] = None
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
@@ -794,10 +768,7 @@ class FullNodeSimulator(FullNodeAPI):
         )
 
     async def wait_for_wallets_synced(
-        self,
-        wallet_nodes: list[WalletNode],
-        timeout: Optional[float] = 5,
-        peak_height: Optional[uint32] = None,
+        self, wallet_nodes: list[WalletNode], timeout: Optional[float] = 5, peak_height: Optional[uint32] = None
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
@@ -805,10 +776,7 @@ class FullNodeSimulator(FullNodeAPI):
                     break
                 await asyncio.sleep(backoff_time)
 
-    async def wait_for_self_synced(
-        self,
-        timeout: Optional[float] = 5,
-    ) -> None:
+    async def wait_for_self_synced(self, timeout: Optional[float] = 5) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
                 if await self.self_is_synced():

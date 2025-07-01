@@ -82,11 +82,7 @@ def test_cmd_bases() -> None:
             print("asyncronous")
 
     runner = CliRunner()
-    result = runner.invoke(
-        cmd,
-        ["--help"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["--help"], catch_exceptions=False)
     assert result.output == textwrap.dedent(
         """\
         Usage: cmd [OPTIONS] COMMAND [ARGS]...
@@ -99,17 +95,9 @@ def test_cmd_bases() -> None:
           temp_cmd_async  blah
         """
     )
-    result = runner.invoke(
-        cmd,
-        ["temp_cmd"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd"], catch_exceptions=False)
     assert result.output == "syncronous\n"
-    result = runner.invoke(
-        cmd,
-        ["temp_cmd_async"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd_async"], catch_exceptions=False)
     assert result.output == "asyncronous\n"
 
 
@@ -134,29 +122,11 @@ def test_option_loading() -> None:
             print(self.some_option)
 
     runner = CliRunner()
-    result = runner.invoke(
-        cmd,
-        ["temp_cmd"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd"], catch_exceptions=False)
     assert "Missing option '-o' / '--some-option'" in result.output
-    result = runner.invoke(
-        cmd,
-        [
-            "temp_cmd",
-            "-o",
-            "13",
-        ],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd", "-o", "13"], catch_exceptions=False)
     assert "13\n" == result.output
-    result = runner.invoke(
-        cmd,
-        [
-            "temp_cmd_2",
-        ],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd_2"], catch_exceptions=False)
     assert "13\n" == result.output
 
     assert TempCMD2() == TempCMD2(some_option=13)
@@ -176,11 +146,7 @@ def test_context_requirement() -> None:
             assert self.context.root_path == pathlib.Path("foo", "bar")
 
     runner = CliRunner()
-    result = runner.invoke(
-        cmd,
-        ["temp_cmd"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd"], catch_exceptions=False)
     assert result.output == ""
 
     # Test that other variables named context are disallowed
@@ -337,32 +303,17 @@ def test_typing() -> None:
         def run(self) -> None: ...
 
     runner = CliRunner()
-    result = runner.invoke(
-        cmd,
-        ["temp_cmd_bad_bytes", "--blob", "not a blob"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd_bad_bytes", "--blob", "not a blob"], catch_exceptions=False)
     assert "not a valid hex string" in result.output
 
-    result = runner.invoke(
-        cmd,
-        ["temp_cmd_bad_bytes32", "--blob32", "0xdeadbeef"],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd_bad_bytes32", "--blob32", "0xdeadbeef"], catch_exceptions=False)
     assert "not a valid 32-byte hex string" in result.output
 
 
 @pytest.mark.limit_consensus_modes(reason="doesn't matter")
 @pytest.mark.parametrize(
     "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [1],
-            "trusted": True,
-            "reuse_puzhash": False,
-        }
-    ],
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": False}],
     indirect=True,
 )
 @pytest.mark.anyio
@@ -384,26 +335,10 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
             pass
 
     runner = CliRunner()
-    result = runner.invoke(
-        cmd,
-        [
-            "temp_cmd",
-            "-wp",
-            str(port),
-            "-f",
-            str(fingerprint),
-        ],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd", "-wp", str(port), "-f", str(fingerprint)], catch_exceptions=False)
     assert result.output == ""
 
-    result = runner.invoke(
-        cmd,
-        [
-            "temp_cmd",
-        ],
-        catch_exceptions=False,
-    )
+    result = runner.invoke(cmd, ["temp_cmd"], catch_exceptions=False)
     assert result.output == ""
 
     expected_command = TempCMD(
@@ -411,7 +346,7 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
             context=ChiaCliContext(root_path=wallet_environments.environments[0].node.root_path),
             wallet_rpc_port=port,
             fingerprint=fingerprint,
-        ),
+        )
     )
     check_click_parsing(expected_command, "-wp", str(port), "-f", str(fingerprint))
 
@@ -525,10 +460,7 @@ async def test_transaction_endpoint_mixin() -> None:
     class TxCMD(TransactionEndpoint):
         @transaction_endpoint_runner
         async def run(self) -> list[TransactionRecord]:
-            assert self.load_condition_valid_times() == ConditionValidTimes(
-                min_time=uint64(10),
-                max_time=uint64(20),
-            )
+            assert self.load_condition_valid_times() == ConditionValidTimes(min_time=uint64(10), max_time=uint64(20))
             return []
 
     # Check that our default object lines up with the default options
@@ -537,24 +469,10 @@ async def test_transaction_endpoint_mixin() -> None:
     example_tx_cmd = TxCMD(
         **{
             **STANDARD_TX_ENDPOINT_ARGS,
-            **dict(
-                fee=uint64(1_000_000_000_000 / 100),
-                push=False,
-                valid_at=10,
-                expires_at=20,
-            ),
+            **dict(fee=uint64(1_000_000_000_000 / 100), push=False, valid_at=10, expires_at=20),
         }
     )
-    check_click_parsing(
-        example_tx_cmd,
-        "--fee",
-        "0.01",
-        "--no-push",
-        "--valid-at",
-        "10",
-        "--expires-at",
-        "20",
-    )
+    check_click_parsing(example_tx_cmd, "--fee", "0.01", "--no-push", "--valid-at", "10", "--expires-at", "20")
 
     await example_tx_cmd.run()  # trigger inner assert
 

@@ -386,10 +386,7 @@ class WalletNode:
     async def _start(self) -> None:
         await self._start_with_fingerprint()
 
-    async def _start_with_fingerprint(
-        self,
-        fingerprint: Optional[int] = None,
-    ) -> bool:
+    async def _start_with_fingerprint(self, fingerprint: Optional[int] = None) -> bool:
         # Makes sure the coin_state_updates get higher priority than new_peak messages.
         # Delayed instantiation until here to avoid errors.
         #   got Future <Future pending> attached to a different loop
@@ -436,14 +433,7 @@ class WalletNode:
 
         assert private_key is None or isinstance(private_key, PrivateKey)
         self._wallet_state_manager = await WalletStateManager.create(
-            private_key,
-            self.config,
-            path,
-            self.constants,
-            self.server,
-            self.root_path,
-            self,
-            public_key,
+            private_key, self.config, path, self.constants, self.server, self.root_path, self, public_key
         )
 
         if self.state_changed_callback is not None:
@@ -787,12 +777,7 @@ class WalletNode:
         self._pending_tx_handler()
 
     async def long_sync(
-        self,
-        target_height: uint32,
-        full_node: WSChiaConnection,
-        fork_height: int,
-        *,
-        rollback: bool,
+        self, target_height: uint32, full_node: WSChiaConnection, fork_height: int, *, rollback: bool
     ) -> None:
         """
         Sync algorithm:
@@ -1023,12 +1008,7 @@ class WalletNode:
             self.log.info(f"request coin: {coin.coin.name().hex()}{coin}")
 
         async with self.wallet_state_manager.lock:
-            await self.add_states_from_peer(
-                request.items,
-                peer,
-                request.fork_height,
-                request.height,
-            )
+            await self.add_states_from_peer(request.items, peer, request.fork_height, request.height)
 
     def get_full_node_peer(self) -> WSChiaConnection:
         """
@@ -1266,9 +1246,7 @@ class WalletNode:
                     all_coin_ids, peer, min_height_for_subscriptions
                 )
                 success = await self.add_states_from_peer(
-                    ph_updates + coin_updates,
-                    peer,
-                    fork_height=uint32(fork_height),
+                    ph_updates + coin_updates, peer, fork_height=uint32(fork_height)
                 )
                 if success:
                     self.synced_peers.add(peer.peer_node_id)

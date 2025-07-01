@@ -118,12 +118,7 @@ def print_transaction(
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
-    if wallet_type in {
-        WalletType.STANDARD_WALLET,
-        WalletType.POOLING_WALLET,
-        WalletType.DATA_LAYER,
-        WalletType.VC,
-    }:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER, WalletType.VC}:
         mojo_per_unit = units["chia"]
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         mojo_per_unit = units["cat"]
@@ -147,17 +142,9 @@ async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> Wal
 
 
 async def get_unit_name_for_wallet_id(
-    config: dict[str, Any],
-    wallet_type: WalletType,
-    wallet_id: int,
-    wallet_client: WalletRpcClient,
+    config: dict[str, Any], wallet_type: WalletType, wallet_id: int, wallet_client: WalletRpcClient
 ) -> str:
-    if wallet_type in {
-        WalletType.STANDARD_WALLET,
-        WalletType.POOLING_WALLET,
-        WalletType.DATA_LAYER,
-        WalletType.VC,
-    }:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER, WalletType.VC}:
         name: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         name = await wallet_client.get_cat_name(wallet_id=wallet_id)
@@ -179,21 +166,14 @@ async def get_transaction(
             wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
             name = await get_unit_name_for_wallet_id(
-                config=config,
-                wallet_type=wallet_type,
-                wallet_id=tx.wallet_id,
-                wallet_client=wallet_client,
+                config=config, wallet_type=wallet_type, wallet_id=tx.wallet_id, wallet_client=wallet_client
             )
         except LookupError as e:
             print(e.args[0])
             return
 
         print_transaction(
-            tx,
-            verbose=(verbose > 0),
-            name=name,
-            address_prefix=address_prefix,
-            mojo_per_unit=mojo_per_unit,
+            tx, verbose=(verbose > 0), name=name, address_prefix=address_prefix, mojo_per_unit=mojo_per_unit
         )
 
 
@@ -233,10 +213,7 @@ async def get_transactions(
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
             name = await get_unit_name_for_wallet_id(
-                config=config,
-                wallet_type=wallet_type,
-                wallet_id=wallet_id,
-                wallet_client=wallet_client,
+                config=config, wallet_type=wallet_type, wallet_id=wallet_id, wallet_client=wallet_client
             )
         except LookupError as e:
             print(e.args[0])
@@ -592,9 +569,9 @@ async def make_offer(
                         offer_dict,
                         driver_dict=driver_dict,
                         fee=fee,
-                        tx_config=CMDTXConfigLoader(
-                            reuse_puzhash=reuse_puzhash,
-                        ).to_tx_config(units["chia"], config, fingerprint),
+                        tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                            units["chia"], config, fingerprint
+                        ),
                         timelock_info=condition_valid_times,
                     )
                     if res.offer is not None:
@@ -1065,9 +1042,9 @@ async def update_did_metadata(
             response = await wallet_client.update_did_metadata(
                 did_wallet_id,
                 json.loads(metadata),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
+                ),
                 push=push,
                 timelock_info=condition_valid_times,
             )
@@ -1131,9 +1108,9 @@ async def transfer_did(
                 target_address,
                 fee,
                 with_recovery,
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
+                ),
                 push=push,
                 timelock_info=condition_valid_times,
             )
@@ -1159,12 +1136,7 @@ async def find_lost_did(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
-            response = await wallet_client.find_lost_did(
-                coin_id,
-                recovery_list_hash,
-                metadata,
-                num_verification,
-            )
+            response = await wallet_client.find_lost_did(coin_id, recovery_list_hash, metadata, num_verification)
             if response["success"]:
                 print(f"Successfully found lost DID {coin_id}, latest coin ID: {response['latest_coin_id']}")
             else:
@@ -1248,9 +1220,9 @@ async def mint_nft(
                     did_id=did_id,
                     push=push,
                 ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
+                ),
                 timelock_info=condition_valid_times,
             )
             spend_bundle = mint_response.spend_bundle
@@ -1294,16 +1266,11 @@ async def add_uri_to_nft(
                 raise ValueError("You must provide at least one of the URI flags")
             response = await wallet_client.add_uri_to_nft(
                 NFTAddURI(
-                    wallet_id=uint32(wallet_id),
-                    nft_coin_id=nft_coin_id,
-                    key=key,
-                    uri=uri_value,
-                    fee=fee,
-                    push=push,
+                    wallet_id=uint32(wallet_id), nft_coin_id=nft_coin_id, key=key, uri=uri_value, fee=fee, push=push
                 ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
+                ),
                 timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
@@ -1339,9 +1306,9 @@ async def transfer_nft(
                     fee=fee,
                     push=push,
                 ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
+                ),
                 timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
@@ -1435,9 +1402,9 @@ async def set_nft_did(
                     fee=fee,
                     push=push,
                 ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
+                ),
                 timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
@@ -1486,13 +1453,7 @@ def calculate_nft_royalty_amount(
 
 def driver_dict_asset_is_nft_supporting_royalties(driver_dict: dict[bytes32, PuzzleInfo], asset_id: bytes32) -> bool:
     asset_dict: PuzzleInfo = driver_dict[asset_id]
-    return asset_dict.check_type(
-        [
-            AssetType.SINGLETON.value,
-            AssetType.METADATA.value,
-            AssetType.OWNERSHIP.value,
-        ]
-    )
+    return asset_dict.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value])
 
 
 def driver_dict_asset_is_fungible(driver_dict: dict[bytes32, PuzzleInfo], asset_id: bytes32) -> bool:
@@ -1527,12 +1488,7 @@ async def send_notification(
         amount: uint64 = cli_amount.convert_amount(units["chia"])
 
         tx = await wallet_client.send_notification(
-            address.puzzle_hash,
-            message,
-            amount,
-            fee,
-            push=push,
-            timelock_info=condition_valid_times,
+            address.puzzle_hash, message, amount, fee, push=push, timelock_info=condition_valid_times
         )
 
         if push:
@@ -1633,11 +1589,7 @@ async def spend_clawback(
             print("Batch fee cannot be negative.")
             return []
         response = await wallet_client.spend_clawback_coins(
-            tx_ids,
-            fee,
-            force,
-            push=push,
-            timelock_info=condition_valid_times,
+            tx_ids, fee, force, push=push, timelock_info=condition_valid_times
         )
         print(str(response))
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
@@ -1728,9 +1680,9 @@ async def spend_vc(
                     fee=fee,
                     push=push,
                 ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
+                ),
                 timelock_info=condition_valid_times,
             )
         ).transactions
@@ -1807,14 +1759,10 @@ async def revoke_vc(
             parent_id = parent_coin_id
         txs = (
             await wallet_client.vc_revoke(
-                VCRevoke(
-                    vc_parent_id=parent_id,
-                    fee=fee,
-                    push=push,
+                VCRevoke(vc_parent_id=parent_id, fee=fee, push=push),
+                tx_config=CMDTXConfigLoader(reuse_puzhash=reuse_puzhash).to_tx_config(
+                    units["chia"], config, fingerprint
                 ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
                 timelock_info=condition_valid_times,
             )
         ).transactions
@@ -1855,9 +1803,7 @@ async def approve_r_cats(
             min_amount_to_claim=min_amount_to_claim.convert_amount(units["cat"]),
             fee=fee,
             tx_config=CMDTXConfigLoader(
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                reuse_puzhash=reuse,
+                min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, reuse_puzhash=reuse
             ).to_tx_config(units["cat"], config, fingerprint),
             push=push,
             timelock_info=condition_valid_times,
@@ -1872,10 +1818,7 @@ async def approve_r_cats(
                 wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
                 mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
                 name = await get_unit_name_for_wallet_id(
-                    config=config,
-                    wallet_type=wallet_type,
-                    wallet_id=tx.wallet_id,
-                    wallet_client=wallet_client,
+                    config=config, wallet_type=wallet_type, wallet_id=tx.wallet_id, wallet_client=wallet_client
                 )
             except LookupError as e:
                 print(e.args[0])

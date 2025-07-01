@@ -117,8 +117,7 @@ class BlockchainMock:
         self._sub_epoch_segments[sub_epoch_summary_hash] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
-        self,
-        sub_epoch_summary_hash: bytes32,
+        self, sub_epoch_summary_hash: bytes32
     ) -> Optional[list[SubEpochChallengeSegment]]:
         segments = self._sub_epoch_segments.get(sub_epoch_summary_hash)
         if segments is None:

@@ -123,12 +123,7 @@ async def run_sync_test(
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
     handler = logging.FileHandler("test-full-sync.log")
-    handler.setFormatter(
-        logging.Formatter(
-            "%(levelname)-8s %(message)s",
-            datefmt="%Y-%m-%dT%H:%M:%S",
-        )
-    )
+    handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"))
     logger.addHandler(handler)
     check_log = ExitOnError()
     logger.addHandler(check_log)
@@ -150,11 +145,7 @@ async def run_sync_test(
             config["full_node"]["single_threaded"] = True
         config["full_node"]["db_sync"] = db_sync
         config["full_node"]["enable_profiler"] = node_profiler
-        full_node = await FullNode.create(
-            config["full_node"],
-            root_path=root_path,
-            consensus_constants=constants,
-        )
+        full_node = await FullNode.create(config["full_node"], root_path=root_path, consensus_constants=constants)
 
         full_node.set_server(cast(ChiaServer, FakeServer()))
         async with full_node.manage():
@@ -235,10 +226,7 @@ async def run_sync_test(
 
                     counter += len(block_batch)
                     height += len(block_batch)
-                    print(
-                        f"\rheight {height} {time_per_block:0.2f} s/block   ",
-                        end="",
-                    )
+                    print(f"\rheight {height} {time_per_block:0.2f} s/block   ", end="")
                     block_batch = []
                     if check_log.exit_with_failure:
                         raise RuntimeError("error printed to log. exiting")

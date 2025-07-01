@@ -28,9 +28,7 @@ async def load_plugin_configurations(root_path: Path, config_type: str, log: log
     valid_configs = []
     for conf_file in config_path.glob("*.conf"):
         with log_exceptions(
-            log=log,
-            consume=True,
-            message=f"Skipping config file due to failure loading or parsing: {conf_file}",
+            log=log, consume=True, message=f"Skipping config file due to failure loading or parsing: {conf_file}"
         ):
             with open(conf_file) as file:
                 data = yaml.safe_load(file)

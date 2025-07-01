@@ -21,11 +21,7 @@ def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[P
 
 def puzzle_for_transfer_program(launcher_id: bytes32, royalty_puzzle_hash: bytes32, percentage: uint16) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_HASH)))
-    return NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-        singleton_struct,
-        royalty_puzzle_hash,
-        percentage,
-    )
+    return NFT_TRANSFER_PROGRAM_DEFAULT.curry(singleton_struct, royalty_puzzle_hash, percentage)
 
 
 def solution_for_transfer_program(

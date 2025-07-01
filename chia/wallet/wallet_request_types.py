@@ -473,11 +473,7 @@ class NFTCalculateRoyaltiesResponse(Streamable):
         for info in self.nft_info:
             summary_dict.setdefault(info.royalty_asset, [])
             summary_dict[info.royalty_asset].append(
-                {
-                    "asset": info.fungible_asset,
-                    "address": info.royalty_address,
-                    "amount": info.royalty_amount,
-                }
+                {"asset": info.fungible_asset, "address": info.royalty_address, "amount": info.royalty_amount}
             )
 
         return summary_dict
@@ -493,12 +489,7 @@ class NFTCalculateRoyaltiesResponse(Streamable):
         # probably shouldn't have ignoring "assets" named "success".
         return cls(
             [
-                RoyaltySummary(
-                    royalty_asset,
-                    summary["asset"],
-                    summary["address"],
-                    uint64(summary["amount"]),
-                )
+                RoyaltySummary(royalty_asset, summary["asset"], summary["address"], uint64(summary["amount"]))
                 for royalty_asset, summaries in json_dict.items()
                 if royalty_asset != "success"
                 for summary in summaries
@@ -974,13 +965,7 @@ class DLUpdateMultipleUpdates(Streamable):
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         return cls(
-            [
-                LauncherRootPair(
-                    bytes32.from_hexstr(key),
-                    bytes32.from_hexstr(value),
-                )
-                for key, value in json_dict.items()
-            ]
+            [LauncherRootPair(bytes32.from_hexstr(key), bytes32.from_hexstr(value)) for key, value in json_dict.items()]
         )
 
 

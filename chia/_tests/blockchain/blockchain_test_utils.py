@@ -104,11 +104,7 @@ async def _validate_and_add_block(
     if fork_info is None:
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
 
-    (
-        result,
-        err,
-        _,
-    ) = await blockchain.add_block(block, results, ssi, fork_info=fork_info)
+    (result, err, _) = await blockchain.add_block(block, results, ssi, fork_info=fork_info)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:
@@ -159,12 +155,7 @@ async def _validate_and_add_block_multi_result(
     fork_info: Optional[ForkInfo] = None,
 ) -> None:
     try:
-        await _validate_and_add_block(
-            blockchain,
-            block,
-            skip_prevalidation=skip_prevalidation,
-            fork_info=fork_info,
-        )
+        await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation, fork_info=fork_info)
     except Exception as e:
         assert isinstance(e, AssertionError)
         assert "Block was not added" in e.args[0]
@@ -174,21 +165,14 @@ async def _validate_and_add_block_multi_result(
 
 
 async def _validate_and_add_block_no_error(
-    blockchain: Blockchain,
-    block: FullBlock,
-    skip_prevalidation: bool = False,
-    fork_info: Optional[ForkInfo] = None,
+    blockchain: Blockchain, block: FullBlock, skip_prevalidation: bool = False, fork_info: Optional[ForkInfo] = None
 ) -> None:
     # adds a block and ensures that there is no error. However, does not ensure that block extended the peak of
     # the blockchain
     await _validate_and_add_block_multi_result(
         blockchain,
         block,
-        expected_result=[
-            AddBlockResult.ALREADY_HAVE_BLOCK,
-            AddBlockResult.NEW_PEAK,
-            AddBlockResult.ADDED_AS_ORPHAN,
-        ],
+        expected_result=[AddBlockResult.ALREADY_HAVE_BLOCK, AddBlockResult.NEW_PEAK, AddBlockResult.ADDED_AS_ORPHAN],
         skip_prevalidation=skip_prevalidation,
         fork_info=fork_info,
     )

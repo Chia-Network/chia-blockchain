@@ -136,9 +136,7 @@ def validate_cwa(cwa: ConditionWithArgs) -> None:
 
 
 def pkm_pairs_for_conditions_dict(
-    conditions_dict: dict[ConditionOpcode, list[ConditionWithArgs]],
-    coin: Coin,
-    additional_data: bytes,
+    conditions_dict: dict[ConditionOpcode, list[ConditionWithArgs]], coin: Coin, additional_data: bytes
 ) -> list[tuple[G1Element, bytes]]:
     ret: list[tuple[G1Element, bytes]] = []
 
@@ -168,8 +166,7 @@ def pkm_pairs_for_conditions_dict(
 
 
 def created_outputs_for_conditions_dict(
-    conditions_dict: dict[ConditionOpcode, list[ConditionWithArgs]],
-    input_coin_name: bytes32,
+    conditions_dict: dict[ConditionOpcode, list[ConditionWithArgs]], input_coin_name: bytes32
 ) -> list[Coin]:
     output_coins = []
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):

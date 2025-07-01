@@ -47,9 +47,7 @@ class TestRpcApi:
         return []  # pragma: no cover
 
     def get_routes(self) -> dict[str, Endpoint]:
-        return {
-            "/log": self.log,
-        }
+        return {"/log": self.log}
 
     async def log(self, request: dict[str, Any]) -> EndpointResult:
         message = request["message"]
@@ -78,9 +76,7 @@ class Client:
             json = {}
 
         async with self.session.post(
-            self.url.rstrip("/") + "/" + endpoint.lstrip("/"),
-            json=json,
-            ssl=self.ssl_context,
+            self.url.rstrip("/") + "/" + endpoint.lstrip("/"), json=json, ssl=self.ssl_context
         ) as response:
             response.raise_for_status()
             json = await response.json()
@@ -96,8 +92,7 @@ class Client:
 
 @pytest.fixture(name="server")
 async def server_fixture(
-    root_path_populated_with_config: Path,
-    self_hostname: str,
+    root_path_populated_with_config: Path, self_hostname: str
 ) -> AsyncIterator[RpcServer[TestRpcApi]]:
     config = load_config(root_path=root_path_populated_with_config, filename="config.yaml")
     service_config = config[service_name]
@@ -115,11 +110,7 @@ async def server_fixture(
     )
 
     try:
-        await rpc_server.start(
-            self_hostname=self_hostname,
-            rpc_port=uint16(0),
-            max_request_body_size=2**16,
-        )
+        await rpc_server.start(self_hostname=self_hostname, rpc_port=uint16(0), max_request_body_size=2**16)
 
         yield rpc_server
     finally:
@@ -128,19 +119,14 @@ async def server_fixture(
 
 
 @pytest.fixture(name="client")
-async def client_fixture(
-    server: RpcServer[TestRpcApi],
-) -> AsyncIterator[Client]:
+async def client_fixture(server: RpcServer[TestRpcApi]) -> AsyncIterator[Client]:
     assert server.webserver is not None
     async with Client.managed(ssl_context=server.ssl_client_context, url=server.webserver.url()) as client:
         yield client
 
 
 @pytest.mark.anyio
-async def test_get_log_level(
-    client: Client,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+async def test_get_log_level(client: Client, caplog: pytest.LogCaptureFixture) -> None:
     level = "WARNING"
     root_logger.setLevel(level)
     result = await client.request("get_log_level")
@@ -148,10 +134,7 @@ async def test_get_log_level(
 
 
 @pytest.mark.anyio
-async def test_set_log_level(
-    client: Client,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+async def test_set_log_level(client: Client, caplog: pytest.LogCaptureFixture) -> None:
     message = "just a maybe unique probably message"
 
     level = "WARNING"
@@ -168,10 +151,7 @@ async def test_set_log_level(
 
 
 @pytest.mark.anyio
-async def test_reset_log_level(
-    client: Client,
-    server: RpcServer[TestRpcApi],
-) -> None:
+async def test_reset_log_level(client: Client, server: RpcServer[TestRpcApi]) -> None:
     configured_level = server.service_config["logging"]["log_level"]
     temporary_level = "INFO"
     assert configured_level != temporary_level

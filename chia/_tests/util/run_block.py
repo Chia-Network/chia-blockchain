@@ -136,10 +136,7 @@ def ref_list_to_args(ref_list: list[uint32], root_path: Path) -> list[bytes]:
 
 
 def run_generator_with_args(
-    generator_program_hex: str,
-    generator_args: list[bytes],
-    constants: ConsensusConstants,
-    cost: uint64,
+    generator_program_hex: str, generator_args: list[bytes], constants: ConsensusConstants, cost: uint64
 ) -> list[CAT]:
     if not generator_program_hex:
         return []

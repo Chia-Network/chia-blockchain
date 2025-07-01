@@ -34,12 +34,7 @@ from chia.util.task_referencer import create_referenced_task
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
 MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
-NETWORK_ID_DEFAULT_PORTS = {
-    "mainnet": 8444,
-    "testnet7": 58444,
-    "testnet10": 58444,
-    "testnet8": 58445,
-}
+NETWORK_ID_DEFAULT_PORTS = {"mainnet": 8444, "testnet7": 58444, "testnet10": 58444, "testnet8": 58445}
 
 
 @dataclass
@@ -117,9 +112,7 @@ class FullNodeDiscovery:
             and self.address_manager is not None
         ):
             timestamped_peer_info = TimestampedPeerInfo(
-                peer.peer_info.host,
-                peer.peer_server_port,
-                uint64(int(time.time())),
+                peer.peer_info.host, peer.peer_server_port, uint64(int(time.time()))
             )
             await self.address_manager.add_to_new_table([timestamped_peer_info], peer.get_peer_info(), 0)
             if self.relay_queue is not None:
@@ -196,13 +189,7 @@ class FullNodeDiscovery:
                 peers: list[TimestampedPeerInfo] = []
                 result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
                 for ip in result:
-                    peers.append(
-                        TimestampedPeerInfo(
-                            ip.to_text(),
-                            uint16(self.default_port),
-                            uint64(0),
-                        )
-                    )
+                    peers.append(TimestampedPeerInfo(ip.to_text(), uint16(self.default_port), uint64(0)))
                 self.log.info(f"Received {len(peers)} peers from DNS seeder, using rdtype = {rdtype}.")
                 if len(peers) > 0:
                     await self._add_peers_common(peers, None, False)
@@ -221,9 +208,7 @@ class FullNodeDiscovery:
                 return
             self.pending_outbound_connections.add(addr.host)
             client_connected = await self.server.start_client(
-                addr,
-                on_connect=self.on_connect_callback,
-                is_feeler=is_feeler,
+                addr, on_connect=self.on_connect_callback, is_feeler=is_feeler
             )
             if self.server.is_duplicate_or_self_connection(addr):
                 # Mark it as a softer attempt, without counting the failures.
@@ -462,19 +447,11 @@ class FullNodeDiscovery:
         for peer in peer_list:
             if peer.timestamp < 100000000 or peer.timestamp > time.time() + 10 * 60:
                 # Invalid timestamp, predefine a bad one.
-                current_peer = TimestampedPeerInfo(
-                    peer.host,
-                    peer.port,
-                    uint64(int(time.time() - 5 * 24 * 60 * 60)),
-                )
+                current_peer = TimestampedPeerInfo(peer.host, peer.port, uint64(int(time.time() - 5 * 24 * 60 * 60)))
             else:
                 current_peer = peer
             if not is_full_node:
-                current_peer = TimestampedPeerInfo(
-                    peer.host,
-                    peer.port,
-                    uint64(0),
-                )
+                current_peer = TimestampedPeerInfo(peer.host, peer.port, uint64(0))
 
             if not self._peer_has_wrong_network_port(peer.port):
                 peers_adjusted_timestamp.append(current_peer)
@@ -530,17 +507,8 @@ class FullNodePeers(FullNodeDiscovery):
                 peer = await self.server.get_peer_info()
                 if peer is None:
                     continue
-                timestamped_peer = [
-                    TimestampedPeerInfo(
-                        peer.host,
-                        peer.port,
-                        uint64(int(time.time())),
-                    )
-                ]
-                msg = make_msg(
-                    ProtocolMessageTypes.respond_peers,
-                    RespondPeers(timestamped_peer),
-                )
+                timestamped_peer = [TimestampedPeerInfo(peer.host, peer.port, uint64(int(time.time())))]
+                msg = make_msg(ProtocolMessageTypes.respond_peers, RespondPeers(timestamped_peer))
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
                 async with self.lock:
@@ -572,10 +540,7 @@ class FullNodePeers(FullNodeDiscovery):
             peers = [peer for peer in peers if not self._peer_has_wrong_network_port(peer.port)]
             await self.add_peers_neighbour(peers, peer_info)
 
-            msg = make_msg(
-                ProtocolMessageTypes.respond_peers,
-                RespondPeers(peers),
-            )
+            msg = make_msg(ProtocolMessageTypes.respond_peers, RespondPeers(peers))
 
             return msg
         except Exception as e:
@@ -646,10 +611,7 @@ class FullNodePeers(FullNodeDiscovery):
                         known_peers.add(relay_peer.host)
                     if connection.peer_node_id is None:
                         continue
-                    msg = make_msg(
-                        ProtocolMessageTypes.respond_peers,
-                        RespondPeers([relay_peer]),
-                    )
+                    msg = make_msg(ProtocolMessageTypes.respond_peers, RespondPeers([relay_peer]))
                     await connection.send_message(msg)
             except Exception as e:
                 self.log.error(f"Exception in address relay: {e}")

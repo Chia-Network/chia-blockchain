@@ -65,9 +65,7 @@ class Formatter:
         # self.extra_def_lines = []
         self.indent_stack: list[int] = []
         self.result: list[list[bytes]] = []
-        self.config: dict[str, Any] = {
-            "gnu_comment_conventions": False,
-        }
+        self.config: dict[str, Any] = {"gnu_comment_conventions": False}
 
     # Add a character of source, breaking the source into lines as we go
     def run_char(self, ch: bytes) -> None:

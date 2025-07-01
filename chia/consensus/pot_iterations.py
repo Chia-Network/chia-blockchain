@@ -32,9 +32,7 @@ def calculate_sp_iters(constants: ConsensusConstants, sub_slot_iters: uint64, si
 
 
 def calculate_phase_out(
-    constants: ConsensusConstants,
-    sub_slot_iters: uint64,
-    prev_transaction_block_height: uint32,
+    constants: ConsensusConstants, sub_slot_iters: uint64, prev_transaction_block_height: uint32
 ) -> uint64:
     if prev_transaction_block_height <= constants.HARD_FORK2_HEIGHT:
         return uint64(0)
@@ -51,10 +49,7 @@ def calculate_phase_out(
 
 
 def calculate_ip_iters(
-    constants: ConsensusConstants,
-    sub_slot_iters: uint64,
-    signage_point_index: uint8,
-    required_iters: uint64,
+    constants: ConsensusConstants, sub_slot_iters: uint64, signage_point_index: uint8, required_iters: uint64
 ) -> uint64:
     # Note that the SSI is for the block passed in, which might be in the previous epoch
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
@@ -88,13 +83,7 @@ def validate_pospace_and_get_required_iters(
         return None
 
     return calculate_iterations_quality(
-        constants,
-        q_str,
-        proof_of_space.size(),
-        difficulty,
-        cc_sp_hash,
-        sub_slot_iters,
-        prev_transaction_block_height,
+        constants, q_str, proof_of_space.size(), difficulty, cc_sp_hash, sub_slot_iters, prev_transaction_block_height
     )
 
 

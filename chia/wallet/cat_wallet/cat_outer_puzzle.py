@@ -34,10 +34,7 @@ class CATOuterPuzzle:
         if args is None:
             return None
         _, tail_hash, inner_puzzle = args
-        constructor_dict: dict[str, Any] = {
-            "type": "CAT",
-            "tail": "0x" + tail_hash.as_atom().hex(),
-        }
+        constructor_dict: dict[str, Any] = {"type": "CAT", "tail": "0x" + tail_hash.as_atom().hex()}
         next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
@@ -84,12 +81,7 @@ class CATOuterPuzzle:
                 solver["sibling_puzzles"].as_iter(),
                 solver["sibling_solutions"].as_iter(),
             ),
-            (
-                Program.to(solver["coin"]),
-                Program.to(solver["parent_spend"]),
-                inner_puzzle,
-                inner_solution,
-            ),
+            (Program.to(solver["coin"]), Program.to(solver["parent_spend"]), inner_puzzle, inner_solution),
         ]
         ring.sort(key=lambda c: bytes(c[0]))  # deterministic sort to make sure all spends have the same ring order
         for coin_prog, spend_prog, puzzle, solution in ring:

@@ -27,14 +27,7 @@ class VCProofs:
             return 1 if Program.to([10, (1, f1[0]), (1, f2[0])]).run([]) == Program.to(None) else -1
 
         prog: Program = Program.to(
-            list_to_binary_tree(
-                list(
-                    sorted(
-                        self.key_value_pairs.items(),
-                        key=cmp_to_key(byte_sort_pairs),
-                    )
-                )
-            )
+            list_to_binary_tree(list(sorted(self.key_value_pairs.items(), key=cmp_to_key(byte_sort_pairs))))
         )
         return prog
 
@@ -216,11 +209,7 @@ class VCStore:
 
         return records
 
-    async def get_vc_record_list(
-        self,
-        start_index: int = 0,
-        count: int = 50,
-    ) -> list[VCRecord]:
+    async def get_vc_record_list(self, start_index: int = 0, count: int = 50) -> list[VCRecord]:
         """
         Return all VCs
         :param start_index: Start index

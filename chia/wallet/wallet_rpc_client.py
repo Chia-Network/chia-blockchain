@@ -812,10 +812,7 @@ class WalletRpcClient(RpcClient):
         return cast(str, response["name"])
 
     async def set_cat_name(self, wallet_id: int, name: str) -> None:
-        request: dict[str, Any] = {
-            "wallet_id": wallet_id,
-            "name": name,
-        }
+        request: dict[str, Any] = {"wallet_id": wallet_id, "name": name}
         await self.fetch("cat_set_name", request)
 
     async def cat_spend(
@@ -1057,10 +1054,7 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def nft_calculate_royalties(
-        self,
-        request: NFTCalculateRoyalties,
-    ) -> NFTCalculateRoyaltiesResponse:
+    async def nft_calculate_royalties(self, request: NFTCalculateRoyalties) -> NFTCalculateRoyaltiesResponse:
         return NFTCalculateRoyaltiesResponse.from_json_dict(
             await self.fetch("nft_calculate_royalties", request.to_json_dict())
         )
@@ -1375,45 +1369,23 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def gather_signing_info(
-        self,
-        args: GatherSigningInfo,
-    ) -> GatherSigningInfoResponse:
+    async def gather_signing_info(self, args: GatherSigningInfo) -> GatherSigningInfoResponse:
         return json_deserialize_with_clvm_streamable(
-            await self.fetch(
-                "gather_signing_info",
-                args.to_json_dict(),
-            ),
-            GatherSigningInfoResponse,
+            await self.fetch("gather_signing_info", args.to_json_dict()), GatherSigningInfoResponse
         )
 
-    async def apply_signatures(
-        self,
-        args: ApplySignatures,
-    ) -> ApplySignaturesResponse:
+    async def apply_signatures(self, args: ApplySignatures) -> ApplySignaturesResponse:
         return json_deserialize_with_clvm_streamable(
-            await self.fetch(
-                "apply_signatures",
-                args.to_json_dict(),
-            ),
-            ApplySignaturesResponse,
+            await self.fetch("apply_signatures", args.to_json_dict()), ApplySignaturesResponse
         )
 
-    async def submit_transactions(
-        self,
-        args: SubmitTransactions,
-    ) -> SubmitTransactionsResponse:
+    async def submit_transactions(self, args: SubmitTransactions) -> SubmitTransactionsResponse:
         return json_deserialize_with_clvm_streamable(
-            await self.fetch(
-                "submit_transactions",
-                args.to_json_dict(),
-            ),
-            SubmitTransactionsResponse,
+            await self.fetch("submit_transactions", args.to_json_dict()), SubmitTransactionsResponse
         )
 
     async def execute_signing_instructions(
-        self,
-        args: ExecuteSigningInstructions,
+        self, args: ExecuteSigningInstructions
     ) -> ExecuteSigningInstructionsResponse:
         return ExecuteSigningInstructionsResponse.from_json_dict(
             await self.fetch("execute_signing_instructions", args.to_json_dict())

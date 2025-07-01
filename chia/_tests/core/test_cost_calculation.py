@@ -67,11 +67,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
             coinbase = coin
             break
     assert coinbase is not None
-    spend_bundle = wallet_tool.generate_signed_transaction(
-        uint64(coinbase.amount),
-        BURN_PUZZLE_HASH,
-        coinbase,
-    )
+    spend_bundle = wallet_tool.generate_signed_transaction(uint64(coinbase.amount), BURN_PUZZLE_HASH, coinbase)
     assert spend_bundle is not None
     program: BlockGenerator = simple_solution_generator(spend_bundle)
 
@@ -128,11 +124,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
             coinbase = coin
             break
     assert coinbase is not None
-    spend_bundle = wallet_tool.generate_signed_transaction(
-        uint64(coinbase.amount),
-        BURN_PUZZLE_HASH,
-        coinbase,
-    )
+    spend_bundle = wallet_tool.generate_signed_transaction(uint64(coinbase.amount), BURN_PUZZLE_HASH, coinbase)
     assert spend_bundle is not None
 
     pk = bytes.fromhex(

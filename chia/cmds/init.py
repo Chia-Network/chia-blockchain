@@ -13,11 +13,7 @@ from chia.cmds.cmd_classes import ChiaCliContext
     help="Create new SSL certificates based on CA in [directory]",
     type=click.Path(),
 )
-@click.option(
-    "--fix-ssl-permissions",
-    is_flag=True,
-    help="Attempt to fix SSL certificate/key file permissions",
-)
+@click.option("--fix-ssl-permissions", is_flag=True, help="Attempt to fix SSL certificate/key file permissions")
 @click.option("--testnet", is_flag=True, help="Configure this chia install to connect to the testnet")
 @click.option("--set-passphrase", "-s", is_flag=True, help="Protect your keyring with a passphrase")
 @click.option(
@@ -27,12 +23,7 @@ from chia.cmds.cmd_classes import ChiaCliContext
 )
 @click.pass_context
 def init_cmd(
-    ctx: click.Context,
-    create_certs: str,
-    fix_ssl_permissions: bool,
-    testnet: bool,
-    set_passphrase: bool,
-    v1_db: bool,
+    ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, testnet: bool, set_passphrase: bool, v1_db: bool
 ) -> None:
     """
     Create a new configuration or migrate from previous versions to current

@@ -14,9 +14,7 @@ from chia.util.streamable import Streamable, streamable
 
 
 def make_spend(
-    coin: Coin,
-    puzzle_reveal: Union[Program, SerializedProgram],
-    solution: Union[Program, SerializedProgram],
+    coin: Coin, puzzle_reveal: Union[Program, SerializedProgram], solution: Union[Program, SerializedProgram]
 ) -> CoinSpend:
     pr: SerializedProgram
     sol: SerializedProgram

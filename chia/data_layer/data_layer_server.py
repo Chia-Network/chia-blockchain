@@ -64,10 +64,7 @@ class DataLayerServer:
         self.webserver = await WebServer.create(
             hostname=self.host_ip,
             port=self.port,
-            routes=[
-                web.get("/{filename}", self.file_handler),
-                web.get("/{tree_id}/{filename}", self.folder_handler),
-            ],
+            routes=[web.get("/{filename}", self.file_handler), web.get("/{tree_id}/{filename}", self.folder_handler)],
         )
         self.log.info("Started Data Layer HTTP Server.")
 
@@ -118,10 +115,7 @@ class DataLayerServer:
         return response
 
     def _accept_signal(
-        self,
-        signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
-        loop: asyncio.AbstractEventLoop,
+        self, signal_: signal.Signals, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop
     ) -> None:
         self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
 
@@ -132,17 +126,10 @@ async def async_start(root_path: Path) -> int:
     shutdown_event = asyncio.Event()
 
     dl_config = load_config(
-        root_path=root_path,
-        filename="config.yaml",
-        sub_config=SERVICE_NAME,
-        fill_missing_services=True,
+        root_path=root_path, filename="config.yaml", sub_config=SERVICE_NAME, fill_missing_services=True
     )
     setproctitle("data_layer_http")
-    initialize_logging(
-        service_name="data_layer_http",
-        logging_config=dl_config["logging"],
-        root_path=root_path,
-    )
+    initialize_logging(service_name="data_layer_http", logging_config=dl_config["logging"], root_path=root_path)
 
     data_layer_server = DataLayerServer(root_path, dl_config, log, shutdown_event)
     async with SignalHandlers.manage() as signal_handlers:
