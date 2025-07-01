@@ -44,7 +44,6 @@ from chia.wallet.wallet_request_types import (
     NFTGetInfo,
     NFTGetInfoResponse,
     SendTransactionMultiResponse,
-    UserFriendlyMemos,
     UserFriendlyTransactionRecord,
     WalletInfoResponse,
 )
@@ -138,7 +137,7 @@ class TestWalletRpcClient(TestRpcClient):
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=bytes32([2] * 32),
-                memos=UserFriendlyMemos([(bytes32([3] * 32), [bytes([4] * 32)])]),
+                memos={bytes32([3] * 32): [bytes([4] * 32)]},
                 valid_times=ConditionValidTimes(),
                 to_address="",
             ),

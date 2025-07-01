@@ -60,7 +60,6 @@ from chia.wallet.wallet_request_types import (
     RoyaltyAsset,
     SendTransactionResponse,
     TakeOfferResponse,
-    UserFriendlyMemos,
     UserFriendlyTransactionRecordWithMetadata,
     WalletInfoResponse,
 )
@@ -140,7 +139,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
                     trade_id=None,
                     type=uint32(t_type.value),
                     name=bytes32([2 + i] * 32),
-                    memos=UserFriendlyMemos([(bytes32([3 + i] * 32), [bytes([4 + i] * 32)])]),
+                    memos={bytes32([3 + i] * 32): [bytes([4 + i] * 32)]},
                     valid_times=ConditionValidTimes(),
                     to_address="",
                 )
