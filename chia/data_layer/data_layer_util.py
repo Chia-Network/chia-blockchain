@@ -135,7 +135,6 @@ async def _dot_dump(
     root_hash: bytes32,
 ) -> str:
     terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
     n = 8
 
@@ -149,16 +148,7 @@ async def _dot_dump(
         value = terminal_node.value.hex()
         dot_nodes.append(f"""node_{hash} [shape=box, label="{hash[:n]}\\nkey: {key}\\nvalue: {value}"];""")
 
-    for internal_node in internal_nodes:
-        hash = internal_node.hash.hex()
-        left = internal_node.left_hash.hex()
-        right = internal_node.right_hash.hex()
-        dot_nodes.append(f"""node_{hash} [label="{hash[:n]}"]""")
-        dot_connections.append(f"""node_{hash} -> node_{left} [label="L"];""")
-        dot_connections.append(f"""node_{hash} -> node_{right} [label="R"];""")
-        dot_pair_boxes.append(
-            f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
-        )
+    #TODO: implement for internal nodes. currently this prints only terminal nodes
 
     lines = [
         "digraph {",
