@@ -56,7 +56,6 @@ from chia.data_layer.data_layer_util import (
     internal_hash,
     key_hash,
     leaf_hash,
-    row_to_node,
     unspecified,
 )
 from chia.util.batches import to_batches

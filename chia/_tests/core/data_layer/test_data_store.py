@@ -29,7 +29,6 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError, TreeGenerationIn
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
-    Node,
     OperationType,
     Root,
     SerializedNode,

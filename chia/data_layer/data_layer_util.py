@@ -148,7 +148,7 @@ async def _dot_dump(
         value = terminal_node.value.hex()
         dot_nodes.append(f"""node_{hash} [shape=box, label="{hash[:n]}\\nkey: {key}\\nvalue: {value}"];""")
 
-    #TODO: implement for internal nodes. currently this prints only terminal nodes
+    # TODO: implement for internal nodes. currently this prints only terminal nodes
 
     lines = [
         "digraph {",
@@ -159,11 +159,6 @@ async def _dot_dump(
     ]
 
     return "\n".join(lines)
-
-
-def row_to_node(row: aiosqlite.Row) -> Node:
-    cls = node_type_to_class[row["node_type"]]
-    return cls.from_row(row=row)
 
 
 class Status(IntEnum):
