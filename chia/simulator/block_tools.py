@@ -1506,7 +1506,8 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            prefix_bits = calculate_prefix_bits(constants, height)
+            # TODO: todo_v2_plots support v2 plots in the plot manager
+            prefix_bits = calculate_prefix_bits(constants, height, PlotSize.make_v1(plot_info.prover.get_size()))
             if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
@@ -1515,6 +1516,7 @@ class BlockTools:
                     required_iters = calculate_iterations_quality(
                         constants,
                         quality_str,
+                        # TODO: todo_v2_plots support v2 plots in the plot manager
                         PlotSize.make_v1(plot_info.prover.get_size()),
                         difficulty,
                         signage_point,
