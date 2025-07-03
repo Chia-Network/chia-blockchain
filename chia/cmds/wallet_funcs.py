@@ -45,6 +45,13 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DIDFindLostDID,
+    DIDGetDID,
+    DIDGetInfo,
+    DIDMessageSpend,
+    DIDSetWalletName,
+    DIDTransferDID,
+    DIDUpdateMetadata,
     FungibleAsset,
     GetNotifications,
     NFTAddURI,
@@ -955,8 +962,8 @@ async def print_balances(
                 print(f"{indent}{'-Spendable:'.ljust(ljust)} {spendable_balance}")
                 print(f"{indent}{'-Type:'.ljust(ljust)} {typ.name}")
                 if typ == WalletType.DECENTRALIZED_ID:
-                    get_did_response = await wallet_client.get_did_id(wallet_id)
-                    my_did = get_did_response["my_did"]
+                    get_did_response = await wallet_client.get_did_id(DIDGetDID(wallet_id))
+                    my_did = get_did_response.my_did
                     print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
                 elif typ == WalletType.NFT:
                     my_did = (await wallet_client.get_nft_wallet_did(NFTGetWalletDID(wallet_id))).did_id
@@ -1007,7 +1014,7 @@ async def did_set_wallet_name(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
-            await wallet_client.did_set_wallet_name(wallet_id, name)
+            await wallet_client.did_set_wallet_name(DIDSetWalletName(uint32(wallet_id), name))
             print(f"Successfully set a new name for DID wallet with id {wallet_id}: {name}")
         except Exception as e:
             print(f"Failed to set DID wallet name: {e}")
@@ -1018,11 +1025,9 @@ async def get_did(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
-            response = await wallet_client.get_did_id(did_wallet_id)
-            my_did = response["my_did"]
-            coin_id = response["coin_id"]
-            print(f"{'DID:'.ljust(23)} {my_did}")
-            print(f"{'Coin ID:'.ljust(23)} {coin_id}")
+            response = await wallet_client.get_did_id(DIDGetDID(uint32(did_wallet_id)))
+            print(f"{'DID:'.ljust(23)} {response.my_did}")
+            print(f"{'Coin ID:'.ljust(23)} {response.coin_id.hex() if response.coin_id is not None else 'Unknown'}")
         except Exception as e:
             print(f"Failed to get DID: {e}")
 
@@ -1033,18 +1038,21 @@ async def get_did_info(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         did_padding_length = 23
         try:
-            response = await wallet_client.get_did_info(coin_id, latest)
-            print(f"{'DID:'.ljust(did_padding_length)} {response['did_id']}")
-            print(f"{'Coin ID:'.ljust(did_padding_length)} {response['latest_coin']}")
-            print(f"{'Inner P2 Address:'.ljust(did_padding_length)} {response['p2_address']}")
-            print(f"{'Public Key:'.ljust(did_padding_length)} {response['public_key']}")
-            print(f"{'Launcher ID:'.ljust(did_padding_length)} {response['launcher_id']}")
-            print(f"{'DID Metadata:'.ljust(did_padding_length)} {response['metadata']}")
-            print(f"{'Recovery List Hash:'.ljust(did_padding_length)} {response['recovery_list_hash']}")
-            print(f"{'Recovery Required Verifications:'.ljust(did_padding_length)} {response['num_verification']}")
-            print(f"{'Last Spend Puzzle:'.ljust(did_padding_length)} {response['full_puzzle']}")
-            print(f"{'Last Spend Solution:'.ljust(did_padding_length)} {response['solution']}")
-            print(f"{'Last Spend Hints:'.ljust(did_padding_length)} {response['hints']}")
+            response = await wallet_client.get_did_info(DIDGetInfo(coin_id, latest))
+            print(f"{'DID:'.ljust(did_padding_length)} {response.did_id}")
+            print(f"{'Coin ID:'.ljust(did_padding_length)} {response.latest_coin.hex()}")
+            print(f"{'Inner P2 Address:'.ljust(did_padding_length)} {response.p2_address}")
+            print(f"{'Public Key:'.ljust(did_padding_length)} {response.public_key.hex()}")
+            print(f"{'Launcher ID:'.ljust(did_padding_length)} {response.launcher_id.hex()}")
+            print(f"{'DID Metadata:'.ljust(did_padding_length)} {response.metadata}")
+            print(
+                f"{'Recovery List Hash:'.ljust(did_padding_length)} "
+                + (response.recovery_list_hash.hex() if response.recovery_list_hash is not None else "")
+            )
+            print(f"{'Recovery Required Verifications:'.ljust(did_padding_length)} {response.num_verification}")
+            print(f"{'Last Spend Puzzle:'.ljust(did_padding_length)} {bytes(response.full_puzzle).hex()}")
+            print(f"{'Last Spend Solution:'.ljust(did_padding_length)} {bytes(response.solution).hex()}")
+            print(f"{'Last Spend Hints:'.ljust(did_padding_length)} {[hint.hex() for hint in response.hints]}")
 
         except Exception as e:
             print(f"Failed to get DID details: {e}")
@@ -1063,12 +1071,14 @@ async def update_did_metadata(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.update_did_metadata(
-                did_wallet_id,
-                json.loads(metadata),
+                DIDUpdateMetadata(
+                    wallet_id=uint32(did_wallet_id),
+                    metadata=json.loads(metadata),
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             if push:
@@ -1095,13 +1105,12 @@ async def did_message_spend(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_message_spend(
-                did_wallet_id,
+                DIDMessageSpend(wallet_id=uint32(did_wallet_id), push=push),
                 CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
                 extra_conditions=(
                     *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
                     *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in puzzle_announcements),
                 ),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             print(f"Message Spend Bundle: {response.spend_bundle.to_json_dict()}")
@@ -1127,14 +1136,16 @@ async def transfer_did(
         try:
             target_address = target_cli_address.original_address
             response = await wallet_client.did_transfer_did(
-                did_wallet_id,
-                target_address,
-                fee,
-                with_recovery,
+                DIDTransferDID(
+                    wallet_id=uint32(did_wallet_id),
+                    inner_address=target_address,
+                    fee=fee,
+                    with_recovery_info=with_recovery,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
             if push:
@@ -1153,22 +1164,21 @@ async def find_lost_did(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     coin_id: str,
-    metadata: Optional[Any],
+    metadata: Optional[str],
     recovery_list_hash: Optional[str],
     num_verification: Optional[int],
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
             response = await wallet_client.find_lost_did(
-                coin_id,
-                recovery_list_hash,
-                metadata,
-                num_verification,
+                DIDFindLostDID(
+                    coin_id,
+                    bytes32.from_hexstr(recovery_list_hash) if recovery_list_hash is not None else None,
+                    uint16.construct_optional(num_verification),
+                    json.loads(metadata) if metadata is not None else None,
+                )
             )
-            if response["success"]:
-                print(f"Successfully found lost DID {coin_id}, latest coin ID: {response['latest_coin_id']}")
-            else:
-                print(f"Cannot find lost DID {coin_id}: {response['error']}")
+            print(f"Successfully found lost DID {coin_id}, latest coin ID: {response.latest_coin_id.hex()}")
         except Exception as e:
             print(f"Failed to find lost DID: {e}")
 
