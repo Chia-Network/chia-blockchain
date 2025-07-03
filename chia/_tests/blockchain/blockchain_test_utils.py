@@ -10,11 +10,13 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
+from chia.full_node.block_store import BlockStore
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
 
 
 async def check_block_store_invariant(bc: Blockchain):
+    assert isinstance(bc.block_store, BlockStore)
     db_wrapper = bc.block_store.db_wrapper
 
     if db_wrapper.db_version == 1:

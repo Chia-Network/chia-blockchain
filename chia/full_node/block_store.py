@@ -3,7 +3,16 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+else:
+    try:
+        from contextlib import AbstractAsyncContextManager
+    except ImportError:
+        from typing import AsyncContextManager as AbstractAsyncContextManager  # noqa: UP035
+    # simplify this once we drop 3.11 support
 
 import typing_extensions
 import zstd
@@ -39,6 +48,10 @@ class BlockStore:
     block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
     ses_challenge_cache: LRUCache[bytes32, list[SubEpochChallengeSegment]]
+
+    def start_transaction(self) -> AbstractAsyncContextManager[Any]:
+        """Provide a transaction context."""
+        return self.db_wrapper.writer()
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:
@@ -320,23 +333,30 @@ class BlockStore:
     async def get_block_records_by_hash(self, header_hashes: list[bytes32]) -> list[BlockRecord]:
         """
         Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
-        Throws an exception if the blocks are not present
+        Automatically handles batching based on database limits.
+        Throws an exception if the blocks are not present.
         """
         if len(header_hashes) == 0:
             return []
 
         all_blocks: dict[bytes32, BlockRecord] = {}
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash,block_record "
-                "FROM full_blocks "
-                f"WHERE header_hash in ({'?,' * (len(header_hashes) - 1)}?)",
-                header_hashes,
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    block_rec = BlockRecord.from_bytes(row[1])
-                    all_blocks[block_rec.header_hash] = block_rec
+        batch_size = self.db_wrapper.host_parameter_limit
 
+        # Process in batches
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            for i in range(0, len(header_hashes), batch_size):
+                batch = header_hashes[i : i + batch_size]
+                async with conn.execute(
+                    "SELECT header_hash,block_record "
+                    "FROM full_blocks "
+                    f"WHERE header_hash in ({'?, ' * (len(batch) - 1)}?)",
+                    batch,
+                ) as cursor:
+                    for row in await cursor.fetchall():
+                        block_rec = BlockRecord.from_bytes(row[1])
+                        all_blocks[bytes32(row[0])] = block_rec
+
+        # Ensure all requested hashes were found
         ret: list[BlockRecord] = []
         for hh in header_hashes:
             if hh not in all_blocks:
@@ -394,30 +414,45 @@ class BlockStore:
 
     async def get_blocks_by_hash(self, header_hashes: list[bytes32]) -> list[FullBlock]:
         """
-        Returns a list of Full Blocks blocks, ordered by the same order in which header_hashes are passed in.
-        Throws an exception if the blocks are not present
+        Returns a list of Full Blocks blocks, in the order specified by header_hashes.
+        Throws an exception if any block is not found.
         """
 
-        if len(header_hashes) == 0:
-            return []
+        results: dict[bytes32, FullBlock] = {}
+        hashes_to_fetch = []
 
-        formatted_str = (
-            f"SELECT header_hash, block from full_blocks WHERE header_hash in ({'?,' * (len(header_hashes) - 1)}?)"
-        )
-        all_blocks: dict[bytes32, FullBlock] = {}
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, header_hashes) as cursor:
-                for row in await cursor.fetchall():
-                    header_hash = bytes32(row[0])
-                    full_block: FullBlock = decompress(row[1])
-                    all_blocks[header_hash] = full_block
-                    self.block_cache.put(header_hash, full_block)
-        ret: list[FullBlock] = []
-        for hh in header_hashes:
-            if hh not in all_blocks:
-                raise ValueError(f"Header hash {hh} not in the blockchain")
-            ret.append(all_blocks[hh])
-        return ret
+        # Step 1: Check the cache for each hash
+        for block_hash in header_hashes:
+            cached_block = self.block_cache.get(block_hash)
+            if cached_block:
+                results[block_hash] = cached_block
+            else:
+                hashes_to_fetch.append(block_hash)
+
+        # Step 2: Query the database for cache misses
+        if hashes_to_fetch:
+            formatted_str = (
+                f"SELECT header_hash, block FROM full_blocks WHERE "
+                f"header_hash IN ({', '.join(['?'] * len(hashes_to_fetch))})"
+            )
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, hashes_to_fetch) as cursor:
+                    rows = await cursor.fetchall()
+
+                    # Add blocks from the database to results and update the cache
+                    for row in rows:
+                        block_hash = bytes32(row[0])
+                        db_block = decompress(row[1])
+                        results[block_hash] = db_block
+                        self.block_cache.put(block_hash, db_block)
+
+            # Step 3: Ensure all requested blocks were found
+            missing_hashes = [block_hash for block_hash in hashes_to_fetch if block_hash not in results]
+            if missing_hashes:
+                raise ValueError(f"Header hashes not found in the blockchain: {missing_hashes}")
+
+        # Step 4: Assemble results in the correct order
+        return [results[block_hash] for block_hash in header_hashes]
 
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
