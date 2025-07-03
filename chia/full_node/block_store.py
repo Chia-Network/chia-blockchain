@@ -3,9 +3,16 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+else:
+    try:
+        from contextlib import AbstractAsyncContextManager
+    except ImportError:
+        from typing import AsyncContextManager as AbstractAsyncContextManager  # noqa: UP035
+    # simplify this once we drop 3.11 support
 
 import typing_extensions
 import zstd
@@ -42,12 +49,9 @@ class BlockStore:
     db_wrapper: DBWrapper2
     ses_challenge_cache: LRUCache[bytes32, list[SubEpochChallengeSegment]]
 
-    @asynccontextmanager
-    async def start_transaction(self) -> AsyncIterator[Any]:
+    def start_transaction(self) -> AbstractAsyncContextManager[Any]:
         """Provide a transaction context."""
-
-        async with self.db_wrapper.writer() as transaction:
-            yield transaction
+        return self.db_wrapper.writer()
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:

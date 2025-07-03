@@ -1,7 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Coroutine
-from typing import Any, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Optional, Protocol
+
+if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+else:
+    try:
+        from contextlib import AbstractAsyncContextManager
+    except ImportError:
+        from typing import AsyncContextManager as AbstractAsyncContextManager  # noqa: UP035
+    # simplify this once we drop 3.11 support
+
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment
 from chia_rs.sized_bytes import bytes32
@@ -14,7 +23,7 @@ class BlockStoreProtocol(Protocol):
     This is a substitute for importing from chia.full_node.block_store directly.
     """
 
-    async def start_transaction(self) -> Coroutine[Any, None, None]:
+    def start_transaction(self) -> AbstractAsyncContextManager[Any]:
         """Context manager for a database transaction."""
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
