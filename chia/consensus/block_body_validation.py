@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
 from chia_rs import (
+    ELIGIBLE_FOR_FF,
     BlockRecord,
     ConsensusConstants,
     FullBlock,
@@ -49,6 +50,7 @@ class ForkAdd:
     timestamp: uint64
     hint: Optional[bytes]
     is_coinbase: bool
+    same_as_parent: bool
 
 
 @dataclass(frozen=True)
@@ -103,7 +105,7 @@ class ForkInfo:
             timestamp = block.foliage_transaction_block.timestamp
             coin_id = coin.name()
             assert coin_id not in self.additions_since_fork
-            self.additions_since_fork[coin_id] = ForkAdd(coin, block.height, timestamp, None, True)
+            self.additions_since_fork[coin_id] = ForkAdd(coin, block.height, timestamp, None, True, False)
 
     def include_spends(self, conds: Optional[SpendBundleConditions], block: FullBlock, header_hash: bytes32) -> None:
         self.update_fork_peak(block, header_hash)
@@ -111,10 +113,26 @@ class ForkInfo:
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             for spend in conds.spends:
-                self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), block.height)
+                spend_coin_id = bytes32(spend.coin_id)
+                spend_ph = bytes32(spend.puzzle_hash)
+                self.removals_since_fork[spend_coin_id] = ForkRem(spend_ph, block.height)
+                # We're only relying on this flag here to tells us that the
+                # coin has the same puzzle hash and amount as its parent and
+                # the amount is odd (among other things).
+                spend_same_as_parent = bool(spend.flags & ELIGIBLE_FOR_FF)
                 for puzzle_hash, amount, hint in spend.create_coin:
-                    coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                    self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, hint, False)
+                    child_ph = bytes32(puzzle_hash)
+                    child_amount = uint64(amount)
+                    child_coin = Coin(spend_coin_id, child_ph, child_amount)
+                    child_coin_id = child_coin.name()
+                    same_as_parent = (
+                        spend_same_as_parent
+                        and child_coin.puzzle_hash == spend.puzzle_hash
+                        and amount == spend.coin_amount
+                    )
+                    self.additions_since_fork[child_coin_id] = ForkAdd(
+                        child_coin, block.height, timestamp, hint, False, same_as_parent
+                    )
         self.include_reward_coins(block)
 
     def include_block(
@@ -127,10 +145,21 @@ class ForkInfo:
         self.update_fork_peak(block, header_hash)
         if block.foliage_transaction_block is not None:
             timestamp = block.foliage_transaction_block.timestamp
+            spent_coins: dict[bytes32, Coin] = {}
             for spend in removals:
-                self.removals_since_fork[bytes32(spend.name())] = ForkRem(bytes32(spend.puzzle_hash), block.height)
+                spend_id = bytes32(spend.name())
+                spent_coins[spend_id] = spend
+                self.removals_since_fork[spend_id] = ForkRem(bytes32(spend.puzzle_hash), block.height)
             for coin, hint in additions:
-                self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, hint, False)
+                same_as_parent = (
+                    coin.amount % 2 == 1
+                    and coin.parent_coin_info in spent_coins
+                    and coin.puzzle_hash == spent_coins[coin.parent_coin_info].puzzle_hash
+                    and coin.amount == spent_coins[coin.parent_coin_info].amount
+                )
+                self.additions_since_fork[coin.name()] = ForkAdd(
+                    coin, block.height, timestamp, hint, False, same_as_parent
+                )
         self.include_reward_coins(block)
 
     def rollback(self, header_hash: bytes32, height: int) -> None:

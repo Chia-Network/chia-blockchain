@@ -219,7 +219,7 @@ class SpendSim:
         coins = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                "SELECT puzzle_hash,coin_parent,amount from coin_record WHERE coinbase=0 AND spent_index==0 ",
+                "SELECT puzzle_hash,coin_parent,amount from coin_record WHERE coinbase=0 AND spent_index <= 0 ",
             )
             rows = await cursor.fetchall()
 
@@ -268,6 +268,7 @@ class SpendSim:
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
+                    spent_coins: dict[bytes32, Coin] = {}
                     spent_coins_ids = []
                     for spend in generator_bundle.coin_spends:
                         hint_dict, _ = compute_spend_hints_and_additions(spend)
@@ -277,9 +278,18 @@ class SpendSim:
                             if hint_obj.hint is not None:
                                 hints.append((coin_name, bytes(hint_obj.hint)))
                         await self.hint_store.add_hints(hints)
-                        spent_coins_ids.append(spend.coin.name())
+                        spend_id = spend.coin.name()
+                        spent_coins[spend_id] = spend.coin
+                        spent_coins_ids.append(spend_id)
                         tx_removals.append(spend.coin)
-                    tx_additions = [(addition.name(), addition) for addition in additions]
+                    for addition in additions:
+                        same_as_parent = (
+                            addition.amount % 2 == 1
+                            and addition.parent_coin_info in spent_coins
+                            and addition.puzzle_hash == spent_coins[addition.parent_coin_info].puzzle_hash
+                            and addition.amount == spent_coins[addition.parent_coin_info].amount
+                        )
+                        tx_additions.append((addition.name(), addition, same_as_parent))
         await self.coin_store.new_block(
             height=uint32(self.block_height + 1),
             timestamp=self.timestamp,
@@ -299,7 +309,7 @@ class SpendSim:
         await self.new_peak(spent_coins_ids)
 
         # return some debugging data
-        return [a for _, a in tx_additions], tx_removals
+        return [a for _, a, _ in tx_additions], tx_removals
 
     def get_height(self) -> uint32:
         return self.block_height

@@ -23,7 +23,7 @@ class CoinStoreProtocol(Protocol):
         height: uint32,
         timestamp: uint64,
         included_reward_coins: Collection[Coin],
-        tx_additions: Collection[tuple[bytes32, Coin]],
+        tx_additions: Collection[tuple[bytes32, Coin, bool]],
         tx_removals: list[bytes32],
     ) -> None:
         """
