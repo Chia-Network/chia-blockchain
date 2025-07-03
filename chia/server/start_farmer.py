@@ -71,16 +71,8 @@ def create_farmer_service(
     )
 
 
-async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml")
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
-    config[SERVICE_NAME] = service_config
-    config_pool = load_config_cli(root_path, "config.yaml", "pool")
-    config["pool"] = config_pool
-    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
-
-    service = create_farmer_service(root_path, config, config_pool, DEFAULT_CONSTANTS)
+async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
+    service = create_farmer_service(root_path, config, config["pool"], DEFAULT_CONSTANTS)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()
@@ -91,10 +83,18 @@ async def async_main(root_path: pathlib.Path) -> int:
 def main() -> int:
     root_path = resolve_root_path(override=None)
 
+    # TODO: refactor to avoid the double load
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    config[SERVICE_NAME] = service_config
+    config_pool = load_config_cli(root_path, "config.yaml", "pool")
+    config["pool"] = config_pool
+    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
+
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        return async_run(coro=async_main(root_path=root_path))
+        return async_run(coro=async_main(root_path=root_path, config=config))
 
 
 if __name__ == "__main__":
