@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import pytest
+from chia_rs import Program as SerializedProgram
 from chia_rs import SpendBundleConditions, SpendConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.generator_tools import tx_removals_and_additions
+from chia.full_node.mempool_check_conditions import get_spends_for_block, get_spends_for_block_with_conditions
+from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
+from chia.types.generator_types import BlockGenerator
 from chia.util.hash import std_hash
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
@@ -81,3 +86,24 @@ def test_tx_removals_and_additions() -> None:
 
 def test_empty_conditions() -> None:
     assert tx_removals_and_additions(None) == ([], [])
+
+
+# this is a malicious generator which should fail
+TEST_GENERATOR = BlockGenerator(
+    SerializedProgram.fromhex(
+        "ff02ffff01ff02ffff01ff04ffff04ffff04ffff01a00101010101010101010101010101010101010101010101010101010101010101ffff04ffff04ffff0101ffff02ff02ffff04ff02ffff04ff05ffff04ff0bffff04ff17ff80808080808080ffff01ff7bffff80ffff018080808080ff8080ff8080ffff04ffff01ff02ffff03ff17ffff01ff04ff05ffff04ff0bffff02ff02ffff04ff02ffff04ff05ffff04ff0bffff04ffff11ff17ffff010180ff8080808080808080ff8080ff0180ff018080ffff04ffff01ff42ff24ff8568656c6c6fffa0010101010101010101010101010101010101010101010101010101010101010180ffff04ffff01ff43ff24ff8568656c6c6fffa0010101010101010101010101010101010101010101010101010101010101010180ffff04ffff01830f4240ff0180808080"
+    ),
+    [],
+)
+
+
+def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
+    conditions = get_spends_for_block(TEST_GENERATOR, 100, test_constants)
+    assert conditions == []
+    assert "get_spends_for_block() encountered a puzzle we couldn't serialize: " in caplog.text
+
+
+def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:
+    conditions = get_spends_for_block_with_conditions(TEST_GENERATOR, 100, test_constants)
+    assert conditions == []
+    assert "get_spends_for_block_with_conditions() encountered a puzzle we couldn't serialize: " in caplog.text
