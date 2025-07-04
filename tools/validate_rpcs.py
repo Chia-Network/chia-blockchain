@@ -230,8 +230,6 @@ async def cli_async(
             if len(in_flight) >= concurrent_requests:
                 done, in_flight = await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
                 completed_requests += len(done)
-                print(completed_requests)
-
                 if completed_requests >= REQUESTS_PER_STATUS_UPDATE:
                     time_taken = time.time() - cycle_start
                     print(
