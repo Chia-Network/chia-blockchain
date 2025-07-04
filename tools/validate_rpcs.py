@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any, Optional
 
@@ -18,6 +17,7 @@ from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
 
 DEFAULT_REQUESTS_PER_BATCH: int = 25000
+REQUESTS_PER_STATUS_UPDATE: int = 3000
 
 
 def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path:
@@ -31,7 +31,7 @@ def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path
     return db_directory / f"height-to-hash{suffix}"
 
 
-async def get_height_to_hash_bytes(root_path: Path, config: dict[str, Any], peak: int) -> bytes:
+async def get_height_to_hash_bytes(root_path: Path, config: dict[str, Any]) -> bytes:
     """
     Load the height-to-hash database file into a bytearray.
     """
@@ -132,7 +132,6 @@ def cli(
     if requests_per_batch == 0:
         print("No RPC calls selected. Exiting.")
         return
-    concurrent_requests = max(1, concurrent_requests // requests_per_batch)
     if start_height is None:
         start_height = 0
     asyncio.run(
@@ -149,6 +148,36 @@ def cli(
     )
 
 
+async def node_spends_with_conditions(
+    node_client: FullNodeRpcClient,
+    block_hash: bytes32,
+    height: int,
+) -> None:
+    result = await node_client.get_block_spends_with_conditions(block_hash)
+    if result is None:
+        raise ValueError(f"[{height}] get_block_spends_with_conditions returned invalid result")
+
+
+async def node_block_spends(
+    node_client: FullNodeRpcClient,
+    block_hash: bytes32,
+    height: int,
+) -> None:
+    result = await node_client.get_block_spends(block_hash)
+    if result is None:
+        raise ValueError(f"[{height}] get_block_spends returned invalid result")
+
+
+async def node_additions_removals(
+    node_client: FullNodeRpcClient,
+    block_hash: bytes32,
+    height: int,
+) -> None:
+    additions, removals = await node_client.get_additions_and_removals(block_hash)
+    if (not additions) and (not removals):
+        raise ValueError(f"[{height}] get_additions_and_removals returned invalid result")
+
+
 async def cli_async(
     root_path: Path,
     rpc_port: Optional[int],
@@ -159,9 +188,6 @@ async def cli_async(
     start_height: int,
     end_height: Optional[int] = None,
 ) -> None:
-    blocks_per_status: int = 3000
-    last_status_height: int = 0
-
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (
         node_client,
         config,
@@ -174,62 +200,51 @@ async def cli_async(
         peak_height = blockchain_state["peak"].height
         assert peak_height is not None, "Blockchain peak height is None"
         if end_height is None:
-            end_height = blockchain_state["peak"]["height"]
+            end_height = peak_height
 
         print("Connected to Full Node")
 
-        height_to_hash_bytes: bytes = await get_height_to_hash_bytes(
-            root_path=root_path,
-            config=config,
-            peak=peak_height,
-        )
+        height_to_hash_bytes: bytes = await get_height_to_hash_bytes(root_path=root_path, config=config)
 
         print("block header hashes loaded from height-to-hash file.")
 
-        # set initial segment heights
-        start_segment: int = start_height
-        end_segment: int = start_height + concurrent_requests
+        # Set initial values for the loop
+
+        in_flight: set[asyncio.Task[None]] = set()
+        completed_requests: int = 0
         # measure time for performance measurement per segment
         cycle_start: float = time.time()
         # also measure time for the whole process
         start_time: float = cycle_start
 
-        while end_segment <= end_height:
-            # Create an initial list to hold pending tasks
-            pending_tasks: list[Coroutine[Any, Any, Any]] = []
+        for i in range(start_height, end_height + 1):
+            block_header_hash = get_block_hash_from_height(i, height_to_hash_bytes)
+            # Create tasks for each RPC call based on the flags
+            if spends_with_conditions:
+                in_flight.add(asyncio.create_task(node_spends_with_conditions(node_client, block_header_hash, i)))
+            if block_spends:
+                in_flight.add(asyncio.create_task(node_block_spends(node_client, block_header_hash, i)))
+            if additions_and_removals:
+                in_flight.add(asyncio.create_task(node_additions_removals(node_client, block_header_hash, i)))
+            # Make Status Updates.
+            if len(in_flight) >= concurrent_requests:
+                done, in_flight = await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
+                completed_requests += len(done)
+                print(completed_requests)
 
-            for i in range(start_segment, end_segment):
-                block_header_hash: bytes32 = get_block_hash_from_height(i, height_to_hash_bytes)
-                if spends_with_conditions:
-                    pending_tasks.append(node_client.get_block_spends_with_conditions(block_header_hash))
-                if block_spends:
-                    pending_tasks.append(node_client.get_block_spends(block_header_hash))
-                if additions_and_removals:
-                    pending_tasks.append(node_client.get_additions_and_removals(block_header_hash))
-            try:
-                results = await asyncio.gather(*pending_tasks)
-                for result in results:
-                    if result is None:
-                        raise ValueError("Received None from RPC call")
-            except Exception as e:
-                print(f"Error processing block range {start_segment} to {end_segment}: {e}")
-                raise e
-            # Print status every blocks_per_status blocks
-            if end_segment - last_status_height >= blocks_per_status:
-                time_taken = time.time() - cycle_start
-                time_per_block = time_taken / (end_segment - last_status_height)
-                print(
-                    f"Time taken for segment"
-                    f" {last_status_height} to {end_segment}: {time_taken:.2f} seconds\n"
-                    f"Average time per block: {time_per_block:.4f} seconds"
-                )
-                last_status_height = end_segment
-                cycle_start = time.time()
+                if completed_requests >= REQUESTS_PER_STATUS_UPDATE:
+                    time_taken = time.time() - cycle_start
+                    print(
+                        f"Processed {completed_requests} RPCs in {time_taken:.2f}s, "
+                        f"{time_taken / completed_requests:.4f}s per RPC"
+                    )
+                    completed_requests = 0
+                    cycle_start = time.time()
 
-            # reset variables for the next segment
-            pending_tasks = []  # clear pending tasks after processing
-            start_segment = end_segment
-            end_segment += concurrent_requests
+        # Wait for any remaining tasks to complete
+        if in_flight:
+            await asyncio.gather(*in_flight)
+
         print(f"Finished processing blocks from {start_height} to {end_height} (peak: {peak_height})")
         print(
             f"Time per block for the whole process: "
