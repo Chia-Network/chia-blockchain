@@ -118,7 +118,9 @@ async def test1(
         print(coins)
         assert len(coins) == 2
 
-        additions, removals = await client.get_additions_and_removals(blocks[-1].header_hash)
+        result = await client.get_additions_and_removals(blocks[-1].header_hash)
+        assert result is not None
+        additions, removals = result
         assert len(additions) >= 2 and len(removals) == 0
 
         wallet = WalletTool(full_node_api_1.full_node.constants)
