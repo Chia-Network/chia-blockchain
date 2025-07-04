@@ -173,8 +173,8 @@ async def node_additions_removals(
     block_hash: bytes32,
     height: int,
 ) -> None:
-    additions, removals = await node_client.get_additions_and_removals(block_hash)
-    if (not additions) and (not removals):
+    response = await node_client.get_additions_and_removals(block_hash)
+    if response is None:
         raise ValueError(f"[{height}] get_additions_and_removals returned invalid result")
 
 
