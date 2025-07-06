@@ -107,7 +107,6 @@ class SignedValues(Streamable):
     foliage_transaction_block_signature: G2Element
 
 
-
 @streamable
 @dataclass(frozen=True)
 class SolutionResponse(Streamable):
