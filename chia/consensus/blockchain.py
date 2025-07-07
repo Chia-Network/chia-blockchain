@@ -802,8 +802,8 @@ class Blockchain:
     async def get_ses_heights(self) -> list[uint32]:
         return await self.__height_map.get_ses_heights()
 
-    def get_ses(self, height: uint32) -> SubEpochSummary:
-        return self.__height_map.get_ses(height)
+    async def get_ses(self, height: uint32) -> SubEpochSummary:
+        return await self.__height_map.get_ses(height)
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if not self.__height_map.contains_height(height):

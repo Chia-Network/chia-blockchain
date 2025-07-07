@@ -374,7 +374,7 @@ async def test_block_ses_mismatch(
 
         # get ses list
         for sub_epoch_n, ses_height in enumerate(summary_heights):
-            summaries.append(full_node_1.full_node.blockchain.get_ses(ses_height))
+            summaries.append(await full_node_1.full_node.blockchain.get_ses(ses_height))
 
         # change summary so check would fail on sub epoch 1
         s = summaries[1]

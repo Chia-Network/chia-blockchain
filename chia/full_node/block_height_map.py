@@ -265,7 +265,7 @@ class BlockHeightMap:
                 f"height-to-hash and sub-epoch-summaries cache, to height {fork_height}",
             )
 
-    def get_ses(self, height: uint32) -> SubEpochSummary:
+    async def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
 
     async def get_ses_heights(self) -> list[uint32]:

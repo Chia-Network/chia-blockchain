@@ -98,12 +98,12 @@ class WeightProofHandler:
             self.tip = tip
             return wp
 
-    def get_sub_epoch_data(self, tip_height: uint32, summary_heights: list[uint32]) -> list[SubEpochData]:
+    async def get_sub_epoch_data(self, tip_height: uint32, summary_heights: list[uint32]) -> list[SubEpochData]:
         sub_epoch_data: list[SubEpochData] = []
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_height:
                 break
-            ses = self.blockchain.get_ses(ses_height)
+            ses = await self.blockchain.get_ses(ses_height)
             log.debug("handle sub epoch summary %s at height: %s ses %s", sub_epoch_n, ses_height, ses)
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
@@ -129,9 +129,9 @@ class WeightProofHandler:
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)
         if prev_ses_block is None:
             return None
-        sub_epoch_data = self.get_sub_epoch_data(tip_rec.height, summary_heights)
+        sub_epoch_data = await self.get_sub_epoch_data(tip_rec.height, summary_heights)
         # use second to last ses as seed
-        seed = self.get_seed_for_proof(summary_heights, tip_rec.height)
+        seed = await self.get_seed_for_proof(summary_heights, tip_rec.height)
         rng = random.Random(seed)
         weight_to_check = _get_weights_for_sampling(rng, tip_rec.weight, recent_chain)
         sample_n = 0
@@ -170,14 +170,14 @@ class WeightProofHandler:
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
-    def get_seed_for_proof(self, summary_heights: list[uint32], tip_height: uint32) -> bytes32:
+    async def get_seed_for_proof(self, summary_heights: list[uint32], tip_height: uint32) -> bytes32:
         count = 0
         ses = None
         for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
             if ses_height <= tip_height:
                 count += 1
             if count == 2:
-                ses = self.blockchain.get_ses(ses_height)
+                ses = await self.blockchain.get_ses(ses_height)
                 break
         assert ses is not None
         seed = ses.get_hash()
@@ -642,7 +642,7 @@ class WeightProofHandler:
         ses_heights = await self.blockchain.get_ses_heights()
         for idx, summary_height in enumerate(ses_heights):
             log.debug(f"check summary {idx} height {summary_height}")
-            local_ses = self.blockchain.get_ses(summary_height)
+            local_ses = await self.blockchain.get_ses(summary_height)
             if idx == len(received_summaries) - 1:
                 # end of wp summaries, local chain is longer or equal to wp chain
                 break
