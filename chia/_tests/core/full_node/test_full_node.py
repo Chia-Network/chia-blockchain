@@ -2551,11 +2551,12 @@ async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBloc
         assert records == {}
 
         records = {rec.coin.name(): rec for rec in await coin_store.get_coins_removed_at_height(block.height)}
-        for rem in removals:
-            rec = records.pop(rem.name())
+        for name, rem in removals:
+            rec = records.pop(name)
             assert rec is not None
             assert rec.spent_block_index == block.height
             assert rec.coin == rem
+            assert name == rem.name()
 
         if len(records) > 0:  # pragma: no cover
             print(f"height: {block.height} unexpected removals: {records} TX: Yes")

@@ -82,6 +82,9 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
     HARD_FORK2_HEIGHT=uint32(0xFFFFFFFA),
+    # starting at the hard fork 2 height, v1 plots will gradually be phased out,
+    # and stop working entirely after this many blocks
+    PLOT_V1_PHASE_OUT=uint32(1179648),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030

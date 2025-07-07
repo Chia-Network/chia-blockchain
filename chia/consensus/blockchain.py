@@ -267,7 +267,7 @@ class Blockchain:
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
         additions: list[tuple[Coin, Optional[bytes]]] = []
-        removals: list[Coin] = []
+        removals: list[tuple[bytes32, Coin]] = []
         if block.transactions_generator is not None:
             block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
             assert block_generator is not None

@@ -359,6 +359,8 @@ def make_test_conds(
                 [],
                 [],
                 flags,
+                execution_cost=0,
+                condition_cost=0,
             )
             for coin_id, parent_id, puzzle_hash, amount, flags, create_coin in spend_info
         ],

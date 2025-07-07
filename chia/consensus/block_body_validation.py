@@ -128,7 +128,7 @@ class ForkInfo:
     def include_block(
         self,
         additions: list[tuple[Coin, Optional[bytes]]],
-        removals: list[Coin],
+        removals: list[tuple[bytes32, Coin]],
         block: FullBlock,
         header_hash: bytes32,
     ) -> None:
@@ -136,10 +136,9 @@ class ForkInfo:
         if block.foliage_transaction_block is not None:
             timestamp = block.foliage_transaction_block.timestamp
             spent_coins: dict[bytes32, Coin] = {}
-            for spend in removals:
-                spend_id = bytes32(spend.name())
-                spent_coins[spend_id] = spend
-                self.removals_since_fork[spend_id] = ForkRem(bytes32(spend.puzzle_hash), block.height)
+            for spend_id, spend in removals:
+                spent_coins[bytes32(spend_id)] = spend
+                self.removals_since_fork[bytes32(spend_id)] = ForkRem(bytes32(spend.puzzle_hash), block.height)
             for coin, hint in additions:
                 parent = spent_coins.get(coin.parent_coin_info)
                 assert parent is not None
