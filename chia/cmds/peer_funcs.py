@@ -5,24 +5,22 @@ from typing import Any, Optional
 
 from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
+from chia.util.network import parse_host_port
 
 
 async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> None:
-    if ":" not in add_connection:
-        print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
-    else:
-        ip, port = (
-            ":".join(add_connection.split(":")[:-1]),
-            add_connection.split(":")[-1],
-        )
-        print(f"Connecting to {ip}, {port}")
+    try:
+        host, port = parse_host_port(add_connection)
+        print(f"Connecting to {host}, {port}")
         try:
-            result = await rpc_client.open_connection(ip, int(port))
+            result = await rpc_client.open_connection(host, port)
             err = result.get("error")
             if result["success"] is False or err is not None:
                 print(err)
         except Exception:
-            print(f"Failed to connect to {ip}:{port}")
+            print(f"Failed to connect to {host}:{port}")
+    except ValueError:
+        print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
 
 
 async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) -> None:
