@@ -176,13 +176,11 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_coin_records_by_hint", d)
         return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records"]]
 
-    async def get_additions_and_removals(
-        self, header_hash: bytes32
-    ) -> Optional[tuple[list[CoinRecord], list[CoinRecord]]]:
+    async def get_additions_and_removals(self, header_hash: bytes32) -> tuple[list[CoinRecord], list[CoinRecord]]:
         try:
             response = await self.fetch("get_additions_and_removals", {"header_hash": header_hash.hex()})
         except Exception:
-            return None
+            return [], []
         removals = []
         additions = []
         for coin_record in response["removals"]:
