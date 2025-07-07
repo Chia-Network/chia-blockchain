@@ -12,13 +12,13 @@ from chia_rs.sized_ints import uint16
 from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
-from chia.full_node.full_node import FullNode
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import FullNodeService
+from chia.server.aliases import SolverService
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import RpcInfo, Service, async_run
+from chia.server.start_service import Service, async_run
+from chia.solver.solver import Solver
+from chia.solver.solver_api import SolverAPI
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -30,13 +30,13 @@ from chia.util.task_timing import maybe_manage_task_instrumentation
 SERVICE_NAME = "solver"
 
 
-async def create_solver_service(
+def create_solver_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
     override_capabilities: Optional[list[tuple[uint16, str]]] = None,
-) -> FullNodeService:
+) -> SolverService:
     service_config = config[SERVICE_NAME]
 
     network_id = service_config["selected_network"]
@@ -44,14 +44,10 @@ async def create_solver_service(
     if service_config["enable_upnp"]:
         upnp_list = [service_config["port"]]
 
-    node = await FullNode.create(
-        service_config,
-        root_path=root_path,
-        consensus_constants=consensus_constants,
-    )
-    peer_api = FullNodeAPI(node)
+    node = Solver(root_path, service_config, consensus_constants)
+    peer_api = SolverAPI(node)
+    network_id = service_config["selected_network"]
 
-    rpc_info: Optional[RpcInfo[FullNodeRpcApi]] = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
 
@@ -64,7 +60,6 @@ async def create_solver_service(
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
-        # connect_peers=get_unresolved_peer_infos(service_config, NodeType.SOLVER),
         on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
@@ -84,7 +79,7 @@ async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) ->
     updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
-    service = await create_solver_service(root_path, config, updated_constants)
+    service = create_solver_service(root_path, config, updated_constants)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()

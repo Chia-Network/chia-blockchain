@@ -18,6 +18,8 @@ from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.crawler_rpc_api import CrawlerRpcApi
 from chia.server.start_service import Service
+from chia.solver.solver import Solver
+from chia.solver.solver_api import SolverAPI
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_rpc_api import TimelordRpcApi
@@ -33,3 +35,4 @@ HarvesterService = Service[Harvester, HarvesterAPI, HarvesterRpcApi]
 IntroducerService = Service[Introducer, IntroducerAPI, FullNodeRpcApi]
 TimelordService = Service[Timelord, TimelordAPI, TimelordRpcApi]
 WalletService = Service[WalletNode, WalletNodeAPI, WalletRpcApi]
+SolverService = Service[Solver, SolverAPI, FullNodeRpcApi]

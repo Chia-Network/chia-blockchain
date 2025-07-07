@@ -33,6 +33,7 @@ from chia.simulator.setup_services import (
     setup_full_node,
     setup_harvester,
     setup_introducer,
+    setup_solver,
     setup_timelord,
     setup_vdf_client,
     setup_vdf_clients,
@@ -468,6 +469,16 @@ async def setup_full_system_inner(
                     break
 
                 await asyncio.sleep(backoff)
+
+        setup_solver(
+            b_tools,
+            shared_b_tools.root_path / "harvester",
+            UnresolvedPeerInfo(self_hostname, farmer_service._server.get_port()),
+            consensus_constants,
+        )
+        # solver_service = await async_exit_stack.enter_async_context(
+
+        # )
 
         full_system = FullSystem(
             node_1=node_1,

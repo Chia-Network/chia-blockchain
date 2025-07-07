@@ -65,6 +65,7 @@ default_capabilities = {
     NodeType.INTRODUCER: _capabilities,
     NodeType.WALLET: _capabilities,
     NodeType.DATA_LAYER: _capabilities,
+    NodeType.SOLVER: [],
 }
 
 

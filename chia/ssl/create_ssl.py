@@ -24,6 +24,7 @@ _all_private_node_names: list[str] = [
     "crawler",
     "data_layer",
     "daemon",
+    "solver",
 ]
 _all_public_node_names: list[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 

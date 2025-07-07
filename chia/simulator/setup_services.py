@@ -28,6 +28,7 @@ from chia.server.aliases import (
     FullNodeService,
     HarvesterService,
     IntroducerService,
+    SolverService,
     TimelordService,
     WalletService,
 )
@@ -37,6 +38,7 @@ from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
 from chia.server.start_introducer import create_introducer_service
+from chia.server.start_solver import create_solver_service
 from chia.server.start_timelord import create_timelord_service
 from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools, test_constants
@@ -505,4 +507,28 @@ async def setup_timelord(
     )
 
     async with service.manage():
+        yield service
+
+
+@asynccontextmanager
+async def setup_solver(
+    root_path: Path,
+    consensus_constants: ConsensusConstants,
+    start_service: bool = True,
+) -> AsyncGenerator[SolverService, None]:
+    with create_lock_and_load_config(root_path / "config" / "ssl" / "ca", root_path) as config:
+        config["logging"]["log_stdout"] = True
+        config["solver"]["enable_upnp"] = True
+        config["solver"]["selected_network"] = "testnet0"
+        config["solver"]["port"] = 0
+        config["solver"]["rpc_port"] = 0
+        config["solver"]["num_threads"] = 1
+        save_config(root_path, "config.yaml", config)
+    service = create_solver_service(
+        root_path,
+        config,
+        consensus_constants,
+    )
+
+    async with service.manage(start=start_service):
         yield service

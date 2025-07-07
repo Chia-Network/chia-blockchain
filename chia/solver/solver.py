@@ -62,6 +62,7 @@ class Solver:
             self._shut_down = True
 
     def solve(self, info: SolverInfo) -> Optional[bytes]:
+        self.log.debug(f"Solve called with SolverInfo: {info}")
         return None
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
