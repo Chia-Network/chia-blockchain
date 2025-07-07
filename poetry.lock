@@ -992,14 +992,14 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "clvm"
-version = "0.9.12"
+version = "0.9.14"
 description = "[Contract Language | Chialisp] Virtual Machine"
 optional = false
 python-versions = "<4,>=3.8.1"
 groups = ["main"]
 files = [
-    {file = "clvm-0.9.12-py3-none-any.whl", hash = "sha256:fb7aec7349ca902eee52651a31a31e8f3806ff2b10ad13d5b6e39c8ae348fee4"},
-    {file = "clvm-0.9.12.tar.gz", hash = "sha256:c14c8c63ee70be05df1df5b211ff5f170033e9de9eaaffa7edc3a4fa8c03a4be"},
+    {file = "clvm-0.9.14-py3-none-any.whl", hash = "sha256:a95bb9fa9c331ced3fab934c5d04825afd0e1872bb0676777cb536d5c2bef970"},
+    {file = "clvm-0.9.14.tar.gz", hash = "sha256:4060beb0bd6f0f22cf75298503eb58aca45aa0d66f047531d382af5c22d59da7"},
 ]
 
 [package.dependencies]
@@ -3792,4 +3792,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "f5a65e71bd8961e3253e98213220d070ec9406d763221cad21d98f135e0c4022"
+content-hash = "9936bbd6113cc1ce110f021bf587194ddc2076ddabc26a4a62803f806026b710"
