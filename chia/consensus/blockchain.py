@@ -799,8 +799,8 @@ class Blockchain:
             raise ValueError(f"Height is not in blockchain: {height}")
         return self.block_record(header_hash)
 
-    def get_ses_heights(self) -> list[uint32]:
-        return self.__height_map.get_ses_heights()
+    async def get_ses_heights(self) -> list[uint32]:
+        return await self.__height_map.get_ses_heights()
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self.__height_map.get_ses(height)

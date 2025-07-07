@@ -1707,7 +1707,7 @@ class FullNodeAPI:
     async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo) -> Message:
         """Returns the start and end height of a sub-epoch for the height specified in request"""
 
-        ses_height = self.full_node.blockchain.get_ses_heights()
+        ses_height = await self.full_node.blockchain.get_ses_heights()
         start_height = request.start_height
         end_height = request.end_height
         ses_hash_heights = []

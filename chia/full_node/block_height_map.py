@@ -268,5 +268,5 @@ class BlockHeightMap:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
 
-    def get_ses_heights(self) -> list[uint32]:
+    async def get_ses_heights(self) -> list[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())

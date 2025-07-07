@@ -123,7 +123,7 @@ class WeightProofHandler:
         if recent_chain is None:
             return None
 
-        summary_heights = self.blockchain.get_ses_heights()
+        summary_heights = await self.blockchain.get_ses_heights()
         zero_hash = self.blockchain.height_to_hash(uint32(0))
         assert zero_hash is not None
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)
@@ -185,7 +185,7 @@ class WeightProofHandler:
 
     async def _get_recent_chain(self, tip_height: uint32) -> Optional[list[HeaderBlock]]:
         recent_chain: list[HeaderBlock] = []
-        ses_heights = self.blockchain.get_ses_heights()
+        ses_heights = await self.blockchain.get_ses_heights()
         min_height = 0
         count_ses = 0
         for ses_height in reversed(ses_heights):
@@ -231,7 +231,7 @@ class WeightProofHandler:
 
     async def create_prev_sub_epoch_segments(self) -> None:
         log.debug("create prev sub_epoch_segments")
-        heights = self.blockchain.get_ses_heights()
+        heights = await self.blockchain.get_ses_heights()
         if len(heights) < 3:
             return None
         count = len(heights) - 2
@@ -255,7 +255,7 @@ class WeightProofHandler:
             log.error("no peak yet")
             return None
 
-        summary_heights = self.blockchain.get_ses_heights()
+        summary_heights = await self.blockchain.get_ses_heights()
         h_hash: Optional[bytes32] = self.blockchain.height_to_hash(uint32(0))
         if h_hash is None:
             return None
@@ -564,7 +564,7 @@ class WeightProofHandler:
             curr.total_iters,
         )
 
-    def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> tuple[bool, uint32]:
+    async def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> tuple[bool, uint32]:
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
@@ -591,7 +591,7 @@ class WeightProofHandler:
         success, _ = validate_recent_blocks(self.constants, wp_recent_chain_bytes, summary_bytes)
         if not success:
             return False, uint32(0)
-        fork_point, _ = self.get_fork_point(summaries)
+        fork_point, _ = await self.get_fork_point(summaries)
         return True, fork_point
 
     async def validate_weight_proof(self, weight_proof: WeightProof) -> tuple[bool, uint32, list[SubEpochSummary]]:
@@ -607,7 +607,7 @@ class WeightProofHandler:
             log.error("weight proof failed sub epoch data validation")
             return False, uint32(0), []
 
-        fork_point, ses_fork_idx = self.get_fork_point(summaries)
+        fork_point, ses_fork_idx = await self.get_fork_point(summaries)
         # timing reference: 1 second
         # TODO: Consider implementing an async polling closer for the executor.
         with ProcessPoolExecutor(
@@ -635,11 +635,11 @@ class WeightProofHandler:
                 valid, _ = await task
         return valid, fork_point, summaries
 
-    def get_fork_point(self, received_summaries: list[SubEpochSummary]) -> tuple[uint32, int]:
+    async def get_fork_point(self, received_summaries: list[SubEpochSummary]) -> tuple[uint32, int]:
         # returns the fork height and ses index
         # iterate through sub epoch summaries to find fork point
         fork_point_index = 0
-        ses_heights = self.blockchain.get_ses_heights()
+        ses_heights = await self.blockchain.get_ses_heights()
         for idx, summary_height in enumerate(ses_heights):
             log.debug(f"check summary {idx} height {summary_height}")
             local_ses = self.blockchain.get_ses(summary_height)

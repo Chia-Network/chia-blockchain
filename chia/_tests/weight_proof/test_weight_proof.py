@@ -255,7 +255,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(bt.constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = await wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -274,7 +274,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = await wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -294,7 +294,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = await wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -313,7 +313,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = await wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -335,7 +335,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(bt.constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = await wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -355,7 +355,7 @@ class TestWeightProof:
 
         assert wp is not None
         wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, {}, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = await wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0

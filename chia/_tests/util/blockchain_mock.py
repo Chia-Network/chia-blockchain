@@ -54,7 +54,7 @@ class BlockchainMock:
 
         return self.block_record(header_hash)
 
-    def get_ses_heights(self) -> list[uint32]:
+    async def get_ses_heights(self) -> list[uint32]:
         return sorted(self._sub_epoch_summaries.keys())
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
