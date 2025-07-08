@@ -217,7 +217,7 @@ class Blockchain:
         if self._peak_height is None:
             return None
         """ Return list of FullBlocks that are peaks"""
-        peak_hash: Optional[bytes32] = self.height_to_hash(self._peak_height)
+        peak_hash: Optional[bytes32] = await self.height_to_hash(self._peak_height)
         assert peak_hash is not None  # Since we must have the peak block
         block = await self.block_store.get_full_block(peak_hash)
         assert block is not None
@@ -352,7 +352,7 @@ class Blockchain:
             if fork_info.fork_height == -1:
                 assert fork_info.peak_hash == self.constants.GENESIS_CHALLENGE
             else:
-                assert self.height_to_hash(uint32(fork_info.fork_height)) == block.prev_header_hash
+                assert await self.height_to_hash(uint32(fork_info.fork_height)) == block.prev_header_hash
         else:
             assert fork_info.peak_hash == block.prev_header_hash
 
@@ -783,8 +783,8 @@ class Blockchain:
 
         return PreValidationResult(None, required_iters, conds, uint32(0))
 
-    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
-        block_hash_from_hh = self.height_to_hash(height)
+    async def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
+        block_hash_from_hh = await self.height_to_hash(height)
         if block_hash_from_hh is None or block_hash_from_hh != header_hash:
             return False
         return True
@@ -792,9 +792,9 @@ class Blockchain:
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__block_records[header_hash]
 
-    def height_to_block_record(self, height: uint32) -> BlockRecord:
+    async def height_to_block_record(self, height: uint32) -> BlockRecord:
         # Precondition: height is in the blockchain
-        header_hash: Optional[bytes32] = self.height_to_hash(height)
+        header_hash: Optional[bytes32] = await self.height_to_hash(height)
         if header_hash is None:
             raise ValueError(f"Height is not in blockchain: {height}")
         return self.block_record(header_hash)
@@ -805,10 +805,10 @@ class Blockchain:
     async def get_ses(self, height: uint32) -> SubEpochSummary:
         return await self.__height_map.get_ses(height)
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    async def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if not self.__height_map.contains_height(height):
             return None
-        return self.__height_map.get_hash(height)
+        return await self.__height_map.get_hash(height)
 
     def contains_height(self, height: uint32) -> bool:
         return self.__height_map.contains_height(height)
@@ -877,7 +877,7 @@ class Blockchain:
     ) -> dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
-            header_hash: Optional[bytes32] = self.height_to_hash(uint32(height))
+            header_hash: Optional[bytes32] = await self.height_to_hash(uint32(height))
             if header_hash is not None:
                 hashes.append(header_hash)
 
@@ -892,7 +892,7 @@ class Blockchain:
         header_blocks: dict[bytes32, HeaderBlock] = {}
 
         for block in blocks:
-            if self.height_to_hash(block.height) != block.header_hash:
+            if await self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
             if tx_filter is False:
                 header = get_block_header(block)
@@ -934,7 +934,7 @@ class Blockchain:
         hashes: list[bytes32] = []
         assert batch_size < self.block_store.db_wrapper.host_parameter_limit
         for height in heights:
-            header_hash: Optional[bytes32] = self.height_to_hash(height)
+            header_hash: Optional[bytes32] = await self.height_to_hash(height)
             if header_hash is None:
                 raise ValueError(f"Do not have block at height {height}")
             hashes.append(header_hash)
@@ -1049,7 +1049,7 @@ class Blockchain:
         # need to find the fork point
         peak_block = await self.get_block_record_from_db(header_hash)
         assert peak_block is not None
-        if self.height_to_hash(peak_block.height) != header_hash:
+        if await self.height_to_hash(peak_block.height) != header_hash:
             peak: Optional[BlockRecord] = self.get_peak()
             assert peak is not None
             reorg_chain: dict[uint32, bytes32]

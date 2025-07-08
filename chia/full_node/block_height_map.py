@@ -117,7 +117,7 @@ class BlockHeightMap:
 
         self.__first_dirty = height + 1
 
-        if self.get_hash(height) != peak:
+        if await self.get_hash(height) != peak:
             self.__set_hash(height, peak)
 
         if row[3] is not None:
@@ -210,7 +210,7 @@ class BlockHeightMap:
                 height = entry[0]
                 if entry[2] is not None:
                     if (
-                        self.get_hash(height) == prev_hash
+                        await self.get_hash(height) == prev_hash
                         and height in self.__sub_epoch_summaries
                         and self.__sub_epoch_summaries[height] == entry[2]
                     ):
@@ -235,7 +235,7 @@ class BlockHeightMap:
         self.__counter += 1
         self.__first_dirty = min(self.__first_dirty, height)
 
-    def get_hash(self, height: uint32) -> bytes32:
+    async def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
         assert idx + 32 <= len(self.__height_to_hash)
         return bytes32(self.__height_to_hash[idx : idx + 32])

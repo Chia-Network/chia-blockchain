@@ -118,14 +118,14 @@ class AugmentedBlockchain:
             return self._underlying.block_record(header_hash)
         return self._underlying.height_to_block_record(height)
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    async def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         ret = self._height_to_hash.get(height)
         if ret is not None:
             return ret
-        return self._underlying.height_to_hash(height)
+        return await self._underlying.height_to_hash(height)
 
-    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
-        block_hash_from_hh = self.height_to_hash(height)
+    async def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
+        block_hash_from_hh = await self.height_to_hash(height)
         if block_hash_from_hh is None or block_hash_from_hh != header_hash:
             return False
         return True
