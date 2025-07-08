@@ -175,7 +175,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
         "xch": 1,
         "cat": 2,
     }
-    test_amount = 100
+    test_amount = uint64(100)
 
     cat_wallet = await mint_cat(
         wallet_environments,

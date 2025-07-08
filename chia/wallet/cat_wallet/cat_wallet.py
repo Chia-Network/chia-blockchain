@@ -4,12 +4,12 @@ import dataclasses
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
-from typing_extensions import Unpack
+from typing_extensions import Self, Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection
@@ -208,8 +208,8 @@ class CATWallet:
         limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
 
         for id, w in wallet_state_manager.wallets.items():
-            if w.type() == CATWallet.type():
-                assert isinstance(w, CATWallet)
+            if w.type() == cls.type():
+                assert isinstance(w, cls)
                 if w.get_asset_id() == limitations_program_hash_hex:
                     self.log.warning("Not creating wallet for already existing CAT wallet")
                     return w
