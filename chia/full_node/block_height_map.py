@@ -240,7 +240,7 @@ class BlockHeightMap:
         assert idx + 32 <= len(self.__height_to_hash)
         return bytes32(self.__height_to_hash[idx : idx + 32])
 
-    def contains_height(self, height: uint32) -> bool:
+    async def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)
 
     def rollback(self, fork_height: int) -> None:

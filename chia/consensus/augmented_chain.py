@@ -130,8 +130,8 @@ class AugmentedBlockchain:
             return False
         return True
 
-    def contains_height(self, height: uint32) -> bool:
-        return (height in self._height_to_hash) or self._underlying.contains_height(height)
+    async def contains_height(self, height: uint32) -> bool:
+        return (height in self._height_to_hash) or await self._underlying.contains_height(height)
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret: list[bytes32] = []

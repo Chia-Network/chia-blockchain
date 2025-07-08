@@ -97,9 +97,9 @@ class TestBlockHeightMap:
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
-            assert not height_map.contains_height(uint32(11))
+            assert not await height_map.contains_height(uint32(11))
             for height in reversed(range(10)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
 
             for height in reversed(range(10)):
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
@@ -113,7 +113,7 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(1000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
 
             for height in reversed(range(10000)):
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
@@ -128,7 +128,7 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % ses_every) == 0:
                     assert await height_map.get_ses(uint32(height)) == gen_ses(height)
@@ -152,7 +152,7 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % ses_every) == 0:
                     assert await height_map.get_ses(uint32(height)) == gen_ses(height)
@@ -185,7 +185,7 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
                     assert await height_map.get_ses(uint32(height)) == gen_ses(height)
@@ -217,7 +217,7 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(2000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
                     assert await height_map.get_ses(uint32(height)) == gen_ses(height)
@@ -237,7 +237,7 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(2000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
                     assert await height_map.get_ses(uint32(height)) == gen_ses(height)
@@ -257,7 +257,7 @@ class TestBlockHeightMap:
 
             # now make sure we have the complete chain, height 0 -> 4000
             for height in reversed(range(4000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
                 assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
                     assert await height_map.get_ses(uint32(height)) == gen_ses(height)
@@ -362,15 +362,15 @@ class TestBlockHeightMap:
             assert await height_map.get_hash(uint32(5)) == gen_block_hash(5)
 
             height_map.rollback(5)
-            assert height_map.contains_height(uint32(0))
-            assert height_map.contains_height(uint32(1))
-            assert height_map.contains_height(uint32(2))
-            assert height_map.contains_height(uint32(3))
-            assert height_map.contains_height(uint32(4))
-            assert height_map.contains_height(uint32(5))
-            assert not height_map.contains_height(uint32(6))
-            assert not height_map.contains_height(uint32(7))
-            assert not height_map.contains_height(uint32(8))
+            assert await height_map.contains_height(uint32(0))
+            assert await height_map.contains_height(uint32(1))
+            assert await height_map.contains_height(uint32(2))
+            assert await height_map.contains_height(uint32(3))
+            assert await height_map.contains_height(uint32(4))
+            assert await height_map.contains_height(uint32(5))
+            assert not await height_map.contains_height(uint32(6))
+            assert not await height_map.contains_height(uint32(7))
+            assert not await height_map.contains_height(uint32(8))
             assert await height_map.get_hash(uint32(5)) == gen_block_hash(5)
 
             assert await height_map.get_ses(uint32(0)) == gen_ses(0)
@@ -398,8 +398,8 @@ class TestBlockHeightMap:
             assert await height_map.get_hash(uint32(6)) == gen_block_hash(6)
 
             height_map.rollback(6)
-            assert height_map.contains_height(uint32(6))
-            assert not height_map.contains_height(uint32(7))
+            assert await height_map.contains_height(uint32(6))
+            assert not await height_map.contains_height(uint32(7))
 
             assert await height_map.get_hash(uint32(6)) == gen_block_hash(6)
             with pytest.raises(AssertionError) as _:

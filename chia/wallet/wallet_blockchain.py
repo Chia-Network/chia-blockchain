@@ -206,7 +206,7 @@ class WalletBlockchain:
         """
         return header_hash in self._block_records
 
-    def contains_height(self, height: uint32) -> bool:
+    async def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 
     async def height_to_hash(self, height: uint32) -> Optional[bytes32]:

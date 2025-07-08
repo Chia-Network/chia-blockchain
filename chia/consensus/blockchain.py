@@ -182,8 +182,8 @@ class Blockchain:
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
-        assert self.__height_map.contains_height(self._peak_height)
-        assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
+        assert await self.__height_map.contains_height(self._peak_height)
+        assert not await self.__height_map.contains_height(uint32(self._peak_height + 1))
 
     async def get_peak(self) -> Optional[BlockRecord]:
         """
@@ -808,12 +808,12 @@ class Blockchain:
         return await self.__height_map.get_ses(height)
 
     async def height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        if not self.__height_map.contains_height(height):
+        if not await self.__height_map.contains_height(height):
             return None
         return await self.__height_map.get_hash(height)
 
-    def contains_height(self, height: uint32) -> bool:
-        return self.__height_map.contains_height(height)
+    async def contains_height(self, height: uint32) -> bool:
+        return await self.__height_map.contains_height(height)
 
     def get_peak_height(self) -> Optional[uint32]:
         return self._peak_height

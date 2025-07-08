@@ -28,14 +28,14 @@ async def _get_blocks_at_height(
         max_num_blocks: max number of blocks to fetch (although less might be fetched)
 
     """
-    if blocks.contains_height(prev_b.height):
+    if await blocks.contains_height(prev_b.height):
         header_hash = await blocks.height_to_hash(prev_b.height)
         if header_hash == prev_b.header_hash:
             # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain. We can directly
             # use the height_to_block_record method
             block_list: list[BlockRecord] = []
             for h in range(target_height, target_height + max_num_blocks):
-                assert blocks.contains_height(uint32(h))
+                assert await blocks.contains_height(uint32(h))
                 block_list.append(await blocks.height_to_block_record(uint32(h)))
             return block_list
 
