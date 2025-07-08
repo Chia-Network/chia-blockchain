@@ -320,7 +320,8 @@ class FullNode:
                     f"time taken: {int(time_taken)}s"
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                    pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
+                    tx_peak = await self.blockchain.get_tx_peak()
+                    pending_tx = await self.mempool_manager.new_peak(tx_peak, None)
                     assert len(pending_tx.items) == 0  # no pending transactions when starting up
 
                     full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
@@ -637,7 +638,7 @@ class FullNode:
                         prev_b = await self.blockchain.get_block_record_from_db(response.blocks[0].prev_header_hash)
                         assert prev_b is not None
                     new_slot = len(response.blocks[0].finished_sub_slots) > 0
-                    ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                    ssi, diff = await get_next_sub_slot_iters_and_difficulty(
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
@@ -840,8 +841,9 @@ class FullNode:
             peak_block = await self.blockchain.get_full_peak()
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
-            difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
-            ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+            ssi_and_difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)
+            difficulty = ssi_and_difficulty[1]
+            ses: Optional[SubEpochSummary] = await next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
                 peak.required_iters,
@@ -1632,7 +1634,7 @@ class FullNode:
             if len(block.finished_sub_slots) > 0:
                 cc_sub_slot = block.finished_sub_slots[0].challenge_chain
                 if cc_sub_slot.new_sub_slot_iters is not None or cc_sub_slot.new_difficulty is not None:
-                    expected_sub_slot_iters, expected_difficulty = get_next_sub_slot_iters_and_difficulty(
+                    expected_sub_slot_iters, expected_difficulty = await get_next_sub_slot_iters_and_difficulty(
                         self.constants, True, block_record, blockchain
                     )
                     assert cc_sub_slot.new_sub_slot_iters is not None
@@ -1810,14 +1812,14 @@ class FullNode:
             # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
             assert ip_sub_slot is not None
             if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():
-                sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(
+                sub_slot_iters, difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(
                     peak.header_hash, True
                 )
         else:
             difficulty = self.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
 
-        tx_peak = self.blockchain.get_tx_peak()
+        tx_peak = await self.blockchain.get_tx_peak()
         # Notify farmers of the new signage point
         broadcast_farmer = farmer_protocol.NewSignagePoint(
             request.challenge_chain_vdf.challenge,
@@ -1849,7 +1851,9 @@ class FullNode:
         """
 
         record = state_change_summary.peak
-        sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(record.header_hash, False)
+        sub_slot_iters, difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(
+            record.header_hash, False
+        )
 
         self.log.info(
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
@@ -1935,7 +1939,8 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         spent_coins: list[bytes32] = [coin_id for coin_id, _ in state_change_summary.removals]
-        mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
+        tx_peak = await self.blockchain.get_tx_peak()
+        mempool_new_peak_result = await self.mempool_manager.new_peak(tx_peak, spent_coins)
 
         return PeakPostProcessingResult(
             mempool_new_peak_result.items,
@@ -2137,7 +2142,7 @@ class FullNode:
                     curr = self.blockchain.block_record(curr.prev_hash)
                 prev_ses_block = curr
             new_slot = len(block.finished_sub_slots) > 0
-            ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
+            ssi, diff = await get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
             future = await pre_validate_block(
                 self.blockchain.constants,
                 AugmentedBlockchain(self.blockchain),
@@ -2482,7 +2487,7 @@ class FullNode:
                 f"{percent_full_str}"
             )
 
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = await get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(block.finished_sub_slots) > 0,
             prev_b,
@@ -2602,7 +2607,7 @@ class FullNode:
         if finished_sub_slots is None:
             return None
 
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = await get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(finished_sub_slots) > 0,
             prev_b,
@@ -2685,7 +2690,7 @@ class FullNode:
 
             peak = await self.blockchain.get_peak()
             if peak is not None and peak.height > 2:
-                next_sub_slot_iters, next_difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(
+                next_sub_slot_iters, next_difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(
                     peak.header_hash, True
                 )
             else:
@@ -2724,7 +2729,7 @@ class FullNode:
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
-                tx_peak = self.blockchain.get_tx_peak()
+                tx_peak = await self.blockchain.get_tx_peak()
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
                     end_of_slot_bundle.challenge_chain.get_hash(),

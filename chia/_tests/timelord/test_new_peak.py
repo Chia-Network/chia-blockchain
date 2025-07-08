@@ -40,7 +40,7 @@ class TestNewPeak:
                     await _validate_and_add_block(b2, block)
                     await full_node.add_block(block)
 
-                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                peak = await timelord_peak_from_block(b1, default_1000_blocks[-1])
                 assert peak is not None
                 assert timelord_api.timelord.new_peak is None
                 await timelord_api.new_peak_timelord(peak)
@@ -54,7 +54,7 @@ class TestNewPeak:
                 await _validate_and_add_block(b1, blocks[-1])
                 await _validate_and_add_block(b2, blocks[-1])
 
-                await timelord_api.new_peak_timelord(timelord_peak_from_block(b1, blocks[-1]))
+                await timelord_api.new_peak_timelord(await timelord_peak_from_block(b1, blocks[-1]))
                 await full_node.add_block(blocks[-1])
                 await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
                 assert timelord_api.timelord.last_state.peak is not None
@@ -62,15 +62,15 @@ class TestNewPeak:
                     timelord_api.timelord.last_state.peak.reward_chain_block.get_hash()
                     == blocks[-1].reward_chain_block.get_hash()
                 )
-                fn_peak = full_node.blockchain.get_peak()
+                fn_peak = await full_node.blockchain.get_peak()
                 assert fn_peak is not None and fn_peak.header_hash == blocks[-1].header_hash
 
                 blocks_1 = bt.get_consecutive_blocks(2, blocks)
                 await _validate_and_add_block(b1, blocks_1[-2])
                 await _validate_and_add_block(b1, blocks_1[-1])
-                await timelord_api.new_peak_timelord(timelord_peak_from_block(b1, blocks_1[-2]))
+                await timelord_api.new_peak_timelord(await timelord_peak_from_block(b1, blocks_1[-2]))
                 await full_node.add_block(blocks_1[-2])
-                await timelord_api.new_peak_timelord(timelord_peak_from_block(b1, blocks_1[-1]))
+                await timelord_api.new_peak_timelord(await timelord_peak_from_block(b1, blocks_1[-1]))
                 await full_node.add_block(blocks_1[-1])
                 await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
                 assert timelord_api.timelord.last_state.peak is not None
@@ -78,18 +78,18 @@ class TestNewPeak:
                     timelord_api.timelord.last_state.peak.reward_chain_block.get_hash()
                     == blocks_1[-1].reward_chain_block.get_hash()
                 )
-                fn_peak = full_node.blockchain.get_peak()
+                fn_peak = await full_node.blockchain.get_peak()
                 assert fn_peak is not None and fn_peak.header_hash == blocks_1[-1].header_hash
 
                 # new unknown peak, weight less then curr peak
                 blocks_2 = bt.get_consecutive_blocks(1, blocks)
                 await _validate_and_add_block(b2, blocks_2[-1])
-                await timelord_api.new_peak_timelord(timelord_peak_from_block(b2, blocks_2[-1]))
+                await timelord_api.new_peak_timelord(await timelord_peak_from_block(b2, blocks_2[-1]))
                 await full_node.add_block(blocks_2[-1])
                 await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
                 assert timelord_api.timelord.last_state.last_weight == blocks_1[-1].weight
                 assert timelord_api.timelord.last_state.total_iters == blocks_1[-1].reward_chain_block.total_iters
-                fn_peak = full_node.blockchain.get_peak()
+                fn_peak = await full_node.blockchain.get_peak()
                 assert fn_peak is not None and fn_peak.header_hash == blocks_1[-1].header_hash
 
     @pytest.mark.anyio
@@ -101,7 +101,7 @@ class TestNewPeak:
             for block in default_1000_blocks:
                 await _validate_and_add_block(b1, block)
 
-            peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+            peak = await timelord_peak_from_block(b1, default_1000_blocks[-1])
             assert peak is not None
             assert timelord_api.timelord.new_peak is None
             await timelord_api.new_peak_timelord(peak)
@@ -128,7 +128,7 @@ class TestNewPeak:
             await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
             assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
-            new_peak = timelord_peak_from_block(b1, block_2)
+            new_peak = await timelord_peak_from_block(b1, block_2)
             assert timelord_unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters
             await timelord_api.new_peak_timelord(new_peak)
 
@@ -156,7 +156,7 @@ class TestNewPeak:
                     await _validate_and_add_block(b2, block)
                     await full_node.add_block(block)
 
-                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                peak = await timelord_peak_from_block(b1, default_1000_blocks[-1])
                 assert peak is not None
                 assert timelord_api.timelord.new_peak is None
                 await timelord_api.new_peak_timelord(peak)
@@ -194,7 +194,7 @@ class TestNewPeak:
                 )
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
                 assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
-                new_peak = timelord_peak_from_block(b2, block_2)
+                new_peak = await timelord_peak_from_block(b2, block_2)
 
                 # timelord knows unfinished block_1 that has lower iterations,
                 # add block_2 peak and make sure we skip it and prefer to finish block_1
@@ -257,7 +257,7 @@ class TestNewPeak:
                     await _validate_and_add_block(b1, block)
                     await _validate_and_add_block(b2, block)
 
-                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                peak = await timelord_peak_from_block(b1, default_1000_blocks[-1])
                 assert peak is not None
                 assert timelord_api.timelord.new_peak is None
                 await timelord_api.new_peak_timelord(peak)
@@ -303,7 +303,7 @@ class TestNewPeak:
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
                 assert timelord_api.timelord.overflow_blocks[-1].get_hash() == timelord_unf_block.get_hash()
-                new_peak = timelord_peak_from_block(b2, block_2)
+                new_peak = await timelord_peak_from_block(b2, block_2)
                 assert timelord_unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters
                 assert block_1.reward_chain_block.get_hash() != new_peak.reward_chain_block.get_hash()
                 await timelord_api.new_peak_timelord(new_peak)
@@ -332,7 +332,7 @@ class TestNewPeak:
                     await _validate_and_add_block(b2, block)
                     await full_node.add_block(block)
 
-                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                peak = await timelord_peak_from_block(b1, default_1000_blocks[-1])
                 assert peak is not None
                 assert timelord_api.timelord.new_peak is None
                 await timelord_api.new_peak_timelord(peak)
@@ -355,7 +355,7 @@ class TestNewPeak:
                 await _validate_and_add_block(b1, block_1)
                 await _validate_and_add_block(b2, block_2)
                 await full_node.add_block(block_2)
-                fn_peak = full_node.blockchain.get_peak()
+                fn_peak = await full_node.blockchain.get_peak()
                 assert fn_peak is not None and fn_peak.header_hash == block_2.header_hash
 
                 block_record = b2.block_record(block_2.header_hash)
@@ -372,7 +372,7 @@ class TestNewPeak:
                 # add unfinished and make sure we cache it
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
                 assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
-                new_peak = timelord_peak_from_block(b1, block_1)
+                new_peak = await timelord_peak_from_block(b1, block_1)
                 assert timelord_unf_block.reward_chain_block.total_iters >= new_peak.reward_chain_block.total_iters
                 await timelord_api.new_peak_timelord(new_peak)
                 await full_node.add_block(block_1)
@@ -384,7 +384,7 @@ class TestNewPeak:
                     == new_peak.reward_chain_block.get_hash()
                 )
 
-                fn_peak = full_node.blockchain.get_peak()
+                fn_peak = await full_node.blockchain.get_peak()
                 assert fn_peak is not None and fn_peak.header_hash == block_1.header_hash
 
     @pytest.mark.anyio
@@ -404,7 +404,7 @@ class TestNewPeak:
                     await _validate_and_add_block(b2, block)
                     await full_node.add_block(block)
 
-                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                peak = await timelord_peak_from_block(b1, default_1000_blocks[-1])
                 assert peak is not None
                 assert timelord_api.timelord.new_peak is None
                 await timelord_api.new_peak_timelord(peak)
@@ -425,7 +425,7 @@ class TestNewPeak:
                 assert block_1.total_iters > default_1000_blocks[-1].total_iters
                 await full_node.add_block(block_2)
                 await _validate_and_add_block(b1, block_2)
-                peak_tl = timelord_peak_from_block(b1, block_2)
+                peak_tl = await timelord_peak_from_block(b1, block_2)
                 peak = await full_node.blockchain.get_full_peak()
                 assert peak is not None
                 assert timelord_api.timelord.new_peak is None
@@ -437,7 +437,7 @@ class TestNewPeak:
 
                 await full_node.add_block(block_1)
                 await _validate_and_add_block(b1, block_1)
-                peak = timelord_peak_from_block(b1, block_1)
+                peak = await timelord_peak_from_block(b1, block_1)
                 assert peak is not None
                 await timelord_api.new_peak_timelord(peak)
                 peak = await full_node.blockchain.get_full_peak()
@@ -470,7 +470,7 @@ class TestNewPeak:
             for block in blocks:
                 await _validate_and_add_block(b1, block)
 
-            peak = timelord_peak_from_block(b1, blocks[-1])
+            peak = await timelord_peak_from_block(b1, blocks[-1])
             assert peak is not None and timelord_api.timelord.new_peak is None
             await timelord_api.new_peak_timelord(peak)
             assert timelord_api.timelord.new_peak is not None
@@ -537,7 +537,7 @@ class TestNewPeak:
                 == timelord_unf_block.reward_chain_block.get_hash()
             )
 
-            new_peak = timelord_peak_from_block(b1, block_1)
+            new_peak = await timelord_peak_from_block(b1, block_1)
             assert timelord_unf_block.reward_chain_block.total_iters == new_peak.reward_chain_block.total_iters
             await timelord_api.new_peak_timelord(new_peak)
             await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
@@ -574,8 +574,8 @@ async def get_rc_prev(blockchain: Blockchain, block: FullBlock) -> bytes32:
     return rc_prev
 
 
-def get_recent_reward_challenges(blockchain: Blockchain) -> list[tuple[bytes32, uint128]]:
-    peak = blockchain.get_peak()
+async def get_recent_reward_challenges(blockchain: Blockchain) -> list[tuple[bytes32, uint128]]:
+    peak = await blockchain.get_peak()
     if peak is None:
         return []
     recent_rc: list[tuple[bytes32, uint128]] = []
@@ -596,13 +596,13 @@ def get_recent_reward_challenges(blockchain: Blockchain) -> list[tuple[bytes32, 
     return list(reversed(recent_rc))
 
 
-def timelord_peak_from_block(
+async def timelord_peak_from_block(
     blockchain: Blockchain,
     block: FullBlock,
 ) -> timelord_protocol.NewPeakTimelord:
     peak = blockchain.block_record(block.header_hash)
-    _, difficulty = get_next_sub_slot_iters_and_difficulty(blockchain.constants, False, peak, blockchain)
-    ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+    _, difficulty = await get_next_sub_slot_iters_and_difficulty(blockchain.constants, False, peak, blockchain)
+    ses: Optional[SubEpochSummary] = await next_sub_epoch_summary(
         blockchain.constants, blockchain, peak.required_iters, block, True
     )
 
@@ -629,7 +629,7 @@ def timelord_peak_from_block(
         peak.deficit,
         peak.sub_slot_iters,
         ses,
-        get_recent_reward_challenges(blockchain),
+        await get_recent_reward_challenges(blockchain),
         last_csb_or_eos,
         passed_ses_height_but_not_yet_included,
     )

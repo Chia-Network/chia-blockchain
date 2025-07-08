@@ -124,7 +124,7 @@ class WeightProofHandler:
             return None
 
         summary_heights = await self.blockchain.get_ses_heights()
-        zero_hash = self.blockchain.height_to_hash(uint32(0))
+        zero_hash = await self.blockchain.height_to_hash(uint32(0))
         assert zero_hash is not None
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)
         if prev_ses_block is None:
@@ -204,7 +204,7 @@ class WeightProofHandler:
             if curr_height == 0:
                 break
             # add to needed reward chain recent blocks
-            header_hash = self.blockchain.height_to_hash(curr_height)
+            header_hash = await self.blockchain.height_to_hash(curr_height)
             assert header_hash is not None
             header_block = headers[header_hash]
             block_rec = blocks[header_block.header_hash]
@@ -217,7 +217,7 @@ class WeightProofHandler:
             curr_height = uint32(curr_height - 1)
             blocks_n += 1
 
-        header_hash = self.blockchain.height_to_hash(curr_height)
+        header_hash = await self.blockchain.height_to_hash(curr_height)
         assert header_hash is not None
         header_block = headers[header_hash]
         recent_chain.insert(0, header_block)
@@ -235,8 +235,8 @@ class WeightProofHandler:
         if len(heights) < 3:
             return None
         count = len(heights) - 2
-        ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
-        prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
+        ses_sub_block = await self.blockchain.height_to_block_record(heights[-2])
+        prev_ses_sub_block = await self.blockchain.height_to_block_record(heights[-3])
         assert prev_ses_sub_block.sub_epoch_summary_included is not None
         segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
         assert segments is not None
@@ -256,7 +256,7 @@ class WeightProofHandler:
             return None
 
         summary_heights = await self.blockchain.get_ses_heights()
-        h_hash: Optional[bytes32] = self.blockchain.height_to_hash(uint32(0))
+        h_hash: Optional[bytes32] = await self.blockchain.height_to_hash(uint32(0))
         if h_hash is None:
             return None
         prev_ses_block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(h_hash)
@@ -321,7 +321,7 @@ class WeightProofHandler:
                 first = False
             else:
                 height = uint32(height + 1)
-            header_hash = self.blockchain.height_to_hash(height)
+            header_hash = await self.blockchain.height_to_hash(height)
             assert header_hash is not None
             curr = header_blocks[header_hash]
             if curr is None:
@@ -342,7 +342,7 @@ class WeightProofHandler:
             if end - curr_rec.height == batch_size - 1:
                 blocks = await self.blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
                 end = curr_rec.height
-            header_hash = self.blockchain.height_to_hash(uint32(curr_rec.height - 1))
+            header_hash = await self.blockchain.height_to_hash(uint32(curr_rec.height - 1))
             assert header_hash is not None
             curr_rec = blocks[header_hash]
         return curr_rec.height
@@ -457,7 +457,7 @@ class WeightProofHandler:
                 curr.total_iters,
             )
             tmp_sub_slots_data.append(ssd)
-            header_hash = self.blockchain.height_to_hash(uint32(curr.height + 1))
+            header_hash = await self.blockchain.height_to_hash(uint32(curr.height + 1))
             assert header_hash is not None
             curr = header_blocks[header_hash]
 
@@ -488,7 +488,7 @@ class WeightProofHandler:
     ) -> tuple[Optional[list[SubSlotData]], uint32]:
         # gets all vdfs first sub slot after challenge block to last sub slot
         log.debug(f"slot end vdf start height {start_height}")
-        header_hash = self.blockchain.height_to_hash(start_height)
+        header_hash = await self.blockchain.height_to_hash(start_height)
         assert header_hash is not None
         curr = header_blocks[header_hash]
         curr_header_hash = curr.header_hash
@@ -508,7 +508,7 @@ class WeightProofHandler:
                     sub_slots_data.append(handle_end_of_slot(sub_slot, eos_vdf_iters))
                 tmp_sub_slots_data = []
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
-            header_hash = self.blockchain.height_to_hash(uint32(curr.height + 1))
+            header_hash = await self.blockchain.height_to_hash(uint32(curr.height + 1))
             assert header_hash is not None
             curr = header_blocks[header_hash]
             curr_header_hash = curr.header_hash

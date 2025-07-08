@@ -191,7 +191,7 @@ def can_finish_sub_and_full_epoch(
     return True, height_can_be_first_in_epoch(constants, uint32(height + 1))
 
 
-def _get_next_sub_slot_iters(
+async def _get_next_sub_slot_iters(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
@@ -236,7 +236,9 @@ def _get_next_sub_slot_iters(
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
 
-    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = await _get_second_to_last_transaction_block_in_previous_epoch(
+        constants, blocks, prev_b
+    )
 
     # This gets the last transaction block before this block's signage point. Assuming the block at height height
     # is the last block infused in the epoch: If this block ends up being a
@@ -269,7 +271,7 @@ def _get_next_sub_slot_iters(
     return new_ssi
 
 
-def _get_next_difficulty(
+async def _get_next_difficulty(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
@@ -315,7 +317,9 @@ def _get_next_difficulty(
         if not new_slot or not can_finish_epoch:
             return current_difficulty
 
-    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = await _get_second_to_last_transaction_block_in_previous_epoch(
+        constants, blocks, prev_b
+    )
 
     # This gets the last transaction block before this block's signage point. Assuming the block at height height
     # is the last block infused in the epoch: If this block ends up being a
@@ -352,7 +356,7 @@ def _get_next_difficulty(
     return uint64(new_difficulty)
 
 
-def get_next_sub_slot_iters_and_difficulty(
+async def get_next_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     is_first_in_sub_slot: bool,
     prev_b: Optional[BlockRecord],
@@ -383,7 +387,7 @@ def get_next_sub_slot_iters_and_difficulty(
         return prev_b.sub_slot_iters, prev_difficulty
 
     sp_total_iters = prev_b.sp_total_iters(constants)
-    difficulty: uint64 = _get_next_difficulty(
+    difficulty: uint64 = await _get_next_difficulty(
         constants,
         blocks,
         prev_b.prev_hash,
@@ -395,7 +399,7 @@ def get_next_sub_slot_iters_and_difficulty(
         sp_total_iters,
     )
 
-    sub_slot_iters: uint64 = _get_next_sub_slot_iters(
+    sub_slot_iters: uint64 = await _get_next_sub_slot_iters(
         constants,
         blocks,
         prev_b.prev_hash,

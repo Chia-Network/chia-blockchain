@@ -94,9 +94,9 @@ class WalletBlockchain:
             await self.clean_block_records()
 
     async def add_block(self, block: HeaderBlock) -> tuple[AddBlockResult, Optional[Err]]:
-        if self.contains_block(block.header_hash):
+        if await self.contains_block(block.header_hash, block.height):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None
-        if not self.contains_block(block.prev_header_hash) and block.height > 0:
+        if not await self.contains_block(block.prev_header_hash, uint32(block.height - 1)) and block.height > 0:
             return AddBlockResult.DISCONNECTED_BLOCK, None
         if (
             len(block.finished_sub_slots) > 0
@@ -188,10 +188,18 @@ class WalletBlockchain:
             return uint32(0)
         return h
 
+    async def get_peak(self) -> Optional[BlockRecord]:
+        """
+        Return the peak block record of the wallet blockchain
+        """
+        if self._peak is None:
+            return None
+        return self._block_records.get(self._peak.header_hash)
+
     def get_latest_timestamp(self) -> uint64:
         return self._latest_timestamp
 
-    def contains_block(self, header_hash: bytes32, height: Optional[uint32] = None) -> bool:
+    async def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         """
         True if we have already added this block to the chain. This may return false for orphan blocks
         that we have added but no longer keep in memory.
@@ -201,15 +209,16 @@ class WalletBlockchain:
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 
-    def height_to_hash(self, height: uint32) -> bytes32:
-        return self._height_to_hash[height]
+    async def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+        return self._height_to_hash.get(height)
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records.get(header_hash)
 
-    def height_to_block_record(self, height: uint32) -> BlockRecord:
-        header_hash: Optional[bytes32] = self.height_to_hash(height)
-        assert header_hash is not None
+    async def height_to_block_record(self, height: uint32) -> BlockRecord:
+        header_hash: Optional[bytes32] = await self.height_to_hash(height)
+        if header_hash is None:
+            raise ValueError(f"Height {height} not found in wallet blockchain")
         return self._block_records[header_hash]
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:

@@ -982,7 +982,7 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            tx_peak = self.full_node.blockchain.get_tx_peak()
+            tx_peak = await self.full_node.blockchain.get_tx_peak()
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants,
                 quality_string,

@@ -193,7 +193,7 @@ class Blockchain:
             return None
         return await self.height_to_block_record(self._peak_height)
 
-    def get_tx_peak(self) -> Optional[BlockRecord]:
+    async def get_tx_peak(self) -> Optional[BlockRecord]:
         """
         Return the most recent transaction block. i.e. closest to the peak of the blockchain
         Requires the blockchain to be initialized and there to be a peak set
@@ -202,14 +202,14 @@ class Blockchain:
         if self._peak_height is None:
             return None
         tx_height = self._peak_height
-        tx_peak = self.height_to_block_record(tx_height)
+        tx_peak = await self.height_to_block_record(tx_height)
         while not tx_peak.is_transaction_block:
             # it seems BlockTools only produce chains where the first block is a
             # transaction block, which makes it hard to test this case
             if tx_height == 0:  # pragma: no cover
                 return None
             tx_height = uint32(tx_height - 1)
-            tx_peak = self.height_to_block_record(tx_height)
+            tx_peak = await self.height_to_block_record(tx_height)
 
         return tx_peak
 
@@ -610,13 +610,15 @@ class Blockchain:
             [fork_add.coin for fork_add in fork_info.additions_since_fork.values() if fork_add.is_coinbase],
         )
 
-    def get_next_sub_slot_iters_and_difficulty(self, header_hash: bytes32, new_slot: bool) -> tuple[uint64, uint64]:
+    async def get_next_sub_slot_iters_and_difficulty(
+        self, header_hash: bytes32, new_slot: bool
+    ) -> tuple[uint64, uint64]:
         curr = self.try_block_record(header_hash)
         assert curr is not None
         if curr.height <= 2:
             return self.constants.SUB_SLOT_ITERS_STARTING, self.constants.DIFFICULTY_STARTING
 
-        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)
+        return await get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)
 
     async def get_sp_and_ip_sub_slots(
         self, header_hash: bytes32
