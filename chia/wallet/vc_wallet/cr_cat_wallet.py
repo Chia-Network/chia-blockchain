@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
-from typing_extensions import Unpack
+from typing_extensions import Self, Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -90,18 +90,19 @@ class CRCATWallet(CATWallet):
     ) -> CATWallet:  # pragma: no cover
         raise NotImplementedError("create_new_cat_wallet is a legacy method and is not available on CR-CAT wallets")
 
-    @staticmethod
+    @classmethod
     async def get_or_create_wallet_for_cat(
+        cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
         authorized_providers: Optional[list[bytes32]] = None,
         proofs_checker: Optional[ProofsChecker] = None,
-    ) -> CRCATWallet:
+    ) -> Self:
         if authorized_providers is None or proofs_checker is None:  # pragma: no cover
             raise ValueError("get_or_create_wallet_for_cat was call on CRCATWallet without proper arguments")
-        self = CRCATWallet()
+        self = cls()
         self.standard_wallet = wallet
         if name is None:
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
@@ -110,8 +111,8 @@ class CRCATWallet(CATWallet):
         tail_hash = bytes32.from_hexstr(limitations_program_hash_hex)
 
         for id, w in wallet_state_manager.wallets.items():
-            if w.type() == CRCATWallet.type():
-                assert isinstance(w, CRCATWallet)
+            if w.type() == cls.type():
+                assert isinstance(w, cls)
                 if w.get_asset_id() == limitations_program_hash_hex:
                     self.log.warning("Not creating wallet for already existing CR-CAT wallet")
                     return w
