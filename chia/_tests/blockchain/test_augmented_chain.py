@@ -45,7 +45,7 @@ class NullBlockchain:
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         raise ValueError("Height is not in blockchain")
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    async def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         return self.heights.get(height)
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
@@ -122,21 +122,21 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
     for i in range(5):
         assert abc.block_record(blocks[i].header_hash) == block_records[i]
         assert abc.try_block_record(blocks[i].header_hash) == block_records[i]
-        assert abc.height_to_hash(uint32(i)) == blocks[i].header_hash
+        assert await abc.height_to_hash(uint32(i)) == blocks[i].header_hash
         assert await abc.prev_block_hash([blocks[i].header_hash]) == [blocks[i].prev_header_hash]
         assert abc.try_block_record(blocks[i].header_hash) is not None
         assert await abc.get_block_record_from_db(blocks[i].header_hash) == block_records[i]
         assert abc.contains_height(uint32(i))
 
     for i in range(5, 10):
-        assert abc.height_to_hash(uint32(i)) is None
+        assert await abc.height_to_hash(uint32(i)) is None
         assert abc.try_block_record(blocks[i].header_hash) is None
         assert not await abc.get_block_record_from_db(blocks[i].header_hash)
         assert not abc.contains_height(uint32(i))
 
-    assert abc.height_to_hash(uint32(5)) is None
+    assert await abc.height_to_hash(uint32(5)) is None
     null.heights = {uint32(5): blocks[5].header_hash}
-    assert abc.height_to_hash(uint32(5)) == blocks[5].header_hash
+    assert await abc.height_to_hash(uint32(5)) == blocks[5].header_hash
 
     # if we add blocks to cache that are already augmented into the chain, the
     # augmented blocks should be removed
@@ -166,12 +166,12 @@ async def test_augmented_chain_contains_block(default_10000_blocks: list[FullBlo
 
             for block in blocks:
                 # check underlying contains block but augmented does not
-                assert abc.contains_block(block.header_hash, block.height) is True
+                assert await abc.contains_block(block.header_hash, block.height) is True
                 assert block.height not in abc._height_to_hash
 
             for block in new_blocks:
                 # check augmented contains block but augmented does not
-                assert abc.contains_block(block.header_hash, block.height) is True
+                assert await abc.contains_block(block.header_hash, block.height) is True
                 assert not abc._underlying.contains_height(block.height)
 
             for block in new_blocks:
@@ -179,7 +179,7 @@ async def test_augmented_chain_contains_block(default_10000_blocks: list[FullBlo
 
             for block in new_blocks:
                 # check underlying contains block
-                assert abc._underlying.height_to_hash(block.height) == block.header_hash
+                assert await abc._underlying.height_to_hash(block.height) == block.header_hash
                 # check augmented contains block
                 assert abc._height_to_hash[block.height] == block.header_hash
 
@@ -188,6 +188,6 @@ async def test_augmented_chain_contains_block(default_10000_blocks: list[FullBlo
             # check blocks removed from augmented
             for block in new_blocks:
                 # check underlying contains block
-                assert abc._underlying.height_to_hash(block.height) == block.header_hash
+                assert await abc._underlying.height_to_hash(block.height) == block.header_hash
                 # check augmented contains block
                 assert block.height not in abc._height_to_hash

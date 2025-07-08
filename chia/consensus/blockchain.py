@@ -185,13 +185,13 @@ class Blockchain:
         assert self.__height_map.contains_height(self._peak_height)
         assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
 
-    def get_peak(self) -> Optional[BlockRecord]:
+    async def get_peak(self) -> Optional[BlockRecord]:
         """
         Return the peak of the blockchain
         """
         if self._peak_height is None:
             return None
-        return self.height_to_block_record(self._peak_height)
+        return await self.height_to_block_record(self._peak_height)
 
     def get_tx_peak(self) -> Optional[BlockRecord]:
         """
@@ -318,7 +318,7 @@ class Blockchain:
         if block.height == 0 and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
             return AddBlockResult.INVALID_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
-        peak = self.get_peak()
+        peak = await self.get_peak()
         genesis: bool = block.height == 0
         extending_main_chain: bool = genesis or peak is None or (block.prev_header_hash == peak.header_hash)
 
@@ -488,7 +488,7 @@ class Blockchain:
         and the new chain, or returns None if there was no update to the heaviest chain.
         """
 
-        peak = self.get_peak()
+        peak = await self.get_peak()
         rolled_back_state: dict[bytes32, CoinRecord] = {}
 
         if genesis and peak is not None:
@@ -671,8 +671,8 @@ class Blockchain:
             return None, ip_sub_slot
         return prev_curr.finished_sub_slots[-1], ip_sub_slot
 
-    def get_recent_reward_challenges(self) -> list[tuple[bytes32, uint128]]:
-        peak = self.get_peak()
+    async def get_recent_reward_challenges(self) -> list[tuple[bytes32, uint128]]:
+        peak = await self.get_peak()
         if peak is None:
             return []
         recent_rc: list[tuple[bytes32, uint128]] = []
@@ -1050,7 +1050,7 @@ class Blockchain:
         peak_block = await self.get_block_record_from_db(header_hash)
         assert peak_block is not None
         if await self.height_to_hash(peak_block.height) != header_hash:
-            peak: Optional[BlockRecord] = self.get_peak()
+            peak: Optional[BlockRecord] = await self.get_peak()
             assert peak is not None
             reorg_chain: dict[uint32, bytes32]
             # Then we look up blocks up to fork point one at a time, backtracking
