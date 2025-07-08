@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, cast
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -193,14 +193,15 @@ class CATWallet:
             interface.side_effects.transactions.append(cat_record)
         return self
 
-    @staticmethod
+    @classmethod
     async def get_or_create_wallet_for_cat(
+        cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
-    ) -> CATWallet:
-        self = CATWallet()
+    ) -> Self:
+        self = cls()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
@@ -351,15 +352,6 @@ class CATWallet:
 
     def get_asset_id(self) -> str:
         return bytes(self.cat_info.limitations_program_hash).hex()
-
-    async def set_tail_program(self, tail_program: str) -> None:
-        assert Program.fromhex(tail_program).get_tree_hash() == self.cat_info.limitations_program_hash
-        await self.save_info(
-            CATInfo(
-                self.cat_info.limitations_program_hash,
-                Program.fromhex(tail_program),
-            )
-        )
 
     async def coin_added(
         self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: Optional[CATCoinData]
