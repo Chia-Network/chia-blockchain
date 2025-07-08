@@ -118,6 +118,36 @@ from chia.wallet.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DIDCreateBackupFile,
+    DIDCreateBackupFileResponse,
+    DIDFindLostDID,
+    DIDFindLostDIDResponse,
+    DIDGetCurrentCoinInfo,
+    DIDGetCurrentCoinInfoResponse,
+    DIDGetDID,
+    DIDGetDIDResponse,
+    DIDGetInfo,
+    DIDGetInfoResponse,
+    DIDGetMetadata,
+    DIDGetMetadataResponse,
+    DIDGetPubkey,
+    DIDGetPubkeyResponse,
+    DIDGetRecoveryInfo,
+    DIDGetRecoveryInfoResponse,
+    DIDGetRecoveryList,
+    DIDGetRecoveryListResponse,
+    DIDGetWalletName,
+    DIDGetWalletNameResponse,
+    DIDMessageSpend,
+    DIDMessageSpendResponse,
+    DIDSetWalletName,
+    DIDSetWalletNameResponse,
+    DIDTransferDID,
+    DIDTransferDIDResponse,
+    DIDUpdateMetadata,
+    DIDUpdateMetadataResponse,
+    DIDUpdateRecoveryIDs,
+    DIDUpdateRecoveryIDsResponse,
     DLDeleteMirror,
     DLDeleteMirrorResponse,
     DLGetMirrors,
@@ -2546,88 +2576,79 @@ class WalletRpcApi:
     # Distributed Identities
     ##########################################################################################
 
-    async def did_set_wallet_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        await wallet.set_name(str(request["name"]))
-        return {"success": True, "wallet_id": wallet_id}
+    @marshal
+    async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        await wallet.set_name(request.name)
+        return DIDSetWalletNameResponse(request.wallet_id)
 
-    async def did_get_wallet_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        name: str = wallet.get_name()  # type: ignore[no-untyped-call]  # Missing hint in `did_wallet.py`
-        return {"success": True, "wallet_id": wallet_id, "name": name}
+    @marshal
+    async def did_get_wallet_name(self, request: DIDGetWalletName) -> DIDGetWalletNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        return DIDGetWalletNameResponse(request.wallet_id, wallet.get_name())
 
     @tx_endpoint(push=True)
+    @marshal
     async def did_update_recovery_ids(
         self,
-        request: dict[str, Any],
+        request: DIDUpdateRecoveryIDs,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        recovery_list = []
-        for _ in request["new_list"]:
-            recovery_list.append(decode_puzzle_hash(_))
-        if "num_verifications_required" in request:
-            new_amount_verifications_required = uint64(request["num_verifications_required"])
-        else:
-            new_amount_verifications_required = uint64(len(recovery_list))
+    ) -> DIDUpdateRecoveryIDsResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        recovery_list = [decode_puzzle_hash(puzzle_hash) for puzzle_hash in request.new_list]
+        new_amount_verifications_required = (
+            request.num_verifications_required
+            if request.num_verifications_required is not None
+            else uint64(len(recovery_list))
+        )
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
             if update_success:
-                await wallet.create_update_spend(
-                    action_scope, fee=uint64(request.get("fee", 0)), extra_conditions=extra_conditions
-                )
-                return {
-                    "success": True,
-                    "transactions": None,  # tx_endpoint wrapper will take care of this
-                }
+                await wallet.create_update_spend(action_scope, fee=request.fee, extra_conditions=extra_conditions)
+                # tx_endpoint will take care of default values here
+                return DIDUpdateRecoveryIDsResponse([], [])
             else:
-                return {"success": False, "transactions": []}  # pragma: no cover
+                raise RuntimeError("updating recovery list failed")
 
     @tx_endpoint(push=False)
+    @marshal
     async def did_message_spend(
         self,
-        request: dict[str, Any],
+        request: DIDMessageSpend,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    ) -> DIDMessageSpendResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
 
         await wallet.create_message_spend(
             action_scope,
             extra_conditions=(
                 *extra_conditions,
-                *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in request.get("coin_announcements", [])),
-                *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in request.get("puzzle_announcements", [])),
+                *(CreateCoinAnnouncement(ca) for ca in request.coin_announcements),
+                *(CreatePuzzleAnnouncement(pa) for pa in request.puzzle_announcements),
             ),
         )
-        return {
-            "success": True,
-            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
 
-    async def did_get_info(self, request: dict[str, Any]) -> EndpointResult:
-        if "coin_id" not in request:
-            return {"success": False, "error": "Coin ID is required."}
-        coin_id = request["coin_id"]
-        if coin_id.startswith(AddressType.DID.hrp(self.service.config)):
-            coin_id = decode_puzzle_hash(coin_id)
+        # tx_endpoint will take care of the default values here
+        return DIDMessageSpendResponse([], [], WalletSpendBundle([], G2Element()))
+
+    @marshal
+    async def did_get_info(self, request: DIDGetInfo) -> DIDGetInfoResponse:
+        if request.coin_id.startswith(AddressType.DID.hrp(self.service.config)):
+            coin_id = decode_puzzle_hash(request.coin_id)
         else:
-            coin_id = bytes32.from_hexstr(coin_id)
+            coin_id = bytes32.from_hexstr(request.coin_id)
         # Get coin state
         peer = self.service.get_full_node_peer()
-        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.latest)
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
-            return {"success": False, "error": "The coin is not a DID."}
+            raise ValueError("The coin is not a DID.")
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        recovery_list_hash_bytes = recovery_list_hash.as_atom()
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
@@ -2636,49 +2657,48 @@ class WalletRpcApi:
         coin_memos = memos.get(coin_state.coin.name())
         if coin_memos is not None:
             for memo in coin_memos:
-                hints.append(memo.hex())
-        return {
-            "success": True,
-            "did_id": encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
-            "latest_coin": coin_state.coin.name().hex(),
-            "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.as_atom().hex(),
-            "recovery_list_hash": recovery_list_hash.as_atom().hex(),
-            "num_verification": num_verification.as_int(),
-            "metadata": did_program_to_metadata(metadata),
-            "launcher_id": launcher_id.hex(),
-            "full_puzzle": coin_spend.puzzle_reveal,
-            "solution": Program.from_serialized(coin_spend.solution).as_python(),
-            "hints": hints,
-        }
+                hints.append(memo)
+        return DIDGetInfoResponse(
+            did_id=encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
+            latest_coin=coin_state.coin.name(),
+            p2_address=encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
+            public_key=public_key.as_atom(),
+            recovery_list_hash=bytes32(recovery_list_hash_bytes) if recovery_list_hash_bytes != b"" else None,
+            num_verification=uint16(num_verification.as_int()),
+            metadata=did_program_to_metadata(metadata),
+            launcher_id=launcher_id,
+            full_puzzle=Program.from_serialized(coin_spend.puzzle_reveal),
+            solution=Program.from_serialized(coin_spend.solution),
+            hints=hints,
+        )
 
-    async def did_find_lost_did(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def did_find_lost_did(self, request: DIDFindLostDID) -> DIDFindLostDIDResponse:
         """
         Recover a missing or unspendable DID wallet by a coin id of the DID
         :param coin_id: It can be DID ID, launcher coin ID or any coin ID of the DID you want to find.
         The latest coin ID will take less time.
         :return:
         """
-        if "coin_id" not in request:
-            return {"success": False, "error": "DID coin ID is required."}
-        coin_id = request["coin_id"]
         # Check if we have a DID wallet for this
-        if coin_id.startswith(AddressType.DID.hrp(self.service.config)):
-            coin_id = decode_puzzle_hash(coin_id)
+        if request.coin_id.startswith(AddressType.DID.hrp(self.service.config)):
+            coin_id = decode_puzzle_hash(request.coin_id)
         else:
-            coin_id = bytes32.from_hexstr(coin_id)
+            coin_id = bytes32.from_hexstr(request.coin_id)
         # Get coin state
         peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
-            return {"success": False, "error": "The coin is not a DID."}
+            raise ValueError("The coin is not a DID.")
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        num_verification_int: Optional[uint16] = uint16(num_verification.as_int())
+        assert num_verification_int is not None
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
             bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
-            uint16(num_verification.as_int()),
+            num_verification_int,
             singleton_struct,
             metadata,
             get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
@@ -2706,7 +2726,7 @@ class WalletRpcApi:
 
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         if derivation_record is None:
-            return {"success": False, "error": f"This DID {launcher_id} does not belong to the connected wallet"}
+            raise ValueError(f"This DID {launcher_id} does not belong to the connected wallet")
         else:
             our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
@@ -2742,11 +2762,12 @@ class WalletRpcApi:
                     did_puzzle = did_wallet.did_info.current_inner
                 else:
                     # Try override
-                    if "recovery_list_hash" in request:
-                        recovery_list_hash = Program.from_bytes(bytes.fromhex(request["recovery_list_hash"]))
-                    num_verification = request.get("num_verification", num_verification)
-                    if "metadata" in request:
-                        metadata = metadata_to_program(request["metadata"])
+                    if request.recovery_list_hash is not None:
+                        recovery_list_hash = Program.from_bytes(request.recovery_list_hash)
+                    if request.num_verification is not None:
+                        num_verification_int = request.num_verification
+                    if request.metadata is not None:
+                        metadata = metadata_to_program(request.metadata)
                     did_puzzle = DID_INNERPUZ_MOD.curry(
                         our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                     )
@@ -2778,17 +2799,16 @@ class WalletRpcApi:
                             )
 
                     if not matched:
-                        return {
-                            "success": False,
-                            "error": f"Cannot recover DID {launcher_id}"
-                            f" because the last spend updated recovery_list_hash/num_verification/metadata.",
-                        }
+                        raise RuntimeError(
+                            f"Cannot recover DID {launcher_id} "
+                            f"because the last spend updated recovery_list_hash/num_verification/metadata."
+                        )
 
             if did_wallet is None:
                 # Create DID wallet
                 response: list[CoinState] = await self.service.get_coin_state([launcher_id], peer=peer)
                 if len(response) == 0:
-                    return {"success": False, "error": f"Could not find the launch coin with ID: {launcher_id}"}
+                    raise ValueError(f"Could not find the launch coin with ID: {launcher_id}")
                 launcher_coin: CoinState = response[0]
                 did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                     self.service.wallet_state_manager,
@@ -2831,7 +2851,7 @@ class WalletRpcApi:
             try:
                 coin = await did_wallet.get_coin()
                 if coin.name() == coin_state.coin.name():
-                    return {"success": True, "latest_coin_id": coin.name().hex()}
+                    return DIDFindLostDIDResponse(coin.name())
             except RuntimeError:
                 # We don't have any coin for this wallet, add the coin
                 pass
@@ -2849,70 +2869,61 @@ class WalletRpcApi:
                 peer,
                 did_data,
             )
-            return {"success": True, "latest_coin_id": coin_state.coin.name().hex()}
+            return DIDFindLostDIDResponse(coin_state.coin.name())
 
     @tx_endpoint(push=True)
+    @marshal
     async def did_update_metadata(
         self,
-        request: dict[str, Any],
+        request: DIDUpdateMetadata,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        metadata: dict[str, str] = {}
-        if "metadata" in request and type(request["metadata"]) is dict:
-            metadata = request["metadata"]
+    ) -> DIDUpdateMetadataResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         async with self.service.wallet_state_manager.lock:
-            update_success = await wallet.update_metadata(metadata)
+            update_success = await wallet.update_metadata(request.metadata)
             # Update coin with new ID info
             if update_success:
-                await wallet.create_update_spend(
-                    action_scope, uint64(request.get("fee", 0)), extra_conditions=extra_conditions
+                await wallet.create_update_spend(action_scope, request.fee, extra_conditions=extra_conditions)
+                # tx_endpoint wrapper will take care of these default values
+                return DIDUpdateMetadataResponse(
+                    [],
+                    [],
+                    wallet_id=request.wallet_id,
+                    spend_bundle=WalletSpendBundle([], G2Element()),
                 )
-                return {
-                    "wallet_id": wallet_id,
-                    "success": True,
-                    "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-                    "transactions": None,  # tx_endpoint wrapper will take care of this
-                }
             else:
-                return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
+                raise ValueError(f"Couldn't update metadata with input: {request.metadata}")
 
-    async def did_get_did(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_did(self, request: DIDGetDID) -> DIDGetDIDResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
         async with self.service.wallet_state_manager.lock:
             try:
                 coin = await wallet.get_coin()
-                return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
+                return DIDGetDIDResponse(wallet_id=request.wallet_id, my_did=my_did, coin_id=coin.name())
             except RuntimeError:
-                return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
+                return DIDGetDIDResponse(wallet_id=request.wallet_id, my_did=my_did)
 
-    async def did_get_recovery_list(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         recovery_list = wallet.did_info.backup_ids
         recovery_dids = []
         for backup_id in recovery_list:
             recovery_dids.append(encode_puzzle_hash(backup_id, AddressType.DID.hrp(self.service.config)))
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "recovery_list": recovery_dids,
-            "num_required": wallet.did_info.num_of_backup_ids_needed,
-        }
+        return DIDGetRecoveryListResponse(
+            wallet_id=request.wallet_id,
+            recovery_list=recovery_dids,
+            num_required=uint16(wallet.did_info.num_of_backup_ids_needed),
+        )
 
-    async def did_get_metadata(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_metadata(self, request: DIDGetMetadata) -> DIDGetMetadataResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         metadata = json.loads(wallet.did_info.metadata)
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "metadata": metadata,
-        }
+        return DIDGetMetadataResponse(wallet_id=request.wallet_id, metadata=metadata)
 
     # TODO: this needs a test
     # Don't need full @tx_endpoint decorator here, but "push" is still a valid option
@@ -2958,11 +2969,12 @@ class WalletRpcApi:
             "transactions": [tx.to_json_dict_convenience(self.service.config)],
         }
 
-    async def did_get_pubkey(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        pubkey = bytes((await wallet.wallet_state_manager.get_unused_derivation_record(wallet_id)).pubkey).hex()
-        return {"success": True, "pubkey": pubkey}
+    @marshal
+    async def did_get_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        return DIDGetPubkeyResponse(
+            (await wallet.wallet_state_manager.get_unused_derivation_record(request.wallet_id)).pubkey
+        )
 
     # TODO: this needs a test
     @tx_endpoint(push=True)
@@ -2996,27 +3008,28 @@ class WalletRpcApi:
         else:
             return {"success": False}
 
-    async def did_get_information_needed_for_recovery(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_information_needed_for_recovery(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
             bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
         )
         assert did_wallet.did_info.temp_coin is not None
-        coin_name = did_wallet.did_info.temp_coin.name().hex()
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "my_did": my_did,
-            "coin_name": coin_name,
-            "newpuzhash": did_wallet.did_info.temp_puzhash,
-            "pubkey": did_wallet.did_info.temp_pubkey,
-            "backup_dids": did_wallet.did_info.backup_ids,
-        }
+        coin_name = did_wallet.did_info.temp_coin.name()
+        return DIDGetRecoveryInfoResponse(
+            wallet_id=request.wallet_id,
+            my_did=my_did,
+            coin_name=coin_name,
+            newpuzhash=did_wallet.did_info.temp_puzhash,
+            pubkey=G1Element.from_bytes(did_wallet.did_info.temp_pubkey)
+            if did_wallet.did_info.temp_pubkey is not None
+            else None,
+            backup_dids=did_wallet.did_info.backup_ids,
+        )
 
-    async def did_get_current_coin_info(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
+    @marshal
+    async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
             bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
         )
@@ -3024,47 +3037,42 @@ class WalletRpcApi:
         did_coin_threeple = await did_wallet.get_info_for_recovery()
         assert my_did is not None
         assert did_coin_threeple is not None
-        return {
-            "success": True,
-            "wallet_id": wallet_id,
-            "my_did": my_did,
-            "did_parent": did_coin_threeple[0],
-            "did_innerpuz": did_coin_threeple[1],
-            "did_amount": did_coin_threeple[2],
-        }
+        return DIDGetCurrentCoinInfoResponse(
+            wallet_id=request.wallet_id,
+            my_did=my_did,
+            did_parent=did_coin_threeple[0],
+            did_innerpuz=did_coin_threeple[1],
+            did_amount=did_coin_threeple[2],
+        )
 
-    async def did_create_backup_file(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        return {"wallet_id": wallet_id, "success": True, "backup_data": did_wallet.create_backup()}
+    @marshal
+    async def did_create_backup_file(self, request: DIDCreateBackupFile) -> DIDCreateBackupFileResponse:
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        return DIDCreateBackupFileResponse(wallet_id=request.wallet_id, backup_data=did_wallet.create_backup())
 
     @tx_endpoint(push=True)
+    @marshal
     async def did_transfer_did(
         self,
-        request: dict[str, Any],
+        request: DIDTransferDID,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> DIDTransferDIDResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
+        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        puzzle_hash: bytes32 = decode_puzzle_hash(request.inner_address)
         async with self.service.wallet_state_manager.lock:
             await did_wallet.transfer_did(
                 puzzle_hash,
-                uint64(request.get("fee", 0)),
-                request.get("with_recovery_info", True),
+                request.fee,
+                request.with_recovery_info,
                 action_scope,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "success": True,
-            "transaction": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "transaction_id": None,  # tx_endpoint wrapper will take care of this
-        }
+        # The tx_endpoint wrapper will take care of these default values
+        return DIDTransferDIDResponse([], [], transaction=REPLACEABLE_TRANSACTION_RECORD, transaction_id=bytes32.zeros)
 
     ##########################################################################################
     # NFT Wallet

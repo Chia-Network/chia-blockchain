@@ -39,15 +39,35 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
+    DIDCreateBackupFile,
+    DIDCreateBackupFileResponse,
+    DIDFindLostDID,
+    DIDFindLostDIDResponse,
     DIDGetCurrentCoinInfo,
     DIDGetCurrentCoinInfoResponse,
+    DIDGetDID,
+    DIDGetDIDResponse,
+    DIDGetInfo,
+    DIDGetInfoResponse,
+    DIDGetMetadata,
+    DIDGetMetadataResponse,
     DIDGetPubkey,
     DIDGetPubkeyResponse,
     DIDGetRecoveryInfo,
     DIDGetRecoveryInfoResponse,
+    DIDGetRecoveryList,
+    DIDGetRecoveryListResponse,
+    DIDGetWalletName,
+    DIDGetWalletNameResponse,
+    DIDMessageSpend,
     DIDMessageSpendResponse,
+    DIDSetWalletName,
+    DIDSetWalletNameResponse,
+    DIDTransferDID,
     DIDTransferDIDResponse,
+    DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
+    DIDUpdateRecoveryIDs,
     DIDUpdateRecoveryIDsResponse,
     DLDeleteMirror,
     DLDeleteMirrorResponse,
@@ -517,110 +537,72 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def get_did_id(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("did_get_did", request)
-        return response
+    async def get_did_id(self, request: DIDGetDID) -> DIDGetDIDResponse:
+        return DIDGetDIDResponse.from_json_dict(await self.fetch("did_get_did", request.to_json_dict()))
 
-    async def get_did_info(self, coin_id: str, latest: bool) -> dict[str, Any]:
-        request = {"coin_id": coin_id, "latest": latest}
-        response = await self.fetch("did_get_info", request)
-        return response
+    async def get_did_info(self, request: DIDGetInfo) -> DIDGetInfoResponse:
+        return DIDGetInfoResponse.from_json_dict(await self.fetch("did_get_info", request.to_json_dict()))
 
-    async def create_did_backup_file(self, wallet_id: int, filename: str) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "filename": filename}
-        response = await self.fetch("did_create_backup_file", request)
-        return response
+    async def create_did_backup_file(self, request: DIDCreateBackupFile) -> DIDCreateBackupFileResponse:
+        return DIDCreateBackupFileResponse.from_json_dict(
+            await self.fetch("did_create_backup_file", request.to_json_dict())
+        )
 
     async def update_did_recovery_list(
         self,
-        wallet_id: int,
-        recovery_list: list[str],
-        num_verification: int,
+        request: DIDUpdateRecoveryIDs,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> DIDUpdateRecoveryIDsResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "new_list": recovery_list,
-            "num_verifications_required": num_verification,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_update_recovery_ids", request)
-        return json_deserialize_with_clvm_streamable(response, DIDUpdateRecoveryIDsResponse)
+        return DIDUpdateRecoveryIDsResponse.from_json_dict(
+            await self.fetch(
+                "did_update_recovery_ids",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
-    async def get_did_recovery_list(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("did_get_recovery_list", request)
-        return response
+    async def get_did_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
+        return DIDGetRecoveryListResponse.from_json_dict(
+            await self.fetch("did_get_recovery_list", request.to_json_dict())
+        )
 
     async def did_message_spend(
         self,
-        wallet_id: int,
+        request: DIDMessageSpend,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = False,
     ) -> DIDMessageSpendResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_message_spend", request)
-        return json_deserialize_with_clvm_streamable(response, DIDMessageSpendResponse)
+        return DIDMessageSpendResponse.from_json_dict(
+            await self.fetch(
+                "did_message_spend",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def update_did_metadata(
         self,
-        wallet_id: int,
-        metadata: dict[str, Any],
+        request: DIDUpdateMetadata,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> DIDUpdateMetadataResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "metadata": metadata,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_update_metadata", request)
-        return json_deserialize_with_clvm_streamable(response, DIDUpdateMetadataResponse)
+        return DIDUpdateMetadataResponse.from_json_dict(
+            await self.fetch(
+                "did_update_metadata",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def get_did_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
         return DIDGetPubkeyResponse.from_json_dict(await self.fetch("did_get_pubkey", request.to_json_dict()))
 
-    async def get_did_metadata(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("did_get_metadata", request)
-        return response
+    async def get_did_metadata(self, request: DIDGetMetadata) -> DIDGetMetadataResponse:
+        return DIDGetMetadataResponse.from_json_dict(await self.fetch("did_get_metadata", request.to_json_dict()))
 
-    async def find_lost_did(
-        self,
-        coin_id: str,
-        recovery_list_hash: Optional[str],
-        metadata: Optional[dict[str, Any]],
-        num_verification: Optional[int],
-    ) -> dict[str, Any]:
-        request: dict[str, Any] = {"coin_id": coin_id}
-        if recovery_list_hash is not None:
-            request["recovery_list_hash"] = recovery_list_hash
-        if metadata is not None:
-            request["metadata"] = (metadata,)
-        if num_verification is not None:
-            request["num_verification"] = num_verification
-        response = await self.fetch("did_find_lost_did", request)
-        return response
+    async def find_lost_did(self, request: DIDFindLostDID) -> DIDFindLostDIDResponse:
+        return DIDFindLostDIDResponse.from_json_dict(await self.fetch("did_find_lost_did", request.to_json_dict()))
 
     async def create_new_did_wallet_from_recovery(self, filename: str) -> dict[str, Any]:
         request = {"wallet_type": "did_wallet", "did_type": "recovery", "filename": filename}
@@ -666,37 +648,23 @@ class WalletRpcClient(RpcClient):
 
     async def did_transfer_did(
         self,
-        wallet_id: int,
-        address: str,
-        fee: int,
-        with_recovery: bool,
+        request: DIDTransferDID,
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> DIDTransferDIDResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "inner_address": address,
-            "fee": fee,
-            "with_recovery_info": with_recovery,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_transfer_did", request)
-        return json_deserialize_with_clvm_streamable(response, DIDTransferDIDResponse)
+        return DIDTransferDIDResponse.from_json_dict(
+            await self.fetch(
+                "did_transfer_did",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
-    async def did_set_wallet_name(self, wallet_id: int, name: str) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "name": name}
-        response = await self.fetch("did_set_wallet_name", request)
-        return response
+    async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
+        return DIDSetWalletNameResponse.from_json_dict(await self.fetch("did_set_wallet_name", request.to_json_dict()))
 
-    async def did_get_wallet_name(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("did_get_wallet_name", request)
-        return response
+    async def did_get_wallet_name(self, request: DIDGetWalletName) -> DIDGetWalletNameResponse:
+        return DIDGetWalletNameResponse.from_json_dict(await self.fetch("did_get_wallet_name", request.to_json_dict()))
 
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.
     async def create_new_pool_wallet(
