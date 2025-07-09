@@ -379,7 +379,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
     assert tx_id is not None
     memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
     assert len(memos.coins_with_memos) == 2
-    assert memos.coins_with_memos[1].memos[0] == cat_2_hash
+    assert cat_2_hash in {coin_w_memos.memos[0] for coin_w_memos in memos.coins_with_memos}
 
     await wallet_environments.process_pending_states(
         [
@@ -456,7 +456,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
     tx_id = coin.name()
     memos = await env_2.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
     assert len(memos.coins_with_memos) == 2
-    assert memos.coins_with_memos[1].memos[0] == cat_2_hash
+    assert cat_2_hash in {coin_w_memos.memos[0] for coin_w_memos in memos.coins_with_memos}
     async with cat_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:

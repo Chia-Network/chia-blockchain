@@ -1138,19 +1138,22 @@ class WalletStateManager:
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a special type of CAT
                 uncurried_puzzle_reveal = uncurry_puzzle(coin_spend.puzzle_reveal)
+                if uncurried_puzzle_reveal.mod != CAT_MOD:
+                    return None
                 revocation_layer_match = match_revocation_layer(uncurry_puzzle(uncurried_puzzle_reveal.args.at("rrf")))
-                if CRCAT.is_cr_cat(uncurried_puzzle_reveal)[0]:
-                    wallet_type = CRCATWallet
-                elif revocation_layer_match is not None:
+                if revocation_layer_match is not None:
                     wallet_type = RCATWallet
                 else:
-                    return None
+                    try:
+                        crcat = next(
+                            crc for crc in CRCAT.get_next_from_coin_spend(coin_spend) if crc.coin == coin_state.coin
+                        )
+                        wallet_type = CRCATWallet
+                    except ValueError:
+                        return None
             if wallet_type is CRCATWallet:
+                assert crcat  # mypy doesn't get the semantics
                 # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
-                crcat: CRCAT = next(
-                    crc for crc in CRCAT.get_next_from_coin_spend(coin_spend) if crc.coin == coin_state.coin
-                )
-
                 # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
                 if (
                     await self.puzzle_store.get_derivation_record_for_puzzle_hash(crcat.inner_puzzle_hash) is None
