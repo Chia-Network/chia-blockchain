@@ -686,6 +686,33 @@ class BlockTools:
     def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.constants, self.pool_master_sk)
 
+    def _run_async_in_sync_context(self, coro):
+        """
+        HACK: Run an async coroutine from a synchronous context.
+
+        This is needed because BlockTools.get_consecutive_blocks() is a synchronous method
+        used by 100+ test files, but it needs to call next_sub_epoch_summary() which was
+        converted to async as part of the BlockHeightMap async conversion project.
+
+        This method uses ThreadPoolExecutor to run the coroutine in a new thread with
+        its own event loop, avoiding conflicts with any existing event loop.
+
+        TODO: In the future, consider making get_consecutive_blocks() async and updating
+        all test files, or create a proper async/sync API boundary.
+
+        Args:
+            coro: The coroutine to execute
+
+        Returns:
+            The result of the coroutine execution
+        """
+        import asyncio
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result()
+
     def get_consecutive_blocks(
         self,
         num_blocks: int,
@@ -1049,12 +1076,14 @@ class BlockTools:
             # include the hash in the next sub-slot
             sub_epoch_summary: Optional[SubEpochSummary] = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
-                sub_epoch_summary = next_sub_epoch_summary(
-                    constants,
-                    BlockCache(blocks),
-                    latest_block.required_iters,
-                    block_list[-1],
-                    False,
+                sub_epoch_summary = self._run_async_in_sync_context(
+                    next_sub_epoch_summary(
+                        constants,
+                        BlockCache(blocks),
+                        latest_block.required_iters,
+                        block_list[-1],
+                        False,
+                    )
                 )
             if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True
