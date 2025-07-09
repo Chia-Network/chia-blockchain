@@ -601,6 +601,14 @@ class CATWallet:
 
         return announcement
 
+    async def make_inner_solution(
+        self,
+        coin: Coin,
+        primaries: list[CreateCoin],
+        conditions: tuple[Condition, ...] = tuple(),
+    ) -> Program:
+        return self.standard_wallet.make_solution(primaries=primaries, conditions=conditions)
+
     async def generate_unsigned_spendbundle(
         self,
         payments: list[CreateCoin],
@@ -686,7 +694,8 @@ class CATWallet:
                             action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.make_inner_solution(
+                            coin=coin,
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
@@ -697,7 +706,8 @@ class CATWallet:
                             action_scope,
                         )
                         assert xch_announcement is not None
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.make_inner_solution(
+                            coin=coin,
                             primaries=primaries,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
@@ -705,13 +715,14 @@ class CATWallet:
                         # TODO: what about when they are equal?
                         raise Exception("Equality not handled")
                 else:
-                    innersol = self.standard_wallet.make_solution(
+                    innersol = await self.make_inner_solution(
+                        coin=coin,
                         primaries=primaries,
                         conditions=(*extra_conditions, announcement),
                     )
             else:
-                innersol = self.standard_wallet.make_solution(
-                    primaries=[], conditions=(announcement.corresponding_assertion(),)
+                innersol = await self.make_inner_solution(
+                    coin=coin, primaries=[], conditions=(announcement.corresponding_assertion(),)
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)

@@ -235,7 +235,7 @@ class Offer:
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
                 asset_id = create_asset_id(puzzle_driver)
-                inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle)
+                inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle, parent_solution)
                 inner_solution: Optional[Program] = get_inner_solution(puzzle_driver, parent_solution)
                 assert inner_puzzle is not None and inner_solution is not None
 

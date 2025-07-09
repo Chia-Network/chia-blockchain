@@ -21,6 +21,12 @@ class CATInfo(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class RCATInfo(CATInfo):
+    hidden_puzzle_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class CATCoinData(Streamable):
     mod_hash: bytes32
     tail_program_hash: bytes32

@@ -10,7 +10,7 @@ import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, cast
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
@@ -48,6 +48,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
@@ -115,7 +116,7 @@ from chia.wallet.util.wallet_sync_utils import (
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
-from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
+from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential, match_revocation_layer
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
@@ -323,6 +324,12 @@ class WalletStateManager:
                 )
             elif wallet_type == WalletType.CRCAT:  # pragma: no cover
                 wallet = await CRCATWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+            elif wallet_type == WalletType.RCAT:  # pragma: no cover
+                wallet = await RCATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -1127,14 +1134,18 @@ class WalletStateManager:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
-            is_crcat: bool = False
+            wallet_type: type[CATWallet] = CATWallet
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
-                # Check if it is a CRCAT
-                if CRCAT.is_cr_cat(uncurry_puzzle(coin_spend.puzzle_reveal)):
-                    is_crcat = True
+                # Check if it is a special type of CAT
+                uncurried_puzzle_reveal = uncurry_puzzle(coin_spend.puzzle_reveal)
+                revocation_layer_match = match_revocation_layer(uncurry_puzzle(uncurried_puzzle_reveal.args.at("rrf")))
+                if CRCAT.is_cr_cat(uncurried_puzzle_reveal)[0]:
+                    wallet_type = CRCATWallet
+                elif revocation_layer_match is not None:
+                    wallet_type = RCATWallet
                 else:
-                    return None  # pragma: no cover
-            if is_crcat:
+                    return None
+            if wallet_type is CRCATWallet:
                 # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
                 crcat: CRCAT = next(
                     crc for crc in CRCAT.get_next_from_coin_spend(coin_spend) if crc.coin == coin_state.coin
@@ -1174,13 +1185,21 @@ class WalletStateManager:
             if parent_data.tail_program_hash.hex() in self.default_cats or self.config.get(
                 "automatically_add_unknown_cats", False
             ):
-                if is_crcat:
-                    cat_wallet: Union[CATWallet, CRCATWallet] = await CRCATWallet.get_or_create_wallet_for_cat(
+                if wallet_type is CRCATWallet:
+                    cat_wallet: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
                         crcat.tail_hash.hex(),
                         authorized_providers=crcat.authorized_providers,
                         proofs_checker=ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                    )
+                elif wallet_type is RCATWallet:
+                    cat_wallet = await RCATWallet.get_or_create_wallet_for_cat(
+                        self,
+                        self.main_wallet,
+                        parent_data.tail_program_hash.hex(),
+                        # too complicated for mypy but semantics guarantee this not to be None
+                        hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
                     )
                 else:
                     cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
@@ -2406,7 +2425,7 @@ class WalletStateManager:
 
     async def get_wallet_for_asset_id(self, asset_id: str) -> Optional[WalletProtocol[Any]]:
         for wallet_id, wallet in self.wallets.items():
-            if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
+            if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
                 if wallet.get_asset_id() == asset_id:
                     return wallet
@@ -2438,6 +2457,7 @@ class WalletStateManager:
                 name,
                 potential_subclasses={
                     AssetType.CR: CRCATWallet,
+                    AssetType.REVOCATION_LAYER: RCATWallet,
                 },
             )
 
