@@ -220,7 +220,7 @@ class DataStore:
             delta_reader.add_internal_nodes(internal_nodes)
             delta_reader.add_leaf_nodes(terminal_nodes)
 
-            missing_hashes = await anyio.to_thread.run_sync(delta_reader.get_missing_hashes)
+            missing_hashes = await anyio.to_thread.run_sync(delta_reader.get_missing_hashes, root_hash)
 
             if len(missing_hashes) > 0:
                 # TODO: consider adding transactions around this code

@@ -817,7 +817,7 @@ pytest = ">=8.3.3,<9.0.0"
 
 [[package]]
 name = "chia_rs"
-version = "0.25.0"
+version = "0.26.0"
 description = "Code useful for implementing chia consensus."
 optional = false
 python-versions = "*"
@@ -831,8 +831,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
-reference = "long_lived/initial_datalayer"
-resolved_reference = "e5ae5ab28167da903a183bb4f66d84ee0469d5d6"
+reference = "fc.check_root_hash"
+resolved_reference = "1c6c23dd71c09049eab740eb3d9fe09e8d2ee7ef"
 subdirectory = "wheel/"
 
 [[package]]
@@ -3820,4 +3820,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "f2903f93eb32bb552d3a5a8cbeaeefd6287064f5eca7f3f354a2a309ae1995c6"
+content-hash = "07c9b1ca2dcfabf5d3db7e3a2799eff5c0c9c297b0ef34dc005db95069bd6ae9"
