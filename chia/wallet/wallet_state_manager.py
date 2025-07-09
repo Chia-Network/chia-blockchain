@@ -1135,12 +1135,16 @@ class WalletStateManager:
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             wallet_type: type[CATWallet] = CATWallet
+            self.log.error(f"HERE")
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a special type of CAT
+                self.log.error(f"HERE2")
                 uncurried_puzzle_reveal = uncurry_puzzle(coin_spend.puzzle_reveal)
                 if uncurried_puzzle_reveal.mod != CAT_MOD:
+                    self.log.error(f"HERE3")
                     return None
                 revocation_layer_match = match_revocation_layer(uncurry_puzzle(uncurried_puzzle_reveal.args.at("rrf")))
+                self.log.error(f"HERE4 {revocation_layer_match}")
                 if revocation_layer_match is not None:
                     wallet_type = RCATWallet
                 else:
