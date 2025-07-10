@@ -184,9 +184,6 @@ class RCATWallet(CATWallet):
         await result.commit(cat_wallet.wallet_state_manager)
         return True
 
-    def get_asset_id(self) -> str:
-        return self.cat_info.limitations_program_hash.hex()
-
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         inner_puzzle = create_revocation_layer(
             self.cat_info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
