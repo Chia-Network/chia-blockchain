@@ -14,7 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CATInfo, RCATInfo
+from chia.wallet.cat_wallet.cat_info import RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     CAT_MOD_HASH,
@@ -61,7 +61,7 @@ class RCATWallet(CATWallet):
     standard_wallet: Wallet
     lineage_store: CATLineageStore
     wallet_type: ClassVar[WalletType] = WalletType.RCAT
-    wallet_info_type: ClassVar[type[CATInfo]] = RCATInfo
+    wallet_info_type: ClassVar[type[RCATInfo]] = RCATInfo
 
     # this is a legacy method and is not available on R-CAT wallets
     create_new_cat_wallet = None  # type: ignore[assignment]
@@ -102,7 +102,7 @@ class RCATWallet(CATWallet):
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
         limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
-        self.cat_info = cls.wallet_info_type(limitations_program_hash, None, hidden_puzzle_hash)  # type: ignore
+        self.cat_info = cls.wallet_info_type(limitations_program_hash, None, hidden_puzzle_hash)
         info_as_string = bytes(self.cat_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, cls.wallet_type, info_as_string)
 
@@ -167,7 +167,7 @@ class RCATWallet(CATWallet):
         replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to R-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
         replace_self.lineage_store = cat_wallet.lineage_store
-        replace_self.cat_info = cls.wallet_info_type(  # type: ignore
+        replace_self.cat_info = cls.wallet_info_type(
             cat_wallet.cat_info.limitations_program_hash, None, hidden_puzzle_hash
         )
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
