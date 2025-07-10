@@ -52,12 +52,8 @@ class CATOuterPuzzle:
         _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:
-            if solution is not None:
-                deep_inner_solution = self.get_inner_solution(constructor, solution)
-            else:
-                deep_inner_solution = None
             deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(
-                also, uncurry_puzzle(inner_puzzle), deep_inner_solution
+                also, uncurry_puzzle(inner_puzzle), solution.first() if solution is not None else None
             )
             return deep_inner_puzzle
         else:

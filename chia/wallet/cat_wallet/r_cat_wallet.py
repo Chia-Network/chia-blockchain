@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
@@ -176,6 +176,36 @@ class RCATWallet(CATWallet):
         self.cat_info = RCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         return self
+
+    @classmethod
+    async def convert_to_revocable(
+        cls,
+        cat_wallet: CATWallet,
+        hidden_puzzle_hash: bytes32,
+    ) -> bool:
+        if not cat_wallet.lineage_store.is_empty():
+            cat_wallet.log.error("Received a revocable CAT to a CAT wallet that already has CATs")
+            return False
+        replace_self = cls()
+        replace_self.standard_wallet = cat_wallet.standard_wallet
+        replace_self.log = logging.getLogger(cat_wallet.get_name())
+        replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to R-CAT wallet")
+        replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
+        replace_self.lineage_store = cat_wallet.lineage_store
+        replace_self.cat_info = RCATInfo(cat_wallet.cat_info.limitations_program_hash, None, hidden_puzzle_hash)
+        await cat_wallet.wallet_state_manager.user_store.update_wallet(
+            WalletInfo(
+                cat_wallet.id(), cat_wallet.get_name(), uint8(WalletType.RCAT.value), bytes(replace_self.cat_info).hex()
+            )
+        )
+        updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
+        assert updated_wallet_info is not None
+        replace_self.wallet_info = updated_wallet_info
+
+        cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
+        result = await cat_wallet.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+        await result.commit(cat_wallet.wallet_state_manager)
+        return True
 
     @classmethod
     def type(cls) -> WalletType:

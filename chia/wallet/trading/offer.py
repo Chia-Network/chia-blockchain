@@ -261,10 +261,7 @@ class Offer:
                     matching_spend_additions = [
                         a
                         for a in matching_spend_additions
-                        if a.puzzle_hash
-                        == construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(  # type: ignore
-                            OFFER_MOD_HASH
-                        )
+                        if a.puzzle_hash == construct_puzzle(puzzle_driver, OFFER_MOD).get_tree_hash()
                     ]
                     if len(matching_spend_additions) == expected_num_matches:
                         coins_for_this_spend.extend(matching_spend_additions)
