@@ -26,6 +26,8 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
+from chia.consensus.block_height_map_protocol import BlockHeightMapProtocol
+from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -34,8 +36,6 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_height_map import BlockHeightMap
-from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
@@ -100,11 +100,11 @@ class Blockchain:
     __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
-    __height_map: BlockHeightMap
+    __height_map: BlockHeightMapProtocol
     # Unspent Store
     coin_store: CoinStoreProtocol
     # Store
-    block_store: BlockStore
+    block_store: BlockStoreProtocol
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
@@ -122,8 +122,8 @@ class Blockchain:
     @staticmethod
     async def create(
         coin_store: CoinStoreProtocol,
-        block_store: BlockStore,
-        height_map: BlockHeightMap,
+        block_store: BlockStoreProtocol,
+        height_map: BlockHeightMapProtocol,
         consensus_constants: ConsensusConstants,
         reserved_cores: int,
         *,
@@ -164,7 +164,7 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
+    async def _load_chain_from_store(self, height_map: BlockHeightMapProtocol) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
@@ -421,7 +421,7 @@ class Blockchain:
 
         try:
             # Always add the block to the database
-            async with self.block_store.db_wrapper.writer():
+            async with self.block_store.start_transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
@@ -883,7 +883,7 @@ class Blockchain:
 
         blocks: list[FullBlock] = []
         for hash in hashes.copy():
-            block = self.block_store.block_cache.get(hash)
+            block = await self.block_store.get_full_block(hash)
             if block is not None:
                 blocks.append(block)
                 hashes.remove(hash)
@@ -932,7 +932,6 @@ class Blockchain:
         """
         records: list[BlockRecord] = []
         hashes: list[bytes32] = []
-        assert batch_size < self.block_store.db_wrapper.host_parameter_limit
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
             if header_hash is None:
