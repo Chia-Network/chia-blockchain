@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -14,7 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import RCATInfo
+from chia.wallet.cat_wallet.cat_info import CATCoinData, RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     CAT_MOD_HASH,
@@ -37,6 +37,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer, solve_revocation_layer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -54,6 +55,9 @@ class RCATMetadata(Streamable):
 
 
 class RCATWallet(CATWallet):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[WalletProtocol[CATCoinData]] = cast("RCATWallet", None)
+
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
