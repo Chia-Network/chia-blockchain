@@ -4334,6 +4334,8 @@ async def test_include_spends_same_as_parent(
                 [],
                 [],
                 0,
+                0,
+                0,
             )
         ],
         0,
@@ -4388,7 +4390,10 @@ async def test_include_block_same_as_parent_coins(
     test_setup = ForkInfoTestSetup.create(same_ph_as_parent, same_amount_as_parent)
     # Now let's run the test
     test_setup.fork_info.include_block(
-        [(test_setup.child_coin, None)], [test_setup.coin], test_setup.test_block, test_setup.test_block.header_hash
+        [(test_setup.child_coin, None)],
+        [(test_setup.coin.name(), test_setup.coin)],
+        test_setup.test_block,
+        test_setup.test_block.header_hash,
     )
     # Let's make sure the results are as expected
     expected_same_as_parent_additions = (

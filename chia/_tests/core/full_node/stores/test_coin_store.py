@@ -106,7 +106,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 additions, removals = additions_and_removals(
                     bytes(block.transactions_generator), [], flags, bt.constants
                 )
-                tx_removals = [removal.name() for removal in removals]
+                tx_removals = [name for name, _ in removals]
                 tx_additions = [(addition.name(), addition, False) for addition, _ in additions]
             else:
                 tx_removals, tx_additions = [], []
