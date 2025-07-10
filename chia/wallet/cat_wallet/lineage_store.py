@@ -73,3 +73,10 @@ class CATLineageStore:
             lineage_dict[bytes32.from_hexstr(row[0])] = LineageProof.from_bytes(row[1])
 
         return lineage_dict
+
+    async def is_empty(self) -> bool:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute(f"SELECT COUNT(*) FROM {self.table_name}")
+            row_count = await cursor.fetchone()
+            assert row_count is not None
+            return bool(row_count[0] == 0)

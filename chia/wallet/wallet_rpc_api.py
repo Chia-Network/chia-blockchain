@@ -1286,7 +1286,7 @@ class WalletRpcApi:
         wallet_balance["wallet_type"] = wallet.type()
         if self.service.logged_in_fingerprint is not None:
             wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
-        if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
+        if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             assert isinstance(wallet, CATWallet)
             wallet_balance["asset_id"] = wallet.get_asset_id()
             if wallet.type() == WalletType.CRCAT:
@@ -1579,7 +1579,7 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-        if wallet.type() in {WalletType.STANDARD_WALLET, WalletType.CAT, WalletType.CRCAT}:
+        if wallet.type() in {WalletType.STANDARD_WALLET, WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             async with self.service.wallet_state_manager.new_action_scope(
                 DEFAULT_TX_CONFIG, push=request.get("save_derivations", True)
             ) as action_scope:
@@ -1654,7 +1654,7 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
+            if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
                 response = await self.cat_spend(request, hold_lock=False)
                 transaction = response["transaction"]
@@ -1807,7 +1807,7 @@ class WalletRpcApi:
         wallet = state_mgr.wallets[wallet_id]
         async with state_mgr.lock:
             all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(wallet_id)
-            if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
+            if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
                 spendable_coins: list[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
             else:

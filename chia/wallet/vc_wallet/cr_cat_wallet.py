@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -68,6 +68,8 @@ class CRCATWallet(CATWallet):
     wallet_info: WalletInfo
     info: CRCATInfo
     standard_wallet: Wallet
+    wallet_type: ClassVar[WalletType] = WalletType.CRCAT
+    wallet_info_type: ClassVar[type[CRCATInfo]] = CRCATInfo
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
@@ -119,7 +121,7 @@ class CRCATWallet(CATWallet):
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.info = CRCATInfo(tail_hash, None, authorized_providers, proofs_checker)
+        self.info = cls.wallet_info_type(tail_hash, None, authorized_providers, proofs_checker)
         info_as_string = bytes(self.info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
 
@@ -160,7 +162,7 @@ class CRCATWallet(CATWallet):
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
-        self.info = CRCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.info = self.wallet_info_type.from_bytes(hexstr_to_bytes(self.wallet_info.data))
         return self
 
     @classmethod
@@ -175,7 +177,7 @@ class CRCATWallet(CATWallet):
         replace_self.log = logging.getLogger(cat_wallet.get_name())
         replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to CR-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
-        replace_self.info = CRCATInfo(
+        replace_self.info = cls.wallet_info_type(
             cat_wallet.cat_info.limitations_program_hash, None, authorized_providers, proofs_checker
         )
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
@@ -197,7 +199,7 @@ class CRCATWallet(CATWallet):
         return self.wallet_info.id
 
     def get_asset_id(self) -> str:
-        return self.info.limitations_program_hash.hex()
+        return bytes(self.info.limitations_program_hash).hex()
 
     async def set_tail_program(self, tail_program: str) -> None:  # pragma: no cover
         raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")
