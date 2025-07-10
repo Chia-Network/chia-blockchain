@@ -2566,7 +2566,7 @@ class WalletStateManager:
     async def convert_puzzle_hash(self, wallet_id: uint32, puzzle_hash: bytes32) -> bytes32:
         wallet = self.wallets[wallet_id]
         # This should be general to wallets but for right now this is just for CATs so we'll add this if
-        if wallet.type() in {WalletType.CAT.value, WalletType.CRCAT.value}:
+        if wallet.type() in {WalletType.CAT.value, WalletType.CRCAT.value, WalletType.RCAT.value}:
             assert isinstance(wallet, CATWallet)
             return await wallet.convert_puzzle_hash(puzzle_hash)
 
