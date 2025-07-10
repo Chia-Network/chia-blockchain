@@ -198,11 +198,11 @@ class CRCATWallet(CATWallet):
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def set_tail_program(self, tail_program: str) -> None:  # pragma: no cover
-        raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")
-
     def get_asset_id(self) -> str:
         return bytes(self.info.limitations_program_hash).hex()
+
+    async def set_tail_program(self, tail_program: str) -> None:  # pragma: no cover
+        raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")
 
     async def coin_added(
         self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[CATCoinData]
