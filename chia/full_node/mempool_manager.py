@@ -606,8 +606,8 @@ class MempoolManager:
                 return Err.INVALID_COIN_SOLUTION, None, []
 
             lineage_info = None
-            mark_as_fast_forward = bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend)
-            if mark_as_fast_forward:
+            eligible_for_ff = bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend)
+            if eligible_for_ff:
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been melted, the
                 # fast forward spend will never become valid.
@@ -625,7 +625,7 @@ class MempoolManager:
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP),
-                eligible_for_fast_forward=mark_as_fast_forward,
+                eligible_for_fast_forward=eligible_for_ff,
                 additions=spend_additions,
                 latest_singleton_lineage=lineage_info,
             )
