@@ -3,19 +3,18 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CATCoinData, RCATInfo
+from chia.wallet.cat_wallet.cat_info import CATInfo, RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     CAT_MOD_HASH,
@@ -37,10 +36,7 @@ from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer, solve_revocation_layer
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
-from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -64,23 +60,15 @@ class RCATWallet(CATWallet):
     cat_info: RCATInfo
     standard_wallet: Wallet
     lineage_store: CATLineageStore
+    wallet_type: ClassVar[WalletType] = WalletType.RCAT
+    wallet_info_type: ClassVar[type[CATInfo]] = RCATInfo
 
-    @property
-    def cost_of_single_tx(self) -> int:
-        return 78000000  # Estimate measured in testing
+    # this is a legacy method and is not available on R-CAT wallets
+    create_new_cat_wallet = None  # type: ignore[assignment]
 
     @staticmethod
-    async def create_new_cat_wallet(
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        cat_tail_info: dict[str, Any],
-        amount: uint64,
-        action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
-        name: Optional[str] = None,
-        push: bool = False,
-    ) -> CATWallet:  # pragma: no cover
-        raise NotImplementedError("create_new_cat_wallet is a legacy method and is not available on R-CAT wallets")
+    def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
+        return f"Revocable-CAT {limitations_program_hash_hex[:16]}..."
 
     # We need to override this with a different signature.
     # It's not immediately clear what is proper here, likely needs a bit of a refactor.
@@ -114,9 +102,9 @@ class RCATWallet(CATWallet):
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
         limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
-        self.cat_info = RCATInfo(limitations_program_hash, None, hidden_puzzle_hash)
+        self.cat_info = cls.wallet_info_type(limitations_program_hash, None, hidden_puzzle_hash)  # type: ignore
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.RCAT, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, cls.wallet_type, info_as_string)
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         # Inherited from duplicating parent
@@ -150,7 +138,7 @@ class RCATWallet(CATWallet):
         potential_subclasses: dict[AssetType, Any] = {},
     ) -> Any:
         rev_layer: Optional[PuzzleInfo] = puzzle_driver.also()
-        if rev_layer is None:  # pragma: no cover
+        if rev_layer is None:
             raise ValueError("create_from_puzzle_info called on RCATWallet with a non R-CAT puzzle driver")
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
@@ -160,22 +148,9 @@ class RCATWallet(CATWallet):
             name,
         )
 
-    @staticmethod
-    async def create(
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        wallet_info: WalletInfo,
-    ) -> RCATWallet:
-        self = RCATWallet()
-
-        self.log = logging.getLogger(__name__)
-
-        self.wallet_state_manager = wallet_state_manager
-        self.wallet_info = wallet_info
-        self.standard_wallet = wallet
-        self.cat_info = RCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
-        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-        return self
+    @property
+    def cost_of_single_tx(self) -> int:
+        return 78000000  # Estimate measured in testing
 
     @classmethod
     async def convert_to_revocable(
@@ -192,10 +167,12 @@ class RCATWallet(CATWallet):
         replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to R-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
         replace_self.lineage_store = cat_wallet.lineage_store
-        replace_self.cat_info = RCATInfo(cat_wallet.cat_info.limitations_program_hash, None, hidden_puzzle_hash)
+        replace_self.cat_info = cls.wallet_info_type(  # type: ignore
+            cat_wallet.cat_info.limitations_program_hash, None, hidden_puzzle_hash
+        )
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
             WalletInfo(
-                cat_wallet.id(), cat_wallet.get_name(), uint8(WalletType.RCAT.value), bytes(replace_self.cat_info).hex()
+                cat_wallet.id(), cat_wallet.get_name(), uint8(cls.wallet_type.value), bytes(replace_self.cat_info).hex()
             )
         )
         updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
@@ -206,13 +183,6 @@ class RCATWallet(CATWallet):
         result = await cat_wallet.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
         await result.commit(cat_wallet.wallet_state_manager)
         return True
-
-    @classmethod
-    def type(cls) -> WalletType:
-        return WalletType.RCAT
-
-    def id(self) -> uint32:
-        return self.wallet_info.id
 
     def get_asset_id(self) -> str:
         return self.cat_info.limitations_program_hash.hex()
@@ -237,12 +207,6 @@ class RCATWallet(CATWallet):
         return create_revocation_layer(
             self.cat_info.hidden_puzzle_hash, (await super().inner_puzzle_for_cat_puzhash(cat_hash)).get_tree_hash()
         )
-
-    @staticmethod
-    def get_metadata_from_record(coin_record: WalletCoinRecord) -> RCATMetadata:
-        metadata: MetadataTypes = coin_record.parsed_metadata()
-        assert isinstance(metadata, RCATMetadata)
-        return metadata
 
     async def make_inner_solution(
         self,
@@ -278,7 +242,7 @@ class RCATWallet(CATWallet):
         return PuzzleInfo(
             {
                 "type": AssetType.CAT.value,
-                "tail": "0x" + self.cat_info.limitations_program_hash.hex(),
+                "tail": "0x" + self.get_asset_id(),
                 "also": {
                     "type": AssetType.REVOCATION_LAYER.value,
                     "hidden_puzzle_hash": "0x" + self.cat_info.hidden_puzzle_hash.hex(),
@@ -306,7 +270,3 @@ class RCATWallet(CATWallet):
         ):
             return True
         return False
-
-
-if TYPE_CHECKING:
-    _dummy: WalletProtocol[CATCoinData] = RCATWallet()

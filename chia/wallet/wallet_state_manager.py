@@ -328,7 +328,7 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.RCAT:  # pragma: no cover
+            elif wallet_type == WalletType.RCAT:
                 wallet = await RCATWallet.create(
                     self,
                     self.main_wallet,
@@ -1145,12 +1145,14 @@ class WalletStateManager:
                     wallet_type = RCATWallet
                 else:
                     try:
-                        crcat = next(
-                            crc for crc in CRCAT.get_next_from_coin_spend(coin_spend) if crc.coin == coin_state.coin
-                        )
-                        wallet_type = CRCATWallet
+                        next_crcats = CRCAT.get_next_from_coin_spend(coin_spend)
+
                     except ValueError:
                         return None
+
+                    crcat = next(crc for crc in next_crcats if crc.coin == coin_state.coin)
+
+                    wallet_type = CRCATWallet
             if wallet_type is CRCATWallet:
                 assert crcat  # mypy doesn't get the semantics
                 # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path

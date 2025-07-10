@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Callable, Optional
+from typing import Any, Optional
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -23,7 +23,7 @@ from chia_puzzles_py.programs import STD_PARENT_MORPHER_HASH as STD_PARENT_MORPH
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from typing_extensions import Any, Self
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -830,12 +830,6 @@ class VerifiedCredential(Streamable):
 # inside of a CAT.
 @dataclass(frozen=True)
 class RevocationOuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
-    _construct: Callable[[PuzzleInfo, Program], Program]
-    _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
-    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
-
     def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
         args = match_revocation_layer(puzzle)
         if args is None:

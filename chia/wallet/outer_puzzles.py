@@ -86,5 +86,5 @@ driver_lookup: dict[AssetType, DriverProtocol] = {
     AssetType.OWNERSHIP: OwnershipOuterPuzzle(*function_args),
     AssetType.ROYALTY_TRANSFER_PROGRAM: TransferProgramPuzzle(*function_args),
     AssetType.CR: CROuterPuzzle(*function_args),
-    AssetType.REVOCATION_LAYER: RevocationOuterPuzzle(*function_args),
+    AssetType.REVOCATION_LAYER: RevocationOuterPuzzle(),
 }
