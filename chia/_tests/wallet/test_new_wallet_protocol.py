@@ -335,7 +335,7 @@ async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -
     # Farm block
     await simulator.farm_blocks_to_puzzlehash(8)
 
-    header_hash = simulator.full_node.blockchain.height_to_hash(uint32(5))
+    header_hash = await simulator.full_node.blockchain.height_to_hash(uint32(5))
     assert header_hash is not None
 
     # Reorg
@@ -359,10 +359,10 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
     # Farm blocks 0-11 and make sure the last one is farmed
     await simulator.farm_blocks_to_puzzlehash(12)
 
-    h0 = simulator.full_node.blockchain.height_to_hash(uint32(0))
+    h0 = await simulator.full_node.blockchain.height_to_hash(uint32(0))
     assert h0 is not None
 
-    h1 = simulator.full_node.blockchain.height_to_hash(uint32(1))
+    h1 = await simulator.full_node.blockchain.height_to_hash(uint32(1))
     assert h1 is not None
 
     # Add more than the max response coin records
@@ -411,7 +411,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
     peak_height = simulator.full_node.blockchain.get_peak_height()
     assert peak_height is not None
 
-    peak_header_hash = simulator.full_node.blockchain.height_to_hash(peak_height)
+    peak_header_hash = await simulator.full_node.blockchain.height_to_hash(peak_height)
     assert peak_header_hash is not None
 
     # Add coin records
@@ -520,7 +520,7 @@ async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str)
     # Farm block
     await simulator.farm_blocks_to_puzzlehash(8)
 
-    header_hash = simulator.full_node.blockchain.height_to_hash(uint32(5))
+    header_hash = await simulator.full_node.blockchain.height_to_hash(uint32(5))
     assert header_hash is not None
 
     # Reorg
@@ -549,10 +549,10 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
     # Farm blocks 0-11 and make sure the last one is farmed
     await simulator.farm_blocks_to_puzzlehash(12)
 
-    h0 = simulator.full_node.blockchain.height_to_hash(uint32(0))
+    h0 = await simulator.full_node.blockchain.height_to_hash(uint32(0))
     assert h0 is not None
 
-    h1 = simulator.full_node.blockchain.height_to_hash(uint32(1))
+    h1 = await simulator.full_node.blockchain.height_to_hash(uint32(1))
     assert h1 is not None
 
     # Add more than the max response coin records

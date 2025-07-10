@@ -68,7 +68,7 @@ async def _validate_and_add_block(
                 curr = blockchain.block_record(curr.prev_hash)
             prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
-    ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
+    ssi, diff = await get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
     await check_block_store_invariant(blockchain)
 
     if skip_prevalidation:

@@ -73,7 +73,7 @@ def make_sub_epoch_summary(
     )
 
 
-def next_sub_epoch_summary(
+async def next_sub_epoch_summary(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     required_iters: uint64,
@@ -108,9 +108,10 @@ def next_sub_epoch_summary(
     assert prev_b is not None
     # This is the ssi of the current block
 
-    sub_slot_iters = get_next_sub_slot_iters_and_difficulty(
+    ssi_and_difficulty = await get_next_sub_slot_iters_and_difficulty(
         constants, len(block.finished_sub_slots) > 0, prev_b, blocks
-    )[0]
+    )
+    sub_slot_iters = ssi_and_difficulty[0]
     overflow = is_overflow_block(constants, signage_point_index)
 
     if (
@@ -172,7 +173,7 @@ def next_sub_epoch_summary(
         sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
         ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 
-        next_difficulty = _get_next_difficulty(
+        next_difficulty = await _get_next_difficulty(
             constants,
             blocks,
             block.prev_header_hash,
@@ -184,7 +185,7 @@ def next_sub_epoch_summary(
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
             True,
         )
-        next_sub_slot_iters = _get_next_sub_slot_iters(
+        next_sub_slot_iters = await _get_next_sub_slot_iters(
             constants,
             blocks,
             block.prev_header_hash,

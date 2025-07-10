@@ -97,12 +97,12 @@ class TestBlockHeightMap:
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
-            assert not height_map.contains_height(uint32(11))
+            assert not await height_map.contains_height(uint32(11))
             for height in reversed(range(10)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
 
             for height in reversed(range(10)):
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
     @pytest.mark.anyio
     async def test_height_to_hash_long_chain(self, tmp_dir: Path, db_version: int) -> None:
@@ -113,10 +113,10 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(1000)):
-                assert height_map.contains_height(uint32(height))
+                assert await height_map.contains_height(uint32(height))
 
             for height in reversed(range(10000)):
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
     @pytest.mark.parametrize("ses_every", [20, 1])
     @pytest.mark.anyio
@@ -128,13 +128,13 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
-                assert height_map.contains_height(uint32(height))
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.contains_height(uint32(height))
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % ses_every) == 0:
-                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                    assert await height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
-                        height_map.get_ses(uint32(height))
+                        await height_map.get_ses(uint32(height))
 
             await height_map.maybe_flush()
 
@@ -152,13 +152,13 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
-                assert height_map.contains_height(uint32(height))
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.contains_height(uint32(height))
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % ses_every) == 0:
-                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                    assert await height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
-                        height_map.get_ses(uint32(height))
+                        await height_map.get_ses(uint32(height))
 
     @pytest.mark.anyio
     async def test_restore_entire_chain(self, tmp_dir: Path, db_version: int) -> None:
@@ -185,13 +185,13 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
-                assert height_map.contains_height(uint32(height))
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.contains_height(uint32(height))
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
-                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                    assert await height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
-                        height_map.get_ses(uint32(height))
+                        await height_map.get_ses(uint32(height))
 
     @pytest.mark.anyio
     async def test_restore_ses_only(self, tmp_dir: Path, db_version: int) -> None:
@@ -217,13 +217,13 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(2000)):
-                assert height_map.contains_height(uint32(height))
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.contains_height(uint32(height))
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
-                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                    assert await height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
-                        height_map.get_ses(uint32(height))
+                        await height_map.get_ses(uint32(height))
 
     @pytest.mark.anyio
     async def test_restore_extend(self, tmp_dir: Path, db_version: int) -> None:
@@ -237,13 +237,13 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(2000)):
-                assert height_map.contains_height(uint32(height))
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.contains_height(uint32(height))
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
-                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                    assert await height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
-                        height_map.get_ses(uint32(height))
+                        await height_map.get_ses(uint32(height))
 
             await height_map.maybe_flush()
 
@@ -257,13 +257,13 @@ class TestBlockHeightMap:
 
             # now make sure we have the complete chain, height 0 -> 4000
             for height in reversed(range(4000)):
-                assert height_map.contains_height(uint32(height))
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.contains_height(uint32(height))
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
-                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                    assert await height_map.get_ses(uint32(height)) == gen_ses(height)
                 else:
                     with pytest.raises(KeyError) as _:
-                        height_map.get_ses(uint32(height))
+                        await height_map.get_ses(uint32(height))
 
     @pytest.mark.anyio
     async def test_height_to_hash_with_orphans(self, tmp_dir: Path, db_version: int) -> None:
@@ -278,7 +278,7 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in range(10):
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
     @pytest.mark.anyio
     async def test_height_to_hash_update(self, tmp_dir: Path, db_version: int) -> None:
@@ -292,14 +292,14 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in range(10):
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
             height_map.update_height(uint32(10), gen_block_hash(100), None)
 
             for height in range(9):
-                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                assert await height_map.get_hash(uint32(height)) == gen_block_hash(height)
 
-            assert height_map.get_hash(uint32(10)) == gen_block_hash(100)
+            assert await height_map.get_hash(uint32(10)) == gen_block_hash(100)
 
     @pytest.mark.anyio
     async def test_update_ses(self, tmp_dir: Path, db_version: int) -> None:
@@ -313,12 +313,12 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(10))
+                await height_map.get_ses(uint32(10))
 
             height_map.update_height(uint32(10), gen_block_hash(10), gen_ses(10))
 
-            assert height_map.get_ses(uint32(10)) == gen_ses(10)
-            assert height_map.get_hash(uint32(10)) == gen_block_hash(10)
+            assert await height_map.get_ses(uint32(10)) == gen_ses(10)
+            assert await height_map.get_hash(uint32(10)) == gen_block_hash(10)
 
     @pytest.mark.anyio
     async def test_height_to_ses(self, tmp_dir: Path, db_version: int) -> None:
@@ -328,22 +328,22 @@ class TestBlockHeightMap:
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
-            assert height_map.get_ses(uint32(0)) == gen_ses(0)
-            assert height_map.get_ses(uint32(2)) == gen_ses(2)
-            assert height_map.get_ses(uint32(4)) == gen_ses(4)
-            assert height_map.get_ses(uint32(6)) == gen_ses(6)
-            assert height_map.get_ses(uint32(8)) == gen_ses(8)
+            assert await height_map.get_ses(uint32(0)) == gen_ses(0)
+            assert await height_map.get_ses(uint32(2)) == gen_ses(2)
+            assert await height_map.get_ses(uint32(4)) == gen_ses(4)
+            assert await height_map.get_ses(uint32(6)) == gen_ses(6)
+            assert await height_map.get_ses(uint32(8)) == gen_ses(8)
 
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(1))
+                await height_map.get_ses(uint32(1))
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(3))
+                await height_map.get_ses(uint32(3))
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(5))
+                await height_map.get_ses(uint32(5))
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(7))
+                await height_map.get_ses(uint32(7))
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(9))
+                await height_map.get_ses(uint32(9))
 
     @pytest.mark.anyio
     async def test_rollback(self, tmp_dir: Path, db_version: int) -> None:
@@ -353,33 +353,33 @@ class TestBlockHeightMap:
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
-            assert height_map.get_ses(uint32(0)) == gen_ses(0)
-            assert height_map.get_ses(uint32(2)) == gen_ses(2)
-            assert height_map.get_ses(uint32(4)) == gen_ses(4)
-            assert height_map.get_ses(uint32(6)) == gen_ses(6)
-            assert height_map.get_ses(uint32(8)) == gen_ses(8)
+            assert await height_map.get_ses(uint32(0)) == gen_ses(0)
+            assert await height_map.get_ses(uint32(2)) == gen_ses(2)
+            assert await height_map.get_ses(uint32(4)) == gen_ses(4)
+            assert await height_map.get_ses(uint32(6)) == gen_ses(6)
+            assert await height_map.get_ses(uint32(8)) == gen_ses(8)
 
-            assert height_map.get_hash(uint32(5)) == gen_block_hash(5)
+            assert await height_map.get_hash(uint32(5)) == gen_block_hash(5)
 
             height_map.rollback(5)
-            assert height_map.contains_height(uint32(0))
-            assert height_map.contains_height(uint32(1))
-            assert height_map.contains_height(uint32(2))
-            assert height_map.contains_height(uint32(3))
-            assert height_map.contains_height(uint32(4))
-            assert height_map.contains_height(uint32(5))
-            assert not height_map.contains_height(uint32(6))
-            assert not height_map.contains_height(uint32(7))
-            assert not height_map.contains_height(uint32(8))
-            assert height_map.get_hash(uint32(5)) == gen_block_hash(5)
+            assert await height_map.contains_height(uint32(0))
+            assert await height_map.contains_height(uint32(1))
+            assert await height_map.contains_height(uint32(2))
+            assert await height_map.contains_height(uint32(3))
+            assert await height_map.contains_height(uint32(4))
+            assert await height_map.contains_height(uint32(5))
+            assert not await height_map.contains_height(uint32(6))
+            assert not await height_map.contains_height(uint32(7))
+            assert not await height_map.contains_height(uint32(8))
+            assert await height_map.get_hash(uint32(5)) == gen_block_hash(5)
 
-            assert height_map.get_ses(uint32(0)) == gen_ses(0)
-            assert height_map.get_ses(uint32(2)) == gen_ses(2)
-            assert height_map.get_ses(uint32(4)) == gen_ses(4)
+            assert await height_map.get_ses(uint32(0)) == gen_ses(0)
+            assert await height_map.get_ses(uint32(2)) == gen_ses(2)
+            assert await height_map.get_ses(uint32(4)) == gen_ses(4)
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(6))
+                await height_map.get_ses(uint32(6))
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(8))
+                await height_map.get_ses(uint32(8))
 
     @pytest.mark.anyio
     async def test_rollback2(self, tmp_dir: Path, db_version: int) -> None:
@@ -389,28 +389,28 @@ class TestBlockHeightMap:
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
-            assert height_map.get_ses(uint32(0)) == gen_ses(0)
-            assert height_map.get_ses(uint32(2)) == gen_ses(2)
-            assert height_map.get_ses(uint32(4)) == gen_ses(4)
-            assert height_map.get_ses(uint32(6)) == gen_ses(6)
-            assert height_map.get_ses(uint32(8)) == gen_ses(8)
+            assert await height_map.get_ses(uint32(0)) == gen_ses(0)
+            assert await height_map.get_ses(uint32(2)) == gen_ses(2)
+            assert await height_map.get_ses(uint32(4)) == gen_ses(4)
+            assert await height_map.get_ses(uint32(6)) == gen_ses(6)
+            assert await height_map.get_ses(uint32(8)) == gen_ses(8)
 
-            assert height_map.get_hash(uint32(6)) == gen_block_hash(6)
+            assert await height_map.get_hash(uint32(6)) == gen_block_hash(6)
 
             height_map.rollback(6)
-            assert height_map.contains_height(uint32(6))
-            assert not height_map.contains_height(uint32(7))
+            assert await height_map.contains_height(uint32(6))
+            assert not await height_map.contains_height(uint32(7))
 
-            assert height_map.get_hash(uint32(6)) == gen_block_hash(6)
+            assert await height_map.get_hash(uint32(6)) == gen_block_hash(6)
             with pytest.raises(AssertionError) as _:
-                height_map.get_hash(uint32(7))
+                await height_map.get_hash(uint32(7))
 
-            assert height_map.get_ses(uint32(0)) == gen_ses(0)
-            assert height_map.get_ses(uint32(2)) == gen_ses(2)
-            assert height_map.get_ses(uint32(4)) == gen_ses(4)
-            assert height_map.get_ses(uint32(6)) == gen_ses(6)
+            assert await height_map.get_ses(uint32(0)) == gen_ses(0)
+            assert await height_map.get_ses(uint32(2)) == gen_ses(2)
+            assert await height_map.get_ses(uint32(4)) == gen_ses(4)
+            assert await height_map.get_ses(uint32(6)) == gen_ses(6)
             with pytest.raises(KeyError) as _:
-                height_map.get_ses(uint32(8))
+                await height_map.get_ses(uint32(8))
 
     @pytest.mark.anyio
     async def test_cache_file_nothing_to_write(self, tmp_dir: Path, db_version: int) -> None:
@@ -530,10 +530,10 @@ async def test_empty_chain(tmp_dir: Path, db_version: int) -> None:
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
         with pytest.raises(KeyError) as _:
-            height_map.get_ses(uint32(0))
+            await height_map.get_ses(uint32(0))
 
         with pytest.raises(AssertionError) as _:
-            height_map.get_hash(uint32(0))
+            await height_map.get_hash(uint32(0))
 
 
 @pytest.mark.anyio
@@ -550,7 +550,7 @@ async def test_peak_only_chain(tmp_dir: Path, db_version: int) -> None:
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
         with pytest.raises(KeyError) as _:
-            height_map.get_ses(uint32(0))
+            await height_map.get_ses(uint32(0))
 
         with pytest.raises(AssertionError) as _:
-            height_map.get_hash(uint32(0))
+            await height_map.get_hash(uint32(0))

@@ -982,7 +982,7 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            tx_peak = self.full_node.blockchain.get_tx_peak()
+            tx_peak = await self.full_node.blockchain.get_tx_peak()
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants,
                 quality_string,
@@ -1707,7 +1707,7 @@ class FullNodeAPI:
     async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo) -> Message:
         """Returns the start and end height of a sub-epoch for the height specified in request"""
 
-        ses_height = self.full_node.blockchain.get_ses_heights()
+        ses_height = await self.full_node.blockchain.get_ses_heights()
         start_height = request.start_height
         end_height = request.end_height
         ses_hash_heights = []
@@ -1721,7 +1721,7 @@ class FullNodeAPI:
             # start_ses_hash
             if ses_start_height <= start_height < next_ses_height:
                 ses_hash_heights.append([ses_start_height, next_ses_height])
-                ses: SubEpochSummary = self.full_node.blockchain.get_ses(ses_start_height)
+                ses: SubEpochSummary = await self.full_node.blockchain.get_ses(ses_start_height)
                 ses_reward_hashes.append(ses.reward_chain_hash)
                 if ses_start_height < end_height < next_ses_height:
                     break
@@ -1731,7 +1731,7 @@ class FullNodeAPI:
                     # else add extra ses as request start <-> end spans two ses
                     next_next_height = ses_height[idx + 2]
                     ses_hash_heights.append([next_ses_height, next_next_height])
-                    nex_ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
+                    nex_ses: SubEpochSummary = await self.full_node.blockchain.get_ses(next_ses_height)
                     ses_reward_hashes.append(nex_ses.reward_chain_hash)
                     break
 

@@ -3305,14 +3305,16 @@ class TestReorgs:
 
         last_tx_block: Optional[bytes32] = None
         for block in blocks:
-            assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+            tx_peak = await b.get_tx_peak()
+            assert maybe_header_hash(tx_peak) == last_tx_block
             await _validate_and_add_block(b, block)
             if block.is_transaction_block():
                 last_tx_block = block.header_hash
         peak = b.get_peak()
         assert peak is not None
         assert peak.height == reorg_point - 1
-        assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+        tx_peak = await b.get_tx_peak()
+        assert maybe_header_hash(tx_peak) == last_tx_block
 
         reorg_last_tx_block: Optional[bytes32] = None
         fork_block = blocks[9]
@@ -3334,7 +3336,8 @@ class TestReorgs:
             if reorg_block.height >= reorg_point:
                 last_tx_block = reorg_last_tx_block
 
-            assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
+            tx_peak = await b.get_tx_peak()
+            assert maybe_header_hash(tx_peak) == last_tx_block
 
         peak = b.get_peak()
         assert peak is not None
@@ -4056,7 +4059,8 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
 
     last_tx_block_record = None
     for b, prevalidation_res in zip(test_blocks, res):
-        assert bc.get_tx_peak() == last_tx_block_record
+        tx_peak = await bc.get_tx_peak()
+        assert tx_peak == last_tx_block_record
         fork_info = ForkInfo(b.height - 1, b.height - 1, b.prev_header_hash)
         _, err, _ = await bc.add_block(b, prevalidation_res, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
@@ -4072,7 +4076,8 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
             )
             last_tx_block_record = block_record
 
-    assert bc.get_tx_peak() == last_tx_block_record
+    tx_peak = await bc.get_tx_peak()
+    assert tx_peak == last_tx_block_record
 
 
 def to_bytes(gen: Optional[SerializedProgram]) -> bytes:

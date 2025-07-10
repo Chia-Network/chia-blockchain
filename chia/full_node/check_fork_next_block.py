@@ -16,7 +16,7 @@ async def check_fork_next_block(
     check_block_future: Callable[[WSChiaConnection, uint32, BlockchainInterface], Awaitable[bool]],
 ) -> uint32:
     our_peak_height = blockchain.get_peak_height()
-    ses_heigths = blockchain.get_ses_heights()
+    ses_heigths = await blockchain.get_ses_heights()
     if len(ses_heigths) > 2 and our_peak_height is not None:
         ses_heigths.sort()
         max_fork_ses_height = ses_heigths[-3]

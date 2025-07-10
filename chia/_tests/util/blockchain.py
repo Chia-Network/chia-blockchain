@@ -31,7 +31,7 @@ async def create_blockchain(
         height_map = await BlockHeightMap.create(path, wrapper)
         bc1 = await Blockchain.create(coin_store, store, height_map, constants, 3, single_threaded=True, log_coins=True)
         try:
-            assert bc1.get_peak() is None
+            assert await bc1.get_peak() is None
             yield bc1, wrapper
         finally:
             bc1.shut_down()

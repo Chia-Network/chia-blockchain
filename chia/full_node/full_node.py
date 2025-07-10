@@ -304,7 +304,7 @@ class FullNode:
                 create_referenced_task(mem_profile_task(self.root_path, "node", self.log), known_unreferenced=True)
 
             time_taken = time.monotonic() - start_time
-            peak: Optional[BlockRecord] = self.blockchain.get_peak()
+            peak: Optional[BlockRecord] = await self.blockchain.get_peak()
             if peak is None:
                 self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
                 if not await self.coin_store.is_empty():
@@ -320,7 +320,8 @@ class FullNode:
                     f"time taken: {int(time_taken)}s"
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                    pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
+                    tx_peak = await self.blockchain.get_tx_peak()
+                    pending_tx = await self.mempool_manager.new_peak(tx_peak, None)
                     assert len(pending_tx.items) == 0  # no pending transactions when starting up
 
                     full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
@@ -528,7 +529,7 @@ class FullNode:
             blockchain=self.blockchain,
             multiprocessing_context=self.multiprocessing_context,
         )
-        peak = self.blockchain.get_peak()
+        peak = await self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
 
@@ -600,7 +601,7 @@ class FullNode:
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
                 return False
-            hash = self.blockchain.height_to_hash(first.block.height - 1)
+            hash = await self.blockchain.height_to_hash(first.block.height - 1)
             assert hash is not None
             if hash != first.block.prev_header_hash:
                 self.log.info("Batch syncing stopped, this is a deep chain")
@@ -618,7 +619,7 @@ class FullNode:
         try:
             peer_info = peer.get_peer_logging()
             if start_height > 0:
-                fork_hash = self.blockchain.height_to_hash(uint32(start_height - 1))
+                fork_hash = await self.blockchain.height_to_hash(uint32(start_height - 1))
             else:
                 fork_hash = self.constants.GENESIS_CHALLENGE
             assert fork_hash
@@ -637,7 +638,7 @@ class FullNode:
                         prev_b = await self.blockchain.get_block_record_from_db(response.blocks[0].prev_header_hash)
                         assert prev_b is not None
                     new_slot = len(response.blocks[0].finished_sub_slots) > 0
-                    ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                    ssi, diff = await get_next_sub_slot_iters_and_difficulty(
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
@@ -711,7 +712,7 @@ class FullNode:
                 if curr_height == 0:
                     found_fork_point = True
                     break
-                hash_at_height = self.blockchain.height_to_hash(curr.block.height - 1)
+                hash_at_height = await self.blockchain.height_to_hash(curr.block.height - 1)
                 if hash_at_height is not None and hash_at_height == curr.block.prev_header_hash:
                     found_fork_point = True
                     break
@@ -765,7 +766,7 @@ class FullNode:
             return None
 
         # Not interested in less heavy peaks
-        peak: Optional[BlockRecord] = self.blockchain.get_peak()
+        peak: Optional[BlockRecord] = await self.blockchain.get_peak()
         curr_peak_height = uint32(0) if peak is None else peak.height
         if peak is not None and peak.weight > request.weight:
             return None
@@ -840,15 +841,16 @@ class FullNode:
             peak_block = await self.blockchain.get_full_peak()
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
-            difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
-            ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+            ssi_and_difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)
+            difficulty = ssi_and_difficulty[1]
+            ses: Optional[SubEpochSummary] = await next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
                 peak.required_iters,
                 peak_block,
                 True,
             )
-            recent_rc = self.blockchain.get_recent_reward_challenges()
+            recent_rc = await self.blockchain.get_recent_reward_challenges()
 
             curr = peak
             while not curr.is_challenge_block(self.constants) and not curr.first_in_sub_slot:
@@ -890,7 +892,7 @@ class FullNode:
             block_is_current_at = uint64(int(time.time() - 60 * 7))
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
-        curr: Optional[BlockRecord] = self.blockchain.get_peak()
+        curr: Optional[BlockRecord] = await self.blockchain.get_peak()
         if curr is None:
             return False
 
@@ -1079,7 +1081,7 @@ class FullNode:
         self.log.info(
             f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} up to height {peak_height}"
         )
-        cur_peak: Optional[BlockRecord] = self.blockchain.get_peak()
+        cur_peak: Optional[BlockRecord] = await self.blockchain.get_peak()
         if cur_peak is not None and peak_weight <= cur_peak.weight:
             raise ValueError("Not performing sync, already caught up.")
         wp_timeout = 360
@@ -1102,7 +1104,7 @@ class FullNode:
             raise ValueError("Weight proof failed bad peak cache validation")
         # dont sync to wp if local peak is heavier,
         # dont ban peer, we asked for this peak
-        current_peak = self.blockchain.get_peak()
+        current_peak = await self.blockchain.get_peak()
         if current_peak is not None:
             if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
                 raise RuntimeError(
@@ -1153,7 +1155,7 @@ class FullNode:
         # fork_info. Otherwise validation is very expensive, especially
         # for deep reorgs
         if fork_point_height > 0:
-            fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
+            fork_hash = await self.blockchain.height_to_hash(uint32(fork_point_height - 1))
             assert fork_hash is not None
         else:
             fork_hash = self.constants.GENESIS_CHALLENGE
@@ -1164,7 +1166,7 @@ class FullNode:
             diff = self.constants.DIFFICULTY_STARTING
             prev_ses_block = None
         else:
-            prev_b_hash = self.blockchain.height_to_hash(fork_point_height)
+            prev_b_hash = await self.blockchain.height_to_hash(fork_point_height)
             assert prev_b_hash is not None
             prev_b = await self.blockchain.get_full_block(prev_b_hash)
             assert prev_b is not None
@@ -1388,7 +1390,7 @@ class FullNode:
                     f"Added blocks {start_height} to {end_height} "
                     f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
-                peak: Optional[BlockRecord] = self.blockchain.get_peak()
+                peak: Optional[BlockRecord] = await self.blockchain.get_peak()
                 if state_change_summary is not None:
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
@@ -1560,7 +1562,7 @@ class FullNode:
             # we have already validated this block once, no need to do it again.
             # however, if this block is not part of the main chain, we need to
             # update the fork context with its additions and removals
-            if self.blockchain.height_to_hash(block.height) == header_hash:
+            if await self.blockchain.height_to_hash(block.height) == header_hash:
                 # we're on the main chain, just fast-forward the fork height
                 fork_info.reset(block.height, header_hash)
             else:
@@ -1632,7 +1634,7 @@ class FullNode:
             if len(block.finished_sub_slots) > 0:
                 cc_sub_slot = block.finished_sub_slots[0].challenge_chain
                 if cc_sub_slot.new_sub_slot_iters is not None or cc_sub_slot.new_difficulty is not None:
-                    expected_sub_slot_iters, expected_difficulty = get_next_sub_slot_iters_and_difficulty(
+                    expected_sub_slot_iters, expected_difficulty = await get_next_sub_slot_iters_and_difficulty(
                         self.constants, True, block_record, blockchain
                     )
                     assert cc_sub_slot.new_sub_slot_iters is not None
@@ -1738,7 +1740,7 @@ class FullNode:
             return None
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-            peak: Optional[BlockRecord] = self.blockchain.get_peak()
+            peak: Optional[BlockRecord] = await self.blockchain.get_peak()
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
             if peak_fb is not None:
                 if fork_point is None:
@@ -1803,21 +1805,21 @@ class FullNode:
         msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
         await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-        peak = self.blockchain.get_peak()
+        peak = await self.blockchain.get_peak()
         if peak is not None and peak.height > self.constants.MAX_SUB_SLOT_BLOCKS:
             sub_slot_iters = peak.sub_slot_iters
             difficulty = uint64(peak.weight - self.blockchain.block_record(peak.prev_hash).weight)
             # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
             assert ip_sub_slot is not None
             if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():
-                sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(
+                sub_slot_iters, difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(
                     peak.header_hash, True
                 )
         else:
             difficulty = self.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
 
-        tx_peak = self.blockchain.get_tx_peak()
+        tx_peak = await self.blockchain.get_tx_peak()
         # Notify farmers of the new signage point
         broadcast_farmer = farmer_protocol.NewSignagePoint(
             request.challenge_chain_vdf.challenge,
@@ -1849,7 +1851,9 @@ class FullNode:
         """
 
         record = state_change_summary.peak
-        sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(record.header_hash, False)
+        sub_slot_iters, difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(
+            record.header_hash, False
+        )
 
         self.log.info(
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
@@ -1883,7 +1887,7 @@ class FullNode:
         fork_block: Optional[BlockRecord] = None
         if state_change_summary.fork_height != block.height - 1 and block.height != 0:
             # This is a reorg
-            fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(state_change_summary.fork_height)
+            fork_hash: Optional[bytes32] = await self.blockchain.height_to_hash(state_change_summary.fork_height)
             assert fork_hash is not None
             fork_block = await self.blockchain.get_block_record_from_db(fork_hash)
 
@@ -1935,7 +1939,8 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         spent_coins: list[bytes32] = [coin_id for coin_id, _ in state_change_summary.removals]
-        mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
+        tx_peak = await self.blockchain.get_tx_peak()
+        mempool_new_peak_result = await self.mempool_manager.new_peak(tx_peak, spent_coins)
 
         return PeakPostProcessingResult(
             mempool_new_peak_result.items,
@@ -2137,7 +2142,7 @@ class FullNode:
                     curr = self.blockchain.block_record(curr.prev_hash)
                 prev_ses_block = curr
             new_slot = len(block.finished_sub_slots) > 0
-            ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
+            ssi, diff = await get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
             future = await pre_validate_block(
                 self.blockchain.constants,
                 AugmentedBlockchain(self.blockchain),
@@ -2248,7 +2253,7 @@ class FullNode:
             pr.dump_stats(profile_dir / f"{block.height}-{validation_time:0.1f}.profile")
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
-        peak = self.blockchain.get_peak()
+        peak = await self.blockchain.get_peak()
         assert peak is not None
 
         # Removes all temporary data for old blocks
@@ -2335,7 +2340,7 @@ class FullNode:
         if self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)[0] is not None:
             return None
 
-        peak: Optional[BlockRecord] = self.blockchain.get_peak()
+        peak: Optional[BlockRecord] = await self.blockchain.get_peak()
         if peak is not None:
             if block.total_iters < peak.sp_total_iters(self.constants):
                 # This means this unfinished block is pretty far behind, it will not add weight to our chain
@@ -2482,7 +2487,7 @@ class FullNode:
                 f"{percent_full_str}"
             )
 
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = await get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(block.finished_sub_slots) > 0,
             prev_b,
@@ -2575,7 +2580,7 @@ class FullNode:
         else:
             # Find the prev block, starts looking backwards from the peak. target_rc_hash must be the hash of a block
             # and not an end of slot (since we just looked through the slots and backtracked)
-            curr: Optional[BlockRecord] = self.blockchain.get_peak()
+            curr: Optional[BlockRecord] = await self.blockchain.get_peak()
 
             for _ in range(10):
                 if curr is None:
@@ -2602,7 +2607,7 @@ class FullNode:
         if finished_sub_slots is None:
             return None
 
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = await get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(finished_sub_slots) > 0,
             prev_b,
@@ -2683,9 +2688,9 @@ class FullNode:
                     False,
                 )
 
-            peak = self.blockchain.get_peak()
+            peak = await self.blockchain.get_peak()
             if peak is not None and peak.height > 2:
-                next_sub_slot_iters, next_difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(
+                next_sub_slot_iters, next_difficulty = await self.blockchain.get_next_sub_slot_iters_and_difficulty(
                     peak.header_hash, True
                 )
             else:
@@ -2724,7 +2729,7 @@ class FullNode:
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
-                tx_peak = self.blockchain.get_tx_peak()
+                tx_peak = await self.blockchain.get_tx_peak()
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
                     end_of_slot_bundle.challenge_chain.get_hash(),
@@ -3013,7 +3018,7 @@ class FullNode:
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
-        peak = self.blockchain.get_peak()
+        peak = await self.blockchain.get_peak()
         if peak is None or peak.height - height < 5:
             self.log.debug("Will not compactify recent block")
             return False
@@ -3088,7 +3093,7 @@ class FullNode:
                 raise
 
     async def add_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
-        peak = self.blockchain.get_peak()
+        peak = await self.blockchain.get_peak()
         if peak is None or peak.height - request.height < 5:
             self.log.info(f"Ignoring add_compact_proof_of_time, height {request.height} too recent.")
             return None
@@ -3112,7 +3117,7 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection) -> None:
-        peak = self.blockchain.get_peak()
+        peak = await self.blockchain.get_peak()
         if peak is None or peak.height - request.height < 5:
             self.log.info(f"Ignoring new_compact_vdf, height {request.height} too recent.")
             return None
@@ -3262,7 +3267,7 @@ class FullNode:
                     if sanitize_weight_proof_only:
                         records = await self.blockchain.get_block_records_in_range(h, h)
                     for header in headers.values():
-                        expected_header_hash = self.blockchain.height_to_hash(header.height)
+                        expected_header_hash = await self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
                             continue
                         if sanitize_weight_proof_only:
@@ -3363,7 +3368,7 @@ async def node_next_block_check(
         FullNodeAPI.request_block, full_node_protocol.RequestBlock(potential_peek, True)
     )
     if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
-        peak = blockchain.get_peak()
+        peak = await blockchain.get_peak()
         if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
             return True
     return False

@@ -1532,8 +1532,8 @@ class WalletNode:
     async def validate_block_inclusion(
         self, block: HeaderBlock, peer: WSChiaConnection, peer_request_cache: PeerRequestCache
     ) -> bool:
-        if self.wallet_state_manager.blockchain.contains_height(block.height):
-            stored_hash = self.wallet_state_manager.blockchain.height_to_hash(block.height)
+        if await self.wallet_state_manager.blockchain.contains_height(block.height):
+            stored_hash = await self.wallet_state_manager.blockchain.height_to_hash(block.height)
             stored_record = self.wallet_state_manager.blockchain.try_block_record(stored_hash)
             if stored_record is not None:
                 if stored_record.header_hash == block.header_hash:

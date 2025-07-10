@@ -200,7 +200,7 @@ class FullNodeRpcApi:
                 },
             }
             return res
-        peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
+        peak: Optional[BlockRecord] = await self.service.blockchain.get_peak()
 
         if peak is not None and peak.height > 0:
             difficulty = uint64(peak.weight - self.service.blockchain.block_record(peak.prev_hash).weight)
@@ -306,7 +306,7 @@ class FullNodeRpcApi:
                 return {"eos": eos, "time_received": time_received, "reverted": False}
 
             # Otherwise we can backtrack from peak to find it in the blockchain
-            curr: Optional[BlockRecord] = self.service.blockchain.get_peak()
+            curr: Optional[BlockRecord] = await self.service.blockchain.get_peak()
             if curr is None:
                 raise ValueError("No blocks in the chain")
 
@@ -343,7 +343,7 @@ class FullNodeRpcApi:
         # Otherwise we can backtrack from peak to find it in the blockchain
         rc_challenge: bytes32 = sp.rc_vdf.challenge
         next_b: Optional[BlockRecord] = None
-        curr_b_optional: Optional[BlockRecord] = self.service.blockchain.get_peak()
+        curr_b_optional: Optional[BlockRecord] = await self.service.blockchain.get_peak()
         assert curr_b_optional is not None
         curr_b: BlockRecord = curr_b_optional
 
@@ -554,7 +554,7 @@ class FullNodeRpcApi:
         return {"block_record": record}
 
     async def get_unfinished_block_headers(self, _request: dict[str, Any]) -> EndpointResult:
-        peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
+        peak: Optional[BlockRecord] = await self.service.blockchain.get_peak()
         if peak is None:
             return {"headers": []}
 
@@ -851,7 +851,7 @@ class FullNodeRpcApi:
 
         # Grab best transactions from Mempool for given tip target
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
-            peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
+            peak: Optional[BlockRecord] = await self.service.blockchain.get_peak()
 
             if peak is None:
                 return {

@@ -10,7 +10,7 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.util.significant_bits import count_significant_bits, truncate_to_significant_bits
 
 
-def _get_blocks_at_height(
+async def _get_blocks_at_height(
     blocks: BlockRecordsProtocol,
     prev_b: BlockRecord,
     target_height: uint32,
@@ -28,15 +28,15 @@ def _get_blocks_at_height(
         max_num_blocks: max number of blocks to fetch (although less might be fetched)
 
     """
-    if blocks.contains_height(prev_b.height):
-        header_hash = blocks.height_to_hash(prev_b.height)
+    if await blocks.contains_height(prev_b.height):
+        header_hash = await blocks.height_to_hash(prev_b.height)
         if header_hash == prev_b.header_hash:
             # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain. We can directly
             # use the height_to_block_record method
             block_list: list[BlockRecord] = []
             for h in range(target_height, target_height + max_num_blocks):
-                assert blocks.contains_height(uint32(h))
-                block_list.append(blocks.height_to_block_record(uint32(h)))
+                assert await blocks.contains_height(uint32(h))
+                block_list.append(await blocks.height_to_block_record(uint32(h)))
             return block_list
 
     # Slow fetching, goes back one by one, since we are in a fork
@@ -51,7 +51,7 @@ def _get_blocks_at_height(
     return list(reversed(target_blocks))
 
 
-def _get_second_to_last_transaction_block_in_previous_epoch(
+async def _get_second_to_last_transaction_block_in_previous_epoch(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     last_b: BlockRecord,
@@ -89,14 +89,14 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
     if height_prev_epoch_surpass == 0:
         # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
         # a block in the previous epoch, which would be height < 0
-        return _get_blocks_at_height(blocks, last_b, uint32(0))[0]
+        return (await _get_blocks_at_height(blocks, last_b, uint32(0)))[0]
 
     # The target block must be in this range. Either the surpass block must be a transaction block, or something
     # in it's sub slot must be a transaction block. If that is the only transaction block in the sub-slot, the last
     # block in the previous sub-slot from that must also be a transaction block (therefore -1 is used).
     # The max height for the new epoch to start is surpass + 2*MAX_SUB_SLOT_BLOCKS + MIN_BLOCKS_PER_CHALLENGE_BLOCK - 3,
     # since we might have a deficit > 0 when surpass is hit. The +3 is added just in case
-    fetched_blocks = _get_blocks_at_height(
+    fetched_blocks = await _get_blocks_at_height(
         blocks,
         last_b,
         uint32(height_prev_epoch_surpass - constants.MAX_SUB_SLOT_BLOCKS - 1),
@@ -191,7 +191,7 @@ def can_finish_sub_and_full_epoch(
     return True, height_can_be_first_in_epoch(constants, uint32(height + 1))
 
 
-def _get_next_sub_slot_iters(
+async def _get_next_sub_slot_iters(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
@@ -236,7 +236,9 @@ def _get_next_sub_slot_iters(
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
 
-    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = await _get_second_to_last_transaction_block_in_previous_epoch(
+        constants, blocks, prev_b
+    )
 
     # This gets the last transaction block before this block's signage point. Assuming the block at height height
     # is the last block infused in the epoch: If this block ends up being a
@@ -269,7 +271,7 @@ def _get_next_sub_slot_iters(
     return new_ssi
 
 
-def _get_next_difficulty(
+async def _get_next_difficulty(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
@@ -315,7 +317,9 @@ def _get_next_difficulty(
         if not new_slot or not can_finish_epoch:
             return current_difficulty
 
-    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = await _get_second_to_last_transaction_block_in_previous_epoch(
+        constants, blocks, prev_b
+    )
 
     # This gets the last transaction block before this block's signage point. Assuming the block at height height
     # is the last block infused in the epoch: If this block ends up being a
@@ -352,7 +356,7 @@ def _get_next_difficulty(
     return uint64(new_difficulty)
 
 
-def get_next_sub_slot_iters_and_difficulty(
+async def get_next_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     is_first_in_sub_slot: bool,
     prev_b: Optional[BlockRecord],
@@ -383,7 +387,7 @@ def get_next_sub_slot_iters_and_difficulty(
         return prev_b.sub_slot_iters, prev_difficulty
 
     sp_total_iters = prev_b.sp_total_iters(constants)
-    difficulty: uint64 = _get_next_difficulty(
+    difficulty: uint64 = await _get_next_difficulty(
         constants,
         blocks,
         prev_b.prev_hash,
@@ -395,7 +399,7 @@ def get_next_sub_slot_iters_and_difficulty(
         sp_total_iters,
     )
 
-    sub_slot_iters: uint64 = _get_next_sub_slot_iters(
+    sub_slot_iters: uint64 = await _get_next_sub_slot_iters(
         constants,
         blocks,
         prev_b.prev_hash,

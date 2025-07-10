@@ -98,12 +98,12 @@ class WeightProofHandler:
             self.tip = tip
             return wp
 
-    def get_sub_epoch_data(self, tip_height: uint32, summary_heights: list[uint32]) -> list[SubEpochData]:
+    async def get_sub_epoch_data(self, tip_height: uint32, summary_heights: list[uint32]) -> list[SubEpochData]:
         sub_epoch_data: list[SubEpochData] = []
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_height:
                 break
-            ses = self.blockchain.get_ses(ses_height)
+            ses = await self.blockchain.get_ses(ses_height)
             log.debug("handle sub epoch summary %s at height: %s ses %s", sub_epoch_n, ses_height, ses)
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
@@ -123,15 +123,15 @@ class WeightProofHandler:
         if recent_chain is None:
             return None
 
-        summary_heights = self.blockchain.get_ses_heights()
-        zero_hash = self.blockchain.height_to_hash(uint32(0))
+        summary_heights = await self.blockchain.get_ses_heights()
+        zero_hash = await self.blockchain.height_to_hash(uint32(0))
         assert zero_hash is not None
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)
         if prev_ses_block is None:
             return None
-        sub_epoch_data = self.get_sub_epoch_data(tip_rec.height, summary_heights)
+        sub_epoch_data = await self.get_sub_epoch_data(tip_rec.height, summary_heights)
         # use second to last ses as seed
-        seed = self.get_seed_for_proof(summary_heights, tip_rec.height)
+        seed = await self.get_seed_for_proof(summary_heights, tip_rec.height)
         rng = random.Random(seed)
         weight_to_check = _get_weights_for_sampling(rng, tip_rec.weight, recent_chain)
         sample_n = 0
@@ -170,14 +170,14 @@ class WeightProofHandler:
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
-    def get_seed_for_proof(self, summary_heights: list[uint32], tip_height: uint32) -> bytes32:
+    async def get_seed_for_proof(self, summary_heights: list[uint32], tip_height: uint32) -> bytes32:
         count = 0
         ses = None
         for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
             if ses_height <= tip_height:
                 count += 1
             if count == 2:
-                ses = self.blockchain.get_ses(ses_height)
+                ses = await self.blockchain.get_ses(ses_height)
                 break
         assert ses is not None
         seed = ses.get_hash()
@@ -185,7 +185,7 @@ class WeightProofHandler:
 
     async def _get_recent_chain(self, tip_height: uint32) -> Optional[list[HeaderBlock]]:
         recent_chain: list[HeaderBlock] = []
-        ses_heights = self.blockchain.get_ses_heights()
+        ses_heights = await self.blockchain.get_ses_heights()
         min_height = 0
         count_ses = 0
         for ses_height in reversed(ses_heights):
@@ -204,7 +204,7 @@ class WeightProofHandler:
             if curr_height == 0:
                 break
             # add to needed reward chain recent blocks
-            header_hash = self.blockchain.height_to_hash(curr_height)
+            header_hash = await self.blockchain.height_to_hash(curr_height)
             assert header_hash is not None
             header_block = headers[header_hash]
             block_rec = blocks[header_block.header_hash]
@@ -217,7 +217,7 @@ class WeightProofHandler:
             curr_height = uint32(curr_height - 1)
             blocks_n += 1
 
-        header_hash = self.blockchain.height_to_hash(curr_height)
+        header_hash = await self.blockchain.height_to_hash(curr_height)
         assert header_hash is not None
         header_block = headers[header_hash]
         recent_chain.insert(0, header_block)
@@ -231,12 +231,12 @@ class WeightProofHandler:
 
     async def create_prev_sub_epoch_segments(self) -> None:
         log.debug("create prev sub_epoch_segments")
-        heights = self.blockchain.get_ses_heights()
+        heights = await self.blockchain.get_ses_heights()
         if len(heights) < 3:
             return None
         count = len(heights) - 2
-        ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
-        prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
+        ses_sub_block = await self.blockchain.height_to_block_record(heights[-2])
+        prev_ses_sub_block = await self.blockchain.height_to_block_record(heights[-3])
         assert prev_ses_sub_block.sub_epoch_summary_included is not None
         segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
         assert segments is not None
@@ -255,8 +255,8 @@ class WeightProofHandler:
             log.error("no peak yet")
             return None
 
-        summary_heights = self.blockchain.get_ses_heights()
-        h_hash: Optional[bytes32] = self.blockchain.height_to_hash(uint32(0))
+        summary_heights = await self.blockchain.get_ses_heights()
+        h_hash: Optional[bytes32] = await self.blockchain.height_to_hash(uint32(0))
         if h_hash is None:
             return None
         prev_ses_block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(h_hash)
@@ -321,7 +321,7 @@ class WeightProofHandler:
                 first = False
             else:
                 height = uint32(height + 1)
-            header_hash = self.blockchain.height_to_hash(height)
+            header_hash = await self.blockchain.height_to_hash(height)
             assert header_hash is not None
             curr = header_blocks[header_hash]
             if curr is None:
@@ -342,7 +342,7 @@ class WeightProofHandler:
             if end - curr_rec.height == batch_size - 1:
                 blocks = await self.blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
                 end = curr_rec.height
-            header_hash = self.blockchain.height_to_hash(uint32(curr_rec.height - 1))
+            header_hash = await self.blockchain.height_to_hash(uint32(curr_rec.height - 1))
             assert header_hash is not None
             curr_rec = blocks[header_hash]
         return curr_rec.height
@@ -457,7 +457,7 @@ class WeightProofHandler:
                 curr.total_iters,
             )
             tmp_sub_slots_data.append(ssd)
-            header_hash = self.blockchain.height_to_hash(uint32(curr.height + 1))
+            header_hash = await self.blockchain.height_to_hash(uint32(curr.height + 1))
             assert header_hash is not None
             curr = header_blocks[header_hash]
 
@@ -488,7 +488,7 @@ class WeightProofHandler:
     ) -> tuple[Optional[list[SubSlotData]], uint32]:
         # gets all vdfs first sub slot after challenge block to last sub slot
         log.debug(f"slot end vdf start height {start_height}")
-        header_hash = self.blockchain.height_to_hash(start_height)
+        header_hash = await self.blockchain.height_to_hash(start_height)
         assert header_hash is not None
         curr = header_blocks[header_hash]
         curr_header_hash = curr.header_hash
@@ -508,7 +508,7 @@ class WeightProofHandler:
                     sub_slots_data.append(handle_end_of_slot(sub_slot, eos_vdf_iters))
                 tmp_sub_slots_data = []
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
-            header_hash = self.blockchain.height_to_hash(uint32(curr.height + 1))
+            header_hash = await self.blockchain.height_to_hash(uint32(curr.height + 1))
             assert header_hash is not None
             curr = header_blocks[header_hash]
             curr_header_hash = curr.header_hash
@@ -564,7 +564,7 @@ class WeightProofHandler:
             curr.total_iters,
         )
 
-    def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> tuple[bool, uint32]:
+    async def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> tuple[bool, uint32]:
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
@@ -591,7 +591,7 @@ class WeightProofHandler:
         success, _ = validate_recent_blocks(self.constants, wp_recent_chain_bytes, summary_bytes)
         if not success:
             return False, uint32(0)
-        fork_point, _ = self.get_fork_point(summaries)
+        fork_point, _ = await self.get_fork_point(summaries)
         return True, fork_point
 
     async def validate_weight_proof(self, weight_proof: WeightProof) -> tuple[bool, uint32, list[SubEpochSummary]]:
@@ -607,7 +607,7 @@ class WeightProofHandler:
             log.error("weight proof failed sub epoch data validation")
             return False, uint32(0), []
 
-        fork_point, ses_fork_idx = self.get_fork_point(summaries)
+        fork_point, ses_fork_idx = await self.get_fork_point(summaries)
         # timing reference: 1 second
         # TODO: Consider implementing an async polling closer for the executor.
         with ProcessPoolExecutor(
@@ -635,14 +635,14 @@ class WeightProofHandler:
                 valid, _ = await task
         return valid, fork_point, summaries
 
-    def get_fork_point(self, received_summaries: list[SubEpochSummary]) -> tuple[uint32, int]:
+    async def get_fork_point(self, received_summaries: list[SubEpochSummary]) -> tuple[uint32, int]:
         # returns the fork height and ses index
         # iterate through sub epoch summaries to find fork point
         fork_point_index = 0
-        ses_heights = self.blockchain.get_ses_heights()
+        ses_heights = await self.blockchain.get_ses_heights()
         for idx, summary_height in enumerate(ses_heights):
             log.debug(f"check summary {idx} height {summary_height}")
-            local_ses = self.blockchain.get_ses(summary_height)
+            local_ses = await self.blockchain.get_ses(summary_height)
             if idx == len(received_summaries) - 1:
                 # end of wp summaries, local chain is longer or equal to wp chain
                 break

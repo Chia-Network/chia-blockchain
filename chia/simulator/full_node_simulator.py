@@ -81,7 +81,7 @@ class FullNodeSimulator(FullNodeAPI):
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def get_all_full_blocks(self) -> list[FullBlock]:
-        peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+        peak: Optional[BlockRecord] = await self.full_node.blockchain.get_peak()
         if peak is None:
             return []
         blocks = []
@@ -216,7 +216,7 @@ class FullNodeSimulator(FullNodeAPI):
                     fork_info,
                 )
 
-            peak = self.full_node.blockchain.get_peak()
+            peak = await self.full_node.blockchain.get_peak()
             assert peak is not None
             curr: BlockRecord = peak
             while not curr.is_transaction_block:
@@ -269,7 +269,7 @@ class FullNodeSimulator(FullNodeAPI):
                 pre_validation_result: PreValidationResult = await future
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(genesis, pre_validation_result, ssi, fork_info)
-            peak = self.full_node.blockchain.get_peak()
+            peak = await self.full_node.blockchain.get_peak()
             assert peak is not None
             curr: BlockRecord = peak
             while not curr.is_transaction_block:
