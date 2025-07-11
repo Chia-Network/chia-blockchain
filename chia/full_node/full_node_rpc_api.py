@@ -489,7 +489,7 @@ class FullNodeRpcApi:
 
         spends = get_spends_for_block(block_generator, full_block.height, self.service.constants)
 
-        return {"block_spends": spends[0]}
+        return spends[0]
 
     async def get_block_spends_with_conditions(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
@@ -506,8 +506,7 @@ class FullNodeRpcApi:
         spends_with_conditions = get_spends_for_block_with_conditions(
             block_generator, full_block.height, self.service.constants
         )
-
-        return {"block_spends_with_conditions": [spends_with_conditions]}
+        return {"block_spends_with_conditions": spends_with_conditions}
 
     async def get_block_record_by_height(self, request: dict[str, Any]) -> EndpointResult:
         if "height" not in request:

@@ -9,6 +9,7 @@ from chia_rs import (
     ConsensusConstants,
     get_flags_for_height_and_constants,
     get_spends_for_trusted_block,
+    get_spends_for_trusted_block_with_conditions,
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
 
@@ -55,7 +56,7 @@ def get_spends_for_block(
 def get_spends_for_block_with_conditions(
     generator: BlockGenerator, height: int, constants: ConsensusConstants
 ) -> list[dict[str, typing.Any]]:
-    spends = get_spends_for_trusted_block(
+    spends = get_spends_for_trusted_block_with_conditions(
         constants,
         generator.program,
         generator.generator_refs,
