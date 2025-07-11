@@ -3199,13 +3199,16 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
     with pytest.raises(
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
-        get_puzzle_and_solution_for_coin(
-            SerializedProgram.to(None),
-            [],
-            test_constants.MAX_BLOCK_COST_CLVM,
-            TEST_COIN,
-            get_flags_for_height_and_constants(0, test_constants),
-        )
+        try:
+            test = get_puzzle_and_solution_for_coin(
+                SerializedProgram.to(None),
+                [],
+                test_constants.MAX_BLOCK_COST_CLVM,
+                TEST_COIN,
+                get_flags_for_height_and_constants(0, test_constants),
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to get puzzle and solution for coin {TEST_COIN}, error: {e}") from e
 
 
 @pytest.mark.parametrize("old", [True, False])
