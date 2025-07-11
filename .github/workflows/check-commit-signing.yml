@@ -16,7 +16,6 @@ concurrency:
 
 jobs:
   check-commit-signing:
-    if: github.repository_owner == 'Chia-Network'
     name: Check commit signing
     runs-on: [ubuntu-latest]
     timeout-minutes: 5
