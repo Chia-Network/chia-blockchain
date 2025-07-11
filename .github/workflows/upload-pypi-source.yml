@@ -39,7 +39,7 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ${{ github.repository_owner == 'Chia-Network' && '[linux, arm64]' || 'ubuntu-22.04-arm' }}
           - name: macOS
             matrix: macos
             emoji: 🍎
@@ -115,7 +115,7 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ${{ github.repository_owner == 'Chia-Network' && '[linux, arm64]' || 'ubuntu-22.04-arm' }}
         arch:
           - name: Intel
             matrix: intel
