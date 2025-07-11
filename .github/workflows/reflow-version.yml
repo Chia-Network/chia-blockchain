@@ -18,6 +18,7 @@ on:
 
 jobs:
   version:
+    if: github.repository_owner == 'Chia-Network'
     name: identify version
     runs-on: ubuntu-latest
     timeout-minutes: 5
