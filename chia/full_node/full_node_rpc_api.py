@@ -13,8 +13,12 @@ from chia_rs import (
     PlotSize,
     SpendBundle,
     SpendBundleConditions,
+    get_flags_for_height_and_constants,
+    get_spends_for_trusted_block,
+    get_spends_for_trusted_block_with_conditions,
     run_block_generator2,
 )
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
@@ -23,11 +27,6 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import (
-    get_puzzle_and_solution_for_coin,
-    get_spends_for_block,
-    get_spends_for_block_with_conditions,
-)
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
@@ -487,7 +486,12 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": spends}
 
-        spends = get_spends_for_block(block_generator, full_block.height, self.service.constants)
+        spends = get_spends_for_trusted_block(
+            self.service.constants,
+            block_generator.program,
+            block_generator.generator_refs,
+            get_flags_for_height_and_constants(full_block.height, self.service.constants),
+        )
 
         return spends[0]
 
@@ -503,8 +507,11 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends_with_conditions": []}
 
-        spends_with_conditions = get_spends_for_block_with_conditions(
-            block_generator, full_block.height, self.service.constants
+        spends_with_conditions = get_spends_for_trusted_block_with_conditions(
+            self.service.constants,
+            block_generator.program,
+            block_generator.generator_refs,
+            get_flags_for_height_and_constants(full_block.height, self.service.constants),
         )
         return {"block_spends_with_conditions": spends_with_conditions}
 
@@ -775,10 +782,17 @@ class FullNodeRpcApi:
         )
         assert block_generator is not None
 
-        spend_info = get_puzzle_and_solution_for_coin(
-            block_generator, coin_record.coin, block.height, self.service.constants
-        )
-        return {"coin_solution": CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)}
+        try:
+            puzzle, solution = get_puzzle_and_solution_for_coin_rust(
+                block_generator.program,
+                block_generator.generator_refs,
+                self.service.constants.MAX_BLOCK_COST_CLVM,
+                coin_record.coin,
+                get_flags_for_height_and_constants(block.height, self.service.constants),
+            )
+            return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
+        except Exception as e:
+            raise ValueError(f"Failed to get puzzle and solution for coin {coin_record.coin}, error: {e}") from e
 
     async def get_additions_and_removals(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
