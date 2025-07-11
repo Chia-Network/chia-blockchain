@@ -587,20 +587,18 @@ class MempoolManager:
         # Map of coin ID to SpendConditions
         spend_conditions = {bytes32(spend.coin_id): spend for spend in conds.spends}
 
-        if len(new_spend.coin_spends) != len(spend_conditions):
-            # if this happens, the SpendBundle doesn't match the
-            # SpendBundleConditions.
-            return Err.INVALID_SPEND_BUNDLE, None, []
+        # if this happens, the SpendBundle doesn't match the
+        # SpendBundleConditions.
+        assert len(new_spend.coin_spends) == len(spend_conditions)
 
         bundle_coin_spends: dict[bytes32, BundleCoinSpend] = {}
         for coin_spend in new_spend.coin_spends:
             coin_id = coin_spend.coin.name()
             removal_names.add(coin_id)
-            spend_conds = spend_conditions.pop(coin_id, None)
-            if spend_conds is None:
-                # if this happens, the SpendBundle doesn't match the
-                # SpendBundleConditions.
-                return Err.INVALID_SPEND_BUNDLE, None, []
+
+            # if this coin_id isn't found, the SpendBundle doesn't match the
+            # SpendBundleConditions.
+            spend_conds = spend_conditions.pop(coin_id)
 
             if bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP) and not is_clvm_canonical(bytes(coin_spend.solution)):
                 return Err.INVALID_COIN_SOLUTION, None, []
