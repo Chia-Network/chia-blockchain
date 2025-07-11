@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Optional, cast
 
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.byte_types import hexstr_to_bytes
 from chia_rs import BlockRecord, CoinSpend, EndOfSubSlotBundle, FullBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
@@ -13,7 +10,10 @@ from chia.consensus.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpendWithConditions
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.util.byte_types import hexstr_to_bytes
 
 
 def coin_record_dict_backwards_compat(coin_record: dict[str, Any]) -> dict[str, Any]:
@@ -209,7 +209,7 @@ class FullNodeRpcClient(RpcClient):
             for block_spend in response["block_spends"]:
                 output.append(CoinSpend.from_json_dict(block_spend))
             return output
-        except Exception as e:
+        except Exception:
             return None
 
     async def get_block_spends_with_conditions(self, header_hash: bytes32) -> Optional[list[CoinSpendWithConditions]]:
@@ -221,12 +221,14 @@ class FullNodeRpcClient(RpcClient):
                 cond_tuples = block_spend["conditions"]
                 conditions = []
                 for condition in cond_tuples:
-                    cwa = ConditionWithArgs(opcode=ConditionOpcode(bytes([condition[0]])), vars=[hexstr_to_bytes(b) for b in condition[1]])
+                    cwa = ConditionWithArgs(
+                        opcode=ConditionOpcode(bytes([condition[0]])), vars=[hexstr_to_bytes(b) for b in condition[1]]
+                    )
                     conditions.append(cwa)
                 block_spends.append(CoinSpendWithConditions(coin_spend=coin_spend, conditions=conditions))
             return block_spends
 
-        except Exception as e:
+        except Exception:
             return None
 
     async def push_tx(self, spend_bundle: SpendBundle) -> dict[str, Any]:
