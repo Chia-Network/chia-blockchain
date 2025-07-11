@@ -8,16 +8,16 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletStateTransition, WalletTestFramework
 from chia.cmds.cmd_helpers import NeedsCoinSelectionConfig, NeedsWalletRPC, WalletClientInfo
 from chia.cmds.coins import CombineCMD, ListCMD, SplitCMD
 from chia.cmds.param_types import CliAmount, cli_amount_none
-from chia.rpc.wallet_request_types import GetSyncStatusResponse
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.wallet_request_types import GetSyncStatusResponse
 
 ONE_TRILLION = 1_000_000_000_000
 
@@ -113,7 +113,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     assert (
         textwrap.dedent(
             f"""\
-        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases['xch']}.
+        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases["xch"]}.
         {len(wallet_coins)} confirmed coins.
         0 unconfirmed additions.
         0 unconfirmed removals.
@@ -134,7 +134,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     assert (
         textwrap.dedent(
             f"""\
-        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases['xch']}.
+        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases["xch"]}.
         {len(wallet_coins)} confirmed coins.
         0 unconfirmed additions.
         0 unconfirmed removals.
@@ -153,7 +153,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     assert (
         textwrap.dedent(
             f"""\
-        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases['xch']}.
+        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases["xch"]}.
         {len(wallet_coins)} confirmed coins.
         0 unconfirmed additions.
         0 unconfirmed removals.
@@ -197,7 +197,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     assert (
         textwrap.dedent(
             f"""\
-        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases['xch']}.
+        There are a total of {len(wallet_coins)} coins in wallet {env.wallet_aliases["xch"]}.
         {len(wallet_coins) - 1} confirmed coins.
         1 unconfirmed additions.
         1 unconfirmed removals.
@@ -240,7 +240,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     assert (
         textwrap.dedent(
             f"""\
-        There are a total of 1 coins in wallet {env.wallet_aliases['cat']}.
+        There are a total of 1 coins in wallet {env.wallet_aliases["cat"]}.
         1 confirmed coins.
         0 unconfirmed additions.
         0 unconfirmed removals.

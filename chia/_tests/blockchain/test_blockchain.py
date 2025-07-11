@@ -1,17 +1,34 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import random
 import time
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, MerkleSet
-from clvm.casts import int_to_bytes
+from chia_rs import (
+    AugSchemeMPL,
+    BlockRecord,
+    ConsensusConstants,
+    EndOfSubSlotBundle,
+    FullBlock,
+    G2Element,
+    InfusedChallengeChainSubSlot,
+    MerkleSet,
+    SpendBundle,
+    SpendBundleConditions,
+    SpendConditions,
+    TransactionsInfo,
+    UnfinishedBlock,
+    is_canonical_serialization,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
@@ -23,44 +40,35 @@ from chia._tests.blockchain.blockchain_test_utils import (
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
-from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.block_body_validation import ForkAdd, ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
+from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.recursive_replace import recursive_replace
-from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -168,7 +176,7 @@ class TestBlockHeaderValidation:
                     uint64(10_000_000),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]]
                 )
                 header_block_bad = get_block_header(block_bad)
                 # TODO: Inspect these block values as they are currently None
@@ -192,7 +200,7 @@ class TestBlockHeaderValidation:
                     uint64(10_000_000),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_2] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [new_finished_ss_2, *block.finished_sub_slots[1:]]
                 )
 
                 header_block_bad_2 = get_block_header(block_bad_2)
@@ -271,8 +279,7 @@ class TestBlockHeaderValidation:
                 )
             await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
             log.info(
-                f"Added block {block.height} total iters {block.total_iters} "
-                f"new slot? {len(block.finished_sub_slots)}"
+                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
         peak = empty_blockchain.get_peak()
         assert peak is not None
@@ -507,7 +514,7 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+            blocks[0], "finished_sub_slots", [new_finished_ss, *blocks[0].finished_sub_slots[1:]]
         )
 
         header_block_bad = get_block_header(block_0_bad)
@@ -535,7 +542,7 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", [new_finished_ss] + blocks[1].finished_sub_slots[1:]
+            blocks[1], "finished_sub_slots", [new_finished_ss, *blocks[1].finished_sub_slots[1:]]
         )
 
         await _validate_and_add_block(empty_blockchain, blocks[0])
@@ -562,7 +569,7 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", blocks[1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[1], "finished_sub_slots", [*blocks[1].finished_sub_slots[:-1], new_finished_ss]
         )
         await _validate_and_add_block(empty_blockchain, blocks[0])
 
@@ -594,7 +601,7 @@ class TestBlockHeaderValidation:
             ),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+            blocks[0], "finished_sub_slots", [new_finished_ss, *blocks[0].finished_sub_slots[1:]]
         )
         await _validate_and_add_block(empty_blockchain, block_0_bad, expected_error=Err.SHOULD_NOT_HAVE_ICC)
 
@@ -628,7 +635,7 @@ class TestBlockHeaderValidation:
                         ),
                     )
                     block_bad = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                     )
                     await _validate_and_add_block(bc1, block_bad, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -646,7 +653,7 @@ class TestBlockHeaderValidation:
                     )
                     log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
                     block_bad_2 = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
                     )
                     await _validate_and_add_block(bc1, block_bad_2, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -663,7 +670,7 @@ class TestBlockHeaderValidation:
                         ),
                     )
                     block_bad_3 = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
                     )
                     await _validate_and_add_block(bc1, block_bad_3, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -674,7 +681,7 @@ class TestBlockHeaderValidation:
                         VDFProof(uint8(0), b"1239819023890", False),
                     )
                     block_bad_5 = recursive_replace(
-                        block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
                     )
                     await _validate_and_add_block(bc1, block_bad_5, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -718,7 +725,7 @@ class TestBlockHeaderValidation:
                         ),
                     )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                 )
 
                 header_block_bad = get_block_header(block_bad)
@@ -740,7 +747,7 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[-1].reward_chain.replace(infused_challenge_chain_sub_slot_hash=None),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc]
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_RC)
             elif len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is None:
@@ -754,7 +761,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_cc]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_cc]
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_CC)
 
@@ -768,7 +775,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc]
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_RC)
 
@@ -789,7 +796,7 @@ class TestBlockHeaderValidation:
             blocks[-1].finished_sub_slots[-1].challenge_chain.replace(subepoch_summary_hash=std_hash(b"0")),
         )
         block_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
         )
 
         header_block_bad = get_block_header(block_bad)
@@ -838,7 +845,7 @@ class TestBlockHeaderValidation:
             blocks[-1].finished_sub_slots[-1].reward_chain.replace(challenge_chain_sub_slot_hash=bytes32([3] * 32)),
         )
         block_1_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
         )
 
         await _validate_and_add_block(blockchain, block_1_bad, expected_error=Err.INVALID_CHALLENGE_SLOT_HASH_RC)
@@ -876,7 +883,7 @@ class TestBlockHeaderValidation:
                 )
                 log.warning(f"Num slots: {len(block.finished_sub_slots)}")
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                 )
                 log.warning(f"Signage point index: {block_bad.reward_chain_block.signage_point_index}")
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_EOS_VDF)
@@ -898,7 +905,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss_2.challenge_chain.get_hash(),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_2, expected_error=Err.INVALID_CC_EOS_VDF)
 
@@ -919,7 +926,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
                 )
 
                 await _validate_and_add_block_multi_error(
@@ -935,7 +942,7 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_5, expected_error=Err.INVALID_CC_EOS_VDF)
 
@@ -967,7 +974,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -982,7 +989,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_2, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -997,7 +1004,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_3, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -1008,7 +1015,7 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_5, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -1027,7 +1034,7 @@ class TestBlockHeaderValidation:
                 bt.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1,
             ),
         )
-        block_bad = recursive_replace(block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss])
+        block_bad = recursive_replace(block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss])
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_DEFICIT)
 
     @pytest.mark.anyio
@@ -1056,7 +1063,7 @@ class TestBlockHeaderValidation:
                     case_2 = True
 
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+                    blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
                 )
                 await _validate_and_add_block_multi_error(
                     empty_blockchain, block_bad, [Err.INVALID_DEFICIT, Err.INVALID_ICC_HASH_CC]
@@ -1085,7 +1092,7 @@ class TestBlockHeaderValidation:
                 challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
             ),
         )
-        block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:])
+        block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]])
         with pytest.raises(AssertionError):
             # Fails pre validation
             await _validate_and_add_block(
@@ -1121,7 +1128,7 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", [new_finished_ss] + blocks[-1].finished_sub_slots[1:]
+                    blocks[-1], "finished_sub_slots", [new_finished_ss, *blocks[-1].finished_sub_slots[1:]]
                 )
                 await _validate_and_add_block_multi_error(
                     empty_blockchain,
@@ -1153,7 +1160,7 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
+        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.version_and_size", 62)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
         block_bad = recursive_replace(
@@ -1164,14 +1171,14 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
-            "reward_chain_block.proof_of_space.size",
+            "reward_chain_block.proof_of_space.version_and_size",
             32,
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.proof_of_space.proof",
-            bytes([1] * int(blocks[-1].reward_chain_block.proof_of_space.size * 64 / 8)),
+            bytes([1] * int((blocks[-1].reward_chain_block.proof_of_space.version_and_size & 0x7F) * 64 / 8)),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
@@ -3479,11 +3486,7 @@ class TestReorgs:
             if (block.height % 128) == 0:
                 peak = b.get_peak()
                 assert peak is not None
-                print(
-                    f"original chain: {block.height:4} "
-                    f"weight: {block.weight:7} "
-                    f"peak: {str(peak.header_hash)[:6]}"
-                )
+                print(f"original chain: {block.height:4} weight: {block.weight:7} peak: {str(peak.header_hash)[:6]}")
             if block.height <= chain_1_height:
                 expect = AddBlockResult.ALREADY_HAVE_BLOCK
             elif block.weight < chain_2_weight:
@@ -3648,6 +3651,41 @@ class TestReorgs:
         assert blocks
         assert len(blocks) == 200
         assert blocks[-1].height == 199
+
+    @pytest.mark.anyio
+    async def test_overlong_generator_encoding(
+        self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
+    ) -> None:
+        # add enough blocks to pass the hard fork
+        blocks = bt.get_consecutive_blocks(10)
+        for b in blocks[:-1]:
+            await _validate_and_add_block(empty_blockchain, b)
+
+        while not blocks[-1].is_transaction_block():
+            await _validate_and_add_block(empty_blockchain, blocks[-1])
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+        original_block: FullBlock = blocks[-1]
+
+        # overlong encoding
+        generator = SerializedProgram.fromhex("c00101")
+        assert not is_canonical_serialization(bytes(generator))
+
+        block = recursive_replace(original_block, "transactions_generator", generator)
+        block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
+        block = recursive_replace(
+            block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
+        )
+        block = recursive_replace(
+            block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
+        )
+
+        # overlong encoding became invalid in the 3.0 hard fork
+        if consensus_mode == ConsensusMode.HARD_FORK_3_0:
+            expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+        else:
+            expected_error = None
+
+        await _validate_and_add_block(empty_blockchain, block, expected_error=expected_error, skip_prevalidation=True)
 
 
 @pytest.mark.anyio
@@ -4200,3 +4238,175 @@ async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchai
     blocks_with_filter = await b.get_header_blocks_in_range(0, 42, tx_filter=True)
     empty_tx_filter = b"\x00"
     assert blocks_with_filter[non_tx_block.header_hash].transactions_filter == empty_tx_filter
+
+
+@dataclass(frozen=True)
+class ForkInfoTestSetup:
+    fork_info: ForkInfo
+    initial_additions_since_fork: dict[bytes32, ForkAdd]
+    test_block: FullBlock
+    coin: Coin
+    child_coin: Coin
+
+    @classmethod
+    def create(cls, same_ph_as_parent: bool, same_amount_as_parent: bool) -> ForkInfoTestSetup:
+        from chia._tests.util.network_protocol_data import full_block as test_block
+
+        unrelated_coin = Coin(bytes32([0] * 32), bytes32([1] * 32), uint64(42))
+        # We add this initial state with an unrelated addition, to create a
+        # difference between the `rollback` state and the completely empty
+        # `reset` state.
+        initial_additions_since_fork = {
+            unrelated_coin.name(): ForkAdd(
+                coin=unrelated_coin,
+                confirmed_height=uint32(1),
+                timestamp=uint64(0),
+                hint=None,
+                is_coinbase=False,
+                same_as_parent=False,
+            )
+        }
+        fork_info = ForkInfo(
+            test_block.height - 1,
+            test_block.height - 1,
+            test_block.prev_header_hash,
+            additions_since_fork=copy.copy(initial_additions_since_fork),
+        )
+        puzzle_hash = bytes32([2] * 32)
+        amount = uint64(1337)
+        coin = Coin(bytes32([3] * 32), puzzle_hash, amount)
+        child_coin_ph = puzzle_hash if same_ph_as_parent else bytes32([4] * 32)
+        child_coin_amount = amount if same_amount_as_parent else uint64(0)
+        child_coin = Coin(coin.name(), child_coin_ph, child_coin_amount)
+        return cls(
+            fork_info=fork_info,
+            initial_additions_since_fork=initial_additions_since_fork,
+            test_block=test_block,
+            coin=coin,
+            child_coin=child_coin,
+        )
+
+    def check_additions(self, expected_same_parent_additions: set[bytes32]) -> None:
+        assert all(
+            a in self.fork_info.additions_since_fork and self.fork_info.additions_since_fork[a].same_as_parent
+            for a in expected_same_parent_additions
+        )
+        remaining_additions = set(self.fork_info.additions_since_fork) - expected_same_parent_additions
+        assert not any(self.fork_info.additions_since_fork[a].same_as_parent for a in remaining_additions)
+
+
+@pytest.mark.parametrize("same_ph_as_parent", [True, False])
+@pytest.mark.parametrize("same_amount_as_parent", [True, False])
+@pytest.mark.parametrize("rollback", [True, False])
+@pytest.mark.parametrize("reset", [True, False])
+@pytest.mark.anyio
+async def test_include_spends_same_as_parent(
+    same_ph_as_parent: bool, same_amount_as_parent: bool, rollback: bool, reset: bool
+) -> None:
+    """
+    Tests that `ForkInfo` properly tracks same-as-parent created coins.
+    A created coin is tracked as such if its puzzle hash and amount match the
+    parent. We're covering here `include_spends`, `rollback` and `reset` in the
+    context of same-as-parent coins.
+    """
+    test_setup = ForkInfoTestSetup.create(same_ph_as_parent, same_amount_as_parent)
+    # Now let's prepare the test spend bundle conditions
+    create_coin = [(test_setup.child_coin.puzzle_hash, test_setup.child_coin.amount, None)]
+    conds = SpendBundleConditions(
+        [
+            SpendConditions(
+                test_setup.coin.name(),
+                test_setup.coin.parent_coin_info,
+                test_setup.coin.puzzle_hash,
+                test_setup.coin.amount,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                create_coin,
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                0,
+                0,
+                0,
+            )
+        ],
+        0,
+        0,
+        0,
+        None,
+        None,
+        [],
+        0,
+        0,
+        0,
+        True,
+        0,
+        0,
+    )
+    # Now let's run the test
+    test_setup.fork_info.include_spends(conds, test_setup.test_block, test_setup.test_block.header_hash)
+    # Let's make sure the results are as expected
+    expected_same_parent_additions = (
+        {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
+    )
+    test_setup.check_additions(expected_same_parent_additions)
+    if rollback:
+        # Now we rollback before the spend that belongs to the test conditions
+        test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
+        # That should leave only the initial additions we started with, which
+        # are unrelated to the test conditions. We added this initial state to
+        # create a difference between `rollback` state and the completely empty
+        # `reset` state.
+        assert test_setup.fork_info.additions_since_fork == test_setup.initial_additions_since_fork
+    if reset:
+        # Now we reset to a test height and header hash
+        test_setup.fork_info.reset(1, bytes32([0] * 32))
+        # That should leave this empty
+        assert test_setup.fork_info.additions_since_fork == {}
+
+
+@pytest.mark.parametrize("same_ph_as_parent", [True, False])
+@pytest.mark.parametrize("same_amount_as_parent", [True, False])
+@pytest.mark.parametrize("rollback", [True, False])
+@pytest.mark.parametrize("reset", [True, False])
+@pytest.mark.anyio
+async def test_include_block_same_as_parent_coins(
+    same_ph_as_parent: bool, same_amount_as_parent: bool, rollback: bool, reset: bool
+) -> None:
+    """
+    Tests that `ForkInfo` properly tracks same-as-parent created coins.
+    A created coin is tracked as such if its puzzle hash and amount match the
+    parent. We're covering here `include_block`, `rollback` and `reset` in the
+    context of such coins.
+    """
+    test_setup = ForkInfoTestSetup.create(same_ph_as_parent, same_amount_as_parent)
+    # Now let's run the test
+    test_setup.fork_info.include_block(
+        [(test_setup.child_coin, None)],
+        [(test_setup.coin.name(), test_setup.coin)],
+        test_setup.test_block,
+        test_setup.test_block.header_hash,
+    )
+    # Let's make sure the results are as expected
+    expected_same_as_parent_additions = (
+        {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
+    )
+    test_setup.check_additions(expected_same_as_parent_additions)
+    if rollback:
+        # Now we rollback before the spend that belongs to the test conditions
+        test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
+        # That should leave only the initial additions we started with
+        assert test_setup.fork_info.additions_since_fork == test_setup.initial_additions_since_fork
+    if reset:
+        # Now we reset to a test height and header hash
+        test_setup.fork_info.reset(1, bytes32([0] * 32))
+        # That should leave this empty
+        assert test_setup.fork_info.additions_since_fork == {}

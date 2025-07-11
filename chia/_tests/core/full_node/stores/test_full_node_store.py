@@ -6,29 +6,27 @@ from collections.abc import AsyncIterator
 from typing import Optional
 
 import pytest
+from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node_store import FullNodeStore, UnfinishedBlockEntry, find_best_block
-from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
 from chia.simulator.keyring import TempKeyring
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
@@ -675,6 +673,8 @@ async def test_basic_store(
             )
             assert sp.cc_vdf is not None
             saved_sp_hash = sp.cc_vdf.output.get_hash()
+            saved_index = uint8(i)
+            saved_challenge = sp.cc_vdf.challenge
             assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
     # Test adding future signage point (bad)
@@ -728,7 +728,10 @@ async def test_basic_store(
     # Get signage point by hash
     assert saved_sp_hash is not None
     assert store.get_signage_point(saved_sp_hash) is not None
+    assert store.get_signage_point_by_index_and_cc_output(saved_sp_hash, saved_challenge, saved_index) is not None
+
     assert store.get_signage_point(std_hash(b"2")) is None
+    assert store.get_signage_point_by_index_and_cc_output(std_hash(b"2"), saved_challenge, saved_index) is None
 
     # Test adding signage points before genesis
     store.initialize_genesis_sub_slot()
@@ -1026,6 +1029,10 @@ async def test_basic_store(
                 assert sp_to_check is not None
                 assert sp_to_check.cc_vdf is not None
                 fetched = store.get_signage_point(sp_to_check.cc_vdf.output.get_hash())
+                fetched_new = store.get_signage_point_by_index_and_cc_output(
+                    sp_to_check.cc_vdf.output.get_hash(), sp_to_check.cc_vdf.challenge, uint8(sp_index)
+                )
+                assert fetched_new == fetched
                 assert (fetched is None) == is_none
                 if fetched is not None:
                     assert fetched == sp_to_check

@@ -2,21 +2,17 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from chia.consensus.block_record import BlockRecord
+from chia_rs import BlockRecord, ChallengeBlockInfo, ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
+
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import ChallengeBlockInfo
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64
 
 
 def block_to_block_record(

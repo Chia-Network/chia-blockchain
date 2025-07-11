@@ -38,9 +38,9 @@ jobs:
       FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, inputs.chia-installer-version, inputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
       DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].dev-file, inputs.chia-installer-version, inputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
       LATEST_DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].latest-dev-file, inputs.chia-installer-version, inputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
-      INSTALL_S3_URL: s3://download.chia.net/install/
-      DEV_S3_URL: s3://download.chia.net/dev/
-      LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
+      INSTALL_S3_URL: s3://download.chia.net/install
+      DEV_S3_URL: s3://download.chia.net/dev
+      LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev
       TORRENT_S3_URL: s3://download.chia.net/torrents/
       TRACKER_URL: udp://tracker.opentrackr.org:1337/announce
 
@@ -130,8 +130,8 @@ jobs:
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true'
         run: |
-          aws s3 cp "artifacts/${FILE}" "${INSTALL_S3_URL}"
-          aws s3 cp "artifacts/${FILE}.sha256" "${INSTALL_S3_URL}"
+          aws s3 cp "artifacts/${FILE}" "${INSTALL_S3_URL}/"
+          aws s3 cp "artifacts/${FILE}.sha256" "${INSTALL_S3_URL}/"
 
       - name: Upload Release Torrent
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true' && matrix.mode.matrix == 'gui'

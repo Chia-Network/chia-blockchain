@@ -4,9 +4,10 @@ import logging
 import random
 from typing import Optional
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64, uint128
+
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64, uint128
 from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -58,10 +59,9 @@ async def select_coins(
             f"Transaction for {amount} is greater than max spendable balance in a block of {sum_spendable_coins}. "
             "There may be other transactions pending or our minimum coin amount is too high."
         )
-    if amount == 0 and sum_spendable_coins == 0:
+    if amount == 0 and len(spendable_coins) == 0:
         raise ValueError(
-            "No coins available to spend, you can not create a coin with an amount of 0,"
-            " without already having coins."
+            "No coins available to spend, you can not create a coin with an amount of 0, without already having coins."
         )
 
     # Sort the coins by amount

@@ -21,6 +21,8 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest import MonkeyPatch
 
 from chia._tests import ether
@@ -47,12 +49,18 @@ from chia._tests.util.setup_nodes import (
 )
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.constants import ConsensusConstants
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.seeder.dns_server import DNSServer
+from chia.server.aliases import (
+    CrawlerService,
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    TimelordService,
+    WalletService,
+)
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -66,36 +74,29 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
-
-# Set spawn after stdlib imports, but before other imports
-from chia.types.aliases import (
-    CrawlerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    TimelordService,
-    WalletService,
-)
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
+# TODO: review how this is now after other imports and before some stdlib imports...  :[
+# Set spawn after stdlib imports, but before other imports
 multiprocessing.set_start_method("spawn")
 
 from dataclasses import replace
 from pathlib import Path
 
+from chia_rs.sized_ints import uint128
+
 from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
-from chia.util.ints import uint128
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
@@ -195,12 +196,12 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK_6 = 2
+    HARD_FORK_3_0 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_6],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
 )
 def consensus_mode(request):
     return request.param
@@ -216,10 +217,16 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
-    if consensus_mode >= ConsensusMode.SOFT_FORK_6:
+
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         ret = ret.replace(
-            SOFT_FORK6_HEIGHT=uint32(2),
+            HARD_FORK_HEIGHT=uint32(2),
+            PLOT_FILTER_128_HEIGHT=uint32(10),
+            PLOT_FILTER_64_HEIGHT=uint32(15),
+            PLOT_FILTER_32_HEIGHT=uint32(20),
+            HARD_FORK2_HEIGHT=uint32(2),
         )
+
     return ret
 
 
@@ -465,6 +472,11 @@ def default_10000_blocks_compact(bt, consensus_mode):
         normalized_to_identity_cc_sp=True,
         seed=b"1000_compact",
     )
+
+
+# If you add another test chain, don't forget to also add a "build_test_chains"
+# generator to chia/_tests/blockchain/test_build_chains.py as well as a test in
+# the same file.
 
 
 @pytest.fixture(scope="function")
@@ -1235,8 +1247,8 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     ]
 ]:
     zero_bit_plot_filter_consts = test_constants_modified.replace(
-        NUMBER_ZERO_BITS_PLOT_FILTER=uint8(0),
-        NUM_SPS_SUB_SLOT=uint32(8),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(0),
+        NUM_SPS_SUB_SLOT=uint8(8),
     )
 
     async with AsyncExitStack() as async_exit_stack:

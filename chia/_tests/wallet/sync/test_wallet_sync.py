@@ -11,7 +11,17 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
-from chia_rs import G2Element, confirm_not_included_already_hashed
+from chia_rs import (
+    BlockRecord,
+    CoinState,
+    ConsensusConstants,
+    FullBlock,
+    G2Element,
+    SpendBundle,
+    confirm_not_included_already_hashed,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
 from chiabip158 import PyBIP158
 from colorlog import getLogger
 
@@ -21,25 +31,23 @@ from chia._tests.util.misc import patch_request_handler, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
-    CoinState,
     RequestAdditions,
     RespondAdditions,
     RespondBlockHeader,
     RespondBlockHeaders,
     SendTransaction,
 )
-from chia.server.outbound_message import Message, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -48,17 +56,13 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -91,7 +95,8 @@ async def test_request_block_headers(
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
     wallet = wallet_node.wallet_state_manager.main_wallet
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await add_blocks_in_batches(default_400_blocks[:100], full_node_api.full_node)
 
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(10), uint32(15), False))
@@ -320,7 +325,9 @@ async def test_almost_recent(
     both_phs = []
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
-        both_phs.append(await wallet.get_new_puzzlehash())
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+        both_phs.append(ph)
 
     for i in range(20):
         # Tests a reorg with the wallet
@@ -444,11 +451,13 @@ async def test_long_sync_wallet(
         full_node.constants, True, block_record, full_node.blockchain
     )
     fork_height = blocks_reorg[-num_blocks - 10].height - 1
+    blockchain = AugmentedBlockchain(full_node.blockchain)
     await full_node.add_block_batch(
         blocks_reorg[-num_blocks - 10 : -1],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(fork_height, fork_height, blocks_reorg[-num_blocks - 10].prev_header_hash),
         ValidationState(sub_slot_iters, difficulty, None),
+        blockchain,
     )
     await full_node.add_block(blocks_reorg[-1])
 
@@ -482,7 +491,9 @@ async def test_wallet_reorg_sync(
     phs = []
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
-        phs.append(await wallet.get_new_puzzlehash())
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+        phs.append(ph)
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
@@ -563,7 +574,8 @@ async def test_wallet_reorg_get_coinbase(
     all_blocks_reorg_2 = blocks_reorg[:-30]
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
-        ph = await wallet.get_new_puzzlehash()
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
         all_blocks_reorg_2 = bt.get_consecutive_blocks(
             1, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph, block_list_input=all_blocks_reorg_2
         )
@@ -572,11 +584,13 @@ async def test_wallet_reorg_get_coinbase(
     sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
         full_node.constants, True, block_record, full_node.blockchain
     )
+    blockchain = AugmentedBlockchain(full_node.blockchain)
     await full_node.add_block_batch(
         blocks_reorg_2[-44:],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(blocks_reorg_2[-45].height, blocks_reorg_2[-45].height, blocks_reorg_2[-45].header_hash),
         ValidationState(sub_slot_iters, difficulty, None),
+        blockchain,
     )
 
     for wallet_node, wallet_server in wallets:
@@ -600,7 +614,8 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     full_nodes, wallets, _ = simulator_and_wallet
     wallet_node, wallet_server = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     full_node_api = full_nodes[0]
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
@@ -655,7 +670,8 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
     full_nodes, wallets, _ = simulator_and_wallet
     wallet_node, wallet_server = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     full_node_api = full_nodes[0]
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
@@ -665,14 +681,19 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    payees: list[Payment] = []
-    for i in range(10):
-        payee_ph = await wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(i + 100)))
-        payees.append(Payment(payee_ph, uint64(i + 200)))
-
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        payees: list[CreateCoin] = []
+        for i in range(10):
+            payee_ph = await action_scope.get_puzzle_hash(
+                wallet.wallet_state_manager, override_reuse_puzhash_with=False
+            )
+            payees.append(CreateCoin(payee_ph, uint64(i + 100)))
+            payees.append(CreateCoin(payee_ph, uint64(i + 200)))
+        await wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -847,7 +868,8 @@ async def test_dusted_wallet(
     # Create two wallets, one for farming (not used for testing), and one for testing dust.
     farm_wallet = farm_wallet_node.wallet_state_manager.main_wallet
     dust_wallet = dust_wallet_node.wallet_state_manager.main_wallet
-    ph = await farm_wallet.get_new_puzzlehash()
+    async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(farm_wallet.wallet_state_manager)
 
     full_node_api = full_nodes[0]
 
@@ -880,13 +902,18 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Part 1: create a single dust coin
-    payees: list[Payment] = []
-    payee_ph = await dust_wallet.get_new_puzzlehash()
-    payees.append(Payment(payee_ph, uint64(dust_value)))
+    async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        payees: list[CreateCoin] = []
+        payee_ph = await action_scope.get_puzzle_hash(dust_wallet.wallet_state_manager)
+        payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        await farm_wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -938,15 +965,22 @@ async def test_dusted_wallet(
     dust_remaining = new_dust
 
     while dust_remaining > 0:
-        payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(dust_value)))
+        async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            payee_ph = await action_scope.get_puzzle_hash(
+                dust_wallet.wallet_state_manager, override_reuse_puzhash_with=False
+            )
+            payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
         # After every 100 (at most) coins added, push the tx and advance the chain
         # This greatly speeds up the overall process
         if dust_remaining % 100 == 0 and dust_remaining != new_dust:
             # construct and send tx
             async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-                await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+                await farm_wallet.generate_signed_transaction(
+                    [uint64(0), *(payee.amount for payee in payees)],
+                    [ph, *(payee.puzzle_hash for payee in payees)],
+                    action_scope,
+                )
             [tx] = action_scope.side_effects.transactions
             assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -965,7 +999,11 @@ async def test_dusted_wallet(
     if new_dust >= 1:
         # construct and send tx
         async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+            await farm_wallet.generate_signed_transaction(
+                [uint64(0), *(payee.amount for payee in payees)],
+                [ph, *(payee.puzzle_hash for payee in payees)],
+                action_scope,
+            )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1005,13 +1043,20 @@ async def test_dusted_wallet(
 
     payees = []
 
-    for _ in range(large_coins):
-        payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
+    async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        for _ in range(large_coins):
+            payee_ph = await action_scope.get_puzzle_hash(
+                dust_wallet.wallet_state_manager, override_reuse_puzhash_with=False
+            )
+            payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        await farm_wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1045,12 +1090,17 @@ async def test_dusted_wallet(
     # Part 4: Create one more dust coin to test the threshold
     payees = []
 
-    payee_ph = await dust_wallet.get_new_puzzlehash()
-    payees.append(Payment(payee_ph, uint64(dust_value)))
+    async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        payee_ph = await action_scope.get_puzzle_hash(dust_wallet.wallet_state_manager)
+        payees.append(CreateCoin(payee_ph, uint64(dust_value)))
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        await farm_wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1086,30 +1136,35 @@ async def test_dusted_wallet(
     # Those below the threshold should get filtered, and those above should not.
     payees = []
 
-    for i in range(5):
-        payee_ph = await dust_wallet.get_new_puzzlehash()
+    async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        for i in range(5):
+            payee_ph = await action_scope.get_puzzle_hash(dust_wallet.wallet_state_manager)
 
-        # Create a large coin and add on the appropriate balance.
-        payees.append(Payment(payee_ph, uint64(xch_spam_amount + i)))
-        large_coins += 1
-        large_coin_balance += xch_spam_amount + i
+            # Create a large coin and add on the appropriate balance.
+            payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount + i)))
+            large_coins += 1
+            large_coin_balance += xch_spam_amount + i
 
-        payee_ph = await dust_wallet.get_new_puzzlehash()
+            payee_ph = await action_scope.get_puzzle_hash(dust_wallet.wallet_state_manager)
 
-        # Make sure we are always creating coins with a positive value.
-        if xch_spam_amount - dust_value - i > 0:
-            payees.append(Payment(payee_ph, uint64(xch_spam_amount - dust_value - i)))
-        else:
-            payees.append(Payment(payee_ph, uint64(dust_value)))
-        # In cases where xch_spam_amount is sufficiently low,
-        # the new dust should be considered a large coina and not be filtered.
-        if xch_spam_amount <= dust_value:
-            large_dust_coins += 1
-            large_dust_balance += dust_value
+            # Make sure we are always creating coins with a positive value.
+            if xch_spam_amount - dust_value - i > 0:
+                payees.append(CreateCoin(payee_ph, uint64(xch_spam_amount - dust_value - i)))
+            else:
+                payees.append(CreateCoin(payee_ph, uint64(dust_value)))
+            # In cases where xch_spam_amount is sufficiently low,
+            # the new dust should be considered a large coina and not be filtered.
+            if xch_spam_amount <= dust_value:
+                large_dust_coins += 1
+                large_dust_balance += dust_value
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        await farm_wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1140,12 +1195,17 @@ async def test_dusted_wallet(
     # Send to the dust wallet "spam_filter_after_n_txs" coins that are equal in value to "xch_spam_amount".
     # Send 1 mojo from the dust wallet. The dust wallet should receive a change coin valued at "xch_spam_amount-1".
 
-    payee_ph = await farm_wallet.get_new_puzzlehash()
-    payees = [Payment(payee_ph, uint64(balance))]
+    async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        payee_ph = await action_scope.get_puzzle_hash(farm_wallet.wallet_state_manager)
+        payees = [CreateCoin(payee_ph, uint64(balance))]
 
     # construct and send tx
     async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await dust_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        await dust_wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1181,15 +1241,20 @@ async def test_dusted_wallet(
         coin_value = 2
 
     while coins_remaining > 0:
-        payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append(Payment(payee_ph, uint64(coin_value)))
+        async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            payee_ph = await action_scope.get_puzzle_hash(dust_wallet.wallet_state_manager)
+            payees.append(CreateCoin(payee_ph, uint64(coin_value)))
 
         # After every 100 (at most) coins added, push the tx and advance the chain
         # This greatly speeds up the overall process
         if coins_remaining % 100 == 0 and coins_remaining != spam_filter_after_n_txs:
             # construct and send tx
             async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-                await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+                await farm_wallet.generate_signed_transaction(
+                    [uint64(0), *(payee.amount for payee in payees)],
+                    [ph, *(payee.puzzle_hash for payee in payees)],
+                    action_scope,
+                )
             [tx] = action_scope.side_effects.transactions
             assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1204,7 +1269,11 @@ async def test_dusted_wallet(
 
     # construct and send tx
     async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await farm_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        await farm_wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1229,12 +1298,17 @@ async def test_dusted_wallet(
     assert balance == unspent_count * coin_value
 
     # Send a 1 mojo coin from the dust wallet to the farm wallet
-    payee_ph = await farm_wallet.get_new_puzzlehash()
-    payees = [Payment(payee_ph, uint64(1))]
+    async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        payee_ph = await action_scope.get_puzzle_hash(farm_wallet.wallet_state_manager)
+        payees = [CreateCoin(payee_ph, uint64(1))]
 
     # construct and send tx
     async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await dust_wallet.generate_signed_transaction(uint64(0), ph, action_scope, primaries=payees)
+        await dust_wallet.generate_signed_transaction(
+            [uint64(0), *(payee.amount for payee in payees)],
+            [ph, *(payee.puzzle_hash for payee in payees)],
+            action_scope,
+        )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -1264,8 +1338,10 @@ async def test_dusted_wallet(
     #         The NFT should not be filtered.
 
     # Start with new puzzlehashes for each wallet
-    farm_ph = await farm_wallet.get_new_puzzlehash()
-    dust_ph = await dust_wallet.get_new_puzzlehash()
+    async with farm_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        farm_ph = await action_scope.get_puzzle_hash(farm_wallet.wallet_state_manager)
+    async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        dust_ph = await action_scope.get_puzzle_hash(dust_wallet.wallet_state_manager)
 
     # Create an NFT wallet for the farmer and dust wallet
     farm_nft_wallet = await NFTWallet.create_new_nft_wallet(
@@ -1361,7 +1437,7 @@ async def test_retry_store(
         ) -> list[CoinState]:
             if flakiness_info.coin_state_flaky:
                 flakiness_info.coin_state_flaky = False
-                raise PeerRequestException()
+                raise PeerRequestException
             else:
                 return await func(coin_names, peer, fork_height)
 
@@ -1394,7 +1470,7 @@ async def test_retry_store(
         ) -> list[CoinState]:
             if flakiness_info.fetch_children_flaky:
                 flakiness_info.fetch_children_flaky = False
-                raise PeerRequestException()
+                raise PeerRequestException
             else:
                 return await func(coin_name, peer, fork_height)
 
@@ -1406,7 +1482,7 @@ async def test_retry_store(
         async def new_func(height: uint32) -> uint64:
             if flakiness_info.get_timestamp_flaky:
                 flakiness_info.get_timestamp_flaky = False
-                raise PeerRequestException()
+                raise PeerRequestException
             else:
                 return await func(height)
 
@@ -1418,7 +1494,7 @@ async def test_retry_store(
         async def new_func(puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
             if flakiness_info.db_flaky:
                 flakiness_info.db_flaky = False
-                raise AIOSqliteError()
+                raise AIOSqliteError
             else:
                 return await func(puzzle_hash)
 
@@ -1456,7 +1532,8 @@ async def test_retry_store(
             await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
             wallet = wallet_node.wallet_state_manager.main_wallet
-            ph = await wallet.get_new_puzzlehash()
+            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
@@ -1473,7 +1550,7 @@ async def test_retry_store(
 
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
-                    uint64(1_000_000_000_000), bytes32.zeros, action_scope, memos=[ph]
+                    [uint64(1_000_000_000_000)], [bytes32.zeros], action_scope, memos=[[ph]]
                 )
             [tx] = action_scope.side_effects.transactions
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
@@ -1573,7 +1650,7 @@ async def test_long_sync_untrusted_break(
 
     sync_canceled = False
 
-    async def register_interest_in_puzzle_hash(
+    async def register_for_ph_updates(
         self: object,
         request: wallet_protocol.RegisterForPhUpdates,
         peer: WSChiaConnection,
@@ -1604,7 +1681,7 @@ async def test_long_sync_untrusted_break(
 
     await add_blocks_in_batches(default_1000_blocks[:400], untrusted_full_node_api.full_node)
 
-    with patch_request_handler(api=untrusted_full_node_api, handler=register_interest_in_puzzle_hash):
+    with patch_request_handler(api=untrusted_full_node_api, handler=register_for_ph_updates):
         # Connect to the untrusted peer and wait until the long sync started
         await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
         await time_out_assert(30, wallet_syncing)

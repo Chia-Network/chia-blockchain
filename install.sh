@@ -168,13 +168,11 @@ if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
   echo "Your OS may have patched OpenSSL and not updated the version to 1.1.1n"
 fi
 
-if [ ! -f .penv/bin/poetry ]; then
-  ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
-fi
+./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
 
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
 # shellcheck disable=SC2086
-.penv/bin/poetry install ${EXTRAS}
+.penv/bin/poetry sync ${EXTRAS}
 
 if [ -e venv ]; then
   if [ -d venv ] && [ ! -L venv ]; then

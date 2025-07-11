@@ -6,15 +6,19 @@ import io
 import json
 import logging
 import random
+from collections.abc import AsyncIterator
 from operator import attrgetter
 from typing import Any, Optional, cast
 from unittest.mock import patch
 
 import aiosqlite
 import pytest
-from chia_rs import G1Element, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.wallet.test_wallet_coin_store import (
     get_coin_records_amount_filter_tests,
@@ -45,47 +49,22 @@ from chia._tests.wallet.test_wallet_coin_store import (
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.rpc_server import RpcServer
-from chia.rpc.wallet_request_types import (
-    AddKey,
-    CheckDeleteKey,
-    CombineCoins,
-    DefaultCAT,
-    DeleteKey,
-    DIDGetPubkey,
-    GetNotifications,
-    GetPrivateKey,
-    GetSyncStatusResponse,
-    GetTimestampForHeight,
-    LogIn,
-    PushTransactions,
-    PushTX,
-    SetWalletResyncOnStartup,
-    SplitCoins,
-    VerifySignature,
-    VerifySignatureResponse,
-)
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.aliases import WalletService
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -101,7 +80,10 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.signer_protocol import UnsignedTransaction
+from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -119,6 +101,44 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_request_types import (
+    AddKey,
+    CheckDeleteKey,
+    CombineCoins,
+    DefaultCAT,
+    DeleteKey,
+    DIDCreateBackupFile,
+    DIDGetDID,
+    DIDGetMetadata,
+    DIDGetPubkey,
+    DIDGetRecoveryList,
+    DIDGetWalletName,
+    DIDMessageSpend,
+    DIDSetWalletName,
+    DIDTransferDID,
+    DIDUpdateMetadata,
+    DIDUpdateRecoveryIDs,
+    FungibleAsset,
+    GetNotifications,
+    GetPrivateKey,
+    GetSyncStatusResponse,
+    GetTimestampForHeight,
+    LogIn,
+    NFTCalculateRoyalties,
+    NFTGetInfo,
+    NFTGetNFTs,
+    NFTMintNFTRequest,
+    NFTTransferNFT,
+    PushTransactions,
+    PushTX,
+    RoyaltyAsset,
+    SetWalletResyncOnStartup,
+    SplitCoins,
+    VerifySignature,
+    VerifySignatureResponse,
+)
+from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 log = logging.getLogger(__name__)
@@ -126,7 +146,7 @@ log = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class WalletBundle:
-    service: Service
+    service: WalletService
     node: WalletNode
     rpc_client: WalletRpcClient
     wallet: Wallet
@@ -150,29 +170,30 @@ async def check_client_synced(wallet_client: WalletRpcClient) -> bool:
     return (await wallet_client.get_sync_status()).synced
 
 
-async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
+async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode) -> None:
     await full_node_api.farm_blocks_to_puzzlehash(count=1)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
 
-def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
+def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
     return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
-async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: WalletSpendBundle):
-    await time_out_assert(
-        20, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
-    )
+async def farm_transaction(
+    full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: WalletSpendBundle
+) -> None:
+    spend_bundle_name = spend_bundle.name()
+    await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle_name)
     await farm_transaction_block(full_node_api, wallet_node)
-    assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
+    assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle_name) is None
 
 
-async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1):
+async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1) -> int:
     wallet_id = 1
     initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(wallet_id)
     ph: bytes32 = decode_puzzle_hash(await wallet_bundle.rpc_client.get_next_address(wallet_id, True))
     generated_funds = 0
-    for i in range(0, num_blocks):
+    for _ in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         peak_height = full_node_api.full_node.blockchain.get_peak_height()
         assert peak_height is not None
@@ -191,7 +212,9 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
 
 
 @pytest.fixture(scope="function", params=[True, False])
-async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostname):
+async def wallet_rpc_environment(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, request: pytest.FixtureRequest, self_hostname: str
+) -> AsyncIterator[WalletRpcTestEnvironment]:
     full_node, wallets, bt = two_wallet_nodes_services
     full_node_service = full_node[0]
     full_node_api = full_node_service._api
@@ -216,33 +239,42 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await wallet_node_2.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
+    assert wallet_service.rpc_server is not None
     async with WalletRpcClient.create_as_context(
         hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
     ) as client:
+        assert wallet_service_2.rpc_server is not None
         async with WalletRpcClient.create_as_context(
             hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
         ) as client_2:
+            assert full_node_service.rpc_server is not None
             async with FullNodeRpcClient.create_as_context(
                 hostname,
                 full_node_service.rpc_server.listen_port,
                 full_node_service.root_path,
                 full_node_service.config,
             ) as client_node:
-                wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
-                wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
-                node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
+                wallet_bundle_1 = WalletBundle(wallet_service, wallet_node, client, wallet)
+                wallet_bundle_2 = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
+                node_bundle = FullNodeBundle(full_node_server, full_node_api, client_node)
 
                 yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
 
 
 async def create_tx_outputs(wallet: Wallet, output_args: list[tuple[int, Optional[list[str]]]]) -> list[dict[str, Any]]:
     outputs = []
-    for args in output_args:
-        output = {"amount": uint64(args[0]), "puzzle_hash": await wallet.get_new_puzzlehash()}
-        if args[1] is not None:
-            assert len(args[1]) > 0
-            output["memos"] = args[1]
-        outputs.append(output)
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        for args in output_args:
+            output = {
+                "amount": uint64(args[0]),
+                "puzzle_hash": await action_scope.get_puzzle_hash(
+                    wallet.wallet_state_manager, override_reuse_puzhash_with=False
+                ),
+            }
+            if args[1] is not None:
+                assert len(args[1]) > 0
+                output["memos"] = args[1]
+            outputs.append(output)
     return outputs
 
 
@@ -278,7 +310,7 @@ def assert_tx_amounts(
         assert (sum(removal_amounts) - sum(addition_amounts)) == amount_fee
 
 
-async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecord):
+async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecord) -> None:
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
     # check error for a ASSERT_ANNOUNCE_CONSUMED_FAILED and if the error is not there throw a value error
@@ -290,7 +322,7 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
             raise ValueError from error
 
 
-async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol) -> None:
+async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol[Any]) -> None:
     expected_balance = await wallet_node.get_balance(wallet.id())
     expected_balance_dict = expected_balance.to_json_dict()
     expected_balance_dict["wallet_id"] = wallet.id()
@@ -302,21 +334,25 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
     assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict
 
 
-async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
+async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32) -> bool:
     tx = await client.get_transaction(transaction_id)
     return tx.is_in_mempool()
 
 
-async def get_confirmed_balance(client: WalletRpcClient, wallet_id: int):
-    return (await client.get_wallet_balance(wallet_id))["confirmed_wallet_balance"]
+async def get_confirmed_balance(client: WalletRpcClient, wallet_id: int) -> uint128:
+    balance = await client.get_wallet_balance(wallet_id)
+    # TODO: casting due to lack of type checked deserialization
+    return cast(uint128, balance["confirmed_wallet_balance"])
 
 
-async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
-    return (await client.get_wallet_balance(wallet_id))["unconfirmed_wallet_balance"]
+async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int) -> uint128:
+    balance = await client.get_wallet_balance(wallet_id)
+    # TODO: casting due to lack of type checked deserialization
+    return cast(uint128, balance["unconfirmed_wallet_balance"])
 
 
 @pytest.mark.anyio
-async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -326,7 +362,8 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1)
 
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     tx_amount = uint64(15600000)
     with pytest.raises(ValueError):
         await client.send_transaction(1, uint64(100000000000000001), addr, DEFAULT_TX_CONFIG)
@@ -396,7 +433,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
 
 
 @pytest.mark.anyio
-async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet: Wallet = env.wallet_1.wallet
@@ -443,7 +480,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 
 
 @pytest.mark.anyio
-async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env = wallet_rpc_environment
     wallet: Wallet = env.wallet_1.wallet
     wallet_node: WalletNode = env.wallet_1.node
@@ -465,7 +502,7 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.anyio
-async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env = wallet_rpc_environment
     wallet: Wallet = env.wallet_1.wallet
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -491,7 +528,7 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
 
 
 @pytest.mark.anyio
-async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env = wallet_rpc_environment
     wallet: Wallet = env.wallet_1.wallet
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -503,13 +540,13 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     fee_amount = 100
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            amount=uint64(5),
-            puzzle_hash=bytes32.zeros,
+            amounts=[uint64(5)],
+            puzzle_hashes=[bytes32.zeros],
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
+        our_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
-    our_ph = await wallet.get_new_puzzlehash()
     await full_node_api.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -519,7 +556,7 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
 
 
 @pytest.mark.anyio
-async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -554,7 +591,7 @@ async def test_create_signed_transaction(
     fee: int,
     select_coin: bool,
     is_cat: bool,
-):
+) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -574,7 +611,7 @@ async def test_create_signed_transaction(
         wallet_id = res["wallet_id"]
 
         await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-        for i in range(5):
+        for _ in range(5):
             if check_mempool_spend_count(full_node_api, 0):
                 break
             await farm_transaction_block(full_node_api, wallet_1_node)
@@ -652,7 +689,9 @@ async def test_create_signed_transaction(
 
 
 @pytest.mark.anyio
-async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_create_signed_transaction_with_coin_announcement(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -684,7 +723,9 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_envir
 
 
 @pytest.mark.anyio
-async def test_create_signed_transaction_with_puzzle_announcement(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_create_signed_transaction_with_puzzle_announcement(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -765,7 +806,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
 
 
 @pytest.mark.anyio
-async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_1_node: WalletNode = env.wallet_1.node
@@ -779,9 +820,11 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1, 1)
     await generate_funds(full_node_api, env.wallet_2, 1)
-    wallet_1_puzhash = await wallet_1.get_new_puzzlehash()
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        wallet_1_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
-    wallet_2_puzhash = await wallet_2.get_new_puzzlehash()
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        wallet_2_puzhash = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
     tx = (
         await wallet_1_rpc.send_transaction(
             wallet_id=1,
@@ -884,7 +927,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
 
 
 @pytest.mark.anyio
-async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -935,7 +978,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
 
 
 @pytest.mark.anyio
-async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet: Wallet = env.wallet_1.wallet
@@ -960,7 +1003,8 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
 
     # Test RELEVANCE
-    puzhash = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        puzhash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(
         1, uint64(1), encode_puzzle_hash(puzhash, "txch"), DEFAULT_TX_CONFIG
@@ -979,7 +1023,8 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_transactions == sorted_transactions
 
     # Test get_transactions to address
-    ph_by_addr = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_by_addr = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"), DEFAULT_TX_CONFIG)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -992,7 +1037,7 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
         1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
     )
     assert len(all_transactions) == 5
-    assert all(transaction.type == TransactionType.COINBASE_REWARD for transaction in all_transactions)
+    assert all(transaction.type == TransactionType.COINBASE_REWARD.value for transaction in all_transactions)
     # Test confirmed filter
     all_transactions = await client.get_transactions(1, confirmed=True)
     assert len(all_transactions) == 10
@@ -1012,7 +1057,7 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
 
 
 @pytest.mark.anyio
-async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -1033,7 +1078,7 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
 
 
 @pytest.mark.anyio
-async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_node: WalletNode = env.wallet_1.node
@@ -1196,7 +1241,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.anyio
-async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_node: WalletNode = env.wallet_1.node
@@ -1315,14 +1360,14 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
     await farm_transaction_block(full_node_api, wallet_node)
 
-    async def is_trade_confirmed(client, trade) -> bool:
-        trade_record = await client.get_offer(trade.name())
+    async def is_trade_confirmed(client: WalletRpcClient, offer: Offer) -> bool:
+        trade_record = await client.get_offer(offer.name())
         return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
 
     await time_out_assert(15, is_trade_confirmed, True, wallet_1_rpc, offer)
 
     # Test trade sorting
-    def only_ids(trades):
+    def only_ids(trades: list[TradeRecord]) -> list[bytes32]:
         return [t.trade_id for t in trades]
 
     trade_record = await wallet_1_rpc.get_offer(offer.name())
@@ -1344,53 +1389,6 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert len(all_offers) == 0
     all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=0, end=50)
     assert len(all_offers) == 2
-
-    ###
-    # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
-    # There's also temp code in wallet_rpc_api.py
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "get_offer_summary",
-            {
-                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "check_offer_validity",
-            {
-                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "take_offer",
-            {
-                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "get_offer_summary",
-            {
-                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "check_offer_validity",
-            {
-                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
-            },
-        )
-    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
-        await wallet_1_rpc.fetch(
-            "take_offer",
-            {
-                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
-            },
-        )
-    ###
 
     await wallet_1_rpc.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
@@ -1450,7 +1448,10 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
     full_node_api = env.full_node.api
     # Generate some funds
     generated_funds = await generate_funds(full_node_api, env.wallet_1, 5)
-    address = encode_puzzle_hash(await env.wallet_1.wallet.get_new_puzzlehash(), "txch")
+    async with env.wallet_1.wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        address = encode_puzzle_hash(
+            await action_scope.get_puzzle_hash(env.wallet_1.wallet.wallet_state_manager), "txch"
+        )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     # Spend half of it back to the same wallet get some spent coins in the wallet
@@ -1495,7 +1496,7 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
 
 
 @pytest.mark.anyio
-async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_1: Wallet = env.wallet_1.wallet
@@ -1516,57 +1517,67 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     did_id_0 = res["my_did"]
 
     # Get wallet name
-    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
-    assert res["success"]
-    assert res["name"] == "Profile 1"
-    nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
+    get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
+    assert get_name_res.name == "Profile 1"
+    nft_wallet = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
     assert isinstance(nft_wallet, NFTWallet)
     assert nft_wallet.get_name() == "Profile 1 NFT Wallet"
 
     # Set wallet name
     new_wallet_name = "test name"
-    res = await wallet_1_rpc.did_set_wallet_name(did_wallet_id_0, new_wallet_name)
-    assert res["success"]
-    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
-    assert res["success"]
-    assert res["name"] == new_wallet_name
+    await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(did_wallet_id_0, new_wallet_name))
+    get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
+    assert get_name_res.name == new_wallet_name
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
-        await wallet_1_rpc.did_set_wallet_name(wallet_1_id, new_wallet_name)
+        await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_1_id, new_wallet_name))
 
     # Check DID ID
-    res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
-    assert res["success"]
-    assert did_id_0 == res["my_did"]
+    did_id_res = await wallet_1_rpc.get_did_id(DIDGetDID(did_wallet_id_0))
+    assert did_id_0 == did_id_res.my_did
     # Create backup file
-    res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
-    assert res["success"]
+    await wallet_1_rpc.create_did_backup_file(DIDCreateBackupFile(did_wallet_id_0))
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     # Update recovery list
-    update_res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1, DEFAULT_TX_CONFIG)
+    update_res = await wallet_1_rpc.update_did_recovery_list(
+        DIDUpdateRecoveryIDs(
+            wallet_id=uint32(did_wallet_id_0), new_list=[did_id_0], num_verifications_required=uint64(1), push=True
+        ),
+        DEFAULT_TX_CONFIG,
+    )
     assert len(update_res.transactions) > 0
-    res = await wallet_1_rpc.get_did_recovery_list(did_wallet_id_0)
-    assert res["num_required"] == 1
-    assert res["recovery_list"][0] == did_id_0
+    recovery_list_res = await wallet_1_rpc.get_did_recovery_list(DIDGetRecoveryList(did_wallet_id_0))
+    assert recovery_list_res.num_required == 1
+    assert recovery_list_res.recovery_list[0] == did_id_0
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
-        await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
-    await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
+        await wallet_1_rpc.update_did_metadata(
+            DIDUpdateMetadata(wallet_id=wallet_1_id, metadata={"Twitter": "Https://test"}, push=True), DEFAULT_TX_CONFIG
+        )
+    await wallet_1_rpc.update_did_metadata(
+        DIDUpdateMetadata(wallet_id=did_wallet_id_0, metadata={"Twitter": "Https://test"}, push=True), DEFAULT_TX_CONFIG
+    )
 
-    res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
-    assert res["metadata"]["Twitter"] == "Https://test"
+    get_metadata_res = await wallet_1_rpc.get_did_metadata(DIDGetMetadata(did_wallet_id_0))
+    assert get_metadata_res.metadata["Twitter"] == "Https://test"
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Transfer DID
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-    await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True, DEFAULT_TX_CONFIG)
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
+    await wallet_1_rpc.did_transfer_did(
+        DIDTransferDID(
+            wallet_id=did_wallet_id_0, inner_address=addr, fee=uint64(0), with_recovery_info=True, push=True
+        ),
+        DEFAULT_TX_CONFIG,
+    )
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
@@ -1578,11 +1589,11 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: (w.type == WalletType.DECENTRALIZED_ID.value),
             await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
-    did_wallet_2: WalletProtocol = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
+    did_wallet_2 = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
     assert isinstance(did_wallet_2, DIDWallet)
     assert (
         encode_puzzle_hash(bytes32.from_hexstr(did_wallet_2.get_my_DID()), AddressType.DID.hrp(wallet_2_node.config))
@@ -1592,7 +1603,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert metadata["Twitter"] == "Https://test"
 
     last_did_coin = await did_wallet_2.get_coin()
-    await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG, push=True)
+    await wallet_2_rpc.did_message_spend(DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG)
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -1602,7 +1613,9 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert next_did_coin.parent_coin_info == last_did_coin.name()
     last_did_coin = next_did_coin
 
-    await wallet_2_rpc.did_message_spend(did_wallet_2.id(), DEFAULT_TX_CONFIG.override(reuse_puzhash=True), push=True)
+    await wallet_2_rpc.did_message_spend(
+        DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
+    )
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -1618,7 +1631,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.anyio
-async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -1632,12 +1645,15 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.create_new_nft_wallet(None)
     nft_wallet_id = res["wallet_id"]
     mint_res = await wallet_1_rpc.mint_nft(
-        nft_wallet_id,
-        None,
-        None,
-        "0xD4584AD463139FA8C0D9F68F4B59F185",
-        ["https://www.chia.net/img/branding/chia-logo.svg"],
-        DEFAULT_TX_CONFIG,
+        request=NFTMintNFTRequest(
+            wallet_id=nft_wallet_id,
+            royalty_address=None,
+            target_address=None,
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+            uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+            push=True,
+        ),
+        tx_config=DEFAULT_TX_CONFIG,
     )
 
     spend_bundle = mint_res.spend_bundle
@@ -1646,27 +1662,32 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=15)
 
-    nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+    nft_wallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
     assert isinstance(nft_wallet, NFTWallet)
 
-    async def have_nfts():
+    async def have_nfts() -> bool:
         return await nft_wallet.get_nft_count() > 0
 
     await time_out_assert(15, have_nfts, True)
 
     # Test with the hex version of nft_id
     nft_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
-    nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
+    with pytest.raises(ResponseFailureError, match="Invalid Coin ID format for 'coin_id'"):
+        await wallet_1_rpc.get_nft_info(NFTGetInfo("error"))
+    nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
+    assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
     # Test with the bech32m version of nft_id
     hmr_nft_id = encode_puzzle_hash(
         (await nft_wallet.get_current_nfts())[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
     )
-    nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
+    nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(hmr_nft_id))).nft_info
+    assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
 
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-    await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0, DEFAULT_TX_CONFIG)
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
+    await wallet_1_rpc.transfer_nft(
+        NFTTransferNFT(wallet_id=nft_wallet_id, nft_coin_id=nft_id, target_address=addr, push=True), DEFAULT_TX_CONFIG
+    )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
@@ -1677,26 +1698,71 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
     )[0].id
-    nft_wallet_1: WalletProtocol = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
+    nft_wallet_1 = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
     assert isinstance(nft_wallet_1, NFTWallet)
-    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id, False))).nft_info
     assert nft_info_1 == nft_info
-    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info_1["nft_coin_id"][2:] == (await nft_wallet_1.get_current_nfts())[0].coin.name().hex()
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
+    assert nft_info_1.nft_coin_id == (await nft_wallet_1.get_current_nfts())[0].coin.name()
     # Cross-check NFT
-    nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
+    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs(nft_wallet_id_1))).nft_list[0]
+    assert nft_info_1 == nft_info_2
+    nft_info_2 = (await wallet_2_rpc.list_nfts(NFTGetNFTs())).nft_list[0]
     assert nft_info_1 == nft_info_2
 
     # Test royalty endpoint
+    with pytest.raises(ValueError, match="Multiple royalty assets with same name specified"):
+        await wallet_1_rpc.nft_calculate_royalties(
+            NFTCalculateRoyalties(
+                [
+                    RoyaltyAsset(
+                        "my asset",
+                        "my address",
+                        uint16(10000),
+                    ),
+                    RoyaltyAsset(
+                        "my asset",
+                        "some other address",
+                        uint16(11111),
+                    ),
+                ],
+                [],
+            )
+        )
+    with pytest.raises(ValueError, match="Multiple fungible assets with same name specified"):
+        await wallet_1_rpc.nft_calculate_royalties(
+            NFTCalculateRoyalties(
+                [],
+                [
+                    FungibleAsset(
+                        None,
+                        uint64(10000),
+                    ),
+                    FungibleAsset(
+                        None,
+                        uint64(11111),
+                    ),
+                ],
+            )
+        )
     royalty_summary = await wallet_1_rpc.nft_calculate_royalties(
-        {
-            "my asset": ("my address", uint16(10000)),
-        },
-        {
-            None: uint64(10000),
-        },
+        NFTCalculateRoyalties(
+            [
+                RoyaltyAsset(
+                    "my asset",
+                    "my address",
+                    uint16(10000),
+                )
+            ],
+            [
+                FungibleAsset(
+                    None,
+                    uint64(10000),
+                )
+            ],
+        )
     )
-    assert royalty_summary == {
+    assert royalty_summary.to_json_dict() == {
         "my asset": [
             {
                 "asset": None,
@@ -1716,11 +1782,11 @@ async def _check_delete_key(
 
     sk = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
     assert sk is not None
-    farmer_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    farmer_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
     sk = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
     assert sk is not None
-    pool_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
+    pool_ph = puzzle_hash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(farmer_ph, "txch")
@@ -1747,7 +1813,7 @@ async def _check_delete_key(
 
 
 @pytest.mark.anyio
-async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet: Wallet = env.wallet_1.wallet
@@ -1764,7 +1830,8 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     assert (await client.get_height_info()).height > 0
 
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     addr = encode_puzzle_hash(ph, "txch")
     tx_amount = uint64(15600000)
     await env.full_node.api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -1839,7 +1906,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
 
 @pytest.mark.anyio
-async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -1850,7 +1917,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     funds = await generate_funds(full_node_api, env.wallet_1)
 
-    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     coin_300: list[Coin]
     tx_amounts: list[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
     for tx_amount in tx_amounts:
@@ -1873,8 +1941,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
     )
-    assert min_coins is not None
-    assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
+    assert len(min_coins) == 1
+    assert min_coins[0].amount == uint64(10_000)
 
     # test max coin amount
     max_coins: list[Coin] = await client_2.select_coins(
@@ -1884,8 +1952,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
         ),
     )
-    assert max_coins is not None
-    assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
+    assert len(max_coins) == 2
+    assert max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
     non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
@@ -1894,11 +1962,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
-    assert excluded_amt_coins is not None
-    assert (
-        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
-        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
-    )
+    assert len(excluded_amt_coins) == len([a for a in tx_amounts if a != 1000])
+    assert sum(c.amount for c in excluded_amt_coins) == non_1000_amt
 
     # test excluded coins
     with pytest.raises(ValueError):
@@ -1973,7 +2038,7 @@ async def test_get_coin_records_rpc(wallet_rpc_environment: WalletRpcTestEnviron
         test_request: GetCoinRecords,
         test_total_count: Optional[int],
         test_records: list[WalletCoinRecord],
-    ):
+    ) -> None:
         response = await client.get_coin_records(test_request)
         assert response["coin_records"] == [coin.to_json_dict_parsed_metadata() for coin in test_records], test_case
         assert response["total_count"] == test_total_count, test_case
@@ -2012,9 +2077,9 @@ async def test_get_coin_records_rpc_limits(
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_node: WalletNode = env.wallet_1.node
     client: WalletRpcClient = env.wallet_1.rpc_client
-    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
     assert rpc_server is not None
-    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    api: WalletRpcApi = rpc_server.rpc_api
     store = wallet_node.wallet_state_manager.coin_store
 
     # Adjust the limits for faster testing
@@ -2084,9 +2149,9 @@ async def test_get_coin_records_rpc_failures(
 ) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     client: WalletRpcClient = env.wallet_1.rpc_client
-    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
     assert rpc_server is not None
-    api = cast(WalletRpcApi, rpc_server.rpc_api)
+    api = rpc_server.rpc_api
 
     too_many_hashes = [bytes32.random(seeded_random) for _ in range(api.max_get_coin_records_filter_items + 1)]
     too_many_amounts = [
@@ -2126,7 +2191,7 @@ async def test_get_coin_records_rpc_failures(
 
 
 @pytest.mark.anyio
-async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -2139,12 +2204,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     env.wallet_2.node.config["enable_notifications"] = True
     env.wallet_2.node.config["required_notification_amount"] = 100000000000
-    tx = await client.send_notification(
-        await wallet_2.get_new_puzzlehash(),
-        b"hello",
-        uint64(100000000000),
-        fee=uint64(100000000000),
-    )
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        tx = await client.send_notification(
+            await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
+            b"hello",
+            uint64(100000000000),
+            fee=uint64(100000000000),
+        )
 
     assert tx.spend_bundle is not None
     await time_out_assert(
@@ -2165,12 +2231,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert await client_2.delete_notifications()
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
-    tx = await client.send_notification(
-        await wallet_2.get_new_puzzlehash(),
-        b"hello",
-        uint64(100000000000),
-        fee=uint64(100000000000),
-    )
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        tx = await client.send_notification(
+            await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
+            b"hello",
+            uint64(100000000000),
+            fee=uint64(100000000000),
+        )
 
     assert tx.spend_bundle is not None
     await time_out_assert(
@@ -2210,8 +2277,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4c65742773206561742c204772616e646d61",  # Let's eat, Grandma
                 "pubkey": (
-                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
-                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
                 ),
                 "signature": (
                     "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
@@ -2227,8 +2293,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2245,8 +2310,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2262,8 +2326,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4f7a6f6e65",  # Ozone
                 "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab3524e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
                     "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
@@ -2281,8 +2344,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4c6574277320656174204772616e646d61",  # Let's eat Grandma
                 "pubkey": (
-                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
-                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
                 ),
                 "signature": (
                     "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
@@ -2297,8 +2359,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
                 "pubkey": (
-                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
-                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b003a1df2dd477d622be928379625b759ef3b388b286ee8658"
                 ),
                 "signature": (
                     "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
@@ -2314,8 +2375,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
             {
                 "message": "4f7a6f6e65",  # Ozone
                 "pubkey": (
-                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab35"
-                    "24e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
+                    "8fba5482e6c798a06ee1fd95deaaa83f11c46da06006ab3524e917f4e116c2bdec69d6098043ca568290ac366e5e2dc5"
                 ),
                 "signature": (
                     "92a5124d53b74e4197d075277d0b31eda1571353415c4a87952035aa392d4e9206b35e4af959e7135e45db1"
@@ -2334,10 +2394,10 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 async def test_verify_signature(
     wallet_rpc_environment: WalletRpcTestEnvironment,
     rpc_request: dict[str, Any],
-    rpc_response: dict[str, Any],
+    rpc_response: VerifySignatureResponse,
     prefix_hex_strings: bool,
-):
-    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+) -> None:
+    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
     assert rpc_server is not None
     updated_request = rpc_request.copy()
     updated_request["pubkey"] = ("0x" if prefix_hex_strings else "") + updated_request["pubkey"]
@@ -2350,13 +2410,13 @@ async def test_verify_signature(
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
-    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
     await generate_funds(full_node_api, env.wallet_1)
     assert rpc_server is not None
-    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    api: WalletRpcApi = rpc_server.rpc_api
     req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
     has_exception = False
     try:
@@ -2377,10 +2437,10 @@ async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
-    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
     await generate_funds(full_node_api, env.wallet_1)
     assert rpc_server is not None
     res = await env.wallet_1.rpc_client.get_auto_claim()
@@ -2391,7 +2451,7 @@ async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.anyio
-async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -2406,12 +2466,15 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     nft_wallet_id = nft_wallet["wallet_id"]
     address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
     await wc.mint_nft(
-        nft_wallet_id,
+        request=NFTMintNFTRequest(
+            wallet_id=nft_wallet_id,
+            royalty_address=address,
+            target_address=address,
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+            uris=["http://test.nft"],
+            push=True,
+        ),
         tx_config=DEFAULT_TX_CONFIG,
-        royalty_address=address,
-        target_address=address,
-        hash="deadbeef",
-        uris=["http://test.nft"],
     )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)
@@ -2488,7 +2551,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
 
 
 @pytest.mark.anyio
-async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -2528,17 +2591,17 @@ async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: Wall
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     await generate_funds(full_node_api, env.wallet_1)
     wallet_node: WalletNode = env.wallet_1.node
     fingerprint = wallet_node.logged_in_fingerprint
-    assert fingerprint
+    assert fingerprint is not None
     db_path = wallet_node.wallet_state_manager.db_path
-    assert await wallet_node.reset_sync_db(
-        db_path, fingerprint
-    ), "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
+    assert await wallet_node.reset_sync_db(db_path, fingerprint), (
+        "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
+    )
     dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
     conn: aiosqlite.Connection
     async with dbw.writer() as conn:
@@ -2550,7 +2613,7 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
 
 
 @pytest.mark.anyio
-async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_node: WalletNode = env.wallet_1.node
@@ -2561,7 +2624,8 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     await generate_funds(full_node_api, env.wallet_1, 1)
 
     # Send to a CAT with an anyone can spend TAIL
-    our_ph: bytes32 = await env.wallet_1.wallet.get_new_puzzlehash()
+    async with env.wallet_1.wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(env.wallet_1.wallet.wallet_state_manager)
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), Program.to(1))
     addr = encode_puzzle_hash(
         cat_puzzle.get_tree_hash(),
@@ -2629,7 +2693,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
 
 
 @pytest.mark.anyio
-async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -2987,7 +3051,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await cat_wallet.generate_signed_transaction(
             [BIG_COIN_AMOUNT, SMALL_COIN_AMOUNT, REALLY_SMALL_COIN_AMOUNT],
-            [await env.xch_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)] * 3,
+            [await action_scope.get_puzzle_hash(env.wallet_state_manager)] * 3,
             action_scope,
         )
 

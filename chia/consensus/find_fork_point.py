@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Union
 
-from chia.consensus.block_record import BlockRecord
+from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
+
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32
 
 
 async def find_fork_point_in_chain(

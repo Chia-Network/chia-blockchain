@@ -8,10 +8,10 @@ from typing import Any, Optional
 from chia.apis import ApiProtocolRegistry
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
+from chia.server.aliases import IntroducerService
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
-from chia.types.aliases import IntroducerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -36,7 +36,18 @@ def create_introducer_service(
     if advertised_port is None:
         advertised_port = service_config["port"]
 
-    node = Introducer(service_config["max_peers_to_send"], service_config["recent_peer_threshold"])
+    try:
+        default_port = service_config["network_overrides"]["config"][network_id]["default_full_node_port"]
+    except KeyError:
+        raise Exception(f"Specify default_full_node_port for network {network_id}")
+
+    dns_servers = service_config.get("dns_servers", [])
+    if dns_servers == [] and network_id == "mainnet":
+        dns_servers.append("dns-introducer.chia.net")
+
+    node = Introducer(
+        service_config["max_peers_to_send"], service_config["recent_peer_threshold"], default_port, dns_servers
+    )
     peer_api = IntroducerAPI(node)
 
     return Service(

@@ -6,20 +6,23 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint16
+
 from chia.apis import ApiProtocolRegistry
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.server.outbound_message import NodeType
+from chia.full_node.full_node_rpc_api import FullNodeRpcApi
+from chia.protocols.outbound_message import NodeType
+from chia.server.aliases import FullNodeService
+from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
-from chia.types.aliases import FullNodeService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
-from chia.util.ints import uint16
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288

@@ -138,7 +138,7 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
     user_input = input("Select the version you want to prepare for submission: ")
     try:
         if int(user_input) <= 0:
-            raise IndexError()
+            raise IndexError
         prepare_result = available_results[int(user_input) - 1]
     except IndexError:
         raise click.ClickException(f"Invalid choice: {user_input}")

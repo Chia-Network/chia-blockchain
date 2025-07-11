@@ -7,6 +7,21 @@ import sys
 from pathlib import Path
 from time import monotonic
 
+from chia_rs import (
+    BlockRecord,
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    PoolTarget,
+    ProofOfSpace,
+    RewardChainBlock,
+    SubEpochSummary,
+    TransactionsInfo,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import (
     clvm_generator,
@@ -19,17 +34,8 @@ from chia._tests.util.benchmarks import (
     rand_vdf_proof,
     rewards,
 )
-from chia.consensus.block_record import BlockRecord
 from chia.full_node.block_store import BlockStore
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 # to run this benchmark:
 # python -m benchmarks.coin_store

@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
@@ -16,6 +17,12 @@ from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 class CATInfo(Streamable):
     limitations_program_hash: bytes32
     my_tail: Optional[Program]  # this is the program
+
+
+@streamable
+@dataclass(frozen=True)
+class RCATInfo(CATInfo):
+    hidden_puzzle_hash: bytes32
 
 
 @streamable
@@ -40,8 +47,6 @@ class LegacyCATInfo(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class CRCATInfo(Streamable):
-    limitations_program_hash: bytes32
-    my_tail: Optional[Program]  # this is the program
+class CRCATInfo(CATInfo):
     authorized_providers: list[bytes32]
     proofs_checker: ProofsChecker

@@ -11,6 +11,7 @@ import pytest
 
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import (
     ChiaRoot,
@@ -22,7 +23,6 @@ from chia._tests.core.data_layer.util import (
 from chia._tests.util.misc import closing_chia_root_popen
 from chia.data_layer.data_layer_util import NodeType, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 # TODO: These are more general than the data layer and should either move elsewhere or
 #       be replaced with an existing common approach.  For now they can at least be

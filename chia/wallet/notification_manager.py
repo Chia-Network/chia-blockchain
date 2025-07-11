@@ -3,15 +3,14 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from chia_rs import G2Element
+from chia_rs import CoinSpend, CoinState, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
-from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition
 from chia.wallet.notification_store import Notification, NotificationStore
 from chia.wallet.util.compute_memos import compute_memos_for_spend
@@ -101,13 +100,13 @@ class NotificationManager:
         )
         extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
         await self.wallet_state_manager.main_wallet.generate_signed_transaction(
-            amount,
-            notification_hash,
+            [amount],
+            [notification_hash],
             action_scope,
             fee,
             coins=coins,
             origin_id=origin_coin,
-            memos=[target, msg],
+            memos=[[target, msg]],
             extra_conditions=(
                 *extra_conditions,
                 AssertCoinAnnouncement(asserted_id=notification_coin.name(), asserted_msg=b""),

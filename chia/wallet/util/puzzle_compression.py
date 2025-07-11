@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import zlib
 
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
+
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.nft_wallet.nft_puzzles import (
@@ -9,10 +11,11 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_OWNERSHIP_LAYER,
     NFT_STATE_LAYER_MOD,
     NFT_TRANSFER_PROGRAM_DEFAULT,
-    SINGLETON_TOP_LAYER_MOD,
 )
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.singleton import (
+    SINGLETON_TOP_LAYER_MOD,
+)
 
 # Need the legacy CAT mod for zlib backwards compatibility
 LEGACY_CAT_MOD = Program.fromhex(
@@ -22,7 +25,6 @@ LEGACY_CAT_MOD = Program.fromhex(
 OFFER_MOD_OLD = Program.fromhex(
     "ff02ffff01ff02ff0affff04ff02ffff04ff03ff80808080ffff04ffff01ffff333effff02ffff03ff05ffff01ff04ffff04ff0cffff04ffff02ff1effff04ff02ffff04ff09ff80808080ff808080ffff02ff16ffff04ff02ffff04ff19ffff04ffff02ff0affff04ff02ffff04ff0dff80808080ff808080808080ff8080ff0180ffff02ffff03ff05ffff01ff04ffff04ff08ff0980ffff02ff16ffff04ff02ffff04ff0dffff04ff0bff808080808080ffff010b80ff0180ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff1effff04ff02ffff04ff09ff80808080ffff02ff1effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080"
 )
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
 # For backwards compatibility to work, we must assume that these mods (already deployed) will not change
 # In the case that they do change and we don't support the old asset then we need to keep around the legacy module
@@ -35,7 +37,7 @@ ZDICT = [
     + bytes(NFT_METADATA_UPDATER)
     + bytes(NFT_TRANSFER_PROGRAM_DEFAULT),
     bytes(CAT_MOD),
-    bytes(OFFER_MOD),
+    SETTLEMENT_PAYMENT,
     b"",  # purposefully break compatibility with older versions
     # more dictionaries go here
 ]

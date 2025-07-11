@@ -7,15 +7,15 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import aiosqlite
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint64
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 
@@ -392,7 +392,7 @@ class Root:
         }
 
 
-node_type_to_class: dict[NodeType, Union[type[InternalNode], type[TerminalNode]]] = {
+node_type_to_class: dict[NodeType, type[Union[InternalNode, TerminalNode]]] = {
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }
@@ -962,13 +962,11 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
 
 
 async def dl_verify_proof(
-    request: dict[str, Any],
+    dlproof: DLProof,
     wallet_node: WalletNode,
     peer: WSChiaConnection,
-) -> dict[str, Any]:
+) -> VerifyProofResponse:
     """Verify a proof of inclusion for a DL singleton"""
-
-    dlproof = DLProof.from_json_dict(request)
 
     coin_id = dlproof.coin_id
     coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
@@ -982,4 +980,4 @@ async def dl_verify_proof(
         success=True,
         current_root=coin_states[0].spent_height is None,
     )
-    return response.to_json_dict()
+    return response

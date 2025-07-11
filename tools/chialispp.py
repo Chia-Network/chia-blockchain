@@ -49,7 +49,7 @@ class Formatter:
     def __init__(self) -> None:
         self.start_paren_level: int = 0
         self.paren_level: int = 0
-        self.out_col: int = 0  # The colum we are at while outputting a line
+        self.out_col: int = 0  # The column we are at while outputting a line
         self.cur_line: int = 0
         self.line: list[bytes] = []
         self.comment: Optional[list[bytes]] = None

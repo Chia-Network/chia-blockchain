@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from chia_rs.sized_ints import uint16
+
 from chia.protocols.shared_protocol import Capability
-from chia.util.ints import uint16
 
 
 def known_active_capabilities(values: Iterable[tuple[uint16, str]]) -> list[Capability]:

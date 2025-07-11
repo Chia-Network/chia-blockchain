@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolItemInfo
@@ -10,7 +11,6 @@ from chia.full_node.fee_estimator_constants import INFINITE_FEE_RATE, INITIAL_ST
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import get_bucket_index, init_buckets
 from chia.types.fee_rate import FeeRateV2
-from chia.util.ints import uint32, uint64
 from chia.util.math import make_monotonically_decreasing
 
 log = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ def test_steady_fee_pressure() -> None:
         estimation = estimator.estimate_fee_rate(time_offset_seconds=time_offset_seconds * (height - start_from))
         estimates_after.append(estimation)
 
-    block_estimates = [estimator.estimate_fee_rate_for_block(uint32(h + 1)) for h in range(0, 50)]
+    block_estimates = [estimator.estimate_fee_rate_for_block(uint32(h + 1)) for h in range(50)]
     for idx, es_after in enumerate(estimates_after):
         assert abs(es_after.mojos_per_clvm_cost - estimates_during[idx].mojos_per_clvm_cost) < 0.001
         assert es_after.mojos_per_clvm_cost == block_estimates[idx].mojos_per_clvm_cost

@@ -54,6 +54,13 @@ class InternalError(DBWrapperError):
     pass
 
 
+class PurposefulAbort(DBWrapperError):
+    obj: object
+
+    def __init__(self, obj: object) -> None:
+        self.obj = obj
+
+
 def generate_in_memory_db_uri() -> str:
     # We need to use shared cache as our DB wrapper uses different types of connections
     return f"file:db_{secrets.token_hex(16)}?mode=memory&cache=shared"
@@ -307,7 +314,7 @@ class DBWrapper2:
                 #       probably skip the nested foreign key check when exiting since
                 #       we don't have many foreign key errors and so it is likely ok
                 #       to save the extra time checking twice.
-                raise NestedForeignKeyDelayedRequestError()
+                raise NestedForeignKeyDelayedRequestError
             async with self._savepoint_ctx():
                 yield self._write_connection
             return

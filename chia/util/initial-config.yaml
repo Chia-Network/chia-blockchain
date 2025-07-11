@@ -19,7 +19,8 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     testnet0:
-      MIN_PLOT_SIZE: 18
+      MIN_PLOT_SIZE_V1: 18
+      MIN_PLOT_SIZE_V2: 20
       GENESIS_CHALLENGE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
@@ -32,12 +33,12 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 3ef7c233fc0785f3c0cae5992c1d35e7c955ca37a423571c1607ba392a9d12f7
       MEMPOOL_BLOCK_BUFFER: 10
-      MIN_PLOT_SIZE: 18
+      MIN_PLOT_SIZE_V1: 18
+      MIN_PLOT_SIZE_V2: 20
       NETWORK_TYPE: 1
       SUB_SLOT_ITERS_STARTING: 67108864
       # Forks activated from the beginning on this network
       HARD_FORK_HEIGHT: 0
-      SOFT_FORK6_HEIGHT: 2000000
       PLOT_FILTER_128_HEIGHT: 6029568
       PLOT_FILTER_64_HEIGHT: 11075328
       PLOT_FILTER_32_HEIGHT: 16121088
@@ -50,7 +51,8 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
       MEMPOOL_BLOCK_BUFFER: 10
-      MIN_PLOT_SIZE: 18
+      MIN_PLOT_SIZE_V1: 18
+      MIN_PLOT_SIZE_V2: 20
       NETWORK_TYPE: 1
       SUB_SLOT_ITERS_STARTING: 67108864
   config:
@@ -264,19 +266,9 @@ timelord:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-  # fast_algorithm is a faster proof generation algorithm. This speed increase
-  # requires much less memory usage and a does not have the risk of OOM that
-  # the normal timelord has but requires significantly more cores doing
-  # parallel proof generation and creates a larger and slower to verify
-  # resulting proof.
-  # An Intel Core i9-10900K can run 2 normal vdf_clients at ~221,000 ips
-  # without slowing down but running more than 1 with fast_algorithm will
-  # run each vdf_client slower.
-  fast_algorithm: False
   # Bluebox (sanitizing timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
-  # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
-  # is running in bluebox_mode.
+  # extending the chain.
   # You must set 'send_uncompact_interval' in 'full_node' > 0 in the full_node
   # section below to have full_node send existing time proofs to be sanitized.
   bluebox_mode: False
@@ -315,6 +307,21 @@ full_node:
   # "auto"  on/off is decided based on a heuristic of how likely a failure is on
   #         the particular system we're running on. Defaults to "full".
   db_sync: "auto"
+
+  # Determine which version of block creation function to use:
+  # 0: Original function, first fill a block with transactions, then compress
+  #    it, then run it to compute its cost. The final block may not use all
+  #    available block cost.
+  # 1: Compressed block function. Compress transactions into the block as they
+  #    are added. Use the new, optimized, compression function. This produces
+  #    blocks that fill up the allowed block cost.
+
+  # block_creation: 0
+
+  # If we spend more than this many seconds forming the new transactions block
+  # generator, stop and just go with what we have so far. This is a safety
+  # measure to not spend too much time building the block generator.
+  # block_creation_timeout: 2.0
 
   # the number of threads used to read from the blockchain database
   # concurrently. There's always only 1 writer, but the number of readers is
@@ -440,6 +447,7 @@ full_node:
     - "seeder.dexie.space"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
+    - "seeder.xchseeder.com"
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
@@ -487,6 +495,7 @@ introducer:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
+  dns_servers: *dns_servers
 
   ssl:
     public_crt: "config/ssl/full_node/public_full_node.crt"
@@ -690,4 +699,3 @@ simulator:
 
   # Fork Settings
   HARD_FORK_HEIGHT: 0
-  SOFT_FORK6_HEIGHT: 0

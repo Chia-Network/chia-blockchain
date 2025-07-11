@@ -2,24 +2,20 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import Optional
 
-from chia.protocols.wallet_protocol import CoinState
+from chia_rs import CoinSpend, CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
+from typing_extensions import Self
+
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD as NFT_MOD
+from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD
 
 log = logging.getLogger(__name__)
-SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-NFT_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
-    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
-
-_T_UncurriedNFT = TypeVar("_T_UncurriedNFT", bound="UncurriedNFT")
 
 
 @streamable
@@ -91,7 +87,7 @@ class UncurriedNFT(Streamable):
     trade_price_percentage: Optional[uint16]
 
     @classmethod
-    def uncurry(cls: type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
+    def uncurry(cls, mod: Program, curried_args: Program) -> Optional[Self]:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class

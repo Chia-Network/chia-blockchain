@@ -14,7 +14,7 @@ from _pytest.capture import CaptureFixture
 
 import chia._tests
 from chia._tests.util.misc import Marks, datacases
-from chia.cmds.gh import Per, TestCMD, get_gh_token
+from chia.cmds.dev.gh import Per, TestCMD, get_gh_token
 
 test_root = Path(chia._tests.__file__).parent
 

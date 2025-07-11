@@ -4,19 +4,20 @@ import re
 from typing import Any
 
 import pytest
+from chia_rs import SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_api import FullNodeRpcApi
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.server.aliases import WalletService
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
-from chia.types.aliases import WalletService
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 @pytest.fixture(scope="function")
@@ -37,7 +38,8 @@ async def setup_node_and_rpc(
     )
     full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
 
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     for i in range(4):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

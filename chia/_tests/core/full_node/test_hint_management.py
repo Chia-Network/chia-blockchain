@@ -3,16 +3,16 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from chia_rs import BlockRecord
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, StateChangeSummary
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 parent_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]

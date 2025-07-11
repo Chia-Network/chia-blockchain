@@ -3,23 +3,25 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Optional, Union
 
-from chia_rs import G2Element
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT, SETTLEMENT_PAYMENT_HASH
+from chia_rs import CoinSpend, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost, uncurry
+from chia.types.coin_spend import make_spend
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint64
 from chia.util.streamable import parse_rust
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     parse_conditions_non_consensus,
     parse_timelock_info,
 )
@@ -31,9 +33,7 @@ from chia.wallet.outer_puzzles import (
     match_puzzle,
     solve_puzzle,
 )
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
@@ -43,8 +43,10 @@ from chia.wallet.util.puzzle_compression import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
-OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
+OfferSummary = dict[Union[int, bytes32], int]
+
+OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
+OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
 
 
 def detect_dependent_coin(
@@ -61,15 +63,17 @@ def detect_dependent_coin(
 
 
 @dataclass(frozen=True)
-class NotarizedPayment(Payment):
+class NotarizedPayment(CreateCoin):
     nonce: bytes32 = bytes32.zeros
 
     @classmethod
     def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
-        p = Payment.from_condition(with_opcode)
-        puzzle_hash, amount, memos = tuple(p.as_condition_args())
-        return cls(puzzle_hash, amount, memos, nonce)
+        p = CreateCoin.from_program(with_opcode)
+        return cls(p.puzzle_hash, p.amount, p.memos, nonce)
+
+    def name(self) -> bytes32:
+        return self.to_program().get_tree_hash()
 
 
 @dataclass(frozen=True, eq=False)
@@ -94,7 +98,7 @@ class Offer:
 
     @staticmethod
     def notarize_payments(
-        requested_payments: dict[Optional[bytes32], list[Payment]],  # `None` means you are requesting XCH
+        requested_payments: dict[Optional[bytes32], list[CreateCoin]],  # `None` means you are requesting XCH
         coins: list[Coin],
     ) -> dict[Optional[bytes32], list[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
@@ -106,8 +110,7 @@ class Offer:
         for asset_id, payments in requested_payments.items():
             notarized_payments[asset_id] = []
             for p in payments:
-                puzzle_hash, amount, memos = tuple(p.as_condition_args())
-                notarized_payments[asset_id].append(NotarizedPayment(puzzle_hash, amount, memos, nonce))
+                notarized_payments[asset_id].append(NotarizedPayment(p.puzzle_hash, p.amount, p.memos, nonce))
 
         return notarized_payments
 
@@ -169,7 +172,7 @@ class Offer:
             max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
             for cs in self._bundle.coin_spends:
                 try:
-                    cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
+                    cost, conds = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
                     max_cost -= cost
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
                 except Exception:  # pragma: no cover
@@ -226,13 +229,13 @@ class Offer:
             coins_for_this_spend: list[Coin] = []
 
             parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
-            parent_solution: Program = parent_spend.solution.to_program()
+            parent_solution = Program.from_serialized(parent_spend.solution)
             additions: list[Coin] = self._additions[parent_spend.coin]
 
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
                 asset_id = create_asset_id(puzzle_driver)
-                inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle)
+                inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle, parent_solution)
                 inner_solution: Optional[Program] = get_inner_solution(puzzle_driver, parent_solution)
                 assert inner_puzzle is not None and inner_solution is not None
 
@@ -258,10 +261,7 @@ class Offer:
                     matching_spend_additions = [
                         a
                         for a in matching_spend_additions
-                        if a.puzzle_hash
-                        == construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(  # type: ignore
-                            OFFER_MOD_HASH
-                        )
+                        if a.puzzle_hash == construct_puzzle(puzzle_driver, OFFER_MOD).get_tree_hash()
                     ]
                     if len(matching_spend_additions) == expected_num_matches:
                         coins_for_this_spend.extend(matching_spend_additions)
@@ -411,7 +411,7 @@ class Offer:
             coin_names.append(name)
             dependencies[name] = []
             announcements[name] = []
-            conditions: Program = spend.puzzle_reveal.run_with_cost(INFINITE_COST, spend.solution)[1]
+            conditions: Program = run_with_cost(spend.puzzle_reveal, INFINITE_COST, spend.solution)[1]
             for condition in conditions.as_iter():
                 if condition.first() == 60:  # create coin announcement
                     announcements[name].append(
@@ -625,7 +625,7 @@ class Offer:
                 asset_id = None
             if coin_spend.coin.parent_coin_info == bytes32.zeros:
                 notarized_payments: list[NotarizedPayment] = []
-                for payment_group in coin_spend.solution.to_program().as_iter():
+                for payment_group in Program.from_serialized(coin_spend.solution).as_iter():
                     nonce = bytes32(payment_group.first().as_atom())
                     payment_args_list = payment_group.rest().as_iter()
                     notarized_payments.extend(
@@ -651,7 +651,7 @@ class Offer:
     def compress(self, version: Optional[int] = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
-            mods: list[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
+            mods: list[bytes] = [bytes(uncurry(s.puzzle_reveal)[0]) for s in as_spend_bundle.coin_spends]
             version = max(lowest_best_version(mods), 6)  # Clients lower than version 6 should not be able to parse
         return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs import BlockRecord
 
 from chia._tests.environments.wallet import (
     BalanceCheckingError,
@@ -8,7 +9,6 @@ from chia._tests.environments.wallet import (
     WalletStateTransition,
     WalletTestFramework,
 )
-from chia.consensus.block_record import BlockRecord
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 
@@ -19,7 +19,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
             "num_environments": 2,
             "config_overrides": {
                 "foo": "bar",  # A config value that never exists
-                "min_mainnet_k_size": 2,  # A config value overriden
+                "min_mainnet_k_size": 2,  # A config value overridden
             },
             "blocks_needed": [1, 0],
         }

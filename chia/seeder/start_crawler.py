@@ -6,16 +6,18 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia_rs import ConsensusConstants
+
 from chia.apis import ApiProtocolRegistry
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.rpc.crawler_rpc_api import CrawlerRpcApi
+from chia.protocols.outbound_message import NodeType
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
-from chia.server.outbound_message import NodeType
+from chia.seeder.crawler_rpc_api import CrawlerRpcApi
+from chia.server.aliases import CrawlerService
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
-from chia.types.aliases import CrawlerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
