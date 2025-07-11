@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import typing
 
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
 from chia_rs import (
@@ -40,10 +41,10 @@ def get_puzzle_and_solution_for_coin(
 
 def get_spends_for_block(
     generator: BlockGenerator, height: int, constants: ConsensusConstants
-) -> dict[str, list[CoinSpend]]:
+) -> list[dict[str, list[CoinSpend]]]:
     spends = get_spends_for_trusted_block(
         constants,
-        bytes(generator.program),
+        generator.program,
         generator.generator_refs,
         get_flags_for_height_and_constants(height, constants),
     )
@@ -53,10 +54,10 @@ def get_spends_for_block(
 
 def get_spends_for_block_with_conditions(
     generator: BlockGenerator, height: int, constants: ConsensusConstants
-) -> dict[any]:
+) -> list[dict[str, typing.Any]]:
     spends = get_spends_for_trusted_block(
         constants,
-        bytes(generator.program),
+        generator.program,
         generator.generator_refs,
         get_flags_for_height_and_constants(height, constants),
     )
