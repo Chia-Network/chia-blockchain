@@ -5,7 +5,7 @@ import pathlib
 
 import pytest
 from chia_rs import G1Element, get_flags_for_height_and_constants
-from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
@@ -89,7 +89,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     coin_spend = spend_bundle.coin_spends[0]
     assert npc_result.conds is not None
     assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
-    puzzle, solution = get_puzzle_and_solution_for_coin_rust(
+    puzzle, solution = get_puzzle_and_solution_for_coin(
         program.program,
         program.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
@@ -176,7 +176,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
         bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
         uint64(300),
     )
-    puz, _solution = get_puzzle_and_solution_for_coin_rust(
+    puz, _solution = get_puzzle_and_solution_for_coin(
         generator.program,
         generator.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
@@ -324,7 +324,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     with benchmark_runner.assert_runtime(seconds=8.5):
         for _ in range(3):
             for c in spent_coins:
-                puz, _solution = get_puzzle_and_solution_for_coin_rust(
+                puz, _solution = get_puzzle_and_solution_for_coin(
                     generator.program,
                     generator.generator_refs,
                     test_constants.MAX_BLOCK_COST_CLVM,

@@ -19,7 +19,7 @@ from chia_rs import (
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
-from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Self
@@ -442,7 +442,7 @@ class SimClient:
         generator: BlockGenerator = filtered_generators[0].transactions_generator  # type: ignore[assignment]
         coin_record = await self.service.coin_store.get_coin_record(coin_id)
         assert coin_record is not None
-        puzzle, solution = get_puzzle_and_solution_for_coin_rust(
+        puzzle, solution = get_puzzle_and_solution_for_coin(
             generator.program,
             generator.generator_refs,
             self.service.defaults.MAX_BLOCK_COST_CLVM,

@@ -30,7 +30,7 @@ from chia_rs import (
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
-from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
@@ -1429,7 +1429,7 @@ class FullNodeAPI:
         try:
             puzzle, solution = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
-                get_puzzle_and_solution_for_coin_rust,
+                get_puzzle_and_solution_for_coin,
                 block_generator.program,
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,

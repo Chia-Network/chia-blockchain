@@ -18,7 +18,7 @@ from chia_rs import (
     get_spends_for_trusted_block_with_conditions,
     run_block_generator2,
 )
-from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
@@ -783,7 +783,7 @@ class FullNodeRpcApi:
         assert block_generator is not None
 
         try:
-            puzzle, solution = get_puzzle_and_solution_for_coin_rust(
+            puzzle, solution = get_puzzle_and_solution_for_coin(
                 block_generator.program,
                 block_generator.generator_refs,
                 self.service.constants.MAX_BLOCK_COST_CLVM,

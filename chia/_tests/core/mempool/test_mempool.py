@@ -18,7 +18,7 @@ from chia_rs import (
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
-from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
@@ -3199,7 +3199,7 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
     with pytest.raises(
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
-        get_puzzle_and_solution_for_coin_rust(
+        get_puzzle_and_solution_for_coin(
             SerializedProgram.to(None),
             [],
             test_constants.MAX_BLOCK_COST_CLVM,
