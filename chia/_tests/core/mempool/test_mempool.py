@@ -3200,7 +3200,7 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
         try:
-            test = get_puzzle_and_solution_for_coin(
+            get_puzzle_and_solution_for_coin(
                 SerializedProgram.to(None),
                 [],
                 test_constants.MAX_BLOCK_COST_CLVM,
