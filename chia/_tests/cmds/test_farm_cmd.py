@@ -84,11 +84,10 @@ async def test_farm_summary_command(
     )
 
     captured = capsys.readouterr()
-    # grab the output
     match = re.search(r"Farming status:.*", captured.out, re.DOTALL)
     assert match, "no 'Farming status:' line"
     output = match.group(0).strip()
-    lines = [l.strip() for l in output.splitlines()]
+    lines = [line.strip() for line in output.splitlines()]
 
     # always check these first six lines
     assert lines[0].startswith("Farming status:")
@@ -100,7 +99,7 @@ async def test_farm_summary_command(
 
     # decide where the harvester section starts
     if "Current/Last height farmed:" in output:
-        # we saw the height‐farmed block, so it occupies lines[6–8]
+        # we saw the height-farmed block, so it occupies lines[6-8]
         assert lines[6].startswith("Current/Last height farmed:")
         assert lines[7].startswith("Blocks since last farmed:")
         assert lines[8].startswith("Time since last farmed:")
