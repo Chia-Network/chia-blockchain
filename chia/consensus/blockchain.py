@@ -422,6 +422,7 @@ class Blockchain:
         try:
             # Always add the block to the database
             async with self.block_store.transaction():
+            async with self.block_store.transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
@@ -931,6 +932,7 @@ class Blockchain:
         gets block records by height (only blocks that are part of the chain)
         """
         hashes: list[bytes32] = []
+        assert batch_size < self.block_store.get_host_parameter_limit()
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
             if header_hash is None:

@@ -192,11 +192,38 @@ class BlockStore:
             return challenge_segments
         return None
 
-    def transaction(self) -> AbstractAsyncContextManager[aiosqlite.Connection]:
+    def get_host_parameter_limit(self) -> int:
+        return self.db_wrapper.host_parameter_limit
+
+    def transaction(self) -> AbstractAsyncContextManager[None]:
         return self.db_wrapper.writer()
 
     def get_block_from_cache(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.block_cache.get(header_hash)
+
+    async def get_block_records_close_to_peak(
+        self, blocks_n: int
+    ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
+        """
+        Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
+        peak header hash. Only blocks that are part of the main chain/current peak are included.
+        """
+
+        peak = await self.get_peak()
+        if peak is None:
+            return {}, None
+
+        ret: dict[bytes32, BlockRecord] = {}
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND in_main_chain=1",
+                (peak[1] - blocks_n,),
+            ) as cursor:
+                for row in await cursor.fetchall():
+                    header_hash = bytes32(row[0])
+                    ret[header_hash] = BlockRecord.from_bytes(row[1])
+
+        return ret, peak[0]
 
     def rollback_cache_block(self, header_hash: bytes32) -> None:
         try:
@@ -205,6 +232,25 @@ class BlockStore:
             # this is best effort. When rolling back, we may not have added the
             # block to the cache yet
             pass
+
+    async def get_prev_hash(self, header_hash: bytes32) -> bytes32:
+        """
+        Returns the header hash preceeding the input header hash.
+        Throws an exception if the block is not present
+        """
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            return cached.prev_header_hash
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT prev_hash FROM full_blocks WHERE header_hash=?",
+                (header_hash,),
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    raise KeyError("missing block in chain")
+                return bytes32(row[0])
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached: Optional[FullBlock] = self.block_cache.get(header_hash)
