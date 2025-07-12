@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Optional
+from typing import Any, Optional
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -32,6 +32,7 @@ from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -820,3 +821,42 @@ class VerifiedCredential(Streamable):
                 slightly_incomplete_vc.coin.amount,
             ),
         )
+
+
+# This class is sort of unparadigmatic as an outer puzzle.
+# It lives somewhere between outer puzzle and inner puzzle, but the most convenient
+# way to present it in this wallet is as an outer puzzle.
+# This may lead to some peculiarities if use cases are to be expanded beyond simply using this
+# inside of a CAT.
+@dataclass(frozen=True)
+class RevocationOuterPuzzle:
+    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+        args = match_revocation_layer(puzzle)
+        if args is None:
+            return None
+        hidden_puzzle_hash, _ = args
+        constructor_dict: dict[str, Any] = {
+            "type": "revocation layer",
+            "hidden_puzzle_hash": "0x" + hidden_puzzle_hash.hex(),
+        }
+        return PuzzleInfo(constructor_dict)
+
+    def get_inner_puzzle(
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+    ) -> Optional[Program]:
+        if solution is None:
+            raise ValueError("Cannot get_inner_puzzle of revocation layer without solution")
+
+        return solution.at("rf")
+
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+        return solution.at("rrf")
+
+    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+        return bytes32(constructor["hidden_puzzle_hash"])
+
+    def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
+        return create_revocation_layer(constructor["hidden_puzzle_hash"], inner_puzzle.get_tree_hash())
+
+    def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
+        return solve_revocation_layer(inner_puzzle, inner_solution)  # deliberately no support for hidden puzzle spends

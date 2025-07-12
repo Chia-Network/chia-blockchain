@@ -21,6 +21,12 @@ class CATInfo(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class RCATInfo(CATInfo):
+    hidden_puzzle_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class CATCoinData(Streamable):
     mod_hash: bytes32
     tail_program_hash: bytes32
@@ -41,8 +47,6 @@ class LegacyCATInfo(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class CRCATInfo(Streamable):
-    limitations_program_hash: bytes32
-    my_tail: Optional[Program]  # this is the program
+class CRCATInfo(CATInfo):
     authorized_providers: list[bytes32]
     proofs_checker: ProofsChecker

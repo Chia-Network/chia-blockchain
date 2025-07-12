@@ -4,7 +4,6 @@ import pytest
 from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -28,6 +27,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle

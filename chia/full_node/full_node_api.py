@@ -1237,7 +1237,7 @@ class FullNodeAPI:
             )
             # strip the hint from additions, and compute the puzzle hash for
             # removals
-            removals_and_additions = ([r.name() for r in removals], [a[0] for a in additions])
+            removals_and_additions = ([name for name, _ in removals], [name for name, _ in additions])
         elif block.is_transaction_block():
             # This is a transaction block with just reward coins.
             removals_and_additions = ([], [])

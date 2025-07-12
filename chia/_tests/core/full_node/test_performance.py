@@ -6,7 +6,6 @@ import random
 import pytest
 from chia_rs import BlockRecord, UnfinishedBlock
 from chia_rs.sized_ints import uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.connection_utils import add_dummy_connection
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
@@ -17,6 +16,7 @@ from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.util.casts import int_to_bytes
 
 log = logging.getLogger(__name__)
 

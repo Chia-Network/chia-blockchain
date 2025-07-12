@@ -2160,7 +2160,7 @@ new_signage_point_harvester_json: dict[str, Any] = {
             "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
         }
     ],
-    "filter_prefix_bits": 9,
+    "peak_height": 0,
     "last_tx_height": 0,
 }
 

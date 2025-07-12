@@ -12,6 +12,7 @@ from chia._tests.conftest import SOFTFORK_HEIGHTS
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.time_out_assert import time_out_assert
+from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -20,6 +21,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program, run
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import CreateCoinAnnouncement, parse_conditions_non_consensus
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -96,10 +98,12 @@ async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) 
     ],
     indirect=["wallet_environments"],
 )
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_cat_trades(
     wallet_environments: WalletTestFramework,
     credential_restricted: bool,
+    wallet_type: type[CATWallet],
     active_softfork_height: uint32,
 ) -> None:
     # Setup
@@ -352,52 +356,11 @@ async def test_cat_trades(
         }
 
         # Mint some standard CATs
-        async with wallet_maker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
-        ) as action_scope:
-            cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager,
-                wallet_maker,
-                {"identifier": "genesis_by_id"},
-                uint64(100),
-                action_scope,
-            )
-
-        async with wallet_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
-        ) as action_scope:
-            new_cat_wallet_taker = await CATWallet.create_new_cat_wallet(
-                wallet_node_taker.wallet_state_manager,
-                wallet_taker,
-                {"identifier": "genesis_by_id"},
-                uint64(100),
-                action_scope,
-            )
-
-        await wallet_environments.process_pending_states(
-            [
-                # Balance checking for this scenario is covered in test_cat_wallet
-                WalletStateTransition(
-                    pre_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "cat": {"init": True, "set_remainder": True},
-                    },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "cat": {"set_remainder": True},
-                    },
-                ),
-                WalletStateTransition(
-                    pre_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "new cat": {"init": True, "set_remainder": True},
-                    },
-                    post_block_balance_updates={
-                        "xch": {"set_remainder": True},
-                        "new cat": {"set_remainder": True},
-                    },
-                ),
-            ]
+        cat_wallet_maker = await mint_cat(
+            wallet_environments, env_maker, "xch", "cat", uint64(100), wallet_type, "cat maker"
+        )
+        new_cat_wallet_taker = await mint_cat(
+            wallet_environments, env_taker, "xch", "new cat", uint64(100), wallet_type, "cat taker"
         )
 
     if credential_restricted:
@@ -428,8 +391,12 @@ async def test_cat_trades(
             proofs_checker_taker,
         )
     else:
-        new_cat_wallet_maker = await CATWallet.get_or_create_wallet_for_cat(
-            wallet_node_maker.wallet_state_manager, wallet_maker, new_cat_wallet_taker.get_asset_id()
+        if wallet_type is RCATWallet:
+            extra_args: Any = (bytes32.zeros,)
+        else:
+            extra_args = tuple()
+        new_cat_wallet_maker = await wallet_type.get_or_create_wallet_for_cat(
+            wallet_node_maker.wallet_state_manager, wallet_maker, new_cat_wallet_taker.get_asset_id(), *extra_args
         )
 
     await env_maker.change_balances(

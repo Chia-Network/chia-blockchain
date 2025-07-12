@@ -9,7 +9,7 @@ import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -44,7 +44,12 @@ from chia.wallet.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
+    FungibleAsset,
     GetHeightInfoResponse,
+    NFTCalculateRoyalties,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
+    RoyaltyAsset,
     SendTransactionResponse,
     TakeOfferResponse,
 )
@@ -246,9 +251,9 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 "unconfirmed_wallet_balance": uint64(0),
             }
 
-        async def get_nft_wallet_did(self, wallet_id: uint8) -> dict[str, Optional[str]]:
-            self.add_to_log("get_nft_wallet_did", (wallet_id,))
-            return {"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}
+        async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
+            self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
+            return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
 
         async def get_connections(
             self, node_type: Optional[NodeType] = None
@@ -277,7 +282,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "test2:\n   -Total Balance:         2000000.0  (2000000000 mojo)",
         "   -Asset ID:              dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860",
         "NFT Wallet:\n   -Total Balance:         1.0",
-        "   -DID ID:                0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652",
+        "   -DID ID:                did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
         "FULL_NODE 127.0.0.1",
         "47482/47482 01010101... May 12",
     ]
@@ -661,12 +666,14 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
     assert_list = [f"Successfully renamed test1 with wallet_id 2 on key {FINGERPRINT} to examplecat"]
     other_assert_list = [f"Successfully added examplecat with wallet id 3 on key {FINGERPRINT}"]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "--asset-id", get_bytes32(1).hex()], assert_list)
-    run_cli_command_and_assert(capsys, root_dir, [*command_args, "--asset-id", get_bytes32(3).hex()], other_assert_list)
+    run_cli_command_and_assert(
+        capsys, root_dir, [*command_args, "--asset-id", bytes32([1, 2] * 16).hex()], other_assert_list
+    )
     # these are various things that should be in the output
 
     expected_calls: logType = {
-        "cat_asset_id_to_name": [(get_bytes32(1),), (get_bytes32(3),)],
-        "create_wallet_for_existing_cat": [(get_bytes32(3),)],
+        "cat_asset_id_to_name": [(get_bytes32(1),), (bytes32([1, 2] * 16),)],
+        "create_wallet_for_existing_cat": [(bytes32([1, 2] * 16),)],
         "set_cat_name": [(2, "examplecat"), (3, "examplecat")],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -765,6 +772,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     inst_rpc_client = MakeOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    offer_cat_id = get_bytes32(4)
     request_cat_id = get_bytes32(2)
     request_nft_id = get_bytes32(2)
     request_nft_addr = encode_puzzle_hash(request_nft_id, "nft")
@@ -780,6 +788,8 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "1:10",
         "--offer",
         "3:100",
+        "--offer",
+        f"{offer_cat_id.hex()}:100",
         "--request",
         f"{request_cat_id.hex()}:10",
         "--request",
@@ -790,7 +800,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "150",
     ]
     assert_list = [
-        "OFFERING:\n  - 10 XCH (10000000000000 mojos)\n  - 100 test3 (100000 mojos)",
+        "OFFERING:\n  - 10 XCH (10000000000000 mojos)\n  - 100 test3 (100000 mojos)\n  - 100 test4 (100000 mojos)",
         "REQUESTING:\n  - 10 test2 (10000 mojos)\n"
         "  - 1 nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft (1 mojos)",
         "Including Fees: 0.5 XCH, 500000000000 mojos",
@@ -799,18 +809,34 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     run_cli_command_and_assert(capsys, root_dir, command_args[:-8], ["without --override"])
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "cat_asset_id_to_name": [(request_cat_id,)],
+        "cat_asset_id_to_name": [(offer_cat_id,), (request_cat_id,)],
         "get_nft_info": [(request_nft_id.hex(), True)],
         "get_cat_name": [(3,)],
         "nft_calculate_royalties": [
             (
-                {
-                    "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft": (
-                        "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
-                        1000,
-                    )
-                },
-                {"XCH": 10000000000000, "test3": 100000},
+                NFTCalculateRoyalties(
+                    [
+                        RoyaltyAsset(
+                            "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft",
+                            "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
+                            uint16(1000),
+                        )
+                    ],
+                    [
+                        FungibleAsset(
+                            "XCH",
+                            uint64(10000000000000),
+                        ),
+                        FungibleAsset(
+                            "test3",
+                            uint64(100000),
+                        ),
+                        FungibleAsset(
+                            "test4",
+                            uint64(100000),
+                        ),
+                    ],
+                ),
             )
         ],
         "create_offer_for_ids": [
@@ -818,6 +844,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 {
                     1: -10000000000000,
                     3: -100000,
+                    "0404040404040404040404040404040404040404040404040404040404040404": -100000,
                     "0202020202020202020202020202020202020202020202020202020202020202": 10000,
                     "0101010101010101010101010101010101010101010101010101010101010101": 1,
                 },
@@ -998,17 +1025,39 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 ),
             )
 
+        async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
+            self.add_to_log("cat_asset_id_to_name", (asset_id,))
+            if asset_id == cat_offered_id:
+                return uint32(2), "offered cat"
+            elif asset_id == cat_requested_id:
+                return uint32(3), "requested cat"
+            else:
+                return None
+
     inst_rpc_client = TakeOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     # these are various things that should be in the output
-    cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
-    cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
+    nft_offered_id = bytes32.from_hexstr("6bc2c2a27c0f04b9e1e57933d2efe08f5b9e156652a374436b70c067b03c444c")
+    cat_offered_id = bytes32.from_hexstr("06e4136cb7295cec5265c5e49cc32fa69aede779532f2b7542a2456589a53f2f")
+    cat_requested_id = bytes32.from_hexstr("13a52e5efb1ee80a24c94b36bbda2b473094353614ced1c2938ba5ef6097431e")
+    nft_requested_id_1 = bytes32.from_hexstr("7657b5f1cdee70459052c314f839bb1b76b8c3f444671da71ad7dfcb6c47f243")
+    nft_requested_id_2 = bytes32.from_hexstr("5f03cdb94c96325f49f4abf1d4d10cabd5ea583632fbf20f251b7fad73645a14")
     assert_list = [
-        f"  OFFERED:\n    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n    - {cat1.hex()}: 100.0 (100000 mojos)",
+        "  OFFERED:\n"
+        f"    - {nft_offered_id.hex()}: 0.001 (1 mojo)\n"
+        f"    - offered cat (Wallet ID: 2): 100.0 (100000 mojos)\n",
         "  REQUESTED:\n"
-        f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"
-        "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",
-        "Accepted offer with ID dfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839",
+        "    - XCH (Wallet ID: 1): 2.0 (2000000000000 mojos)\n"
+        f"    - {nft_requested_id_1.hex()}: 0.001 (1 mojo)\n"
+        f"    - {nft_requested_id_2.hex()}: 0.001 (1 mojo)\n",
+        "    - requested cat (Wallet ID: 3): 100.0 (100000 mojos)\n",
+        "Royalties Summary:\n"
+        f"  - For {encode_puzzle_hash(nft_offered_id, 'nft')}:\n"
+        "    - 0.2 XCH (200000000000 mojos) to xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2\n"
+        "    - 10 requested cat (10000 mojos) to xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2\n",
+        "Total Amounts Requested:\n",
+        "  - 2.2 XCH (2200000000000 mojos)\n  - 110 requested cat (110000 mojos)\n",
+        "Accepted offer with ID 71fd6de245d896c691b0115cdb9b47904cb60858ae87b86bfd648b23208b6cc1",
     ]
 
     with importlib_resources.as_file(test_offer_file_path) as test_offer_file_name:
@@ -1028,9 +1077,12 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     expected_calls: logType = {
         "cat_asset_id_to_name": [
-            (cat1,),
-            (cat2,),
-            (bytes32.from_hexstr("accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d"),),
+            (nft_offered_id,),
+            (cat_offered_id,),
+            (nft_requested_id_1,),
+            (nft_requested_id_2,),
+            (cat_requested_id,),
+            (cat_requested_id,),
         ],
         "take_offer": [
             (
@@ -1096,14 +1148,13 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
         "150",
     ]
     # these are various things that should be in the output
-    cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
-    cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
+    nft_offered_id = bytes32.from_hexstr("6bc2c2a27c0f04b9e1e57933d2efe08f5b9e156652a374436b70c067b03c444c")
+    cat_offered_id = bytes32.from_hexstr("06e4136cb7295cec5265c5e49cc32fa69aede779532f2b7542a2456589a53f2f")
+    cat_requested_id = bytes32.from_hexstr("13a52e5efb1ee80a24c94b36bbda2b473094353614ced1c2938ba5ef6097431e")
+    nft_requested_id_1 = bytes32.from_hexstr("7657b5f1cdee70459052c314f839bb1b76b8c3f444671da71ad7dfcb6c47f243")
+    nft_requested_id_2 = bytes32.from_hexstr("5f03cdb94c96325f49f4abf1d4d10cabd5ea583632fbf20f251b7fad73645a14")
     assert_list = [
-        f"  OFFERED:\n    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n    - {cat1.hex()}: 100.0 (100000 mojos)",
-        "  REQUESTED:\n"
-        f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"
-        "    - accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d: 0.001 (1 mojo)",
-        "Cancelled offer with ID dfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839",
+        "Cancelled offer with ID 71fd6de245d896c691b0115cdb9b47904cb60858ae87b86bfd648b23208b6cc1",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
@@ -1112,10 +1163,13 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
             (test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True, True, test_condition_valid_times)
         ],
         "cat_asset_id_to_name": [
-            (cat1,),
-            (cat2,),
-            (bytes32.from_hexstr("accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d"),),
-            (cat1,),
+            (nft_offered_id,),
+            (cat_offered_id,),
+            (nft_requested_id_1,),
+            (nft_requested_id_2,),
+            (cat_requested_id,),
+            (nft_offered_id,),
+            (cat_offered_id,),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

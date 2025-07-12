@@ -29,7 +29,6 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from clvm.casts import int_to_bytes
 from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
@@ -48,11 +47,11 @@ from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_cu
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.sync_store import Peak
@@ -99,6 +98,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.casts import int_to_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
@@ -2505,7 +2505,7 @@ def print_coin_records(records: dict[bytes32, CoinRecord]) -> None:  # pragma: n
         print(f"{rec}")
 
 
-async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> None:
+async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBlock]) -> None:
     prev_height = blocks[0].height - 1
     prev_hash = blocks[0].prev_header_hash
     for block in blocks:
@@ -2551,11 +2551,12 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
         assert records == {}
 
         records = {rec.coin.name(): rec for rec in await coin_store.get_coins_removed_at_height(block.height)}
-        for rem in removals:
-            rec = records.pop(rem.name())
+        for name, rem in removals:
+            rec = records.pop(name)
             assert rec is not None
             assert rec.spent_block_index == block.height
             assert rec.coin == rem
+            assert name == rem.name()
 
         if len(records) > 0:  # pragma: no cover
             print(f"height: {block.height} unexpected removals: {records} TX: Yes")

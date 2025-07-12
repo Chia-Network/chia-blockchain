@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Optional, cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
-from chia.wallet.wallet_request_types import PushTransactions
+from chia.wallet.wallet_request_types import NFTGetNFTs, NFTMintBulk, NFTMintMetadata, PushTransactions
 
 
 async def nft_count(wallet: NFTWallet) -> int:
@@ -308,24 +307,26 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
             wallet_id=env_0.wallet_aliases["did"],
         )
     )[0]
-    did_lineage_parent = None
+    did_lineage_parent: Optional[bytes32] = None
     txs: list[TransactionRecord] = []
     nft_ids = set()
     for i in range(0, n, chunk):
         resp = await env_0.rpc_client.nft_mint_bulk(
-            wallet_id=nft_wallet_maker["wallet_id"],
-            metadata_list=metadata_list[i : i + chunk],
-            target_list=target_list[i : i + chunk],
-            royalty_percentage=royalty_percentage,
-            royalty_address=royalty_address,
-            mint_number_start=i + 1,
-            mint_total=n,
-            xch_coins=[next_coin.to_json_dict()],
-            xch_change_target=funding_coin_dict["puzzle_hash"],
-            did_coin=did_coin.to_json_dict() if with_did else None,
-            did_lineage_parent=did_lineage_parent if with_did else None,
-            mint_from_did=with_did,
-            fee=fee,
+            NFTMintBulk(
+                wallet_id=nft_wallet_maker["wallet_id"],
+                metadata_list=[NFTMintMetadata.from_json_dict(metadata) for metadata in metadata_list[i : i + chunk]],
+                target_list=target_list[i : i + chunk],
+                royalty_percentage=uint16.construct_optional(royalty_percentage),
+                royalty_address=royalty_address,
+                mint_number_start=uint16(i + 1),
+                mint_total=uint16(n),
+                xch_coins=[next_coin],
+                xch_change_target=funding_coin_dict["puzzle_hash"],
+                did_coin=did_coin if with_did else None,
+                did_lineage_parent=did_lineage_parent if with_did else None,
+                mint_from_did=with_did,
+                fee=uint64(fee),
+            ),
             tx_config=wallet_environments.tx_config,
         )
         if with_did:
@@ -335,7 +336,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
                 if tx.spend_bundle is not None
                 for cn in tx.spend_bundle.removals()
                 if cn.name() == did_coin.name()
-            ).parent_coin_info.hex()
+            ).parent_coin_info
             did_coin = next(
                 cn
                 for tx in resp.transactions
@@ -415,10 +416,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
     )
 
     # check NFT edition numbers
-    nfts = [
-        NFTInfo.from_json_dict(nft)
-        for nft in (await env_1.rpc_client.list_nfts(env_1.wallet_aliases["nft"]))["nft_list"]
-    ]
+    nfts = [nft for nft in (await env_1.rpc_client.list_nfts(NFTGetNFTs(uint32(env_1.wallet_aliases["nft"])))).nft_list]
     for nft in nfts:
         edition_num = nft.edition_number
         meta_dict = metadata_list[edition_num - 1]

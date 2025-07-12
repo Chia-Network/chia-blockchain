@@ -105,7 +105,7 @@ foreach ($extra in $extras)
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
-.penv/Scripts/poetry install @extras_cli
+.penv/Scripts/poetry sync @extras_cli
 
 if ($i)
 {

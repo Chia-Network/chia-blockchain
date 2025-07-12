@@ -19,7 +19,7 @@ class CROuterPuzzle:
     _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
     def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
@@ -37,14 +37,16 @@ class CROuterPuzzle:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
 
-    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
+    def get_inner_puzzle(
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+    ) -> Optional[Program]:
         args: Optional[tuple[list[bytes32], Program, Program]] = match_cr_layer(puzzle_reveal)
         if args is None:
             raise ValueError("This driver is not for the specified puzzle reveal")  # pragma: no cover
         _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:
-            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle))
+            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
             return deep_inner_puzzle
         else:
             return inner_puzzle

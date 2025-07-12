@@ -77,7 +77,7 @@ def validate_coins(constants: ConsensusConstants, blocks: list[FullBlock]) -> No
                 constants,
             )
 
-            for rem in removals:
+            for _, rem in removals:
                 try:
                     unspent_coins.remove(rem)
                 except KeyError:  # pragma: no cover

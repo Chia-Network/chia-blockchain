@@ -5,7 +5,6 @@ from typing import Optional
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 from chia_rs.sized_ints import uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
@@ -15,6 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,

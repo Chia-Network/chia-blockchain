@@ -10,7 +10,8 @@ from chia.consensus.pos_quality import _expected_plot_size
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.util.hash import std_hash
 
-PHASE_OUT_PERIOD = uint32(10000000)  # TODO: add to chia_rs and get from constants
+# TODO: todo_v2_plots add to chia_rs and get from constants
+PHASE_OUT_PERIOD = uint32(10000000)
 
 
 def is_overflow_block(constants: ConsensusConstants, signage_point_index: uint8) -> bool:

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import random
 import time
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Optional
 
 import pytest
@@ -20,12 +21,14 @@ from chia_rs import (
     InfusedChallengeChainSubSlot,
     MerkleSet,
     SpendBundle,
+    SpendBundleConditions,
+    SpendConditions,
     TransactionsInfo,
     UnfinishedBlock,
+    is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
@@ -38,7 +41,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.augmented_chain import AugmentedBlockchain
-from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_body_validation import ForkAdd, ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -61,6 +64,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -3648,6 +3652,41 @@ class TestReorgs:
         assert len(blocks) == 200
         assert blocks[-1].height == 199
 
+    @pytest.mark.anyio
+    async def test_overlong_generator_encoding(
+        self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
+    ) -> None:
+        # add enough blocks to pass the hard fork
+        blocks = bt.get_consecutive_blocks(10)
+        for b in blocks[:-1]:
+            await _validate_and_add_block(empty_blockchain, b)
+
+        while not blocks[-1].is_transaction_block():
+            await _validate_and_add_block(empty_blockchain, blocks[-1])
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+        original_block: FullBlock = blocks[-1]
+
+        # overlong encoding
+        generator = SerializedProgram.fromhex("c00101")
+        assert not is_canonical_serialization(bytes(generator))
+
+        block = recursive_replace(original_block, "transactions_generator", generator)
+        block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
+        block = recursive_replace(
+            block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
+        )
+        block = recursive_replace(
+            block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
+        )
+
+        # overlong encoding became invalid in the 3.0 hard fork
+        if consensus_mode == ConsensusMode.HARD_FORK_3_0:
+            expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+        else:
+            expected_error = None
+
+        await _validate_and_add_block(empty_blockchain, block, expected_error=expected_error, skip_prevalidation=True)
+
 
 @pytest.mark.anyio
 async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> None:
@@ -4199,3 +4238,175 @@ async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchai
     blocks_with_filter = await b.get_header_blocks_in_range(0, 42, tx_filter=True)
     empty_tx_filter = b"\x00"
     assert blocks_with_filter[non_tx_block.header_hash].transactions_filter == empty_tx_filter
+
+
+@dataclass(frozen=True)
+class ForkInfoTestSetup:
+    fork_info: ForkInfo
+    initial_additions_since_fork: dict[bytes32, ForkAdd]
+    test_block: FullBlock
+    coin: Coin
+    child_coin: Coin
+
+    @classmethod
+    def create(cls, same_ph_as_parent: bool, same_amount_as_parent: bool) -> ForkInfoTestSetup:
+        from chia._tests.util.network_protocol_data import full_block as test_block
+
+        unrelated_coin = Coin(bytes32([0] * 32), bytes32([1] * 32), uint64(42))
+        # We add this initial state with an unrelated addition, to create a
+        # difference between the `rollback` state and the completely empty
+        # `reset` state.
+        initial_additions_since_fork = {
+            unrelated_coin.name(): ForkAdd(
+                coin=unrelated_coin,
+                confirmed_height=uint32(1),
+                timestamp=uint64(0),
+                hint=None,
+                is_coinbase=False,
+                same_as_parent=False,
+            )
+        }
+        fork_info = ForkInfo(
+            test_block.height - 1,
+            test_block.height - 1,
+            test_block.prev_header_hash,
+            additions_since_fork=copy.copy(initial_additions_since_fork),
+        )
+        puzzle_hash = bytes32([2] * 32)
+        amount = uint64(1337)
+        coin = Coin(bytes32([3] * 32), puzzle_hash, amount)
+        child_coin_ph = puzzle_hash if same_ph_as_parent else bytes32([4] * 32)
+        child_coin_amount = amount if same_amount_as_parent else uint64(0)
+        child_coin = Coin(coin.name(), child_coin_ph, child_coin_amount)
+        return cls(
+            fork_info=fork_info,
+            initial_additions_since_fork=initial_additions_since_fork,
+            test_block=test_block,
+            coin=coin,
+            child_coin=child_coin,
+        )
+
+    def check_additions(self, expected_same_parent_additions: set[bytes32]) -> None:
+        assert all(
+            a in self.fork_info.additions_since_fork and self.fork_info.additions_since_fork[a].same_as_parent
+            for a in expected_same_parent_additions
+        )
+        remaining_additions = set(self.fork_info.additions_since_fork) - expected_same_parent_additions
+        assert not any(self.fork_info.additions_since_fork[a].same_as_parent for a in remaining_additions)
+
+
+@pytest.mark.parametrize("same_ph_as_parent", [True, False])
+@pytest.mark.parametrize("same_amount_as_parent", [True, False])
+@pytest.mark.parametrize("rollback", [True, False])
+@pytest.mark.parametrize("reset", [True, False])
+@pytest.mark.anyio
+async def test_include_spends_same_as_parent(
+    same_ph_as_parent: bool, same_amount_as_parent: bool, rollback: bool, reset: bool
+) -> None:
+    """
+    Tests that `ForkInfo` properly tracks same-as-parent created coins.
+    A created coin is tracked as such if its puzzle hash and amount match the
+    parent. We're covering here `include_spends`, `rollback` and `reset` in the
+    context of same-as-parent coins.
+    """
+    test_setup = ForkInfoTestSetup.create(same_ph_as_parent, same_amount_as_parent)
+    # Now let's prepare the test spend bundle conditions
+    create_coin = [(test_setup.child_coin.puzzle_hash, test_setup.child_coin.amount, None)]
+    conds = SpendBundleConditions(
+        [
+            SpendConditions(
+                test_setup.coin.name(),
+                test_setup.coin.parent_coin_info,
+                test_setup.coin.puzzle_hash,
+                test_setup.coin.amount,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                create_coin,
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                0,
+                0,
+                0,
+            )
+        ],
+        0,
+        0,
+        0,
+        None,
+        None,
+        [],
+        0,
+        0,
+        0,
+        True,
+        0,
+        0,
+    )
+    # Now let's run the test
+    test_setup.fork_info.include_spends(conds, test_setup.test_block, test_setup.test_block.header_hash)
+    # Let's make sure the results are as expected
+    expected_same_parent_additions = (
+        {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
+    )
+    test_setup.check_additions(expected_same_parent_additions)
+    if rollback:
+        # Now we rollback before the spend that belongs to the test conditions
+        test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
+        # That should leave only the initial additions we started with, which
+        # are unrelated to the test conditions. We added this initial state to
+        # create a difference between `rollback` state and the completely empty
+        # `reset` state.
+        assert test_setup.fork_info.additions_since_fork == test_setup.initial_additions_since_fork
+    if reset:
+        # Now we reset to a test height and header hash
+        test_setup.fork_info.reset(1, bytes32([0] * 32))
+        # That should leave this empty
+        assert test_setup.fork_info.additions_since_fork == {}
+
+
+@pytest.mark.parametrize("same_ph_as_parent", [True, False])
+@pytest.mark.parametrize("same_amount_as_parent", [True, False])
+@pytest.mark.parametrize("rollback", [True, False])
+@pytest.mark.parametrize("reset", [True, False])
+@pytest.mark.anyio
+async def test_include_block_same_as_parent_coins(
+    same_ph_as_parent: bool, same_amount_as_parent: bool, rollback: bool, reset: bool
+) -> None:
+    """
+    Tests that `ForkInfo` properly tracks same-as-parent created coins.
+    A created coin is tracked as such if its puzzle hash and amount match the
+    parent. We're covering here `include_block`, `rollback` and `reset` in the
+    context of such coins.
+    """
+    test_setup = ForkInfoTestSetup.create(same_ph_as_parent, same_amount_as_parent)
+    # Now let's run the test
+    test_setup.fork_info.include_block(
+        [(test_setup.child_coin, None)],
+        [(test_setup.coin.name(), test_setup.coin)],
+        test_setup.test_block,
+        test_setup.test_block.header_hash,
+    )
+    # Let's make sure the results are as expected
+    expected_same_as_parent_additions = (
+        {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
+    )
+    test_setup.check_additions(expected_same_as_parent_additions)
+    if rollback:
+        # Now we rollback before the spend that belongs to the test conditions
+        test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
+        # That should leave only the initial additions we started with
+        assert test_setup.fork_info.additions_since_fork == test_setup.initial_additions_since_fork
+    if reset:
+        # Now we reset to a test height and header hash
+        test_setup.fork_info.reset(1, bytes32([0] * 32))
+        # That should leave this empty
+        assert test_setup.fork_info.additions_since_fork == {}

@@ -127,7 +127,9 @@ DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSTRAP_GENERATOR)
 
 test_constants = DEFAULT_CONSTANTS.replace(
-    MIN_PLOT_SIZE=uint8(18),
+    MIN_PLOT_SIZE_V1=uint8(18),
+    # TODO: todo_v2_plots decide on v2 test plot k-size
+    MIN_PLOT_SIZE_V2=uint8(18),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
     DIFFICULTY_STARTING=uint64(2**10),
     DISCRIMINANT_SIZE_BITS=uint16(16),
@@ -135,7 +137,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(380),
     DIFFICULTY_CONSTANT_FACTOR=uint128(33554432),
-    NUM_SPS_SUB_SLOT=uint32(16),  # Must be a power of 2
+    NUM_SPS_SUB_SLOT=uint8(16),  # Must be a power of 2
     MAX_SUB_SLOT_BLOCKS=uint32(50),
     EPOCH_BLOCKS=uint32(340),
     # the block cache must contain at least 3 epochs in order for
@@ -1504,7 +1506,8 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            prefix_bits = calculate_prefix_bits(constants, height)
+            # TODO: todo_v2_plots support v2 plots in the plot manager
+            prefix_bits = calculate_prefix_bits(constants, height, PlotSize.make_v1(plot_info.prover.get_size()))
             if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
@@ -1513,6 +1516,7 @@ class BlockTools:
                     required_iters = calculate_iterations_quality(
                         constants,
                         quality_str,
+                        # TODO: todo_v2_plots support v2 plots in the plot manager
                         PlotSize.make_v1(plot_info.prover.get_size()),
                         difficulty,
                         signage_point,
