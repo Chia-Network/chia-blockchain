@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import sqlite3
 from contextlib import AbstractAsyncContextManager
-from typing import Optional
+from typing import Any, Optional
 
 import aiosqlite
 import typing_extensions
