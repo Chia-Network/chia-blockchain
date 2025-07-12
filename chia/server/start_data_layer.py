@@ -22,6 +22,7 @@ from chia.ssl.create_ssl import create_all_ssl
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
+from chia.util.resource_monitor import ResourceMonitor, ResourceMonitorConfiguration
 from chia.util.task_timing import maybe_manage_task_instrumentation
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
@@ -92,7 +93,7 @@ def create_data_layer_service(
     )
 
 
-async def async_main(root_path: pathlib.Path) -> int:
+async def async_main(root_path: pathlib.Path, resource_monitor: ResourceMonitor) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml", fill_missing_services=True)
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
@@ -103,49 +104,57 @@ async def async_main(root_path: pathlib.Path) -> int:
         root_path=root_path,
     )
 
-    create_all_ssl(
-        root_path=root_path,
-        private_node_names=["data_layer"],
-        public_node_names=["data_layer"],
-        overwrite=False,
-    )
+    async with resource_monitor.manage():
+        create_all_ssl(
+            root_path=root_path,
+            private_node_names=["data_layer"],
+            public_node_names=["data_layer"],
+            overwrite=False,
+        )
 
-    plugins_config = config["data_layer"].get("plugins", {})
-    service_dir = root_path / SERVICE_NAME
+        plugins_config = config["data_layer"].get("plugins", {})
+        service_dir = root_path / SERVICE_NAME
 
-    old_uploaders = config["data_layer"].get("uploaders", [])
-    new_uploaders = plugins_config.get("uploaders", [])
-    conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
-    uploaders: list[PluginRemote] = [
-        *(PluginRemote(url=url) for url in old_uploaders),
-        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
-        *conf_file_uploaders,
-    ]
+        old_uploaders = config["data_layer"].get("uploaders", [])
+        new_uploaders = plugins_config.get("uploaders", [])
+        conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
+        uploaders: list[PluginRemote] = [
+            *(PluginRemote(url=url) for url in old_uploaders),
+            *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
+            *conf_file_uploaders,
+        ]
 
-    old_downloaders = config["data_layer"].get("downloaders", [])
-    new_downloaders = plugins_config.get("downloaders", [])
-    conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
-    downloaders: list[PluginRemote] = [
-        *(PluginRemote(url=url) for url in old_downloaders),
-        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
-        *conf_file_uploaders,
-    ]
+        old_downloaders = config["data_layer"].get("downloaders", [])
+        new_downloaders = plugins_config.get("downloaders", [])
+        conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
+        downloaders: list[PluginRemote] = [
+            *(PluginRemote(url=url) for url in old_downloaders),
+            *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
+            *conf_file_uploaders,
+        ]
 
-    service = create_data_layer_service(root_path, config, downloaders, uploaders)
-    async with SignalHandlers.manage() as signal_handlers:
-        await service.setup_process_global_state(signal_handlers=signal_handlers)
-        await service.run()
+        service = create_data_layer_service(root_path, config, downloaders, uploaders)
+        async with SignalHandlers.manage() as signal_handlers:
+            await service.setup_process_global_state(signal_handlers=signal_handlers)
+            await service.run()
 
-    return 0
+        return 0
 
 
 def main() -> int:
     root_path = resolve_root_path(override=None)
 
-    with maybe_manage_task_instrumentation(
-        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
-    ):
-        return async_run(coro=async_main(root_path=root_path))
+    # TODO: just hacking for now, pr not ready until this is removed
+    service_config: dict[str, Any] = {}
+    service_config["resource_monitor"] = {"process_memory": True}
+
+    with ResourceMonitor.managed(
+        log=log, config=ResourceMonitorConfiguration.create(service_config=service_config)
+    ) as resource_monitor:
+        with maybe_manage_task_instrumentation(
+            enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+        ):
+            return async_run(coro=async_main(root_path=root_path, resource_monitor=resource_monitor))
 
 
 if __name__ == "__main__":
