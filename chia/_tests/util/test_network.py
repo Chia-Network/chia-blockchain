@@ -8,7 +8,38 @@ from typing import Union
 import pytest
 
 from chia.util.ip_address import IPAddress
-from chia.util.network import resolve
+from chia.util.network import parse_host_port, resolve
+
+
+@pytest.mark.parametrize(
+    "host_port, expected_host, expected_port",
+    [
+        ("127.0.0.1:8080", "127.0.0.1", 8080),
+        ("[::1]:8080", "::1", 8080),
+        ("example.com:8080", "example.com", 8080),
+        ("localhost:8555", "localhost", 8555),
+    ],
+)
+def test_parse_host_port(host_port: str, expected_host: str, expected_port: int) -> None:
+    host, port = parse_host_port(host_port)
+    assert host == expected_host
+    assert port == expected_port
+
+
+@pytest.mark.parametrize(
+    "host_port",
+    [
+        "127.0.0.1",
+        "::1",
+        "example.com",
+        "localhost",
+        "127.0.0.1:",
+        ":8080",
+    ],
+)
+def test_parse_host_port_invalid(host_port: str) -> None:
+    with pytest.raises(ValueError):
+        parse_host_port(host_port)
 
 
 @pytest.mark.anyio

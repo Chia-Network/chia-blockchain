@@ -1734,7 +1734,8 @@ def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = Tr
     if not automated_testing:  # make sure we don't accidentally stack directories.
         root_dir = (
             root_dir.parent
-            if root_dir.parts[-1] == plot_dir_name.split("/")[0] or root_dir.parts[-1] == plot_dir_name.split("\\")[0]
+            if root_dir.parts[-1] == plot_dir_name.split("/", maxsplit=1)[0]
+            or root_dir.parts[-1] == plot_dir_name.split("\\", maxsplit=1)[0]
             else root_dir
         )
     cache_path = root_dir.joinpath(plot_dir_name)

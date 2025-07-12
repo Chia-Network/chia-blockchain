@@ -9,6 +9,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from ipaddress import IPv4Network, IPv6Network, ip_address
 from typing import Any, Literal, Optional, Union
+from urllib.parse import urlsplit
 
 from aiohttp import web
 from aiohttp.log import web_logger
@@ -18,6 +19,14 @@ from typing_extensions import final
 
 from chia.util.ip_address import IPAddress
 from chia.util.task_referencer import create_referenced_task
+
+
+def parse_host_port(host_port: str) -> tuple[str, int]:
+    """Parse a host:port string into a tuple of (host, port), raising ValueError on failure."""
+    result = urlsplit(f"//{host_port}")
+    if result.hostname and result.port:
+        return result.hostname, result.port
+    raise ValueError(f"Invalid host:port string: {host_port}")
 
 
 @final

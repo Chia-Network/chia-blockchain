@@ -14,6 +14,7 @@ from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncResponse
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 
 
@@ -37,11 +38,11 @@ def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> 
     # Test invalid NodeType values
     for connection_type in NodeType:
         if connection_type != NodeType.FARMER:
-            pytest.raises(
-                InvalidConnectionTypeError,
-                sender.set_connection,
-                get_dummy_connection(connection_type, farmer_connection.peer_node_id),
-            )
+            with pytest.raises(InvalidConnectionTypeError):
+                dummy_connection: WSChiaConnection = get_dummy_connection(
+                    connection_type, farmer_connection.peer_node_id
+                )  # type: ignore[assignment]
+                sender.set_connection(dummy_connection)
     # Test setting a valid connection works
     sender.set_connection(farmer_connection)  # type:ignore[arg-type]
     assert sender._connection is not None
