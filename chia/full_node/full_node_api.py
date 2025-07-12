@@ -30,6 +30,7 @@ from chia_rs import (
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
@@ -43,7 +44,6 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -1427,17 +1427,18 @@ class FullNodeAPI:
         )
         assert block_generator is not None
         try:
-            spend_info = await asyncio.get_running_loop().run_in_executor(
+            puzzle, solution = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
                 get_puzzle_and_solution_for_coin,
-                block_generator,
+                block_generator.program,
+                block_generator.generator_refs,
+                self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
-                height,
-                self.full_node.constants,
+                get_flags_for_height_and_constants(height, self.full_node.constants),
             )
         except ValueError:
             return reject_msg
-        wrapper = PuzzleSolutionResponse(coin_name, height, spend_info.puzzle, spend_info.solution)
+        wrapper = PuzzleSolutionResponse(coin_name, height, puzzle, solution)
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
         return response_msg

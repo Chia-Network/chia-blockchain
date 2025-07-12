@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import pytest
 from chia_rs import Program as SerializedProgram
-from chia_rs import SpendBundleConditions, SpendConditions
+from chia_rs import (
+    SpendBundleConditions,
+    SpendConditions,
+    get_spends_for_trusted_block,
+    get_spends_for_trusted_block_with_conditions,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.generator_tools import tx_removals_and_additions
-from chia.full_node.mempool_check_conditions import get_spends_for_block, get_spends_for_block_with_conditions
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
@@ -102,12 +106,14 @@ TEST_GENERATOR = BlockGenerator(
 
 
 def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
-    conditions = get_spends_for_block(TEST_GENERATOR, 100, test_constants)
-    assert conditions == []
-    assert "get_spends_for_block() encountered a puzzle we couldn't serialize: " in caplog.text
+    conditions = get_spends_for_trusted_block(
+        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
+    )
+    assert conditions[0]["block_spends"] == []
 
 
 def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:
-    conditions = get_spends_for_block_with_conditions(TEST_GENERATOR, 100, test_constants)
+    conditions = get_spends_for_trusted_block_with_conditions(
+        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
+    )
     assert conditions == []
-    assert "get_spends_for_block_with_conditions() encountered a puzzle we couldn't serialize: " in caplog.text

@@ -19,6 +19,7 @@ from chia_rs import (
     get_flags_for_height_and_constants,
     run_block_generator2,
 )
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Self
@@ -30,7 +31,6 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import Mempool
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
@@ -442,8 +442,14 @@ class SimClient:
         generator: BlockGenerator = filtered_generators[0].transactions_generator  # type: ignore[assignment]
         coin_record = await self.service.coin_store.get_coin_record(coin_id)
         assert coin_record is not None
-        spend_info = get_puzzle_and_solution_for_coin(generator, coin_record.coin, height, self.service.defaults)
-        return CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)
+        puzzle, solution = get_puzzle_and_solution_for_coin(
+            generator.program,
+            generator.generator_refs,
+            self.service.defaults.MAX_BLOCK_COST_CLVM,
+            coin_record.coin,
+            get_flags_for_height_and_constants(height, self.service.defaults),
+        )
+        return CoinSpend(coin_record.coin, puzzle, solution)
 
     async def get_all_mempool_tx_ids(self) -> list[bytes32]:
         return self.service.mempool_manager.mempool.all_item_ids()

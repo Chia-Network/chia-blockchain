@@ -254,7 +254,8 @@ async def test1(
         assert coin_spend_with_conditions.coin_spend.solution == SerializedProgram.fromhex(
             "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa0a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee54798080ff8080"
         )
-        assert coin_spend_with_conditions.conditions == [
+
+        expected = [
             ConditionWithArgs(
                 ConditionOpcode(b"2"),
                 [
@@ -278,6 +279,8 @@ async def test1(
                 ],
             ),
         ]
+
+        assert coin_spend_with_conditions.conditions == expected
 
         coin_spend_with_conditions = block_spends_with_conditions[2]
 
