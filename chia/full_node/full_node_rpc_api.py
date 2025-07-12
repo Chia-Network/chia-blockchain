@@ -10,6 +10,7 @@ from chia_rs import (
     BlockRecord,
     CoinSpend,
     FullBlock,
+    PlotSize,
     SpendBundle,
     SpendBundleConditions,
     run_block_generator2,
@@ -599,7 +600,9 @@ class FullNodeRpcApi:
             raise ValueError(f"Older block {older_block_hex} not found")
         delta_weight = newer_block.weight - older_block.weight
 
-        plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height)
+        # TODO: todo_v2_plots Update this calculation to take v2 plots into
+        # account
+        plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height, PlotSize.make_v1(32))
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR

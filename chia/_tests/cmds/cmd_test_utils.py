@@ -13,7 +13,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
-from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX
+from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX, get_bytes32
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -33,7 +33,14 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
+from chia.wallet.wallet_request_types import (
+    GetSyncStatusResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
+    SendTransactionMultiResponse,
+)
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -150,16 +157,14 @@ class TestWalletRpcClient(TestRpcClient):
         if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
         """
         self.add_to_log("cat_asset_id_to_name", (asset_id,))
-        if asset_id == bytes32([1] * 32):
-            return uint32(2), "test1"
-        elif asset_id == bytes32([2] * 32):
-            return uint32(3), "test2"
-        else:
-            return None
+        for i in range(256):
+            if asset_id == get_bytes32(i):
+                return uint32(i + 1), "test" + str(i)
+        return None
 
-    async def get_nft_info(self, coin_id: str, latest: bool = True) -> dict[str, Any]:
-        self.add_to_log("get_nft_info", (coin_id, latest))
-        coin_id_bytes = bytes32.fromhex(coin_id)
+    async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
+        self.add_to_log("get_nft_info", (request.coin_id, request.latest))
+        coin_id_bytes = bytes32.fromhex(request.coin_id)
         nft_info = NFTInfo(
             nft_id=encode_puzzle_hash(coin_id_bytes, "nft"),
             launcher_id=bytes32([1] * 32),
@@ -182,17 +187,18 @@ class TestWalletRpcClient(TestRpcClient):
             supports_did=True,
             p2_address=bytes32([8] * 32),
         )
-        return {"nft_info": nft_info.to_json_dict()}
+        return NFTGetInfoResponse(nft_info)
 
     async def nft_calculate_royalties(
         self,
-        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
-        fungible_asset_dict: dict[Any, uint64],
-    ) -> dict[Any, list[dict[str, Any]]]:
-        self.add_to_log("nft_calculate_royalties", (royalty_assets_dict, fungible_asset_dict))
-        return NFTWallet.royalty_calculation(
-            royalty_assets_dict=royalty_assets_dict,
-            fungible_asset_dict=fungible_asset_dict,
+        request: NFTCalculateRoyalties,
+    ) -> NFTCalculateRoyaltiesResponse:
+        self.add_to_log("nft_calculate_royalties", (request,))
+        return NFTCalculateRoyaltiesResponse.from_json_dict(
+            NFTWallet.royalty_calculation(
+                {asset.asset: (asset.royalty_address, asset.royalty_percentage) for asset in request.royalty_assets},
+                {asset.asset: asset.amount for asset in request.fungible_assets},
+            )
         )
 
     async def get_spendable_coins(

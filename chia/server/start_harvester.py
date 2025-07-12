@@ -9,7 +9,7 @@ from chia_rs import ConsensusConstants
 
 from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import replace_str_to_bytes
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.harvester.harvester_rpc_api import HarvesterRpcApi
@@ -41,6 +41,7 @@ def create_harvester_service(
 
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
+    update_testnet_overrides(network_id, overrides)
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     node = Harvester(root_path, service_config, updated_constants)

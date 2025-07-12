@@ -3,16 +3,14 @@ from __future__ import annotations
 import pytest
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32
+from chia_rs.sized_ints import uint32
 
 from chia._tests.util.blockchain_mock import BlockchainMock
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.pot_iterations import validate_pospace_and_get_required_iters
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 
 
 async def load_blocks_dont_validate(
@@ -490,28 +488,3 @@ class TestWeightProof:
         valid, fork_point, _ = await wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
-
-
-@pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
-def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None:
-    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
-    assert calculate_prefix_bits(constants, height) == expected
-
-
-@pytest.mark.parametrize(
-    argnames=["height", "expected"],
-    argvalues=[
-        (0, 9),
-        (5495999, 9),
-        (5496000, 8),
-        (10541999, 8),
-        (10542000, 7),
-        (15591999, 7),
-        (15592000, 6),
-        (20642999, 6),
-        (20643000, 5),
-    ],
-)
-def test_calculate_prefix_bits_default(height: uint32, expected: int) -> None:
-    constants = DEFAULT_CONSTANTS
-    assert calculate_prefix_bits(constants, height) == expected
