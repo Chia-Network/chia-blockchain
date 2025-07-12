@@ -195,7 +195,7 @@ class BlockStore:
     def get_host_parameter_limit(self) -> int:
         return self.db_wrapper.host_parameter_limit
 
-    def transaction(self) -> AbstractAsyncContextManager[None]:
+    def transaction(self) -> AbstractAsyncContextManager[Any]:
         return self.db_wrapper.writer()
 
     def get_block_from_cache(self, header_hash: bytes32) -> Optional[FullBlock]:
