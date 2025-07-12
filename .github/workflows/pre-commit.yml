@@ -25,12 +25,12 @@ jobs:
             matrix: linux
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ${{ github.repository_owner == 'Chia-Network' && '[linux, arm64]' || 'ubuntu-22.04-arm' }}
           - name: macOS
             matrix: macos
             runs-on:
               intel: macos-13
-              arm: macos-13-arm64
+              arm: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-arm64' || 'macos-latest' }}
           - name: Windows
             matrix: windows
             runs-on:
