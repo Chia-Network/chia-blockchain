@@ -42,7 +42,6 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.eligible_coin_spends import run_for_cost
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
@@ -3135,15 +3134,11 @@ def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = 
 
 
 def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
-    def agg_and_add_sb_returning_cost_info(mempool: Mempool, spend_bundles: list[SpendBundle]) -> uint64:
+    def agg_and_add_sb_returning_cost_info(mempool: Mempool, spend_bundles: list[SpendBundle]) -> None:
         sb = SpendBundle.aggregate(spend_bundles)
         mi = mempool_item_from_spendbundle(sb)
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
-        saved_cost = run_for_cost(
-            sb.coin_spends[0].puzzle_reveal, sb.coin_spends[0].solution, len(mi.additions), mi.cost
-        )
-        return saved_cost
 
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
     mempool_info = MempoolInfo(
@@ -3163,7 +3158,7 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     invariant_check_mempool(mempool)
     # Create a ~2 FPC item that spends the eligible coin using the same solution A
     sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
-    saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
+    agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
     invariant_check_mempool(mempool)
     result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
     assert result is not None
@@ -3177,10 +3172,8 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
         # We're picking this fee to get a ~3 FPC, and get picked after sb_A1
         # (which has ~10 FPC) but before sb_A2 (which has ~2 FPC)
         sb_mid_rate = make_test_spendbundle(coins[i], fee=38004852 - i)
-        saved_cost_on_solution_B = agg_and_add_sb_returning_cost_info(mempool, [sb_B, sb_mid_rate])
+        agg_and_add_sb_returning_cost_info(mempool, [sb_B, sb_mid_rate])
         invariant_check_mempool(mempool)
-    # We'd save more cost if we went with solution B instead of A
-    assert saved_cost_on_solution_B > saved_cost_on_solution_A
     # If we process everything now, the 3 x ~3 FPC items get skipped because
     # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
     # would get picked
