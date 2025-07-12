@@ -201,30 +201,6 @@ class BlockStore:
     def get_block_from_cache(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.block_cache.get(header_hash)
 
-    async def get_block_records_close_to_peak(
-        self, blocks_n: int
-    ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
-        """
-        Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
-        peak header hash. Only blocks that are part of the main chain/current peak are included.
-        """
-
-        peak = await self.get_peak()
-        if peak is None:
-            return {}, None
-
-        ret: dict[bytes32, BlockRecord] = {}
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND in_main_chain=1",
-                (peak[1] - blocks_n,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    header_hash = bytes32(row[0])
-                    ret[header_hash] = BlockRecord.from_bytes(row[1])
-
-        return ret, peak[0]
-
     def rollback_cache_block(self, header_hash: bytes32) -> None:
         try:
             self.block_cache.remove(header_hash)
@@ -529,6 +505,30 @@ class BlockStore:
         if peak_height is None:
             return None
         return bytes32(peak_row[0]), uint32(peak_height[0])
+
+    async def get_block_records_close_to_peak(
+        self, blocks_n: int
+    ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
+        """
+        Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
+        peak header hash. Only blocks that are part of the main chain/current peak are included.
+        """
+
+        peak = await self.get_peak()
+        if peak is None:
+            return {}, None
+
+        ret: dict[bytes32, BlockRecord] = {}
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND in_main_chain=1",
+                (peak[1] - blocks_n,),
+            ) as cursor:
+                for row in await cursor.fetchall():
+                    header_hash = bytes32(row[0])
+                    ret[header_hash] = BlockRecord.from_bytes(row[1])
+
+        return ret, peak[0]
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.
