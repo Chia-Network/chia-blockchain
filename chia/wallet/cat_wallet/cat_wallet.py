@@ -256,8 +256,11 @@ class CATWallet:
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: dict[AssetType, Any] = {},
+        potential_subclasses: Optional[dict[AssetType, Any]] = None,
     ) -> Any:
+        if potential_subclasses is None:
+            potential_subclasses = {}
+
         next_layer: Optional[PuzzleInfo] = puzzle_driver.also()
         if next_layer is not None:
             if AssetType(next_layer.type()) in potential_subclasses:
