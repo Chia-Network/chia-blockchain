@@ -13,6 +13,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
+from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
 from chia.util.lru_cache import LRUCache
@@ -190,9 +191,6 @@ class BlockStore:
             return challenge_segments
         return None
 
-    def get_host_parameter_limit(self) -> int:
-        return self.db_wrapper.host_parameter_limit
-
     def transaction(self) -> AbstractAsyncContextManager[Any]:
         return self.db_wrapper.writer()
 
@@ -332,20 +330,21 @@ class BlockStore:
         Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present
         """
+
         if len(header_hashes) == 0:
             return []
 
         all_blocks: dict[bytes32, BlockRecord] = {}
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash,block_record "
-                "FROM full_blocks "
-                f"WHERE header_hash in ({'?,' * (len(header_hashes) - 1)}?)",
-                header_hashes,
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    block_rec = BlockRecord.from_bytes(row[1])
-                    all_blocks[block_rec.header_hash] = block_rec
+        for batch in to_batches(header_hashes, self.db_wrapper.host_parameter_limit):
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(
+                    "SELECT header_hash,block_record FROM full_blocks "
+                    f"WHERE header_hash in ({'?,' * (len(batch.entries) - 1)}?)",
+                    batch.entries,
+                ) as cursor:
+                    for row in await cursor.fetchall():
+                        block_rec = BlockRecord.from_bytes(row[1])
+                        all_blocks[block_rec.header_hash] = block_rec
 
         ret: list[BlockRecord] = []
         for hh in header_hashes:
