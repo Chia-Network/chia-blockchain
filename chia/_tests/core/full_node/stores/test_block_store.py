@@ -18,10 +18,10 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_block_utils import GeneratorBlockInfo

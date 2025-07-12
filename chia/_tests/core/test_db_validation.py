@@ -14,10 +14,10 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import test_constants

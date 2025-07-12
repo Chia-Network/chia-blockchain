@@ -39,6 +39,7 @@ from packaging.version import Version
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
@@ -49,7 +50,6 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
