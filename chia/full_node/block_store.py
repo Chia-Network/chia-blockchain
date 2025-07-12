@@ -13,7 +13,6 @@ from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSe
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -479,7 +478,8 @@ class BlockStore:
         No orphan blocks.
         """
 
-        assert self.db_wrapper.db_version == 2
+        if self.db_wrapper.db_version != 2:
+            raise NotImplementedError("get_block_bytes_in_range requires DB version 2")
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? AND in_main_chain=1",
