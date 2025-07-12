@@ -192,9 +192,6 @@ class BlockStore:
             return challenge_segments
         return None
 
-    def get_host_parameter_limit(self) -> int:
-        return self.db_wrapper.host_parameter_limit
-
     def transaction(self) -> AbstractAsyncContextManager[Any]:
         return self.db_wrapper.writer()
 

@@ -932,7 +932,6 @@ class Blockchain:
         gets block records by height (only blocks that are part of the chain)
         """
         hashes: list[bytes32] = []
-        assert batch_size < self.block_store.get_host_parameter_limit()
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
             if header_hash is None:
