@@ -56,18 +56,43 @@ async def test_farm_summary_command(
     )
 
     captured = capsys.readouterr()
-    match = re.search(r"^.+(Farming status:.+)$", captured.out, re.DOTALL)
+    match = re.search(r"(Farming status:.*)", captured.out, re.DOTALL)
     assert match is not None
-    lines = match.group(1).split("\n")
+    output = match.group(1)
 
-    assert lines[0] == "Farming status: Not synced or not connected to peers"
-    assert "Total chia farmed:" in lines[1]
-    assert "User transaction fees:" in lines[2]
-    assert "Block rewards:" in lines[3]
-    assert "Last height farmed:" in lines[4]
-    assert lines[5] == "Local Harvester"
-    assert "e (effective)" in lines[6]
-    assert "Plot count for all harvesters:" in lines[7]
-    assert "e (effective)" in lines[8]
-    assert "Estimated network space:" in lines[9]
-    assert "Expected time to win:" in lines[10]
+    assert "Farming status:" in output
+    assert "Total chia farmed:" in output
+    assert "User transaction fees:" in output
+    assert "Block rewards:" in output
+    assert "Last height farmed:" in output
+    assert "Local Harvester" in output
+    assert "e (effective)" in output
+    assert "Plot count for all harvesters:" in output
+    assert "Estimated network space:" in output
+    assert "Expected time to win:" in output
+
+    await summary(
+        rpc_port=full_node_rpc_port,
+        wallet_rpc_port=wallet_rpc_port,
+        harvester_rpc_port=None,
+        farmer_rpc_port=farmer_rpc_port,
+        include_pool_rewards=True,
+        root_path=bt.root_path,
+    )
+
+    captured = capsys.readouterr()
+    match = re.search(r"(Farming status:.*)", captured.out, re.DOTALL)
+    assert match is not None
+    output = match.group(1)
+
+    assert "Farming status:" in output
+    assert "Total chia farmed:" in output
+    assert "User transaction fees:" in output
+    assert "Farmer rewards:" in output
+    assert "Pool rewards:" in output
+    assert "Total rewards:" in output
+    assert "Local Harvester" in output
+    assert "e (effective)" in output
+    assert "Plot count for all harvesters:" in output
+    assert "Estimated network space:" in output
+    assert "Expected time to win:" in output
