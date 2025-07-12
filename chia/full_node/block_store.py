@@ -400,25 +400,6 @@ class BlockStore:
             ret.append(all_blocks[hh])
         return ret
 
-    async def get_prev_hash(self, header_hash: bytes32) -> bytes32:
-        """
-        Returns the header hash preceeding the input header hash.
-        Throws an exception if the block is not present
-        """
-        cached = self.block_cache.get(header_hash)
-        if cached is not None:
-            return cached.prev_header_hash
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT prev_hash FROM full_blocks WHERE header_hash=?",
-                (header_hash,),
-            ) as cursor:
-                row = await cursor.fetchone()
-                if row is None:
-                    raise KeyError("missing block in chain")
-                return bytes32(row[0])
-
     async def get_block_bytes_by_hash(self, header_hashes: list[bytes32]) -> list[bytes]:
         """
         Returns a list of Full Blocks block blobs, ordered by the same order in which header_hashes are passed in.
@@ -548,30 +529,6 @@ class BlockStore:
         if peak_height is None:
             return None
         return bytes32(peak_row[0]), uint32(peak_height[0])
-
-    async def get_block_records_close_to_peak(
-        self, blocks_n: int
-    ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
-        """
-        Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
-        peak header hash. Only blocks that are part of the main chain/current peak are included.
-        """
-
-        peak = await self.get_peak()
-        if peak is None:
-            return {}, None
-
-        ret: dict[bytes32, BlockRecord] = {}
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND in_main_chain=1",
-                (peak[1] - blocks_n,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    header_hash = bytes32(row[0])
-                    ret[header_hash] = BlockRecord.from_bytes(row[1])
-
-        return ret, peak[0]
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.
