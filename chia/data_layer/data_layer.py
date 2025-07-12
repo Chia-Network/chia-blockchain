@@ -351,10 +351,11 @@ class DataLayer:
         for pending_root in pending_roots:
             root_hash = pending_root.node_hash if pending_root.node_hash is not None else self.none_bytes
             updates.append(LauncherRootPair(pending_root.store_id, root_hash))
-            await self.data_store.change_root_status(pending_root, Status.PENDING)
         response = await self.wallet_rpc.dl_update_multiple(
             DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee), DEFAULT_TX_CONFIG
         )
+        for pending_root in pending_roots:
+            await self.data_store.change_root_status(pending_root, Status.PENDING)
         return response.transactions
 
     async def batch_insert(
