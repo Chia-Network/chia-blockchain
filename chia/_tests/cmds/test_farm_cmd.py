@@ -51,7 +51,7 @@ async def test_farm_summary_command(
         wallet_rpc_port=wallet_rpc_port,
         harvester_rpc_port=None,
         farmer_rpc_port=farmer_rpc_port,
-        include_pool_rewards=True,
+        include_pool_rewards=False,
         root_path=bt.root_path,
     )
 
