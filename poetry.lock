@@ -190,7 +190,7 @@ description = "Python graph (network) package"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "python_version <= \"3.12\" and extra == \"dev\""
+markers = "python_version < \"3.14\" and extra == \"dev\""
 files = [
     {file = "altgraph-0.17.4-py2.py3-none-any.whl", hash = "sha256:642743b4750de17e655e6711601b077bc6598dbfa3ba5fa2b2a35ce12b508dff"},
     {file = "altgraph-0.17.4.tar.gz", hash = "sha256:1b5afbb98f6c4dcadb2e2ae6ab9fa994bbb8c1d75f4fa96d340f9437ae454406"},
@@ -877,6 +877,7 @@ files = [
     {file = "chiabip158-1.5.2-cp39-cp39-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b7b36a529ee5685294fe55cedfa0788cb1baac03c310b1533cd23481357efd10"},
     {file = "chiabip158-1.5.2-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ad40df68317d39f33272e25fd9651f05a27b85d524e9ed694ac7549cde44918c"},
     {file = "chiabip158-1.5.2-cp39-cp39-win_amd64.whl", hash = "sha256:07b298cfb0621dba1027c710e9669970f4e089c118db8732bd456101c727db65"},
+    {file = "chiabip158-1.5.2.tar.gz", hash = "sha256:86c225f5a566cca3199607f6ea646799da9e406df6fb0ae7323d57e5ac8e2f2c"},
 ]
 
 [[package]]
@@ -1859,7 +1860,7 @@ description = "Mach-O header analysis and editing"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"darwin\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and sys_platform == \"darwin\" and python_version < \"3.14\""
 files = [
     {file = "macholib-1.16.3-py2.py3-none-any.whl", hash = "sha256:0e315d7583d38b8c77e815b1ecbdbf504a8258d8b3e17b61165c6feb60d18f2c"},
     {file = "macholib-1.16.3.tar.gz", hash = "sha256:07ae9e15e8e4cd9a788013d81f5908b3609aa76f9b1421bae9c4d7606ec86a30"},
@@ -2318,7 +2319,7 @@ description = "Python PE parsing module"
 optional = true
 python-versions = ">=3.6.0"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"win32\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and sys_platform == \"win32\" and python_version < \"3.14\""
 files = [
     {file = "pefile-2023.2.7-py3-none-any.whl", hash = "sha256:da185cd2af68c08a6cd4481f7325ed600a88f6a813bad9dea07ab3ef73d8d8d6"},
     {file = "pefile-2023.2.7.tar.gz", hash = "sha256:82e6114004b3d6911c77c3953e3838654b04511b8b66e8583db70c65998017dc"},
@@ -2656,7 +2657,7 @@ description = "PyInstaller bundles a Python application and all its dependencies
 optional = true
 python-versions = "<3.14,>=3.8"
 groups = ["main"]
-markers = "python_version <= \"3.12\" and extra == \"dev\""
+markers = "python_version < \"3.14\" and extra == \"dev\""
 files = [
     {file = "pyinstaller-6.14.1-py3-none-macosx_10_13_universal2.whl", hash = "sha256:da559cfe4f7a20a7ebdafdf12ea2a03ea94d3caa49736ef53ee2c155d78422c9"},
     {file = "pyinstaller-6.14.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:f040d1e3d42af3730104078d10d4a8ca3350bd1c78de48f12e1b26f761e0cbc3"},
@@ -2693,7 +2694,7 @@ description = "Community maintained hooks for PyInstaller"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "python_version <= \"3.12\" and extra == \"dev\""
+markers = "python_version < \"3.14\" and extra == \"dev\""
 files = [
     {file = "pyinstaller_hooks_contrib-2025.5-py3-none-any.whl", hash = "sha256:ebfae1ba341cb0002fb2770fad0edf2b3e913c2728d92df7ad562260988ca373"},
     {file = "pyinstaller_hooks_contrib-2025.5.tar.gz", hash = "sha256:707386770b8fe066c04aad18a71bc483c7b25e18b4750a756999f7da2ab31982"},
@@ -3753,7 +3754,7 @@ description = "ZSTD Bindings for Python"
 optional = false
 python-versions = "*"
 groups = ["main"]
-markers = "python_version == \"3.12\""
+markers = "python_version >= \"3.12\""
 files = [
     {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b5cd20afab8d13c52d2b2219bf18cc765eae87b8219343bce20647007890adab"},
     {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:0f467ab9b57ab8b4b874e6974d38b802f20406803bb7ec9308df923553cd48f7"},
@@ -3795,4 +3796,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "3293ff0599e616275fcf2e6057aafd46c5b39764aec44df57fd71d8387d9e39e"
+content-hash = "2857a97f89e752a41d14c2c038c2ff68eba87180d389ba96935a7bf427287887"
