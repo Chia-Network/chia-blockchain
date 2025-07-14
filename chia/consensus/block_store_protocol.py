@@ -7,7 +7,7 @@ from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.full_node.full_block_utils import GeneratorBlockInfo
+from chia.consensus.generator_block_info import GeneratorBlockInfo
 
 
 class BlockStoreProtocol(Protocol):

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Callable, Optional
 
 from chia_rs import G1Element, G2Element, TransactionsInfo, serialized_length
@@ -8,6 +7,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 from chiabip158 import PyBIP158
 
+from chia.consensus.generator_block_info import GeneratorBlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 
@@ -222,14 +222,6 @@ def generator_from_block(buf: memoryview) -> Optional[bytes]:
     buf = buf[1:]
     length = serialized_length(buf)
     return bytes(buf[:length])
-
-
-# this implements the BlockInfo protocol
-@dataclass(frozen=True)
-class GeneratorBlockInfo:
-    prev_header_hash: bytes32
-    transactions_generator: Optional[SerializedProgram]
-    transactions_generator_ref_list: list[uint32]
 
 
 def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
