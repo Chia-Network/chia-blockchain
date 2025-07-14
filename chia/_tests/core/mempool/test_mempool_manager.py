@@ -32,7 +32,6 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.eligible_coin_spends import (
     DedupCoinSpend,
-    EligibilityAndAdditions,
     IdenticalSpendDedup,
     SkipDedup,
     run_for_cost,
@@ -559,33 +558,29 @@ def make_bundle_spends_map_and_fee(
     spend_bundle: SpendBundle, conds: SpendBundleConditions
 ) -> tuple[dict[bytes32, BundleCoinSpend], uint64]:
     bundle_coin_spends: dict[bytes32, BundleCoinSpend] = {}
-    eligibility_and_additions: dict[bytes32, EligibilityAndAdditions] = {}
+
+    spend_conditions = {bytes32(spend.coin_id): spend for spend in conds.spends}
+
     removals_amount = 0
     additions_amount = 0
-    for spend in conds.spends:
-        coin_id = bytes32(spend.coin_id)
-        spend_additions = []
-        for puzzle_hash, amount, _ in spend.create_coin:
-            spend_additions.append(Coin(coin_id, puzzle_hash, uint64(amount)))
-            additions_amount += amount
-        eligibility_and_additions[coin_id] = EligibilityAndAdditions(
-            is_eligible_for_dedup=bool(spend.flags & ELIGIBLE_FOR_DEDUP),
-            spend_additions=spend_additions,
-            ff_puzzle_hash=bytes32(spend.puzzle_hash) if bool(spend.flags & ELIGIBLE_FOR_FF) else None,
-        )
     for coin_spend in spend_bundle.coin_spends:
         coin_id = coin_spend.coin.name()
         removals_amount += coin_spend.coin.amount
-        eligibility_info = eligibility_and_additions.get(
-            coin_id, EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None)
-        )
+        spend_conds = spend_conditions.pop(coin_id)
+
+        additions_amount += coin_spend.coin.amount
+
+        additions = []
+        for puzzle_hash, amount, _ in spend_conds.create_coin:
+            additions.append(Coin(coin_id, puzzle_hash, uint64(amount)))
+
         bundle_coin_spends[coin_id] = BundleCoinSpend(
             coin_spend=coin_spend,
-            eligible_for_dedup=eligibility_info.is_eligible_for_dedup,
-            eligible_for_fast_forward=eligibility_info.ff_puzzle_hash is not None,
-            additions=eligibility_info.spend_additions,
+            eligible_for_dedup=bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP),
+            eligible_for_fast_forward=bool(spend_conds.flags & ELIGIBLE_FOR_FF),
+            additions=additions,
             latest_singleton_lineage=UnspentLineageInfo(coin_id, coin_spend.coin.parent_coin_info, bytes32([0] * 32))
-            if eligibility_info.ff_puzzle_hash is not None
+            if bool(spend_conds.flags & ELIGIBLE_FOR_FF)
             else None,
         )
     fee = uint64(removals_amount - additions_amount)
