@@ -10,8 +10,8 @@ from typing import Optional
 from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint64
 
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools

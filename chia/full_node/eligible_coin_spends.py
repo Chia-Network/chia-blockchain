@@ -16,16 +16,6 @@ from chia.types.mempool_item import BundleCoinSpend, UnspentLineageInfo
 from chia.util.errors import Err
 
 
-@dataclasses.dataclass(frozen=True)
-class EligibilityAndAdditions:
-    is_eligible_for_dedup: bool
-    spend_additions: list[Coin]
-    # This is the spend puzzle hash. It's set to `None` if the spend is not
-    # eligible for fast forward. When the spend is eligible, we use its puzzle
-    # hash to check if the singleton has an unspent coin or not.
-    ff_puzzle_hash: Optional[bytes32] = None
-
-
 def run_for_cost(
     puzzle_reveal: SerializedProgram, solution: SerializedProgram, additions_count: int, max_cost: int
 ) -> uint64:
